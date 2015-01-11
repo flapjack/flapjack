@@ -2,7 +2,8 @@
 
 def drain_events
   loop do
-    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
+    event = Flapjack::Data::Event.next('events', :block => false,
+      :redis => @redis)
     break unless event
     @processor.send(:process_event, event)
   end
@@ -12,9 +13,20 @@ end
 def drain_notifications
   return unless @notifier_redis
   loop do
-    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
+    notification = Flapjack::Data::Notification.next('notifications',
+      :block => false, :redis => @notifier_redis)
     break unless notification
     @notifier.send(:process_notification, notification)
+  end
+end
+
+def drain_alerts(queue, gateway)
+  return unless @notifier_redis
+  loop do
+    alert = Flapjack::Data::Alert.next(queue, :block => false,
+      :redis => @notifier_redis, :logger => @logger)
+    break unless alert
+    gateway.send(:deliver, alert)
   end
 end
 
@@ -405,18 +417,18 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   when 'no'
     num_queued = 0
   end
-  queue = Resque.peek("#{media}_notifications", 0, 30)
-  queued_length = queue.find_all {|n|
-    type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
+  queued = redis_peek("#{media}_notifications", 0, 30)
+  queued_length = queued.find_all {|n|
+    type_ok = notification_type ? ( n['notification_type'] == notification_type ) : true
     rollup_ok = case rollup
     when 'none'
-      n['args'].first['rollup'].nil?
-    when nil, n['args'].first['rollup']
+      n['rollup'].nil?
+    when nil, n['rollup']
       true
     else
       false
     end
-    type_ok && rollup_ok && ( n['args'].first['address'] == address )
+    type_ok && rollup_ok && ( n['address'] == address )
   }.length
   expect(queued_length).to eq(num_queued.to_i)
 end

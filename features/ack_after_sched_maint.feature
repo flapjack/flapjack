@@ -1,4 +1,4 @@
-@rollup @notification_rules @resque @processor @notifier @events
+@rollup @notification_rules @processor @notifier @events
 Feature: Multiple acknowledgements after scheduled maintenance
 
   Background:

@@ -51,7 +51,7 @@ module Flapjack
 
       include Flapjack::Utility
 
-      def initialize(contents, opts)
+      def initialize(contents, opts = {})
         raise "no logger supplied" unless @logger = opts[:logger]
 
         @event_id                   = contents['event_id']
@@ -103,7 +103,34 @@ module Flapjack
               details['state'] && allowed_rollup_states.include?(details['state'])
           end
         end
+      end
 
+      def self.add(queue, alert_data, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+        redis.rpush(queue, Flapjack.dump_json(alert_data))
+      end
+
+      def self.next(queue, opts = {})
+        raise "Redis connection not set" unless redis = opts[:redis]
+
+        defaults = { :block => true }
+        options  = defaults.merge(opts)
+
+        if options[:block]
+          raw = redis.blpop(queue, 0)[1]
+        else
+          raw = redis.lpop(queue)
+          return unless raw
+        end
+        begin
+          parsed = ::Flapjack.load_json( raw )
+        rescue Oj::Error => e
+          if options[:logger]
+            options[:logger].warn("Error deserialising alert json: #{e}, raw json: #{raw.inspect}")
+          end
+          return nil
+        end
+        self.new( parsed, :logger => opts[:logger] )
       end
 
       def type

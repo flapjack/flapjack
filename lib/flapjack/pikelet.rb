@@ -13,8 +13,6 @@
 require 'hiredis'
 require 'redis/connection/synchrony'
 require 'redis'
-require 'em-resque'
-require 'em-resque/worker'
 require 'thin'
 
 require 'flapjack/notifier'
@@ -45,7 +43,7 @@ module Flapjack
 
     # TODO find a better way of expressing these two methods
     def self.is_pikelet?(type)
-      type_klass = [Flapjack::Pikelet::Generic, Flapjack::Pikelet::Resque,
+      type_klass = [Flapjack::Pikelet::Generic,
         Flapjack::Pikelet::Thin].detect do |kl|
 
         kl::PIKELET_TYPES[type]
@@ -57,7 +55,6 @@ module Flapjack
     def self.create(type, opts = {})
       pikelet = nil
       [Flapjack::Pikelet::Generic,
-       Flapjack::Pikelet::Resque,
        Flapjack::Pikelet::Thin].each do |kl|
         next unless kl::PIKELET_TYPES[type]
         break if pikelet = kl.create(type, opts)
@@ -95,14 +92,6 @@ module Flapjack
         @status = 'stopping'
       end
 
-      def configure_resque
-        unless ::Resque.instance_variable_defined?('@flapjack_pool') && !::Resque.instance_variable_get('@flapjack_pool').nil?
-          resque_pool = Flapjack::RedisPool.new(:config => @redis_config, :logger => @logger)
-          ::Resque.instance_variable_set('@flapjack_pool', resque_pool)
-          ::Resque.redis = resque_pool
-        end
-      end
-
     end
 
     class Generic < Flapjack::Pikelet::Base
@@ -111,7 +100,11 @@ module Flapjack
                       'processor'  => Flapjack::Processor,
                       'jabber'     => Flapjack::Gateways::Jabber,
                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
-                      'oobetet'    => Flapjack::Gateways::Oobetet}
+                      'oobetet'    => Flapjack::Gateways::Oobetet,
+                      'email'      => Flapjack::Gateways::Email,
+                      'sms'        => Flapjack::Gateways::SmsMessagenet,
+                      'sms_twilio' => Flapjack::Gateways::SmsTwilio,
+                      'sns'        => Flapjack::Gateways::AwsSns}
 
       def self.create(type, opts = {})
         self.new(type, PIKELET_TYPES[type], :config => opts[:config],
@@ -122,8 +115,6 @@ module Flapjack
 
       def initialize(type, pikelet_klass, opts = {})
         super(type, pikelet_klass, opts)
-
-        configure_resque if type == 'notifier'
 
         @pikelet = @klass.new(opts.merge(:logger => @logger))
       end
@@ -153,69 +144,6 @@ module Flapjack
         @status = 'stopped' if @fiber && !@fiber.alive?
       end
 
-    end
-
-    class Resque < Flapjack::Pikelet::Base
-
-      PIKELET_TYPES = {'email'      => Flapjack::Gateways::Email,
-                       'sms'        => Flapjack::Gateways::SmsMessagenet,
-                       'sms_twilio' => Flapjack::Gateways::SmsTwilio,
-                       'sns'        => Flapjack::Gateways::AwsSns}
-
-      def self.create(type, opts = {})
-        self.new(type, PIKELET_TYPES[type], :config => opts[:config],
-          :redis_config => opts[:redis_config],
-          :boot_time => opts[:boot_time])
-      end
-
-      def initialize(type, pikelet_klass, opts = {})
-        super(type, pikelet_klass, opts)
-
-        configure_resque
-
-        # guard against another Resque pikelet having created the pool already
-        unless defined?(@@redis_connection) && !@@redis_connection.nil?
-          @@redis_connection = Flapjack::RedisPool.new(:config => @redis_config, :logger => @logger)
-        end
-
-        pikelet_klass.instance_variable_set('@config', @config)
-        pikelet_klass.instance_variable_set('@redis', @@redis_connection)
-        pikelet_klass.instance_variable_set('@logger', @logger)
-
-        # TODO error if config['queue'].nil?
-
-        @worker = EM::Resque::Worker.new(@config['queue'])
-        # # Use these to debug the resque workers
-        # worker.verbose = true
-        # worker.very_verbose = true
-      end
-
-      def start
-        @fiber = Fiber.new {
-          @worker.work(0.1)
-        }
-        super
-        @klass.start if @klass.respond_to?(:start)
-        @fiber.resume
-      end
-
-      # this should only reload if all changes can be applied -- will
-      # return false to log warning otherwise
-      def reload(cfg)
-        @klass.respond_to?(:reload) ?
-          (@klass.reload(cfg) && super(cfg)) : super(cfg)
-      end
-
-      def stop
-        @worker.shutdown if @worker && @fiber && @fiber.alive?
-        @klass.stop if @klass.respond_to?(:stop)
-        super
-      end
-
-      def update_status
-        return @status unless 'stopping'.eql?(@status)
-        @status = 'stopped' if @fiber && !@fiber.alive?
-      end
     end
 
     class Thin < Flapjack::Pikelet::Base

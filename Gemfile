@@ -13,7 +13,6 @@ group :test do
   gem 'rack-test'
   gem 'pact'
   gem 'async_rack_test', '>= 0.0.5'
-  gem 'resque_spec'
   gem 'webmock'
   gem 'guard'
   gem 'rb-fsevent'

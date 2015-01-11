@@ -12,10 +12,6 @@ describe Flapjack::Pikelet do
 
   let(:time) { Time.now }
 
-  before do
-    Flapjack::Pikelet::Resque.class_variable_set(:@@resque_pool, nil)
-  end
-
   it "creates and starts a processor pikelet" do
     expect(Flapjack::Logger).to receive(:new).and_return(logger)
 
@@ -38,35 +34,25 @@ describe Flapjack::Pikelet do
     pik.start
   end
 
-  it "creates and starts a resque worker gateway" do
+  it "creates and starts a generic worker gateway" do
     expect(Flapjack::Logger).to receive(:new).and_return(logger)
 
     expect(config).to receive(:[]).with('logger').and_return(nil)
-    expect(config).to receive(:[]).with('queue').and_return('email_notif')
 
-    resque_redis = double('resque_redis')
-    redis = double('redis')
-    expect(Flapjack::RedisPool).to receive(:new).twice.and_return(resque_redis, redis)
-    expect(Resque).to receive(:redis=).with(resque_redis)
+    fc = double('coordinator')
 
-    expect(Flapjack::Gateways::Email).to receive(:instance_variable_set).
-      with('@config', config)
-    expect(Flapjack::Gateways::Email).to receive(:instance_variable_set).
-      with('@redis', redis)
-    expect(Flapjack::Gateways::Email).to receive(:instance_variable_set).
-      with('@logger', logger)
-
-    worker = double('worker')
-    expect(worker).to receive(:work).with(0.1)
-    expect(Flapjack::Gateways::Email).to receive(:start)
-    expect(EM::Resque::Worker).to receive(:new).with('email_notif').and_return(worker)
+    email = double('email')
+    expect(email).to receive(:start)
+    expect(Flapjack::Gateways::Email).to receive(:new).with(:config => config,
+        :redis_config => redis_config, :boot_time => time, :logger => logger, :coordinator => fc).
+      and_return(email)
 
     expect(fiber).to receive(:resume)
     expect(Fiber).to receive(:new).and_yield.and_return(fiber)
 
     pik = Flapjack::Pikelet.create('email', :config => config,
-      :redis_config => redis_config)
-    expect(pik).to be_a(Flapjack::Pikelet::Resque)
+      :redis_config => redis_config, :boot_time => time, :coordinator => fc)
+    expect(pik).to be_a(Flapjack::Pikelet::Generic)
     pik.start
   end
 

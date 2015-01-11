@@ -5,6 +5,8 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
   let(:lock) { double(Monitor) }
 
+  let(:redis) { double('redis') }
+
   let(:config) { {'username'  => 'user',
                   'password'  => 'password'
                  }
@@ -39,10 +41,11 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       to_return(:status => 200)
 
     EM.synchrony do
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', config)
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsMessagenet.start
-      Flapjack::Gateways::SmsMessagenet.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      sms_messagenet = Flapjack::Gateways::SmsMessagenet.new(:config => config, :logger => @logger)
+      sms_messagenet.deliver(alert)
       EM.stop
     end
     expect(req).to have_been_requested
@@ -64,10 +67,11 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
       to_return(:status => 200)
 
     EM.synchrony do
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', config)
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsMessagenet.start
-      Flapjack::Gateways::SmsMessagenet.perform(long_msg)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(long_msg, :logger => @logger)
+      sms_messagenet = Flapjack::Gateways::SmsMessagenet.new(:config => config, :logger => @logger)
+      sms_messagenet.deliver(alert)
       EM.stop
     end
     expect(req).to have_been_requested
@@ -75,10 +79,11 @@ describe Flapjack::Gateways::SmsMessagenet, :logger => true do
 
   it "does not send an SMS message with an invalid config" do
     EM.synchrony do
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', config.reject {|k, v| k == 'password'})
-      Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsMessagenet.start
-      Flapjack::Gateways::SmsMessagenet.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      sms_messagenet = Flapjack::Gateways::SmsMessagenet.new(:config => config.reject {|k, v| k == 'password'}, :logger => @logger)
+      sms_messagenet.deliver(alert)
       EM.stop
     end
 

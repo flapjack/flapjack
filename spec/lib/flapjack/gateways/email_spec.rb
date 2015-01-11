@@ -3,21 +3,21 @@ require 'flapjack/gateways/email'
 
 describe Flapjack::Gateways::Email, :logger => true do
 
-  it "can have a custom from email address" do
-    email = double('email')
-    redis = double('redis')
+  let(:client) { double('client') }
+  let(:redis) { double('redis') }
 
+  it "can have a custom from email address" do
     expect(EM::P::SmtpClient).to receive(:send).with(
       hash_including(host: 'localhost',
                      port: 25,
                      from: "from@example.org")
-    ).and_return(email)
+    ).and_return(client)
 
     response = double(response)
     expect(response).to receive(:"respond_to?").with(:code).and_return(true)
     expect(response).to receive(:code).and_return(250)
 
-    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(client).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
@@ -31,28 +31,29 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'event_id'            => 'example.com:ping'}
 
     config = {"smtp_config" => {'from' => 'from@example.org'}}
-    Flapjack::Gateways::Email.instance_variable_set('@config', config)
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.perform(notification)
+
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(notification, :logger => @logger)
+      email = Flapjack::Gateways::Email.new(:config => config, :logger => @logger)
+      email.deliver(alert)
+      EM.stop
+    end
   end
 
   it "can have a full name in custom from email address" do
-    email = double('email')
-    redis = double('redis')
-
     expect(EM::P::SmtpClient).to receive(:send).with(
       hash_including(host: 'localhost',
                      port: 25,
                      from: "from@example.org")
-    ).and_return(email)
+    ).and_return(client)
 
     response = double(response)
     expect(response).to receive(:"respond_to?").with(:code).and_return(true)
     expect(response).to receive(:code).and_return(250)
 
-    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(client).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
@@ -66,17 +67,18 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'event_id'            => 'example.com:ping'}
 
     config = {"smtp_config" => {'from' => 'Full Name <from@example.org>'}}
-    Flapjack::Gateways::Email.instance_variable_set('@config', config)
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.perform(notification)
+
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(notification, :logger => @logger)
+      email = Flapjack::Gateways::Email.new(:config => config, :logger => @logger)
+      email.deliver(alert)
+      EM.stop
+    end
   end
 
   it "can have a custom reply-to address" do
-    email = double('email')
-    redis = double('redis')
-
     expect(EM::P::SmtpClient).to receive(:send) { |message|
       # NOTE No access to headers directly. Must be determined from message content
       expect( message[:content] ).to include("Reply-To: reply-to@example.com")
@@ -84,13 +86,13 @@ describe Flapjack::Gateways::Email, :logger => true do
       expect( message[:host] ).to eql('localhost')
       expect( message[:port] ).to eql(25)
       expect( message[:from] ).to eql('from@example.org')
-    }.and_return(email)
+    }.and_return(client)
 
     response = double(response)
     expect(response).to receive(:"respond_to?").with(:code).and_return(true)
     expect(response).to receive(:code).and_return(250)
 
-    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(client).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
@@ -105,27 +107,27 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     config = {"smtp_config" => {'from' => 'from@example.org', 'reply_to' => 'reply-to@example.com'}}
 
-    Flapjack::Gateways::Email.instance_variable_set('@config', config)
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.perform(notification)
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(notification, :logger => @logger)
+      email = Flapjack::Gateways::Email.new(:config => config, :logger => @logger)
+      email.deliver(alert)
+      EM.stop
+    end
   end
 
   it "must default to from address if no reply-to given" do
-    email = double('email')
-    redis = double('redis')
-
     expect(EM::P::SmtpClient).to receive(:send) { |message|
       # NOTE No access to headers directly. Must be determined from message content
       expect( message[:content] ).to include("Reply-To: from@example.org")
-    }.and_return(email)
+    }.and_return(client)
 
     response = double(response)
     expect(response).to receive(:"respond_to?").with(:code).and_return(true)
     expect(response).to receive(:code).and_return(250)
 
-    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(client).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
@@ -140,31 +142,31 @@ describe Flapjack::Gateways::Email, :logger => true do
 
     config = {"smtp_config" => {'from' => 'from@example.org'}}
 
-    Flapjack::Gateways::Email.instance_variable_set('@config', config)
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.perform(notification)
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(notification, :logger => @logger)
+      email = Flapjack::Gateways::Email.new(:config => config, :logger => @logger)
+      email.deliver(alert)
+      EM.stop
+    end
   end
 
   it "sends a mail with text, html parts and default from address" do
-    email = double('email')
-
     entity_check = double(Flapjack::Data::EntityCheck)
-    redis = double('redis')
 
     # TODO better checking of what gets passed here
     expect(EM::P::SmtpClient).to receive(:send).with(
       hash_including(:host    => 'localhost',
                      :port    => 25,
                      :from    => "flapjack@example.com"
-                    )).and_return(email)
+                    )).and_return(client)
 
     response = double(response)
     expect(response).to receive(:"respond_to?").with(:code).and_return(true)
     expect(response).to receive(:code).and_return(250)
 
-    expect(EM::Synchrony).to receive(:sync).with(email).and_return(response)
+    expect(EM::Synchrony).to receive(:sync).with(client).and_return(response)
 
     notification = {'notification_type'   => 'recovery',
                     'contact_first_name'  => 'John',
@@ -177,12 +179,15 @@ describe Flapjack::Gateways::Email, :logger => true do
                     'time'                => Time.now.to_i,
                     'event_id'            => 'example.com:ping'}
 
-    Flapjack::Gateways::Email.instance_variable_set('@config', {})
-    Flapjack::Gateways::Email.instance_variable_set('@redis', redis)
-    Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-    Flapjack::Gateways::Email.start
-    Flapjack::Gateways::Email.instance_variable_set('@fqdn', "example.com")
-    Flapjack::Gateways::Email.perform(notification)
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(notification, :logger => @logger)
+      email = Flapjack::Gateways::Email.new(:config => {}, :logger => @logger)
+      email.instance_variable_set('@fqdn', "example.com")
+      email.deliver(alert)
+      EM.stop
+    end
   end
 
 end
