@@ -11,6 +11,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   let(:check_tags)  { double('check_tags') }
 
   it 'adds tags to a check' do
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Rule,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
@@ -36,6 +40,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   end
 
   it 'updates tags for a check' do
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Rule,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).

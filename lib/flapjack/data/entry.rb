@@ -47,6 +47,15 @@ module Flapjack
       validates :action, :allow_nil => true,
         :inclusion => {:in => Flapjack::Data::Entry::ACTIONS}
 
+      # TODO handle JSON exception
+      def perfdata
+        if self.perfdata_json.nil?
+          @perfdata = nil
+          return
+        end
+        @perfdata ||= Flapjack.load_json(self.perfdata_json)
+      end
+
       # example perfdata: time=0.486630s;;;0.000000 size=909B;;;0
       def perfdata=(data)
         if data.nil?

@@ -16,7 +16,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -47,7 +48,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it 'creates a tag linked to a check' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -87,7 +89,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it 'creates a tag linked to a check and a rule' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])

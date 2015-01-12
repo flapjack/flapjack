@@ -1,4 +1,4 @@
-<% page_title "#{h(@check)} on #{h(@entity)}" %>
+<% page_title "#{h(@check.name)}" %>
 <div class="page-header">
   <h2><%= h @check.name %></h2>
 </div>
@@ -17,7 +17,6 @@
                         else
                           "info #{@check_state}"
                         end
-
     %>
 
     <div class="alert alert-<%= state_class %>">
@@ -382,7 +381,7 @@
 <div class="row">
   <div id="contacts" class="col-md-8">
     <h3>Contacts</h3>
-    <% if @contacts.empty? %>
+    <% if @contacts.nil? || @contacts.empty? %>
       <p>There are <strong>no contacts</strong> associated with this check.</p>
     <% else %>
       <table class="table table-bordered table-hover table-condensed">
@@ -394,7 +393,7 @@
           <tr>
             <td><a href="<%= @base_url %>contacts/<%= u(contact.id) %>" title="contact details"><%= h contact.name %></a></td>
             <td>
-              <%- contact_media = @media_by_contact_id[contact.id] %>
+              <% contact_media = @media_by_contact_id[contact.id] %>
               <% if contact_media.nil? || contact_media.empty? %>
                 <p>No media</p>
               <% else %>

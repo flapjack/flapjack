@@ -10,7 +10,7 @@ module Flapjack
         UUID_REGEXP = /^#{Flapjack::UUID_RE}$/
 
         def validate(record)
-          if UUID_REGEXP.match(record.id.to_s).nil?
+          if !record.id.nil? && UUID_REGEXP.match(record.id.to_s).nil?
             record.errors.add(:id, 'is not a UUID')
           end
         end

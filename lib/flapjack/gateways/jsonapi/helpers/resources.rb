@@ -47,11 +47,7 @@ module Flapjack
               end
               links_by_resource = resources_data.each_with_object({}) do |rd, memo|
                 record_data = normalise_json_data(attribute_types, rd)
-                if id_field.nil?
-                  record_data[:id] ||= klass.generate_id
-                else
-                  record_data[:id] = record_data[id_field]
-                end
+                record_data[:id] = record_data[id_field] unless id_field.nil?
                 r = klass.new(record_data)
                 halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
                 memo[r] = rd['links']

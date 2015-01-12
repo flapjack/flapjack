@@ -193,8 +193,6 @@ module Flapjack
         Flapjack::Data::Tag, Flapjack::Data::Route, Flapjack::Data::Medium,
         Flapjack::Data::Notification) do
 
-        # TODO rethink name / event_id mapping, current behaviour is quick
-        # hack for Flapjack v1 equivalence
         check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
           Flapjack::Data::Check.new(:name => event.id)
 

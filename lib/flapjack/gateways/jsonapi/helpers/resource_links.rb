@@ -19,14 +19,16 @@ module Flapjack
             # Not checking for duplication on adding existing to a multiple
             # association, the JSONAPI spec doesn't ask for it
             if !multiple_klass.nil?
-              multiple_klass[:data].lock(*multiple_klass[:related]) do
+              assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
+              klass.lock(*assoc_classes) do
                 associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
                 resource.send(assoc_name.to_sym).add(*associated)
               end
             elsif !singular_klass.nil?
               halt(err(409, "Association '#{assoc_name}' is already populated")) unless resource.send(assoc_name.to_sym).nil?
               halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              singular_klass[:data].lock(*singular_klass[:related]) do
+              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+              klass.lock(*assoc_classes) do
                 associated = singular_klass[:data].find_by_id!(*assoc_ids)
                 resource.send("#{assoc_name}=".to_sym, associated)
               end
@@ -62,7 +64,8 @@ module Flapjack
             multiple_klass = multiple_links[assoc_name.to_sym]
 
             if !multiple_klass.nil?
-              multiple_klass[:data].lock(*multiple_klass[:related]) do
+              assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
+              klass.lock(*assoc_classes) do
                 current_assoc_ids = resource.send(assoc_name.to_sym).ids
                 to_remove = current_assoc_ids - assoc_ids
                 to_add    = assoc_ids - current_assoc_ids
@@ -73,7 +76,8 @@ module Flapjack
               end
             elsif !singular_klass.nil?
               halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              singular_klass[:data].lock(*singular_klass[:related]) do
+              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+              klass.lock(*assoc_classes) do
                 value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
                 resource.send("#{assoc_name}=".to_sym, value)
               end

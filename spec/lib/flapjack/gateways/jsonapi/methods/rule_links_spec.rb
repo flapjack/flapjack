@@ -14,6 +14,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   let(:rule_media) { double('rule_media') }
 
   it 'sets a contact for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
@@ -38,6 +41,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'changes the contact for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
@@ -61,6 +67,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'adds a medium to a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
@@ -86,6 +95,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'updates media for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
@@ -113,6 +125,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'adds tags to a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
@@ -138,6 +154,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'updates tags for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).

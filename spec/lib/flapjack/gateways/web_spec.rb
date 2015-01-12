@@ -158,7 +158,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
 
-      expect(check).to receive(:name).and_return(check_name)
+      expect(check).to receive(:name).twice.and_return(check_name)
 
       failing_entry = double(Flapjack::Data::Entry)
       failing_state = double(Flapjack::Data::State)
@@ -213,9 +213,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
         and_return(check)
 
       expect(Flapjack::Data::Contact).to receive(:lock).
-        with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
+        with(Flapjack::Data::Medium, Flapjack::Data::Rule,
+             Flapjack::Data::Route).and_yield
 
-      expect(check).to receive(:rule_ids_by_contact_id).and_return({})
+      expect(check).to receive(:rule_ids_and_route_ids).and_return([{}, {}])
 
       get "/checks/#{check.id}"
       expect(last_response).to be_ok
@@ -312,8 +313,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       all_media = double('all_media', :all => [medium])
       expect(contact).to receive(:media).and_return(all_media)
 
-      no_notification_rules = double('no_notification_rules', :all => [])
-      expect(contact).to receive(:notification_rules).and_return(no_notification_rules)
+      no_rules = double('no_rules', :all => [])
+      expect(contact).to receive(:rules).and_return(no_rules)
 
       no_checks = double('no_checks', :all => [])
       expect(contact).to receive(:checks).and_return(no_checks)

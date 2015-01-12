@@ -44,7 +44,7 @@ module Flapjack
 
       validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::Entry::ACTIONS}
 
-      validates :condition_duration, :presence => true,
+      validates :condition_duration, :presence => true, :allow_nil => true,
         :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}
 
       validates_each :rollup_states_json do |record, att, value|

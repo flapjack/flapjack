@@ -14,6 +14,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
   let(:tag_rules)  { double('tag_rules') }
 
   it 'adds a check to a tag' do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
@@ -39,6 +43,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
   end
 
   it 'updates checks for a tag' do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).with(check.id).
@@ -66,6 +74,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
   end
 
   it 'adds a rule to a tag' do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
@@ -91,6 +103,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
   end
 
   it 'updates rules for a tag' do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).

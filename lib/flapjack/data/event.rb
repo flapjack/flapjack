@@ -14,8 +14,8 @@ module Flapjack
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       # type was a required key in v1, but is superfluous
-      REQUIRED_KEYS = %w(state entity check summary)
-      OPTIONAL_KEYS = %w(time details acknowledgement_id duration tags perfdata type)
+      REQUIRED_KEYS = %w(state check summary)
+      OPTIONAL_KEYS = %w(entity time details acknowledgement_id duration tags perfdata type)
 
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
@@ -24,7 +24,7 @@ module Flapjack
           "state must be one of 'ok', 'warning', 'critical', 'unknown', " +
           "'acknowledgement' or 'test_notifications'",
 
-        proc {|e| e['entity'].is_a?(String) } =>
+        proc {|e| e['entity'].nil? || e['entity'].is_a?(String) } =>
           "entity must be a string",
 
         proc {|e| e['check'].is_a?(String) } =>
@@ -154,7 +154,11 @@ module Flapjack
       end
 
       def initialize(attrs = {})
-        @id = "#{attrs['entity']}:#{attrs['check']}"
+        @id = if attrs['entity'].nil?
+          attrs['check']
+        else
+          "#{attrs['entity']}:#{attrs['check']}"
+        end
         [:state, :time, :summary, :perfdata, :details, :acknowledgement_id,
          :duration].each do |key|
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])

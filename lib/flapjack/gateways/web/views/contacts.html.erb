@@ -10,12 +10,10 @@
   <table class="table table-bordered table-hover table-condensed">
     <tr>
       <th>Name</th>
-      <th>Email</th>
     </tr>
     <% @contacts.sort_by(&:name).each do |contact| %>
     <tr>
       <td><a href="<%= @base_url %>contacts/<%= contact.id %>" title="contact details"><%= h contact.name %></a></td>
-      <td><%= h contact.email %></td>
     </tr>
     <% end %>
   </table>

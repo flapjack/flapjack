@@ -14,7 +14,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
   it "creates a rule" do
     expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
-      Flapjack::Data::Medium, Flapjack::Data::Tag).and_yield
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -44,7 +45,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
   it "does not create a rule if the data is improperly formatted" do
     expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
-      Flapjack::Data::Medium, Flapjack::Data::Tag).and_yield
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     expect(Flapjack::Data::Rule).to receive(:intersect).
@@ -63,8 +65,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "creates a rule linked to a contact" do
-    expect(Flapjack::Data::Rule).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag).and_yield
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -101,8 +104,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not create a rule with a linked contact if the contact doesn't exist" do
-    expect(Flapjack::Data::Rule).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag).and_yield
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
