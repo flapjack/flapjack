@@ -16,8 +16,8 @@ module Flapjack
             singular_links, multiple_links = association_klasses(klass)
 
             validate_data(resources_data, :attributes => attributes,
-              :singular_links => singular_links,
-              :multiple_links => multiple_links)
+              :singular_links => singular_links.keys,
+              :multiple_links => multiple_links.keys)
 
             resources = nil
 
@@ -27,17 +27,31 @@ module Flapjack
             data_ids = resources_data.reject {|d| d[idf.to_s].nil? }.
                                       map    {|i| i[idf.to_s].to_s }
 
-            assoc_klasses = singular_links.values | multiple_links.values
+            assoc_klasses = singular_links.values.inject([]) {|sl_memo, slv|
+              sl_memo << slv[:data]
+              sl_memo slv[:related] unless (slv[:related].nil? || slv[:related].empty?)
+              sl_memo
+            } | multiple_links.values.inject([]) {|ml_memo, mlv|
+              ml_memo << mlv[:data]
+              ml_memo += mlv[:related] unless (mlv[:related].nil? || mlv[:related].empty?)
+              ml_memo
+            }
 
             attribute_types = klass.attribute_types
 
             klass.lock(*assoc_klasses) do
-              conflicted_ids = klass.intersect(idf => data_ids).ids
-              halt(err(403, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
-                       conflicted_ids.join(', '))) unless conflicted_ids.empty?
+              unless data_ids.empty?
+                conflicted_ids = klass.intersect(idf => data_ids).ids
+                halt(err(403, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
+                         conflicted_ids.join(', '))) unless conflicted_ids.empty?
+              end
               links_by_resource = resources_data.each_with_object({}) do |rd, memo|
                 record_data = normalise_json_data(attribute_types, rd)
-                record_data[:id] = record_data[id_field] unless id_field.nil?
+                if id_field.nil?
+                  record_data[:id] ||= klass.generate_id
+                else
+                  record_data[:id] = record_data[id_field]
+                end
                 r = klass.new(record_data)
                 halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
                 memo[r] = rd['links']
@@ -50,13 +64,13 @@ module Flapjack
                 singular_links.each_pair do |assoc, assoc_klass|
                   next unless links.has_key?(assoc.to_s)
                   memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc.to_s] = assoc_klass.find_by_id!(links[assoc.to_s])
+                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s])
                 end
 
                 multiple_links.each_pair do |assoc, assoc_klass|
                   next unless links.has_key?(assoc.to_s)
                   memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc.to_s] = assoc_klass.find_by_ids!(*links[assoc.to_s])
+                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_ids!(*links[assoc.to_s])
                 end
               end
 
@@ -135,8 +149,8 @@ module Flapjack
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
             validate_data(resources_data, :attributes => attributes,
-              :singular_links => singular_links,
-              :multiple_links => multiple_links)
+              :singular_links => singular_links.keys,
+              :multiple_links => multiple_links.keys)
             resources = klass.find_by_ids!(*ids)
 
             if resources_data.map {|d| d['id'] }.sort != ids.sort
@@ -145,7 +159,13 @@ module Flapjack
 
             resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
-            assoc_klasses = singular_links.values | multiple_links.values
+            assoc_klasses = singular_links.values.each_with_object([]) {|slv, sl_memo|
+              sl_memo << slv[:data]
+              sl_memo += slv[:related] unless slv[:related].nil? || slv[:related].empty?
+            } | multiple_links.values.each_with_object([]) {|mlv, ml_memo|
+              ml_memo << mlv[:data]
+              ml_memo += mlv[:related] unless mlv[:related].nil? || mlv[:related].empty?
+            }
 
             attribute_types = klass.attribute_types
 
@@ -162,7 +182,7 @@ module Flapjack
               singular_links.each_pair do |assoc, assoc_klass|
                 next unless links.has_key?(assoc.to_s)
                 memo[r.id] ||= {}
-                memo[r.id][assoc] = assoc_klass.find_by_id!(links[assoc])
+                memo[r.id][assoc] = assoc_klass[:data].find_by_id!(links[assoc])
               end
 
               multiple_links.each_pair do |assoc, assoc_klass|
@@ -174,8 +194,8 @@ module Flapjack
                 to_add    = links[assoc.to_s] - current_assoc_ids
 
                 memo[r.id][assoc] = [
-                  to_remove.empty? ? [] : assoc_klass.find_by_ids!(*to_remove),
-                  to_add.empty?    ? [] : assoc_klass.find_by_ids!(*to_add)
+                  to_remove.empty? ? [] : assoc_klass[:data].find_by_ids!(*to_remove),
+                  to_add.empty?    ? [] : assoc_klass[:data].find_by_ids!(*to_add)
                 ]
               end
             end
@@ -231,13 +251,13 @@ module Flapjack
             klass.send(:with_association_data) do |assoc_data|
               assoc_data.each_pair do |name, data|
                 if sa = singular_aliases.detect {|a| a.has_key?(name) }
-                  singular_links[sa[name]] = data.data_klass
+                  singular_links[sa[name]] = {:data => data.data_klass, :related => data.related_klasses}
                 elsif singular_names.include?(name)
-                  singular_links[name] = data.data_klass
+                  singular_links[name] = {:data => data.data_klass, :related => data.related_klasses}
                 elsif ma = multiple_aliases.detect {|a| a.has_key?(name) }
-                  multiple_links[ma[name]] = data.data_klass
+                  multiple_links[ma[name]] = {:data => data.data_klass, :related => data.related_klasses}
                 elsif multiple_names.include?(name)
-                  multiple_links[name] = data.data_klass
+                  multiple_links[name] = {:data => data.data_klass, :related => data.related_klasses}
                 end
               end
             end
@@ -340,8 +360,8 @@ module Flapjack
 
           def validate_data(data, options = {})
             valid_keys = ((options[:attributes] || []).map(&:to_s) + ['links']) | ['id']
-            sl = options[:singular_links] ? options[:singular_links].keys.map(&:to_s) : []
-            ml = options[:multiple_links] ? options[:multiple_links].keys.map(&:to_s) : []
+            sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
+            ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
             all_links = sl + ml
 
             data.each do |d|

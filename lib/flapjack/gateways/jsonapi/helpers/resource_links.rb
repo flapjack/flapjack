@@ -19,13 +19,17 @@ module Flapjack
             # Not checking for duplication on adding existing to a multiple
             # association, the JSONAPI spec doesn't ask for it
             if !multiple_klass.nil?
-              associated = multiple_klass.find_by_ids!(*assoc_ids)
-              resource.send(assoc_name.to_sym).add(*associated)
+              multiple_klass[:data].lock(*multiple_klass[:related]) do
+                associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
+                resource.send(assoc_name.to_sym).add(*associated)
+              end
             elsif !singular_klass.nil?
               halt(err(409, "Association '#{assoc_name}' is already populated")) unless resource.send(assoc_name.to_sym).nil?
               halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              associated = singular_klass.find_by_id!(*assoc_ids)
-              resource.send("#{assoc_name}=".to_sym, associated)
+              singular_klass[:data].lock(*singular_klass[:related]) do
+                associated = singular_klass[:data].find_by_id!(*assoc_ids)
+                resource.send("#{assoc_name}=".to_sym, associated)
+              end
             else
               # TODO halt
             end
@@ -58,17 +62,21 @@ module Flapjack
             multiple_klass = multiple_links[assoc_name.to_sym]
 
             if !multiple_klass.nil?
-              current_assoc_ids = resource.send(assoc_name.to_sym).ids
-              to_remove = current_assoc_ids - assoc_ids
-              to_add    = assoc_ids - current_assoc_ids
-              tr = to_remove.empty? ? [] : multiple_klass.find_by_ids!(*to_remove)
-              ta = to_add.empty?    ? [] : multiple_klass.find_by_ids!(*to_add)
-              resource.send(assoc_name.to_sym).delete(*tr) unless tr.empty?
-              resource.send(assoc_name.to_sym).add(*ta) unless ta.empty?
+              multiple_klass[:data].lock(*multiple_klass[:related]) do
+                current_assoc_ids = resource.send(assoc_name.to_sym).ids
+                to_remove = current_assoc_ids - assoc_ids
+                to_add    = assoc_ids - current_assoc_ids
+                tr = to_remove.empty? ? [] : multiple_klass[:data].find_by_ids!(*to_remove)
+                ta = to_add.empty?    ? [] : multiple_klass[:data].find_by_ids!(*to_add)
+                resource.send(assoc_name.to_sym).delete(*tr) unless tr.empty?
+                resource.send(assoc_name.to_sym).add(*ta) unless ta.empty?
+              end
             elsif !singular_klass.nil?
               halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              value = assoc_ids.first.nil? ? nil : singular_klass.find_by_id!(assoc_ids.first)
-              resource.send("#{assoc_name}=".to_sym, value)
+              singular_klass[:data].lock(*singular_klass[:related]) do
+                value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
+                resource.send("#{assoc_name}=".to_sym, value)
+              end
             else
               # TODO halt
             end
