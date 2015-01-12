@@ -9,8 +9,8 @@ module Flapjack
   module Gateways
     class SmsGammu
       INSERT_QUERY = <<-SQL
-        INSERT INTO outbox (InsertIntoDB, Text, DestinationNumber, CreatorID)
-        VALUES ('%s', '%s', '%s', '%s')
+        INSERT INTO outbox (InsertIntoDB, TextDecoded, DestinationNumber, CreatorID, Class)
+        VALUES ('%s', '%s', '%s', '%s', %s)
       SQL
 
       class << self
@@ -48,7 +48,7 @@ module Flapjack
 
         def send_message(message, from, to)
           begin
-            @db.query(INSERT_QUERY % [Time.now, message, to, from])
+            @db.query(INSERT_QUERY % [Time.now, message, to, from, 1])
             @sent += 1
             @alert.record_send_success!
             @logger.debug "Sent SMS via Gammu"
