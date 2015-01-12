@@ -14,6 +14,7 @@ require 'flapjack/utility'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
+require 'flapjack/gateways/sms_gammu'
 require 'flapjack/gateways/aws_sns'
 
 module Flapjack
@@ -158,6 +159,8 @@ module Flapjack
         case media_type.to_sym
         when :sms
           Resque.enqueue_to(@queues['sms'], Flapjack::Gateways::SmsMessagenet, contents)
+        when :sms_gammu
+          Resque.enqueue_to(@queues['sms_gammu'], Flapjack::Gateways::SmsGammu, contents)
         when :sms_twilio
           Resque.enqueue_to(@queues['sms_twilio'], Flapjack::Gateways::SmsTwilio, contents)
         when :email

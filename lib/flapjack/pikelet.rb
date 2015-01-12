@@ -26,6 +26,7 @@ require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
+require 'flapjack/gateways/sms_gammu'
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
@@ -160,6 +161,7 @@ module Flapjack
       PIKELET_TYPES = {'email'      => Flapjack::Gateways::Email,
                        'sms'        => Flapjack::Gateways::SmsMessagenet,
                        'sms_twilio' => Flapjack::Gateways::SmsTwilio,
+                       'sms_gammu'  => Flapjack::Gateways::SmsGammu,
                        'sns'        => Flapjack::Gateways::AwsSns}
 
       def self.create(type, opts = {})
