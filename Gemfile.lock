@@ -19,6 +19,7 @@ PATH
       ice_cube
       mail
       oj (>= 2.9.0)
+      rack (~> 1.5.2)
       rbtrace
       redis (>= 3.0.7)
       sinatra
@@ -75,12 +76,12 @@ GEM
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
     mime-types (2.4.3)
-    minitest (5.5.0)
-    msgpack (0.5.9)
+    minitest (5.5.1)
+    msgpack (0.5.10)
     multi_json (1.10.1)
     multi_test (0.1.1)
     numerizer (0.1.1)
-    oj (2.11.1)
+    oj (2.11.2)
     pact (1.4.0)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
@@ -115,10 +116,10 @@ GEM
       thor
     parslet (1.5.0)
       blankslate (~> 2.0)
-    rack (1.6.0)
+    rack (1.5.2)
     rack-protection (1.5.3)
       rack
-    rack-test (0.6.2)
+    rack-test (0.6.3)
       rack (>= 1.0)
     rake (10.4.2)
     randexp (0.1.7)

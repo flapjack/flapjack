@@ -22,6 +22,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'oj', '>= 2.9.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
+  gem.add_dependency 'rack', '~> 1.5.2' # until sinatra is fixed for rack 1.6.0+
   gem.add_dependency 'sinatra'
   gem.add_dependency 'mail'
   gem.add_dependency 'xmpp4r', '>= 0.5.5'
