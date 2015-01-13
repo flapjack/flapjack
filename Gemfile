@@ -21,6 +21,7 @@ group :test do
   gem 'guard-cucumber'
   gem 'fuubar'
   gem 'simplecov', :require => false
+  gem 'mysql2'
 
   # # Not compiling under 1.9.3-p550 anyway
   # if RUBY_VERSION.split('.')[0] == '1' && RUBY_VERSION.split('.')[1] == '9'
