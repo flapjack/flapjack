@@ -24,14 +24,14 @@ module Flapjack
 
       redis = @config['redis']
       redis_defaults.each_pair do |k,v|
-        next if redis.has_key?(k) && redis[k] &&
+        next if redis.has_key?(k) && !redis[k].nil? &&
           !(redis[k].is_a?(String) && redis[k].empty?)
         redis[k] = v
       end
 
       redis_path = (redis['path'] || nil)
       base_opts = HashWithIndifferentAccess.new({ :db => (redis['db'] || 0) })
-      base_opts[:driver] = redis['driver'] if redis['driver']
+      base_opts[:driver] = redis['driver'] unless redis['driver'].nil?
       redis_config = base_opts.merge(
         (redis_path ? { :path => redis_path } :
                       { :host => (redis['host'] || '127.0.0.1'),

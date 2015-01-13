@@ -8,6 +8,7 @@ class ::Logger; alias_method :write, :<<; end
 
 # fix for deprecation warning introduced by
 # https://bugs.ruby-lang.org/issues/7688 ; remove when fixed in xmpp4r
+# TODO move to spec_helper.rb, this is only a problem in RSpec
 if (RUBY_VERSION.split('.') <=> ['2', '2', '0']) >= 0
   require 'xmpp4r'
   require 'xmpp4r/jid'
@@ -71,7 +72,7 @@ module ::GLI
             break
           rescue UnknownCommand
             arguments.unshift(next_command_name)
-            # Although command finder could certainy know if it should use
+            # Although command finder could certainly know if it should use
             # the default command, it has no way to put the "unknown command"
             # back into the argument stack.  UGH.
             unless command.get_default_command.nil?
