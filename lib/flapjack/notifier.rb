@@ -4,6 +4,8 @@ require 'active_support/time'
 
 require 'em-hiredis'
 
+require 'flapjack/data/alert'
+
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
 require 'flapjack/data/notification'
@@ -14,6 +16,7 @@ require 'flapjack/utility'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
+require 'flapjack/gateways/sms_gammu'
 require 'flapjack/gateways/aws_sns'
 
 module Flapjack

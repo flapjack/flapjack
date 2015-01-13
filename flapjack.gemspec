@@ -42,4 +42,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'rake'
   gem.add_dependency 'gli', '= 2.12.0'
   gem.add_dependency 'nokogiri', '= 1.6.2.1'
+  gem.add_dependency 'mysql2'
 end

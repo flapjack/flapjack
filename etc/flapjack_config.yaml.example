@@ -40,6 +40,7 @@ production:
     email_queue: email_notifications
     sms_queue: sms_notifications
     sms_twilio_queue: sms_twilio_notifications
+    sms_gammu_queue: sms_gammu_notifications
     sns_queue: sns_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
@@ -116,6 +117,22 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
+    # Sends SMS notifications via Gammu
+    sms_gammu:
+      enabled: yes
+      queue: sms_gammu_notifications
+      from: "xxxxxxxxx"
+      mysql_host: "x.x.x.x"
+      mysql_database: "gammu"
+      mysql_username: "gammu"
+      mysql_password: "xxxxxxxx"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      templates:
+        rollup.text: '/etc/flapjack/templates/sms_gammu/rollup.text.erb'
+        alert.text: '/etc/flapjack/templates/sms_gammu/alert.text.erb'
     # Generates SNS notifications
     sns:
       enabled: no
