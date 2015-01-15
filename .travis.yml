@@ -1,8 +1,10 @@
+sudo: false
 language: ruby
 rvm:
 - '2.0'
 - '2.1'
 - '2.2'
+cache: bundler
 services:
 - redis-server
 before_script:
