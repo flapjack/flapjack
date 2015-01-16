@@ -111,14 +111,14 @@ module Flapjack
         migrate_rules
 
         migrate_states
-        migrate_actions  # only partially done
+        migrate_actions  # only partially done -- need to set latest_notifications etc.
 
         migrate_scheduled_maintenances
         migrate_unscheduled_maintenances # TODO notification data into entries?
 
-        # NB notification blocks aren't migrated
-
-        # migrate_alerting_checks # need to finish rule&tags first
+        # NB 'alerting checks' data isn't migrated, as it's not always possible to
+        # know which routes (in the new schema) would have caused the alert.
+        # TODO output a warning if any of these are set
       rescue Exception => e
         puts e.message
         trace = e.backtrace.join("\n")
@@ -149,7 +149,8 @@ module Flapjack
           media_intervals = @source_redis.hgetall("contact_media_intervals:#{contact_id}")
           media_rollup_thresholds = @source_redis.hgetall("contact_media_rollup_thresholds:#{contact_id}")
 
-          # skipped contact tags (dropped) and pagerduty media (moved to gateway config)
+          # skipped pagerduty media (moved to gateway config)
+          # TODO output warning if pagerduty media is found
 
           contact = Flapjack::Data::Contact.new(:name =>
               "#{contact_data['first_name']} #{contact_data['last_name']}",
@@ -297,6 +298,8 @@ module Flapjack
           # TODO pagination
           timestamps = @source_redis.lrange(timestamp_key, 0, -1)
 
+          most_severe = nil
+
           timestamps.each do |timestamp|
             condition = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:state")
             summary   = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:summary")
@@ -316,11 +319,25 @@ module Flapjack
 
             state.entries << entry
 
+            if Flapjack::Data::Condition.healthy?(condition)
+              most_severe = nil
+            elsif Flapjack::Data::Condition.unhealthy.has_key?(event_condition.name) &&
+              (most_severe.nil? ||
+               (Flapjack::Data::Condition.unhealthy[condition] <
+                  Flapjack::Data::Condition.unhealthy[most_severe.condition]))
+
+              most_severe = entry
+            end
+
             check.states << state
+          end
+
+          unless most_severe.nil?
+            check.most_severe = most_severe
           end
         end
 
-        # TODO foreach check, work out most_severe state and the various last_notifications
+        # TODO foreach check, work out most_severe state
       end
 
       # depends on checks
@@ -524,31 +541,6 @@ module Flapjack
           contact.rules.add(*rules)
         end
       end
-
-# # depends on contacts, media, checks
-# def migrate_alerting_checks
-
-#   alerting_checks_keys = @source_redis.keys('contact_alerting_checks:*:media:*')
-
-#   alerting_checks_keys.each do |alerting_checks_key|
-
-#     raise "Bad regex" unless alerting_checks_key =~ /\Acontact_alerting_checks:(#{ID_PATTERN_FRAGMENT}):media:(\w+)\z/
-
-#     contact_id = $1
-#     media_type = $2
-
-#     medium = find_medum(contact_id, media_type)
-
-#     contact_medium_checks = @source_redis.zrange(alerting_checks_key, 0, -1)
-
-#     contact_medium_checks.each do |entity_and_check_name|
-#       entity_name, check_name = entity_and_check_name.split(':', 1)
-#       check = find_or_create_check(entity_name, check_name)
-
-#       medium.alerting_checks << check
-#     end
-#   end
-# end
 
       # ###########################################################################
 
