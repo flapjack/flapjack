@@ -108,7 +108,7 @@ module Flapjack
 
         migrate_contact_entity_linkages
 
-        migrate_rules # only partially done
+        migrate_rules
 
         migrate_states
         migrate_actions  # only partially done
@@ -116,8 +116,9 @@ module Flapjack
         migrate_scheduled_maintenances
         migrate_unscheduled_maintenances # TODO notification data into entries?
 
-        # migrate_notification_blocks
-        # migrate_alerting_checks
+        # NB notification blocks aren't migrated
+
+        # migrate_alerting_checks # need to finish rule&tags first
       rescue Exception => e
         puts e.message
         trace = e.backtrace.join("\n")
@@ -251,7 +252,7 @@ module Flapjack
           contacts = contact_ids.collect {|c_id| find_contact(c_id) }
 
           contacts.each do |contact|
-            check_ids_by_contact_id_cache[contact.id] ||= []
+            @check_ids_by_contact_id_cache[contact.id] ||= []
           end
 
           tag_for_check = proc do |en, cn, tn|
@@ -259,7 +260,7 @@ module Flapjack
             check.tags << find_tag(tn, :create => true)
 
             contacts.each do |contact|
-              check_ids_by_contact_id_cache[contact.id] << check.id
+              @check_ids_by_contact_id_cache[contact.id] << check.id
             end
           end
 
@@ -437,6 +438,8 @@ module Flapjack
 
           contact = find_contact(contact_id)
 
+          check_ids = check_ids_by_contact_id_cache[contact.id]
+
           rules = []
 
           notification_rule_ids = @source_redis.smembers(notification_rules_key)
@@ -445,13 +448,19 @@ module Flapjack
 
             notification_rule_data = @source_redis.hgetall("notification_rule:#{notification_rule_id}")
 
-            # TODO for all rules created, add tags based on the various entity & tags attrs,
-            # and also set those on matching checks
-
             time_restrictions = Flapjack.load_json(notification_rule_data['time_restrictions'])
 
-            # entities = Set.new( Flapjack.load_json(notification_rule_data['entities']))
-            # tags     = Set.new( Flapjack.load_json(notification_rule_data['tags']))
+            entities = Set.new( Flapjack.load_json(notification_rule_data['entities']))
+            regex_entities = Set.new( Flapjack.load_json(notification_rule_data['regex_entities']))
+
+            tags       = Set.new( Flapjack.load_json(notification_rule_data['tags']))
+            regex_tags = Set.new( Flapjack.load_json(notification_rule_data['regex_tags']))
+
+            # collect specific matches together with regexes
+            regex_entities = regex_entities.collect {|re| Regex.new(re) } +
+              entities.to_a.collect {|entity| /\A#{Regex.escape(entity)}\z/}
+            regex_tags     = regex_tags.collect {|re| Regex.new(re) } +
+              tags.to_a.collect {|tag| /\A#{Regex.escape(tag)}\z/}
 
             media_states = {}
 
@@ -481,10 +490,33 @@ module Flapjack
 
               rule.media.add(*media) unless media.empty?
 
-              # TODO if all rule entities/tags fields are empty, create a tag that
-              # links the rule to all checks for entities that were registered for
-              # the contact -- otherwise apply the entities/tag fields as a filter
+              checks_for_rule = Flapjack::Data::Check.intersect(:id => check_ids)
 
+              checks = if regex_entities.empty? && regex_tags.empty?
+                checks_for_rule.all
+              else
+                # apply the entities/tag regexes as a filter
+                checks_for_rule.each_with_object([]) do |check, memo|
+                  entity_name = check.name.split(':', 2).first
+                  if regex_entities.all? {|re| re === entity_name }
+                    # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
+                    # not sure if this does what we want, but it's how it currently works
+                    matching_re = []
+                    check_tags.each do |check_tags|
+                      matching_re += regex_tags.select {|re| re === check_tag }
+                    end
+                    memo << check if matching_re.size >= regex_tags.size
+                  end
+                end
+              end
+
+              tags = checks.collect do |check|
+                tag = Flapjack::Data::Tag.new(:name => "migrated|contact_#{contact.id}|check_#{check.id}|")
+                check.tags << tag
+                tag
+              end
+
+              rule.tags.add(*tags)
               rules << rule
             end
           end
@@ -492,63 +524,6 @@ module Flapjack
           contact.rules.add(*rules)
         end
       end
-
-# # depends on contacts, media, checks
-# def migrate_notification_blocks
-#   # drop_alerts_for_contact:CONTACT_ID:MEDIA:ENTITY:CHECK:STATE
-#   nb_keys = @source_redis.keys('drop_alerts_for_contact:*:*:*:*:*')
-
-#   nb_keys.each do |nb_key|
-
-#     # TODO fix regex, check current code
-#     raise "Bad regex" unless nb_key =~ /\Adrop_alerts_for_contact:(#{ID_PATTERN_FRAGMENT}):(\w+):(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):(\w+)\z/
-
-#     contact_id  = $1
-#     media_type  = $2
-#     entity_name = $3
-#     check_name  = $4
-#     state       = $5
-
-#     # TODO Lua script for full timestamp back from Redis -- less fuzzy
-#     expiry_time = Time.now + @source_redis.ttl(nb_key)
-
-#     medium  = find_medum(contact_id, media_type)
-#     check   = find_or_create_check(entity_name, check_name)
-
-#     notification_block = Flapjack::Data::NotificationBlock.new(
-#       :expire_at => expiry_time, :rollup => false, :state => state)
-
-#     notification_block.save
-#     raise notification_block.errors.full_messages.join(", ") unless notification_block.persisted?
-
-#     check.notification_blocks  << notification_block
-#     medium.notification_blocks << notification_block
-#   end
-
-#   rnb_keys = @source_redis.keys('drop_rollup_alerts_for_contact:*:*')
-
-#   rnb_keys.each do |rnb_key|
-
-#     # TODO fix regex, check current code
-#     raise "Bad regex" unless rnb_key =~ /\Adrop_rollup_alerts_for_contact:(#{ID_PATTERN_FRAGMENT}):(\w+)\z/
-
-#     contact_id  = $1
-#     media_type  = $2
-
-#     # TODO Lua script for full timestamp back from Redis -- less fuzzy
-#     expiry_time = Time.now + @source_redis.ttl(rnb_key)
-
-#     medium = find_medum(contact_id, media_type)
-
-#     rollup_notification_block = Flapjack::Data::NotificationBlock.new(
-#       :expire_at => expiry_time, :rollup => true)
-#     rollup_notification_block.save
-#     raise rollup_notification_block.errors.full_messages.join(", ") unless rollup_notification_block.persisted?
-
-#     medium.notification_blocks << notification_block
-#   end
-
-# end
 
 # # depends on contacts, media, checks
 # def migrate_alerting_checks

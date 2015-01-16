@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: 42611b6ae403d7144f149c97fc88c7379b44653b
+  revision: a63dc955d809faf5012d3a083f87497ee3d2d94a
   branch: master
   specs:
     sandstorm (0.1.0)
