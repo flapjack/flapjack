@@ -40,6 +40,7 @@ module Flapjack
         purged = checks.inject([]) do |memo, check|
           pu = check.purge_history(options)
           memo << pu unless pu == 0
+          memo
         end
 
         if purged.empty?
