@@ -38,8 +38,6 @@ require 'flapjack/notifier'
 require 'flapjack/processor'
 require 'flapjack/patches'
 
-require 'resque_spec'
-
 class MockLogger
   attr_accessor :messages
 
@@ -122,6 +120,20 @@ redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
+# Not the most efficient of operations...
+def redis_peek(queue, start = 0, count = nil)
+  size = @notifier_redis.llen(queue)
+  start = 0 if start < 0
+  count = (size - start) if count.nil? || (count > (size - start))
+
+  (0..(size - 1)).inject([]) do |memo, n|
+    object = @notifier_redis.rpoplpush(queue, queue)
+    next memo unless (n >= start || n < (start + count))
+    memo << Flapjack.load_json(object)
+    memo
+  end
+end
+
 Around do |scenario, blk|
   EM.synchrony do
     blk.call
@@ -130,11 +142,13 @@ Around do |scenario, blk|
 end
 
 Before do
+  @redis_opts = redis_opts
   @logger = MockLogger.new
 end
 
 After do
   @logger.messages = []
+  @redis_opts = nil
 end
 
 Before('@processor') do
@@ -150,7 +164,7 @@ After('@processor') do
 end
 
 Before('@notifier') do
-  @notifier  = Flapjack::Notifier.new(:logger => @logger,
+  @notifier = Flapjack::Notifier.new(:logger => @logger,
     :redis_config => redis_opts,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
@@ -163,11 +177,6 @@ After('@notifier') do
   @notifier_redis.flushdb
   @notifier_redis.quit
   @notifier_redis = nil
-end
-
-Before('@resque') do
-  ResqueSpec.reset!
-  @queues = {:email => 'email_queue'}
 end
 
 Before('@time') do

@@ -1,4 +1,4 @@
-@notification_rules @resque @processor @notifier
+@notification_rules @processor @notifier
 Feature: Notification rules on a per contact basis
 
   Background:

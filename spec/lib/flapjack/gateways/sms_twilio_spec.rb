@@ -5,6 +5,8 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
 
   let(:lock) { double(Monitor) }
 
+  let(:redis) { double('redis') }
+
   let(:config) { {'account_sid'  => 'the_account_sid',
                   'auth_token'   => 'the_auth_token',
                   'from'         => 'the_from_address'
@@ -36,10 +38,11 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
       to_return(:status => 201)
 
     EM.synchrony do
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@config', config)
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsTwilio.start
-      Flapjack::Gateways::SmsTwilio.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      sms_twilio = Flapjack::Gateways::SmsTwilio.new(:config => config, :logger => @logger)
+      sms_twilio.deliver(alert)
       EM.stop
     end
     expect(req).to have_been_requested
@@ -63,10 +66,11 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
       to_return(:status => 200)
 
     EM.synchrony do
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@config', config)
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsTwilio.start
-      Flapjack::Gateways::SmsTwilio.perform(long_msg)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(long_msg, :logger => @logger)
+      sms_twilio = Flapjack::Gateways::SmsTwilio.new(:config => config, :logger => @logger)
+      sms_twilio.deliver(alert)
       EM.stop
     end
     expect(req).to have_been_requested
@@ -74,10 +78,11 @@ describe Flapjack::Gateways::SmsTwilio, :logger => true do
 
   it "does not send an SMS message with an invalid config" do
     EM.synchrony do
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@config', config.reject {|k, v| k == 'auth_token'})
-      Flapjack::Gateways::SmsTwilio.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::SmsTwilio.start
-      Flapjack::Gateways::SmsTwilio.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      sms_twilio = Flapjack::Gateways::SmsTwilio.new(:config => config.reject {|k, v| k == 'auth_token'}, :logger => @logger)
+      sms_twilio.deliver(alert)
       EM.stop
     end
 
