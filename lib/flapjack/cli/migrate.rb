@@ -462,6 +462,9 @@ module Flapjack
       def migrate_rules
         notification_rules_keys = @source_redis.keys('contact_notification_rules:*')
 
+        contact_counts_by_id = {}
+        check_counts_by_id = {}
+
         notification_rules_keys.each do |notification_rules_key|
 
           raise "Bad regex for '#{notification_rules_key}'" unless
@@ -470,6 +473,12 @@ module Flapjack
           contact_id = $1
 
           contact = find_contact(contact_id)
+
+          contact_num = contact_counts_by_id[contact.id]
+          if contact_num.nil?
+            contact_num = contact_counts_by_id.size + 1
+            contact_counts_by_id[contact.id] = contact_num
+          end
 
           check_ids = @check_ids_by_contact_id_cache[contact.id]
 
@@ -544,7 +553,14 @@ module Flapjack
               end
 
               tags = checks.collect do |check|
-                tag = Flapjack::Data::Tag.new(:name => "migrated|contact_#{contact.id}|check_#{check.id}|")
+
+                check_num = check_counts_by_id[check.id]
+                if check_num.nil?
+                  check_num = check_counts_by_id.size + 1
+                  check_counts_by_id[check.id] = check_num
+                end
+
+                tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}|")
                 tag.save
                 check.tags << tag
                 tag
@@ -562,7 +578,6 @@ module Flapjack
       # ###########################################################################
 
       def find_contact(old_contact_id)
-        puts "find_contact #{old_contact_id}"
         new_contact_id = @contact_id_cache[old_contact_id]
         return if new_contact_id.nil?
 
@@ -573,7 +588,6 @@ module Flapjack
       end
 
       def find_check(entity_name, check_name, opts = {})
-        puts "find_check #{entity_name}:#{check_name}"
         new_check_name = "#{entity_name}:#{check_name}"
         check = @check_name_cache[new_check_name]
 
@@ -589,7 +603,6 @@ module Flapjack
       end
 
       def find_tag(tag_name, opts = {})
-        puts "find_tag #{tag_name}"
         tag = @tag_name_cache[tag_name]
 
         if tag.nil? && opts[:create]
