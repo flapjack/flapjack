@@ -53,11 +53,14 @@ module Flapjack
         @global_options = global_options
         @options = options
 
-        @config = Flapjack::Configuration.new
-        @config.load(global_options[:config])
-        @config_env = @config.all
+        config = Flapjack::Configuration.new
 
-        @source_redis_options = @config.for_redis
+        if options[:source].nil? || options[:source].strip.empty?
+          config.load(global_options[:config])
+          config_env = config.all
+        end
+
+        @source_redis_options = config.for_redis
       end
 
       def to_v2
@@ -74,13 +77,13 @@ module Flapjack
         end
 
         dest_addr = @options[:destination]
-        dest_redis = Redis.new(:url => source_addr, :driver => :hiredis)
+        dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
 
         Sandstorm.redis = dest_redis
 
         dest_db_size = Sandstorm.redis.dbsize
         if dest_db_size > 0
-          if options[:force]
+          if @options[:force]
             Sandstorm.redis.flushdb
             puts "Cleared #{@options[:destination]} db"
           else
@@ -111,7 +114,7 @@ module Flapjack
         migrate_rules
 
         migrate_states
-        migrate_actions  # only partially done -- need to set latest_notifications etc.
+        migrate_actions
 
         migrate_scheduled_maintenances
         migrate_unscheduled_maintenances # TODO notification data into entries?
@@ -119,6 +122,7 @@ module Flapjack
         # NB 'alerting checks' data isn't migrated, as it's not always possible to
         # know which routes (in the new schema) would have caused the alert.
         # TODO output a warning if any of these are set
+
       rescue Exception => e
         puts e.message
         trace = e.backtrace.join("\n")
@@ -159,7 +163,7 @@ module Flapjack
           raise contact.errors.full_messages.join(", ") unless contact.persisted?
 
           media_addresses.each_pair do |media_type, address|
-            medium = Flapjack::Data::Medium.new(:transport => media_transport,
+            medium = Flapjack::Data::Medium.new(:transport => media_type,
               :address => address, :interval => media_intervals[media_type].to_i,
               :rollup_threshold => media_rollup_thresholds[media_type].to_i)
             medium.save
@@ -217,7 +221,6 @@ module Flapjack
             check.enabled = current_check_names.include?(check_name)
             check.save
 
-            # TODO do we want tag namespacing?
             check.tags << find_tag("entity_#{entity_name}", :create => true)
 
             if !entity_tags.nil? && !entity_tags.empty?
@@ -298,6 +301,15 @@ module Flapjack
           # TODO pagination
           timestamps = @source_redis.lrange(timestamp_key, 0, -1)
 
+          last_notifications = [:warning, :critical, :unknown, :recovery,
+                    :acknowledgement].each_with_object({}) do |state, memo|
+            ln = @source_redis.get("#{entity_name}:#{check_name}:last_#{state}_notification")
+            unless ln.nil? && ln =~ /^\d+$/
+              memo[state] = ln
+            end
+            memo
+          end
+
           most_severe = nil
 
           timestamps.each do |timestamp|
@@ -307,11 +319,11 @@ module Flapjack
             count     = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:count")
 
             state = Flapjack::Data::State.new(:condition => condition,
-              :timestamp => timestamp)
+              :timestamp => timestamp.to_i)
             state.save
             raise state.errors.full_messages.join(", ") unless state.persisted?
 
-            entry = Flapjack::Data::Entry.new(:timestamp => timestamp,
+            entry = Flapjack::Data::Entry.new(:timestamp => timestamp.to_i,
               :condition => condition, :summary => summary, :details => details)
             # TODO perfdata ?
             entry.save
@@ -321,12 +333,18 @@ module Flapjack
 
             if Flapjack::Data::Condition.healthy?(condition)
               most_severe = nil
-            elsif Flapjack::Data::Condition.unhealthy.has_key?(event_condition.name) &&
+            elsif Flapjack::Data::Condition.unhealthy.has_key?(condition) &&
               (most_severe.nil? ||
                (Flapjack::Data::Condition.unhealthy[condition] <
                   Flapjack::Data::Condition.unhealthy[most_severe.condition]))
 
-              most_severe = entry
+              most_severe = state
+            end
+
+            notif_state = 'ok'.eql?(condition) ? :recovery : condition.to_sym
+
+            if timestamp.to_i == last_notifications[notif_state]
+              check.last_notifications << entry
             end
 
             check.states << state
@@ -336,8 +354,6 @@ module Flapjack
             check.most_severe = most_severe
           end
         end
-
-        # TODO foreach check, work out most_severe state
       end
 
       # depends on checks
@@ -455,7 +471,7 @@ module Flapjack
 
           contact = find_contact(contact_id)
 
-          check_ids = check_ids_by_contact_id_cache[contact.id]
+          check_ids = @check_ids_by_contact_id_cache[contact.id]
 
           rules = []
 
@@ -474,10 +490,10 @@ module Flapjack
             regex_tags = Set.new( Flapjack.load_json(notification_rule_data['regex_tags']))
 
             # collect specific matches together with regexes
-            regex_entities = regex_entities.collect {|re| Regex.new(re) } +
-              entities.to_a.collect {|entity| /\A#{Regex.escape(entity)}\z/}
-            regex_tags     = regex_tags.collect {|re| Regex.new(re) } +
-              tags.to_a.collect {|tag| /\A#{Regex.escape(tag)}\z/}
+            regex_entities = regex_entities.collect {|re| Regexp.new(re) } +
+              entities.to_a.collect {|entity| /\A#{Regexp.escape(entity)}\z/}
+            regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
+              tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
 
             media_states = {}
 
@@ -498,11 +514,9 @@ module Flapjack
               rule.conditions_list   = fail_states.sort.join("|")
               rule.save
 
-              media = media_types_str.split('|').inject([]) do |memo, media_type|
+              media = media_types_str.split('|').each_with_object([]) do |media_type, memo|
                 medium = contact.media.intersect(:transport => media_type).all.first
-                raise "Couldn't find media #{media_type} for contact old_id #{contact_id}" if medium.nil?
-                memo += medium
-                memo
+                memo << medium unless medium.nil?
               end
 
               rule.media.add(*media) unless media.empty?
@@ -513,7 +527,7 @@ module Flapjack
                 checks_for_rule.all
               else
                 # apply the entities/tag regexes as a filter
-                checks_for_rule.each_with_object([]) do |check, memo|
+                checks_for_rule.select do |check|
                   entity_name = check.name.split(':', 2).first
                   if regex_entities.all? {|re| re === entity_name }
                     # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
@@ -522,18 +536,21 @@ module Flapjack
                     check_tags.each do |check_tags|
                       matching_re += regex_tags.select {|re| re === check_tag }
                     end
-                    memo << check if matching_re.size >= regex_tags.size
+                    matching_re.size >= regex_tags.size
+                  else
+                    false
                   end
                 end
               end
 
               tags = checks.collect do |check|
                 tag = Flapjack::Data::Tag.new(:name => "migrated|contact_#{contact.id}|check_#{check.id}|")
+                tag.save
                 check.tags << tag
                 tag
               end
 
-              rule.tags.add(*tags)
+              rule.tags.add(*tags) unless tags.empty?
               rules << rule
             end
           end
@@ -545,6 +562,7 @@ module Flapjack
       # ###########################################################################
 
       def find_contact(old_contact_id)
+        puts "find_contact #{old_contact_id}"
         new_contact_id = @contact_id_cache[old_contact_id]
         return if new_contact_id.nil?
 
@@ -555,6 +573,7 @@ module Flapjack
       end
 
       def find_check(entity_name, check_name, opts = {})
+        puts "find_check #{entity_name}:#{check_name}"
         new_check_name = "#{entity_name}:#{check_name}"
         check = @check_name_cache[new_check_name]
 
@@ -570,6 +589,7 @@ module Flapjack
       end
 
       def find_tag(tag_name, opts = {})
+        puts "find_tag #{tag_name}"
         tag = @tag_name_cache[tag_name]
 
         if tag.nil? && opts[:create]

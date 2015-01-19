@@ -47,7 +47,7 @@ module Flapjack
       # name must == id
       validates :name, :presence => true,
         :inclusion => { :in => proc {|t| [t.id] }},
-        :format => /\A[a-z0-9\-_]+\z/i
+        :format => /\A[a-z0-9\-_\.\|]+\z/i
 
       before_update :update_allowed?
       def update_allowed?
