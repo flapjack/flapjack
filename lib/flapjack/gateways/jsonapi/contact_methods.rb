@@ -25,11 +25,11 @@ module Flapjack
               semaphore = Flapjack::Data::Semaphore.new(resource, :redis => redis, :expiry => 30)
             rescue Flapjack::Data::Semaphore::ResourceLocked
               strikes += 1
-              raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless strikes < 3
+              raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) if strikes >= 3
               sleep 1
               retry
             end
-            raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) unless semaphore
+            raise Flapjack::Gateways::JSONAPI::ResourceLocked.new(resource) if semaphore.nil?
             semaphore
           end
 
@@ -45,7 +45,7 @@ module Flapjack
             missing_ids = contacts_by_id.select {|k, v| v.nil? }.keys
             unless missing_ids.empty?
               semaphore.release
-              halt(404, "Contacts with ids #{missing_ids.join(', ')} were not found")
+              raise Flapjack::Gateways::JSONAPI::ContactsNotFound.new(missing_ids)
             end
 
             block.call(contacts_by_id.select {|k, v| !v.nil? }.values)
@@ -93,7 +93,7 @@ module Flapjack
 
             response.headers['Location'] = "#{base_url}/contacts/#{contact_ids.join(',')}"
             status 201
-            contact_ids.to_json
+            Flapjack.dump_json(contact_ids)
           end
 
           # Returns all (/contacts) or some (/contacts/1,2,3) or one (/contacts/2) contact(s)
@@ -131,7 +131,7 @@ module Flapjack
                 apply_json_patch('contacts') do |op, property, linked, value|
                   case op
                   when 'replace'
-                    if ['first_name', 'last_name', 'email'].include?(property)
+                    if ['first_name', 'last_name', 'email', 'timezone'].include?(property)
                       contact.update(property => value)
                     end
                   when 'add'
@@ -144,9 +144,6 @@ module Flapjack
                       unless notification_rule.nil?
                         contact.grab_notification_rule(notification_rule)
                       end
-                    when 'tags'
-                      value.respond_to?(:each) ? contact.add_tags(*value) :
-                                                 contact.add_tags(value)
                     # when 'media' # not supported yet due to id brokenness
                     end
                   when 'remove'
@@ -159,9 +156,6 @@ module Flapjack
                       unless notification_rule.nil?
                         contact.delete_notification_rule(notification_rule)
                       end
-                    when 'tags'
-                      value.respond_to?(:each) ? contact.delete_tags(*value) :
-                                                 contact.delete_tags(value)
                     # when 'media' # not supported yet due to id brokenness
                     end
                   end

@@ -3,6 +3,8 @@
 require 'hiredis'
 require 'flapjack/configuration'
 
+require 'flapjack/data/migration'
+
 module Flapjack
   module CLI
     class Purge
@@ -35,10 +37,11 @@ module Flapjack
         else
           Flapjack::Data::EntityCheck.all(:redis => redis, :create_entity => true)
         end
-        purged = checks.map do |check|
-          p = check.purge_history(options)
-          p == 0 ? nil : p
-        end.compact
+        purged = checks.inject([]) do |memo, check|
+          pu = check.purge_history(options)
+          memo << pu unless pu == 0
+          memo
+        end
 
         if purged.empty?
           puts "Nothing to do"
@@ -50,7 +53,10 @@ module Flapjack
       private
 
       def redis
-        @redis ||= Redis.new(@redis_options.merge(:driver => :ruby))
+        return @redis unless @redis.nil?
+        @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
+        Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        @redis
       end
 
     end

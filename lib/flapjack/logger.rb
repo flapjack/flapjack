@@ -25,7 +25,7 @@ module Flapjack
       @name = name
 
       @formatter = proc do |severity, datetime, progname, msg|
-        t = datetime.iso8601
+        t = datetime.iso8601(6)
         "#{t} [#{severity}] :: #{name} :: #{msg}\n"
       end
 

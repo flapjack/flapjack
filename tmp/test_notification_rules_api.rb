@@ -2,8 +2,7 @@
 
 require 'httparty'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :strict }
+require 'flapjack'
 
 class Foo
 
@@ -155,7 +154,7 @@ class Foo
     do_post(url, data)
   end
 
-  rule = Oj.load(get('/contacts/21/notification_rules').body).last
+  rule = Flapjack.load_json(get('/contacts/21/notification_rules').body).last
   rule_id = rule['id']
   raise RuntimeError unless rule_id
   puts "****** NOTIFICATION RULE ID TO PICK ON (PUT, DELETE) IS: #{rule_id} ******"

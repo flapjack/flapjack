@@ -1,10 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'oj'
 require 'active_support/time'
 require 'ice_cube'
 require 'flapjack/utility'
-require 'flapjack/data/tag_set'
 
 module Flapjack
   module Data
@@ -108,20 +106,19 @@ module Flapjack
         nil
       end
 
-      def to_json(*args)
-        self.class.hashify(:id, :contact_id, :tags, :regex_tags, :entities, :regex_entities,
-            :time_restrictions, :unknown_media, :warning_media, :critical_media,
-            :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
-          [k, self.send(k)]
-        }.to_json
-      end
-
       def to_jsonapi(opts = {})
-        self.class.hashify(:id, :tags, :regex_tags, :entities, :regex_entities,
+        json_data = self.class.hashify(:id, :tags, :regex_tags, :entities, :regex_entities,
             :time_restrictions, :unknown_media, :warning_media, :critical_media,
             :unknown_blackhole, :warning_blackhole, :critical_blackhole) {|k|
-          [k, self.send(k)]
-        }.merge(:links => {:contacts => [self.contact_id]}).to_json
+          case k
+          when :tags, :regex_tags
+            [k.to_s, self.send(k).to_a.sort]
+          else
+            [k.to_s, self.send(k)]
+          end
+        }.merge('links' => {'contacts' => [self.contact_id]})
+
+        Flapjack.dump_json(json_data)
       end
 
       # entity names match?
@@ -203,10 +200,10 @@ module Flapjack
         rule_data[:warning_blackhole]  = rule_data[:warning_blackhole] || false
         rule_data[:critical_blackhole] = rule_data[:critical_blackhole] || false
         if rule_data[:tags].is_a?(Array)
-          rule_data[:tags] = Flapjack::Data::TagSet.new(rule_data[:tags])
+          rule_data[:tags] = Set.new(rule_data[:tags])
         end
         if rule_data[:regex_tags].is_a?(Array)
-          rule_data[:regex_tags] = Flapjack::Data::TagSet.new(rule_data[:regex_tags])
+          rule_data[:regex_tags] = Set.new(rule_data[:regex_tags])
         end
         rule_data
       end
@@ -227,14 +224,14 @@ module Flapjack
         json_rule_data = {
           :id                 => rule_data[:id].to_s,
           :contact_id         => rule_data[:contact_id].to_s,
-          :entities           => Oj.dump(rule_data[:entities]),
-          :regex_entities     => Oj.dump(rule_data[:regex_entities]),
-          :tags               => Oj.dump(tag_data),
-          :regex_tags         => Oj.dump(regex_tag_data),
-          :time_restrictions  => Oj.dump(rule_data[:time_restrictions], :mode => :compat),
-          :unknown_media      => Oj.dump(rule_data[:unknown_media]),
-          :warning_media      => Oj.dump(rule_data[:warning_media]),
-          :critical_media     => Oj.dump(rule_data[:critical_media]),
+          :entities           => Flapjack.dump_json(rule_data[:entities]),
+          :regex_entities     => Flapjack.dump_json(rule_data[:regex_entities]),
+          :tags               => Flapjack.dump_json(tag_data),
+          :regex_tags         => Flapjack.dump_json(regex_tag_data),
+          :time_restrictions  => Flapjack.dump_json(rule_data[:time_restrictions]),
+          :unknown_media      => Flapjack.dump_json(rule_data[:unknown_media]),
+          :warning_media      => Flapjack.dump_json(rule_data[:warning_media]),
+          :critical_media     => Flapjack.dump_json(rule_data[:critical_media]),
           :unknown_blackhole  => rule_data[:unknown_blackhole],
           :warning_blackhole  => rule_data[:warning_blackhole],
           :critical_blackhole => rule_data[:critical_blackhole],
@@ -255,6 +252,11 @@ module Flapjack
 
         return unless (tr.has_key?(:start_time) || tr.has_key?(:start_date)) &&
           (tr.has_key?(:end_time) || tr.has_key?(:end_date))
+
+        # exrules is deprecated in latest ice_cube, but may be stored in data
+        # serialised from earlier versions of the gem
+        # ( https://github.com/flapjack/flapjack/issues/715 )
+        tr.delete(:exrules)
 
         parsed_time = proc {|tr, field|
           if t = tr.delete(field)
@@ -323,13 +325,13 @@ module Flapjack
 
         proc {|d| !d.has_key?(:tags) ||
                ( d[:tags].nil? ||
-                 d[:tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:tags].is_a?(Set) &&
                  d[:tags].all? {|et| et.is_a?(String)} ) } =>
         "tags must be a tag_set of strings",
 
         proc {|d| !d.has_key?(:regex_tags) ||
                ( d[:regex_tags].nil? ||
-                 d[:regex_tags].is_a?(Flapjack::Data::TagSet) &&
+                 d[:regex_tags].is_a?(Set) &&
                  d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
         "regex_tags must be a tag_set of strings",
 
@@ -400,16 +402,16 @@ module Flapjack
         rule_data = @redis.hgetall("notification_rule:#{@id}")
 
         @contact_id         = rule_data['contact_id']
-        tags                = Oj.load(rule_data['tags'] || '')
-        @tags               = tags ? Flapjack::Data::TagSet.new(tags) : nil
-        regex_tags          = Oj.load(rule_data['regex_tags'] || '')
-        @regex_tags         = regex_tags ? Flapjack::Data::TagSet.new(regex_tags) : nil
-        @entities           = Oj.load(rule_data['entities'] || '')
-        @regex_entities     = Oj.load(rule_data['regex_entities'] || '')
-        @time_restrictions  = Oj.load(rule_data['time_restrictions'] || '')
-        @unknown_media      = Oj.load(rule_data['unknown_media'] || '')
-        @warning_media      = Oj.load(rule_data['warning_media'] || '')
-        @critical_media     = Oj.load(rule_data['critical_media'] || '')
+        tags                = Flapjack.load_json(rule_data['tags'] || '')
+        @tags               = tags ? Set.new(tags) : nil
+        regex_tags          = Flapjack.load_json(rule_data['regex_tags'] || '')
+        @regex_tags         = regex_tags ? Set.new(regex_tags) : nil
+        @entities           = Flapjack.load_json(rule_data['entities'] || '')
+        @regex_entities     = Flapjack.load_json(rule_data['regex_entities'] || '')
+        @time_restrictions  = Flapjack.load_json(rule_data['time_restrictions'] || '')
+        @unknown_media      = Flapjack.load_json(rule_data['unknown_media'] || '')
+        @warning_media      = Flapjack.load_json(rule_data['warning_media'] || '')
+        @critical_media     = Flapjack.load_json(rule_data['critical_media'] || '')
         @unknown_blackhole  = ((rule_data['unknown_blackhole'] || 'false').downcase == 'true')
         @warning_blackhole  = ((rule_data['warning_blackhole'] || 'false').downcase == 'true')
         @critical_blackhole = ((rule_data['critical_blackhole'] || 'false').downcase == 'true')

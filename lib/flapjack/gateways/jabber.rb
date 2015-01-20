@@ -6,7 +6,6 @@ require 'socket'
 
 require 'blather/client/client'
 require 'chronic_duration'
-require 'oj'
 
 require 'flapjack/data/entity_check'
 require 'flapjack/redis_pool'
@@ -47,9 +46,10 @@ module Flapjack
         @redis_config = opts[:redis_config] || {}
         @boot_time = opts[:boot_time]
 
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
-
         @logger = opts[:logger]
+
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
+
         @logger.debug("Jabber Initializing")
 
         @buffer = []
@@ -69,7 +69,7 @@ module Flapjack
         redis_uri = @redis_config[:path] ||
           "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
         shutdown_redis = EM::Hiredis.connect(redis_uri)
-        shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
+        shutdown_redis.rpush(@config['queue'], Flapjack.dump_json('notification_type' => 'shutdown'))
       end
 
       def setup
@@ -755,7 +755,7 @@ module Flapjack
           events[queue] = @redis.blpop(queue, 0)
           event_json = events[queue][1]
           begin
-            event = Oj.load(event_json)
+            event = Flapjack.load_json(event_json)
 
             @logger.debug('jabber notification event received: ' + event.inspect)
 

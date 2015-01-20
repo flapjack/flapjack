@@ -1,11 +1,6 @@
 require 'spec_helper'
 
-require 'active_support/time_with_zone'
-require 'ice_cube'
 require 'flapjack/data/contact'
-require 'flapjack/data/entity_check'
-require 'flapjack/data/notification_rule'
-require 'flapjack/data/tag_set'
 
 describe Flapjack::Data::Contact, :redis => true do
 
@@ -24,11 +19,11 @@ describe Flapjack::Data::Contact, :redis => true do
 
   let(:general_notification_rule_data) {
     {:entities           => [],
-     :tags               => Flapjack::Data::TagSet.new([]),
+     :tags               => Set.new([]),
      :time_restrictions  => [],
      :unknown_media      => [],
-     :warning_media      => ['email', 'sms', 'sms_twilio', 'jabber', 'pagerduty', 'sns'],
-     :critical_media     => ['email', 'sms', 'sms_twilio', 'jabber', 'pagerduty', 'sns'],
+     :warning_media      => ['email', 'sms', 'sms_twilio', 'sms_gammu', 'jabber', 'pagerduty', 'sns'],
+     :critical_media     => ['email', 'sms', 'sms_twilio', 'sms_gammu', 'jabber', 'pagerduty', 'sns'],
      :unknown_blackhole  => false,
      :warning_blackhole  => false,
      :critical_blackhole => false}
@@ -121,6 +116,14 @@ describe Flapjack::Data::Contact, :redis => true do
     expect(contact.media).to be_empty
   end
 
+  it "updates a contact's timezone" do
+    contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
+
+    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('UTC'))
+    contact.update('timezone' => 'Asia/Shanghai')
+    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('Asia/Shanghai'))
+  end
+
   it "updates a contact, does not clear notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
     expect(contact).not_to be_nil
@@ -193,9 +196,8 @@ describe Flapjack::Data::Contact, :redis => true do
     expect(rules.select {|r| r.is_specific? }.size).to eq(1)
   end
 
-  it "deletes a contact by id, including linked entities, checks, tags and notification rules" do
+  it "deletes a contact by id, including linked entities, checks and notification rules" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
-    contact.add_tags('admin')
 
     entity_name = 'abc-123'
 
@@ -206,10 +208,8 @@ describe Flapjack::Data::Contact, :redis => true do
 
     expect {
       expect {
-        expect {
-          contact.delete!
-        }.to change { Flapjack::Data::Contact.all(:redis => @redis).size }.by(-1)
-      }.to change { @redis.smembers('contact_tag:admin').size }.by(-1)
+        contact.delete!
+      }.to change { Flapjack::Data::Contact.all(:redis => @redis).size }.by(-1)
     }.to change { entity.contacts.size }.by(-1)
   end
 
@@ -226,7 +226,12 @@ describe Flapjack::Data::Contact, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name(entity_name, 'PING', :redis => @redis)
     t = Time.now.to_i
     ec.update_state('ok', :timestamp => t, :summary => 'a')
-    ec.last_update = t
+    # was check.last_update=
+    @redis.hset("check:#{entity_name}:PING", 'last_update', t)
+    @redis.zadd("all_checks", t, @key)
+    @redis.zadd("all_checks:#{entity_name}", t, 'PING')
+    @redis.zadd("current_checks:#{entity_name}", t, 'PING')
+    @redis.zadd('current_entities', t, entity_name)
 
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     eandcs = contact.entities(:checks => true)

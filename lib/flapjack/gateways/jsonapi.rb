@@ -89,6 +89,13 @@ module Flapjack
         end
       end
 
+      class EntityChecksNotFound < RuntimeError
+        attr_reader :entity_checks
+        def initialize(entity_checks)
+          @entity_checks = entity_checks
+        end
+      end
+
       class ResourceLocked < RuntimeError
         attr_reader :resource
         def initialize(resource)
@@ -100,37 +107,45 @@ module Flapjack
 
       set :protection, :except => :path_traversal
 
-      rescue_error = Proc.new {|status, exception, request_info, *msg|
-        if !msg || msg.empty?
-          trace = exception.backtrace.join("\n")
-          msg = "#{exception.class} - #{exception.message}"
-          msg_str = "#{msg}\n#{trace}"
-        else
-          msg_str = msg.join(", ")
-        end
-        case
-        when status < 500
-          @logger.warn "Error: #{msg_str}"
-        else
-          @logger.error "Error: #{msg_str}"
-        end
+      @rescue_exception = Proc.new {|env, e|
 
-        response_body = {:errors => msg}.to_json
+        rescue_error = Proc.new {|status, exception, request_info, *msg|
+          if !msg || msg.empty?
+            trace = exception.backtrace.join("\n")
+            msg = "#{exception.class} - #{exception.message}"
+            msg_str = "#{msg}\n#{trace}"
+          else
+            msg_str = msg.join(", ")
+          end
+          case
+          when status < 500
+            @logger.warn "Error: #{msg_str}"
+          else
+            @logger.error "Error: #{msg_str}"
+          end
 
-        query_string = (request_info[:query_string].respond_to?(:length) &&
-                        request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
-        if @logger.debug?
-          @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
-        elsif @logger.info?
-          @logger.info("Returning #{status} for #{request_info[:request_method]} " +
-            "#{request_info[:path_info]}#{query_string}")
-        end
+          response_body = Flapjack.dump_json(:errors => msg)
 
-        [status, {}, response_body]
-      }
+          query_string = (request_info[:query_string].respond_to?(:length) &&
+                          request_info[:query_string].length > 0) ? "?#{request_info[:query_string]}" : ""
+          if @logger.debug?
+            @logger.debug("Returning #{status} for #{request_info[:request_method]} " +
+              "#{request_info[:path_info]}#{query_string}, body: #{response_body}")
+          elsif @logger.info?
+            @logger.info("Returning #{status} for #{request_info[:request_method]} " +
+              "#{request_info[:path_info]}#{query_string}")
+          end
 
-      rescue_exception = Proc.new {|env, e|
+          headers = if 'DELETE'.eql?(request_info[:request_method])
+            # not set by default for delete, but the error structure is JSON
+            {'Content-Type' => JSONAPI_MEDIA_TYPE}
+          else
+            {}
+          end
+
+          [status, headers, response_body]
+        }
+
         request_info = {
           :path_info      => env['REQUEST_PATH'],
           :request_method => env['REQUEST_METHOD'],
@@ -147,22 +162,28 @@ module Flapjack
           rescue_error.call(404, e, request_info, "could not find notification rules '" + e.notification_rule_ids.join(', ') + "'")
         when Flapjack::Gateways::JSONAPI::EntityNotFound
           rescue_error.call(404, e, request_info, "could not find entity '#{e.entity}'")
+        when Flapjack::Gateways::JSONAPI::EntitiesNotFound
+          entity_ids = "'" + e.entity_ids.join("', '") + "'"
+          rescue_error.call(404, e, request_info, "could not find entities: #{entity_ids}")
         when Flapjack::Gateways::JSONAPI::EntityCheckNotFound
           rescue_error.call(404, e, request_info, "could not find entity check '#{e.check}'")
+        when Flapjack::Gateways::JSONAPI::EntityChecksNotFound
+          checks = "'" + e.entity_checks.join("', '") + "'"
+          rescue_error.call(404, e, request_info, "could not find entity checks: #{checks}")
         when Flapjack::Gateways::JSONAPI::ResourceLocked
           rescue_error.call(423, e, request_info, "unable to obtain lock for resource '#{e.resource}'")
         else
           rescue_error.call(500, e, request_info)
         end
       }
-      use ::Rack::FiberPool, :size => 25, :rescue_exception => rescue_exception
+      use ::Rack::FiberPool, :size => 25, :rescue_exception => @rescue_exception
 
       use ::Rack::MethodOverride
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
           @logger.info "starting jsonapi - class"
 
@@ -205,10 +226,10 @@ module Flapjack
       before do
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
-                        request.query_string.length > 0) ? "?#{request.query_string}" : ""
+                         (request.query_string.length > 0)) ? "?#{request.query_string}" : ""
         if logger.debug?
           input = env['rack.input'].read
-          logger.debug("#{request.request_method} #{request.path_info}#{query_string} #{input}")
+          logger.debug("#{request.request_method} #{request.path_info}#{query_string} Headers: #{headers.inspect}, Body: #{input}")
         elsif logger.info?
           input = env['rack.input'].read
           input_short = input.gsub(/\n/, '').gsub(/\s+/, ' ')
@@ -229,8 +250,9 @@ module Flapjack
           else
             response.body.to_s
           end
+          headers_debug = response.headers.to_s
           logger.debug("Returning #{response.status} for #{request.request_method} " +
-            "#{request.path_info}#{query_string}, body: #{body_debug}")
+            "#{request.path_info}#{query_string}, headers: #{headers_debug}, body: #{body_debug}")
         elsif logger.info?
           logger.info("Returning #{response.status} for #{request.request_method} " +
             "#{request.path_info}#{query_string}")
@@ -256,7 +278,7 @@ module Flapjack
         def err(status, *msg)
           msg_str = msg.join(", ")
           logger.info "Error: #{msg_str}"
-          [status, {}, {:errors => msg}.to_json]
+          [status, {}, Flapjack.dump_json(:errors => msg)]
         end
 
         def is_json_request?
@@ -390,7 +412,7 @@ module Flapjack
       # bare 'params' may have splat/captures for regex route, see
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
-        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request
+        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
         content_type JSONAPI_MEDIA_TYPE
         cors_headers
         pass

@@ -83,6 +83,16 @@ describe 'Flapjack::Gateways::JSONAPI::CheckMethods', :sinatra => true, :logger 
     expect(last_response).to be_ok
     expect(last_response.body).to eq({:checks => [check_data, check_data_2]}.to_json)
   end
+
+  it "does not find a check" do
+    expect(Flapjack::Data::EntityCheck).to receive(:for_event_id).
+      with('www.example.com:SSH', :logger => @logger, :redis => redis).
+      and_return(nil)
+
+    aget '/checks/www.example.com:SSH'
+    expect(last_response).to be_not_found
+  end
+
   it "creates checks from a submitted list" do
     checks = {'checks' =>
       [

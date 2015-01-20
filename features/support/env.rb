@@ -15,7 +15,6 @@ if ENV['COVERAGE']
     add_filter '/features/'
   end
   SimpleCov.at_exit do
-    Oj.default_options = { :mode => :compat }
     SimpleCov.result.format!
   end
 end
@@ -34,16 +33,10 @@ require 'pathname'
 require 'webmock/cucumber'
 WebMock.disable_net_connect!
 
-require 'oj'
-Oj.mimic_JSON
-Oj.default_options = { :indent => 0, :mode => :strict }
-require 'active_support/json'
-
+require 'flapjack'
 require 'flapjack/notifier'
 require 'flapjack/processor'
 require 'flapjack/patches'
-
-require 'resque_spec'
 
 class MockLogger
   attr_accessor :messages
@@ -120,16 +113,27 @@ end
 
 config = Flapjack::Configuration.new
 redis_opts = config.load(FLAPJACK_CONFIG) ?
-             config.for_redis :
+             config.for_redis.merge(:driver => :ruby) :
              {:db => 14, :driver => :ruby}
 redis = ::Redis.new(redis_opts)
 redis.flushdb
 RedisDelorean.before_all(:redis => redis)
 redis.quit
 
-# NB: this seems to execute outside the Before/After hooks
-# regardless of placement -- this is what we want, as the
-# @redis driver should be initialised in the sync block.
+# Not the most efficient of operations...
+def redis_peek(queue, start = 0, count = nil)
+  size = @notifier_redis.llen(queue)
+  start = 0 if start < 0
+  count = (size - start) if count.nil? || (count > (size - start))
+
+  (0..(size - 1)).inject([]) do |memo, n|
+    object = @notifier_redis.rpoplpush(queue, queue)
+    next memo unless (n >= start || n < (start + count))
+    memo << Flapjack.load_json(object)
+    memo
+  end
+end
+
 Around do |scenario, blk|
   EM.synchrony do
     blk.call
@@ -138,13 +142,14 @@ Around do |scenario, blk|
 end
 
 Before do
+  @redis_opts = redis_opts
   @logger = MockLogger.new
 end
 
 After do
   @logger.messages = []
+  @redis_opts = nil
 end
-
 
 Before('@processor') do
   @processor = Flapjack::Processor.new(:logger => @logger,
@@ -155,10 +160,11 @@ end
 After('@processor') do
   @redis.flushdb
   @redis.quit
+  @redis = nil
 end
 
 Before('@notifier') do
-  @notifier  = Flapjack::Notifier.new(:logger => @logger,
+  @notifier = Flapjack::Notifier.new(:logger => @logger,
     :redis_config => redis_opts,
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
@@ -170,15 +176,11 @@ end
 After('@notifier') do
   @notifier_redis.flushdb
   @notifier_redis.quit
-end
-
-Before('@resque') do
-  ResqueSpec.reset!
-  @queues = {:email => 'email_queue'}
+  @notifier_redis = nil
 end
 
 Before('@time') do
-  RedisDelorean.before_each(:redis => @redis)
+  RedisDelorean.before_each(:redis => @redis || @notifier_redis)
 end
 
 After('@time') do

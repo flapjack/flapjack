@@ -22,7 +22,7 @@ module Flapjack
     class Web < Sinatra::Base
 
       rescue_exception = Proc.new do |env, e|
-        if settings.show_exceptions?
+        if @config['show_exceptions'].is_a?(TrueClass)
           # ensure the sinatra error page shows properly
           request = Sinatra::Request.new(env)
           printer = Sinatra::ShowExceptions.new(proc{ raise e })
@@ -40,7 +40,7 @@ module Flapjack
 
       class << self
         def start
-          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+          @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
           @logger.info "starting web - class"
 
@@ -57,7 +57,7 @@ module Flapjack
 
           @api_url = @config['api_url']
           if @api_url
-            if (@api_url =~ /^#{URI::regexp(%w(http https))}$/).nil?
+            if URI.regexp(['http', 'https']).match(@api_url).nil?
               @logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
               @api_url = nil
             end
@@ -211,7 +211,7 @@ module Flapjack
         self_stats
         entity_stats
         check_stats
-        {
+        json_data = {
           'events_queued'       => @events_queued,
           'all_entities'        => @count_current_entities,
           'failing_entities'    => @count_failing_entities,
@@ -231,7 +231,8 @@ module Flapjack
           'boottime'            => @boot_time,
           'current_time'        => Time.now,
           'executive_instances' => @executive_instances,
-        }.to_json
+        }
+        Flapjack.dump_json(json_data)
       end
 
       get '/entities_all' do
@@ -279,8 +280,7 @@ module Flapjack
         @check  = params[:check]
 
         entity_check = get_entity_check(@entity, @check)
-
-        return 404 if entity_check.nil?
+        halt(404, "Could not find check '#{@entity}:#{@check}'") if entity_check.nil?
 
         check_stats
 
@@ -319,7 +319,8 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         @duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        return 404 if get_entity_check(@entity, @check).nil?
+        entity_check = get_entity_check(@entity, @check)
+        halt(404, "Could not find check '#{@entity}:#{@check}'") if entity_check.nil?
 
         ack = Flapjack::Data::Event.create_acknowledgement(
           @entity, @check,
@@ -338,7 +339,7 @@ module Flapjack
         @check  = params[:check]
 
         entity_check = get_entity_check(@entity, @check)
-        return 404 if entity_check.nil?
+        halt(404, "Could not find check '#{@entity}:#{@check}'") if entity_check.nil?
 
         entity_check.end_unscheduled_maintenance(Time.now.to_i)
 
@@ -348,12 +349,12 @@ module Flapjack
       # create scheduled maintenance
       post '/scheduled_maintenances/:entity/:check' do
         start_time = Chronic.parse(params[:start_time]).to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
+        halt(400, "Start time '#{params[:start_time]}' parsed to 0") if start_time == 0
         duration   = ChronicDuration.parse(params[:duration])
         summary    = params[:summary]
 
         entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
+        halt(404, "Could not find check '#{params[:entity]}:#{params[:check]}'") if entity_check.nil?
 
         entity_check.create_scheduled_maintenance(start_time, duration,
                                                   :summary => summary)
@@ -363,7 +364,7 @@ module Flapjack
       # delete a scheduled maintenance
       delete '/scheduled_maintenances/:entity/:check' do
         entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
+        halt(404, "Could not find check '#{params[:entity]}:#{params[:check]}'") if entity_check.nil?
 
         entity_check.end_scheduled_maintenance(params[:start_time].to_i)
         redirect back
@@ -372,7 +373,7 @@ module Flapjack
       # delete a check (actually just disables it)
       delete '/checks/:entity/:check' do
         entity_check = get_entity_check(params[:entity], params[:check])
-        return 404 if entity_check.nil?
+        halt(404, "Could not find check '#{params[:entity]}:#{params[:check]}'") if entity_check.nil?
 
         entity_check.disable!
         redirect back
@@ -390,15 +391,10 @@ module Flapjack
 
       get "/contacts/:contact" do
         contact_id = params[:contact]
+        halt(404, "No contact id") if contact_id.nil?
 
-        if contact_id
-          @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
-        end
-
-        unless @contact
-          status 404
-          return
-        end
+        @contact = Flapjack::Data::Contact.find_by_id(contact_id, :redis => redis)
+        halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
         if @contact.media.has_key?('pagerduty')
           @pagerduty_credentials = @contact.pagerduty_credentials

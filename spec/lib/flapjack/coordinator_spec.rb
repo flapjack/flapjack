@@ -9,6 +9,8 @@ describe Flapjack::Coordinator do
 
   let(:logger) { double(Flapjack::Logger) }
 
+  let(:redis)  { double(::Redis) }
+
   let!(:time)  { Time.now }
 
   it "starts and stops a pikelet" do
@@ -18,6 +20,10 @@ describe Flapjack::Coordinator do
     expect(EM).to receive(:synchrony).and_yield
     expect(config).to receive(:for_redis).and_return({})
     expect(config).to receive(:all).twice.and_return(cfg)
+
+    expect(redis).to receive(:keys).with('entity_tag:*').and_return([])
+    expect(redis).to receive(:keys).with('check_tag:*').and_return([])
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
 
     processor = double('processor')
     expect(processor).to receive(:start)
@@ -52,6 +58,10 @@ describe Flapjack::Coordinator do
     expect(config).to receive(:for_redis).and_return({})
     expect(config).to receive(:all).twice.and_return(cfg)
 
+    expect(redis).to receive(:keys).with('entity_tag:*').and_return([])
+    expect(redis).to receive(:keys).with('check_tag:*').and_return([])
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
     processor = double('processor')
     expect(processor).to receive(:start).and_raise(RuntimeError)
     expect(processor).to receive(:stop)
@@ -78,6 +88,10 @@ describe Flapjack::Coordinator do
     expect(EM).to receive(:synchrony).and_yield
     expect(config).to receive(:for_redis).and_return({})
     expect(config).to receive(:all).twice.and_return(cfg)
+
+    expect(redis).to receive(:keys).with('entity_tag:*').and_return([])
+    expect(redis).to receive(:keys).with('check_tag:*').and_return([])
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
 
     processor = double('processor')
     expect(processor).to receive(:start)
@@ -120,6 +134,10 @@ describe Flapjack::Coordinator do
     expect(EM).to receive(:synchrony).and_yield
     expect(config).to receive(:for_redis).and_return({})
     expect(config).to receive(:all).twice.and_return(cfg)
+
+    expect(redis).to receive(:keys).with('entity_tag:*').and_return([])
+    expect(redis).to receive(:keys).with('check_tag:*').and_return([])
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
 
     processor = double('processor')
     expect(processor).to receive(:start)

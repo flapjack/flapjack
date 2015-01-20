@@ -27,7 +27,7 @@ test:
   processor:
     enabled: yes
     logger:
-      level: warn
+      level: debug
 """
 
   Scenario: Running with --help shows usage information

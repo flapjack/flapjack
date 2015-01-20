@@ -5,28 +5,24 @@ Feature: notifications
 
   # TODO test across multiple contacts
 
-  @resque
   Scenario: Queue an SMS notification
     Given the user wants to receive SMS notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
     Then an SMS notification for entity 'example.com' should be queued for the user
     And an email notification for entity 'example.com' should not be queued for the user
 
-  @resque
   Scenario: Queue an SNS notification
     Given the user wants to receive SNS notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
     Then an SNS notification for entity 'example.com' should be queued for the user
     And an email notification for entity 'example.com' should not be queued for the user
 
-  @resque
   Scenario: Queue an email notification
     Given the user wants to receive email notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
     Then an email notification for entity 'example.com' should be queued for the user
     And an SMS notification for entity 'example.com' should not be queued for the user
 
-  @resque
   Scenario: Queue SMS and email notifications
     Given the user wants to receive SMS notifications for entity 'example.com' and email notifications for entity 'example2.com'
     When an event notification is generated for entity 'example.com'
@@ -35,11 +31,6 @@ Feature: notifications
     And an SMS notification for entity 'example2.com' should not be queued for the user
     Then an email notification for entity 'example.com' should not be queued for the user
     And an email notification for entity 'example2.com' should be queued for the user
-
-  # NB: Scenarios below here are those that cover code run by the Resque workers
-  # We could maybe test resque integration as well, see
-  #   http://corner.squareup.com/2010/08/cucumber-and-resque.html
-  #   http://gist.github.com/532100
 
   Scenario: Send a queued SMS notification
     Given a user SMS notification has been queued for entity 'example.com'

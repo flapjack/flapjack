@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'oj'
-
 require 'flapjack/data/contact'
 require 'flapjack/data/event'
 require 'flapjack/data/message'
@@ -66,7 +64,7 @@ module Flapjack
                  'severity'       => opts[:severity],
                  'tags'           => tag_data }
 
-        redis.rpush(queue, Oj.dump(notif))
+        redis.rpush(queue, Flapjack.dump_json(notif))
       end
 
       def self.next(queue, opts = {})
@@ -82,7 +80,7 @@ module Flapjack
           return unless raw
         end
         begin
-          parsed = ::Oj.load( raw )
+          parsed = ::Flapjack.load_json( raw )
         rescue Oj::Error => e
           if options[:logger]
             options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{raw.inspect}")
@@ -133,7 +131,7 @@ module Flapjack
           media = contact.media
 
           logger.debug "Notification#messages: creating messages for contact: #{contact_id} " +
-            "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{@tags.to_json} media: #{media.inspect}"
+            "event_id: \"#{@event_id}\" state: #{@state} event_tags: #{Flapjack.dump_json(@tags)} media: #{media.inspect}"
           rlen = rules.length
           logger.debug "found #{rlen} rule#{(rlen == 1) ? '' : 's'} for contact #{contact_id}"
 
@@ -144,7 +142,7 @@ module Flapjack
             # for time, entity and tags
             matchers = rules.select do |rule|
               logger.debug("considering rule with entities: #{rule.entities}, entities regex: #{rule.regex_entities},
-                           tags: #{rule.tags.to_json} and regex tags: #{rule.regex_tags.to_json}")
+                           tags: #{Flapjack.dump_json(rule.tags)} and regex tags: #{Flapjack.dump_json(rule.regex_tags)}")
               rule_has_tags           = rule.tags           ? (rule.tags.length > 0)           : false
               rule_has_regex_tags     = rule.regex_tags     ? (rule.regex_tags.length > 0)     : false
               rule_has_entities       = rule.entities       ? (rule.entities.length > 0)       : false
@@ -162,7 +160,7 @@ module Flapjack
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"
             matchers.each do |matcher|
-              logger.debug "  - #{matcher.to_json}"
+              logger.debug "  - #{matcher.to_jsonapi}"
             end
 
             # delete any general matchers if there are more specific matchers left
@@ -175,7 +173,7 @@ module Flapjack
               if num_matchers != matchers.length
                 logger.debug("removal of general matchers when entity specific matchers are present: number of matchers changed from #{num_matchers} to #{matchers.length} for contact id: #{contact_id}")
                 matchers.each do |matcher|
-                  logger.debug "  - #{matcher.to_json}"
+                  logger.debug "  - #{matcher.to_jsonapi}"
                 end
               end
             end
@@ -185,7 +183,7 @@ module Flapjack
             if blackhole_matchers.length > 0
               logger.debug "dropping this media as #{blackhole_matchers.length} blackhole matchers are present:"
               blackhole_matchers.each {|bm|
-                logger.debug "  - #{bm.to_json}"
+                logger.debug "  - #{bm.to_jsonapi}"
               }
               next
             else
@@ -264,7 +262,7 @@ module Flapjack
         @state_duration = opts['state_duration']
         @type           = opts['type']
         @severity       = opts['severity']
-        @tags           = opts['tags'].is_a?(Array) ? Flapjack::Data::TagSet.new(opts['tags']) : nil
+        @tags           = opts['tags'].is_a?(Array) ? Set.new(opts['tags']) : nil
       end
 
       # # time restrictions match?

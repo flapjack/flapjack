@@ -11,7 +11,10 @@ FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'production'
 namespace :entities do
 
   def redis
-    @redis ||= Redis.new(@redis_config)
+    return @redis unless @redis.nil?
+    @redis = Redis.new(@redis_config.merge(:driver => :hiredis))
+    Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+    @redis
   end
 
   def orphaned_entity_names
@@ -126,10 +129,10 @@ namespace :entities do
 
         if id.nil? || entity.nil?
           id ||= SecureRandom.uuid
-          redis.multi
-          redis.set("entity_id:#{name}", id)
-          redis.hset("entity:#{id}", 'name', name)
-          redis.exec
+          redis.multi do
+            multi.hset('all_entity_ids_by_name', name, id)
+            multi.hset('all_entity_names_by_id', id, name)
+          end
           puts "Set id '#{id}' for entity #{name}'"
         elsif entity.name.eql?(name)
           puts "'#{name}' entity already exists with the provided id"

@@ -5,6 +5,8 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:lock) { double(Monitor) }
 
+  let(:redis) { double('redis') }
+
   let(:time) { Time.new(2013, 10, 31, 13, 45) }
 
   let(:time_str) { Time.at(time).strftime('%-d %b %H:%M') }
@@ -41,10 +43,11 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
       to_return(:status => 200)
 
     EM.synchrony do
-      Flapjack::Gateways::AwsSns.instance_variable_set('@config', config)
-      Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::AwsSns.start
-      Flapjack::Gateways::AwsSns.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      aws_sns = Flapjack::Gateways::AwsSns.new(:config => config, :logger => @logger)
+      aws_sns.deliver(alert)
       EM.stop
     end
     expect(req).to have_been_requested
@@ -52,10 +55,11 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   it "does not send an SMS message with an invalid config" do
     EM.synchrony do
-      Flapjack::Gateways::AwsSns.instance_variable_set('@config', config.reject {|k, v| k == 'secret_key'})
-      Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
-      Flapjack::Gateways::AwsSns.start
-      Flapjack::Gateways::AwsSns.perform(message)
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+      aws_sns = Flapjack::Gateways::AwsSns.new(:config => config.reject {|k, v| k == 'secret_key'}, :logger => @logger)
+      aws_sns.deliver(alert)
       EM.stop
     end
 

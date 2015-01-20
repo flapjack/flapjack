@@ -11,7 +11,6 @@ namespace :profile do
   FLAPJACK_PORT = ((port > 1024) && (port <= 65535)) ? port : 8075
 
   REPETITIONS     = 10
-  RESQUE_REPETITIONS = 2
 
   require 'ruby-prof'
 
@@ -39,78 +38,6 @@ namespace :profile do
       output_dir = File.join('tmp', 'profiles')
       FileUtils.mkdir_p(output_dir)
       printer.print(:path => output_dir, :profile => name)
-      EM.stop
-    end
-
-    empty_db(:redis => redis)
-    redis.quit
-  end
-
-  # rubyprof doesn't like the mail gem, possibly due to treetop -- crashes
-  # with "stack level too deep" errors when generating if the profiling
-  # runs over 3 or more mails.
-  def profile_resque(cfg_name, config, redis_options, &block)
-    redis = Redis.new(redis_options.merge(:driver => 'ruby'))
-    check_db_empty(:redis => redis, :redis_options => redis_options)
-    setup_baseline_data(:redis => redis)
-
-    ::Resque.redis = redis
-
-    EM.synchrony do
-      FlapjackProfileResque.instance_eval {
-
-        class << self
-
-          alias_method :orig_perform, :perform
-
-          # NB: this is very brittle in the case of exceptions; Resque swallows them,
-          # so you'll need to turn on the worker's verbose switches below to see what's
-          # really going on
-          def perform(notification)
-            r = nil
-            begin
-              count = if FlapjackProfileResque.class_variable_defined?('@@profile_count')
-                FlapjackProfileResque.class_variable_get('@@profile_count')
-              else
-                FlapjackProfileResque.class_variable_set('@@profile_count', 0)
-              end
-
-              RubyProf.send( (count.zero? ? :start : :resume) )
-              r = orig_perform(notification)
-              RubyProf.pause
-
-              count += 1
-              FlapjackProfileResque.class_variable_set('@@profile_count', count)
-            rescue Exception => e
-              puts e.message
-            end
-            r
-          end
-        end
-
-      }
-
-      FlapjackProfileResque.bootstrap(:config => config)
-
-      worker = EM::Resque::Worker.new(config['queue'])
-      worker.verbose = true
-      worker.very_verbose = true
-
-      EM.defer(block)
-
-      worker.work(0.1) {|job|
-        if FlapjackProfileResque.class_variable_defined?('@@profile_count') &&
-          (FlapjackProfileResque.class_variable_get('@@profile_count') >= RESQUE_REPETITIONS)
-          job.worker.shutdown
-        end
-      }
-
-      result = RubyProf.stop
-      printer = RubyProf::MultiPrinter.new(result)
-      output_dir = File.join('tmp', 'profiles')
-      FileUtils.mkdir_p(output_dir)
-      printer.print(:path => output_dir, :profile => cfg_name)
-
       EM.stop
     end
 
@@ -252,13 +179,14 @@ namespace :profile do
   task :jabber do
 
     require 'flapjack/jabber'
+    require 'flapjack/data/alert'
     require 'flapjack/data/contact'
     require 'flapjack/data/event'
     require 'flapjack/data/notification'
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
-    profile_pikelet(Flapjack::Jabber, 'jabber', config_env['jabber_gateway'],
+    profile_pikelet(Flapjack::Gateways::Jabber, 'jabber', config_env['jabber_gateway'],
       redis_options) {
 
         # this executes in a separate thread, so no Fibery stuff is allowed
@@ -277,8 +205,8 @@ namespace :profile do
           notification.messages(:contacts => [contact]).each do |msg|
             contents = msg.contents
             contents['event_count'] = n
-            redis.rpush(config_env['jabber_gateway']['queue'],
-              Oj.dump(contents))
+            Flapjack::Data::Alert.add(config_env['jabber_gateway']['queue'],
+              contents)
           end
         end
 
@@ -291,51 +219,39 @@ namespace :profile do
   desc "profile email notifier with rubyprof"
   task :email do
 
-    require 'eventmachine'
-    # the redis/synchrony gems need to be required in this particular order, see
-    # the redis-rb README for details
-    require 'hiredis'
-    require 'em-synchrony'
-    require 'redis/connection/synchrony'
-    require 'redis'
-    require 'em-resque'
-    require 'em-resque/worker'
-
-    require 'flapjack/patches'
-    require 'flapjack/redis_pool'
-    require 'flapjack/notification/email'
-
+    require 'flapjack/email'
+    require 'flapjack/data/alert'
     require 'flapjack/data/contact'
     require 'flapjack/data/event'
     require 'flapjack/data/notification'
 
     FLAPJACK_ENV = ENV['FLAPJACK_ENV'] || 'profile'
     config_env, redis_options = load_config
+    profile_pikelet(Flapjack::Gateways::Email, 'jabber', config_env['jabber_gateway'],
+      redis_options) {
 
-    FlapjackProfileResque = Class.new(Flapjack::Notification::Email)
+        # this executes in a separate thread, so no Fibery stuff is allowed
+        redis = Redis.new(redis_options.merge(:driver => 'ruby'))
 
-    profile_resque('email', config_env['email_notifier'], redis_options) {
+        event = Flapjack::Data::Event.new('type'    => 'service',
+                                          'state'   => 'critical',
+                                          'summary' => '100% packet loss',
+                                          'entity'  => 'clientx-app-01',
+                                          'check'   => 'ping')
+        notification = Flapjack::Data::Notification.for_event(event)
 
-      # this executes in a separate thread, so no Fibery stuff is allowed
-      redis = Redis.new(redis_options.merge(:driver => 'ruby'))
+        contact = Flapjack::Data::Contact.find_by_id('1000', :redis => redis)
 
-      event = Flapjack::Data::Event.new('type'    => 'service',
-                                        'state'   => 'critical',
-                                        'summary' => '100% packet loss',
-                                        'entity'  => 'clientx-app-01',
-                                        'check'   => 'ping')
-      notification = Flapjack::Data::Notification.for_event(event)
-
-      contact = Flapjack::Data::Contact.find_by_id('1000', :redis => redis)
-
-      RESQUE_REPETITIONS.times do
-        notification.messages(:contacts => [contact]).each do |msg|
-          Resque.enqueue_to(config_env['email_notifier']['queue'],
-            FlapjackProfileResque, msg.contents)
+        REPETITIONS.times do |n|
+          notification.messages(:contacts => [contact]).each do |msg|
+            contents = msg.contents
+            contents['event_count'] = n
+            Flapjack::Data::Alert.add(config_env['email_gateway']['queue'],
+              contents)
+          end
         end
-      end
 
-      redis.quit
+        redis.quit
     }
   end
 

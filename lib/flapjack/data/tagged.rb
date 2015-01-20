@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'flapjack/data/tag'
-require 'flapjack/data/tag_set'
-
 # mixed in to some of the Flapjack data classes
 
 module Flapjack
@@ -13,20 +10,25 @@ module Flapjack
       self.class.name.split('::').last.downcase + '_tag'
     end
 
+    def known_key
+      "known_tags:#{tag_prefix}"
+    end
+
     # return the set of tags for this object
     def tags
-      @tags ||= Flapjack::Data::TagSet.new( @redis.keys("#{tag_prefix}:*").inject([]) {|memo, tag|
-        if Flapjack::Data::Tag.find(tag, :redis => @redis).include?(@id.to_s)
-          memo << tag.sub(/^#{tag_prefix}:/, '')
-        end
+      return @tags unless @tags.nil?
+      @tags ||= Set.new( @redis.smembers(known_key).inject([]) {|memo, t|
+        tag_key = "#{tag_prefix}:#{t}"
+        memo << t if @redis.sismember(tag_key, @id.to_s)
         memo
-      } )
+      })
     end
 
     # adds tags to this object
     def add_tags(*enum)
       enum.each do |t|
-        Flapjack::Data::Tag.create("#{tag_prefix}:#{t}", [@id], :redis => @redis)
+        @redis.sadd(known_key, t)
+        @redis.sadd("#{tag_prefix}:#{t}", @id)
         tags.add(t)
       end
     end
@@ -34,9 +36,10 @@ module Flapjack
     # removes tags from this object
     def delete_tags(*enum)
       enum.each do |t|
-        tag = Flapjack::Data::Tag.find("#{tag_prefix}:#{t}", :redis => @redis)
-        tag.delete(@id)
+        tag_key = "#{tag_prefix}:#{t}"
+        @redis.srem(tag_key, @id)
         tags.delete(t)
+        @redis.srem(known_key, t) if (@redis.scard(tag_key) == 0)
       end
     end
 

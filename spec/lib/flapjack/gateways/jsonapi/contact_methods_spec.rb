@@ -100,10 +100,12 @@ describe 'Flapjack::Gateways::JSONAPI::ContactMethods', :sinatra => true, :logge
       with('1234', :logger => @logger, :redis => redis).and_return(contact)
 
     expect(contact).to receive(:update).with('first_name' => 'Elias').and_return(nil)
+    expect(contact).to receive(:update).with('timezone' => 'Asia/Shanghai').and_return(nil)
     expect(semaphore).to receive(:release).and_return(true)
 
     apatch "/contacts/1234",
-      [{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'}].to_json,
+      [{:op => 'replace', :path => '/contacts/0/first_name', :value => 'Elias'},
+       {:op => 'replace', :path => '/contacts/0/timezone', :value => 'Asia/Shanghai'}].to_json,
       jsonapi_patch_env
     expect(last_response.status).to eq(204)
   end

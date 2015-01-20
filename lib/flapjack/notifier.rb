@@ -4,7 +4,7 @@ require 'active_support/time'
 
 require 'em-hiredis'
 
-require 'oj'
+require 'flapjack/data/alert'
 
 require 'flapjack/data/contact'
 require 'flapjack/data/entity_check'
@@ -16,6 +16,7 @@ require 'flapjack/utility'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
+require 'flapjack/gateways/sms_gammu'
 require 'flapjack/gateways/aws_sns'
 
 module Flapjack
@@ -28,7 +29,7 @@ module Flapjack
       @config = opts[:config]
       @redis_config = opts[:redis_config] || {}
       @logger = opts[:logger]
-      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+      @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
       @notifications_queue = @config['queue'] || 'notifications'
 
@@ -79,7 +80,7 @@ module Flapjack
       redis_uri = @redis_config[:path] ||
         "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
       shutdown_redis = EM::Hiredis.connect(redis_uri)
-      shutdown_redis.rpush(@notifications_queue, Oj.dump('type' => 'shutdown'))
+      shutdown_redis.rpush(@notifications_queue, Flapjack.dump_json('type' => 'shutdown'))
     end
 
   private
@@ -92,7 +93,8 @@ module Flapjack
 
       timestamp    = Time.now
       event_id     = notification.event_id
-      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id, :redis => @redis, :logger => @logger)
+      entity_check = Flapjack::Data::EntityCheck.for_event_id(event_id,
+                      :redis => @redis, :logger => @logger)
       contacts     = entity_check.contacts
 
       if contacts.empty?
@@ -101,13 +103,10 @@ module Flapjack
         return
       end
 
-      messages = notification.messages(contacts, :default_timezone => @default_contact_timezone,
-        :logger => @logger)
+      messages = notification.messages(contacts,
+        :default_timezone => @default_contact_timezone, :logger => @logger)
 
       notification_contents = notification.contents
-
-      in_unscheduled_maintenance = entity_check.in_scheduled_maintenance?
-      in_scheduled_maintenance   = entity_check.in_unscheduled_maintenance?
 
       messages.each do |message|
         media_type = message.medium
@@ -125,15 +124,13 @@ module Flapjack
             memo
           end
           contents['rollup_alerts'] = rollup_alerts
-
           contents['rollup_threshold'] = message.contact.rollup_threshold_for_media(media_type)
-
         end
 
         @notifylog.info("#{event_id} | " +
           "#{notification.type} | #{message.contact.id} | #{media_type} | #{address}")
 
-        unless @queues[media_type.to_s]
+        if @queues[media_type.to_s].nil?
           @logger.error("no queue for media type: #{media_type}")
           return
         end
@@ -160,19 +157,7 @@ module Flapjack
         contents_tags = contents['tags']
         contents['tags'] = contents_tags.is_a?(Set) ? contents_tags.to_a : contents_tags
 
-        # FIXME(@auxesis): change Resque jobs to use raw blpop
-        case media_type.to_sym
-        when :sms
-          Resque.enqueue_to(@queues['sms'], Flapjack::Gateways::SmsMessagenet, contents)
-        when :sms_twilio
-          Resque.enqueue_to(@queues['sms_twilio'], Flapjack::Gateways::SmsTwilio, contents)
-        when :email
-          Resque.enqueue_to(@queues['email'], Flapjack::Gateways::Email, contents)
-        when :sns
-          Resque.enqueue_to(@queues['sns'], Flapjack::Gateways::AwsSns, contents)
-        else
-          @redis.rpush(@queues[media_type.to_s], Oj.dump(contents))
-        end
+        Flapjack::Data::Alert.add(@queues[media_type.to_s], contents, :redis => @redis)
       end
     end
 

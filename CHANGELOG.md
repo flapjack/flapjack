@@ -1,5 +1,47 @@
 ## Flapjack Changelog
 
+# 1.2.1 - 2014-12-10
+- Bug: Fix PagerDuty log failure on POST (maint/1.x) #744 (@jgoldschrafe)
+
+# 1.2.1rc3 - 2014-12-09
+- Bug: flapjack 1.2.0 ignores umask and makes logs world writable #708 (@ali-graham)
+- Bug: Can't get full name email syntax working #690 (@jessereynolds)
+
+# 1.2.1rc2 - 2014-12-04
+- Bug: Correct scheduled maintenance periods with expiry that don't match their timestamps #734 (@ali-graham)
+
+# 1.2.1rc1 - 2014-12-04
+- Bug: Exception in pagerduty gateway when looking for acknowledgements #721 (@jessereynolds)
+- Bug: Retrieving scheduled maintenance via api fails when old entities without ids are present #711 (@jessereynolds)
+- Bug: Repeated acknowledgement notifications sent after acknowledging on PagerDuty #714 (@jessereynolds)
+- Bug: Exception thrown to browser when you pass no values to "Add Scheduled Maintenance" #719 (@ali-graham)
+- Bug: API doesn't allow contact timezone to be updated #718 (@ali-graham)
+- Bug: IceCube deprecation warning in 1.2.0 - :exrules is deprecated, #715 (@ali-graham)
+- Bug: Badly formed error response to scheduled maintenance report with invalid check id #712 (@ali-graham)
+- Bug: Searching for checks in maintenance via CLI doesn't seem to work #710 (@jessereynolds, @Hobbsee)
+
+# 1.2.0 - 2014-11-07
+- Bug: multi blocks for safe redis connection pool usage #694 (@ali-graham)
+- Bug: data migration to work around previous notification rule bug #699 (@ali-graham)
+
+# 1.2.0rc2 - 2014-10-17
+- Feature: Cache entity and check name <-> id lookups #682 (@ali-graham)
+- Chore: Add last_change field to status_reports in the API (closes: #678) #679 (@Hobbsee)
+- Chore: Move archive cache responsibility to mirror source. #683 (@ali-graham)
+- Bug: jsonapi: GET /entities is non performant #674 (@ali-graham)
+
+# 1.2.0rc1 - 2014-10-08
+- Feature: Allow updating an entities name via PATCH /entities/id[,id...] #628 (@ali-graham)
+- Feature: Pact specs for flapjack-diner compatability testing #663 (@ali-graham)
+- Feature: more api check methods #644 (@ali-graham)
+- Chore: optimise tag code #654 (@ali-graham)
+- Chore: fix #653, overuse of Redis KEYS in mirror #661 (@ali-graham)
+- Bug: Entities should return linked checks with list of check "ids" in API #648 (@ali-graham)
+- Bug: 500 error getting all checks from API #641 (@ali-graham)
+- Bug: Pager Duty credentials get throws error #657 (@ali-graham)
+- Bug: Flapjack crashes when email alert is triggered #656 (@ali-graham)
+- Bug: Fix /edit_contacts media saving after adding contacts #651 (@ali-graham)
+
 # 1.1.0 - 2014-09-10
 - Feature: Add autorefresh for the web GUI (Closes: #494) #607 (@Hobbsee)
 - Feature: twilio sms sending #633 (@jessereynolds)

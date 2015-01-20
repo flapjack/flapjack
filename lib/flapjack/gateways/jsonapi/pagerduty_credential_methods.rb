@@ -46,7 +46,7 @@ module Flapjack
             contact = Flapjack::Data::Contact.find_by_id(params[:contact_id], :redis => redis)
             if contact.nil?
               semaphore.release
-              halt err(422, "Contact id '#{params[:contact_id]}' could not be loaded")
+              halt err(422, "Contact id: '#{params[:contact_id]}' could not be loaded")
             end
 
             pagerduty_credential_data = fields.inject({}) do |memo, field|
@@ -61,7 +61,7 @@ module Flapjack
 
             status 201
             response.headers['Location'] = "#{base_url}/pagerduty_credentials/#{contact.id}"
-            [contact.id].to_json
+            Flapjack.dump_json([contact.id])
           end
 
           app.get %r{^/pagerduty_credentials(?:/)?([^/]+)?$} do
@@ -83,7 +83,7 @@ module Flapjack
               memo
             end
 
-            '{"pagerduty_credentials":' + pagerduty_credentials_data.to_json + '}'
+            '{"pagerduty_credentials":' + Flapjack.dump_json(pagerduty_credentials_data) + '}'
           end
 
           # update one or more sets of pagerduty credentials

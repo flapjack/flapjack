@@ -2,14 +2,11 @@
 
 require 'redis'
 
-require 'oj'
-Oj.default_options = { :indent => 0, :mode => :compat }
-
 id = "%.2d" % (1..10).to_a[rand(9)]
 
 events = []
 
-events << Oj.dump({
+events << Flapjack.dump_json({
   'entity' => "app-#{id}",
   'check' => 'http',
   'type' => 'service',
@@ -17,7 +14,7 @@ events << Oj.dump({
   'summary' => 'well i don\'t know',
 })
 
-events << Oj.dump({
+events << Flapjack.dump_json({
   'entity' => "app-#{id}",
   'check' => 'http',
   'type' => 'host',

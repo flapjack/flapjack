@@ -1,8 +1,6 @@
 require 'spec_helper'
 
-require 'flapjack/data/entity'
 require 'flapjack/data/entity_check'
-require 'flapjack/data/tag_set'
 
 describe Flapjack::Data::EntityCheck, :redis => true do
 
@@ -542,7 +540,8 @@ describe Flapjack::Data::EntityCheck, :redis => true do
         ec.create_scheduled_maintenance(three_hours_ago + five_minutes, seven_hours, :summary => "Scheduled maintenance started 3 hours ago")
         ec.create_scheduled_maintenance(four_hours_ago, seven_hours, :summary => "Scheduled maintenance started 4 hours ago")
 
-        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis, :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
+        smp = Flapjack::Data::EntityCheck.find_maintenance(:redis => @redis,
+          :type => 'scheduled', :started => input).sort_by { |k| k[:entity] }
 
         expect(smp).to be_an(Array)
         expect(smp.size).to eq(2)
@@ -1200,7 +1199,13 @@ describe Flapjack::Data::EntityCheck, :redis => true do
   it "updates enabled checks" do
     ts = Time.now.to_i
     ec = Flapjack::Data::EntityCheck.for_entity_name(name, check, :redis => @redis)
-    ec.last_update = ts
+
+    # was check.last_update=
+    @redis.hset("check:#{name}:#{check}", 'last_update', ts)
+    @redis.zadd("all_checks", ts, @key)
+    @redis.zadd("all_checks:#{name}", ts, check)
+    @redis.zadd("current_checks:#{name}", ts, check)
+    @redis.zadd('current_entities', ts, name)
 
     saved_check_ts = @redis.zscore("current_checks:#{name}", check)
     expect(saved_check_ts).not_to be_nil
@@ -1404,7 +1409,7 @@ describe Flapjack::Data::EntityCheck, :redis => true do
     ec = Flapjack::Data::EntityCheck.for_entity_name('foo-app-01.example.com', 'Disk / Utilisation', :create_entity => true, :redis => @redis)
     tags = ec.tags
     expect(tags).not_to be_nil
-    expect(tags).to be_a(Flapjack::Data::TagSet)
+    expect(tags).to be_a(Set)
     expect(['foo-app-01', 'example.com', 'disk', '/', 'utilisation'].to_set.subset?(tags)).to be true
   end
 

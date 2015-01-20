@@ -4,8 +4,6 @@ require 'em-hiredis'
 require 'em-synchrony'
 require 'em-synchrony/em-http'
 
-require 'oj'
-
 require 'flapjack/data/entity_check'
 require 'flapjack/data/alert'
 require 'flapjack/redis_pool'
@@ -25,7 +23,7 @@ module Flapjack
         @config = opts[:config]
         @logger = opts[:logger]
         @redis_config = opts[:redis_config] || {}
-        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2)
+        @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
         @logger.debug("New Pagerduty pikelet with the following options: #{@config.inspect}")
 
@@ -40,7 +38,7 @@ module Flapjack
         redis_uri = @redis_config[:path] ||
           "redis://#{@redis_config[:host] || '127.0.0.1'}:#{@redis_config[:port] || '6379'}/#{@redis_config[:db] || '0'}"
         shutdown_redis = EM::Hiredis.connect(redis_uri)
-        shutdown_redis.rpush(@config['queue'], Oj.dump('notification_type' => 'shutdown'))
+        shutdown_redis.rpush(@config['queue'], Flapjack.dump_json('notification_type' => 'shutdown'))
       end
 
       def start
@@ -67,7 +65,7 @@ module Flapjack
           event_json    = events[queue][1]
 
           begin
-            event = Oj.load(event_json)
+            event = Flapjack.load_json(event_json)
             @logger.debug("pagerduty notification event received: " + event.inspect)
 
             if 'shutdown'.eql?(event['notification_type'])
@@ -166,9 +164,9 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        options  = { :body => Oj.dump(event) }
+        options  = { :body => Flapjack.dump_json(event) }
         http = EM::HttpRequest.new(PAGERDUTY_EVENTS_API_URL).post(options)
-        response = Oj.load(http.response)
+        response = Flapjack.load_json(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         unless status == 200
@@ -196,24 +194,34 @@ module Flapjack
             ret
           }
 
-          check = entity_check.check
+          check       = entity_check.check
+          entity_name = entity_check.entity_name
 
           if ec_credentials.empty?
-            @logger.debug("No pagerduty credentials found for #{entity_check.entity_name}:#{check}, skipping")
+            @logger.debug("No pagerduty credentials found for #{entity_name}:#{check}, skipping")
             next
           end
 
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-          options = ec_credentials.first.merge('check' => "#{entity_check.entity_name}:#{check}")
+          options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
 
           acknowledged = pagerduty_acknowledged?(options)
           if acknowledged.nil?
-            @logger.debug "#{entity_check.entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+            next
+          end
+
+          # check again that the check is still unacknowledged in flapjack
+          unless Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis).map {|ec|
+              "#{ec.entity_name}:#{ec.check}"
+            }.include?("#{entity_name}:#{check}")
+            # skip this one
+            @logger.warn "#{entity_name}:#{check} seems to have been acknowledged by " +
+              "some other process while I've been running, cancelling acknowledgement creation"
             next
           end
 
           pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-          entity_name = entity_check.entity_name
           @logger.info "#{entity_name}:#{check} is acknowledged in pagerduty, creating flapjack acknowledgement... "
           who_text = ""
           if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
@@ -263,10 +271,9 @@ module Flapjack
 
         http = EM::HttpRequest.new(url).get(options)
         begin
-          response = Oj.load(http.response)
+          response = Flapjack.load_json(http.response)
         rescue Oj::Error
           @logger.error("failed to parse json from a post to #{url} ... response headers and body follows...")
-          return nil
         end
         status   = http.response_header.status
         @logger.debug(http.response_header.inspect)

@@ -12,6 +12,11 @@ describe Flapjack::RedisPool do
         redis
       }
       expect(::Redis).to receive(:new).exactly(redis_count).times.and_return(*redis_conns)
+      expect(Flapjack::Data::Migration).to receive(:correct_notification_rule_contact_linkages).exactly(redis_count).times
+      expect(Flapjack::Data::Migration).to receive(:migrate_entity_check_data_if_required).exactly(redis_count).times
+      expect(Flapjack::Data::Migration).to receive(:create_entity_ids_if_required).exactly(redis_count).times
+      expect(Flapjack::Data::Migration).to receive(:refresh_archive_index).exactly(redis_count).times
+      expect(Flapjack::Data::Migration).to receive(:validate_scheduled_maintenance_periods).exactly(redis_count).times
 
       frp = Flapjack::RedisPool.new(:size => redis_count)
 

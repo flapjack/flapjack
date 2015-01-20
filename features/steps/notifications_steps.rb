@@ -2,16 +2,16 @@
 # copied from flapjack-populator
 # TODO use Flapjack::Data::Contact.add
 def add_contact(contact = {})
-  @redis.multi
-  @redis.del("contact:#{contact['id']}")
-  @redis.del("contact_media:#{contact['id']}")
-  @redis.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
-  @redis.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
-  @redis.hset("contact:#{contact['id']}", 'email',      contact['email'])
-  contact['media'].each_pair {|medium, address|
-    @redis.hset("contact_media:#{contact['id']}", medium, address)
-  }
-  @redis.exec
+  @notifier_redis.multi do |multi|
+    multi.del("contact:#{contact['id']}")
+    multi.del("contact_media:#{contact['id']}")
+    multi.hset("contact:#{contact['id']}", 'first_name', contact['first_name'])
+    multi.hset("contact:#{contact['id']}", 'last_name',  contact['last_name'])
+    multi.hset("contact:#{contact['id']}", 'email',      contact['email'])
+    contact['media'].each_pair {|medium, address|
+      multi.hset("contact_media:#{contact['id']}", medium, address)
+    }
+  end
 end
 
 Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ do |entity|
@@ -23,7 +23,7 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
   Flapjack::Data::Entity.add({'id'       => '5000',
                               'name'     => entity,
                               'contacts' => ["0999"]},
-                             :redis => @redis )
+                             :redis => @notifier_redis )
 end
 
 Given /^the user wants to receive SNS notifications for entity '([\w\.\-]+)'$/ do |entity|
@@ -35,7 +35,7 @@ Given /^the user wants to receive SNS notifications for entity '([\w\.\-]+)'$/ d
   Flapjack::Data::Entity.add({'id'       => '5000',
                               'name'     => entity,
                               'contacts' => ["0999"]},
-                              :redis => @redis )
+                              :redis => @notifier_redis )
 end
 
 Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/ do |entity|
@@ -47,7 +47,7 @@ Given /^the user wants to receive email notifications for entity '([\w\.\-]+)'$/
   Flapjack::Data::Entity.add({'id'       => '5000',
                               'name'     => entity,
                               'contacts' => ["0999"]},
-                             :redis => @redis )
+                             :redis => @notifier_redis )
 end
 
 Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and email notifications for entity '([\w\.\-]+)'$/ do |entity1, entity2|
@@ -64,11 +64,11 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)' and
   Flapjack::Data::Entity.add({'id'       => '5000',
                               'name'     => entity1,
                               'contacts' => ["0998"]},
-                             :redis => @redis )
+                             :redis => @notifier_redis )
   Flapjack::Data::Entity.add({'id'       => '5001',
                               'name'     => entity2,
                               'contacts' => ["0999"]},
-                             :redis => @redis )
+                             :redis => @notifier_redis )
 end
 
 # TODO create the notification object in redis, flag the relevant operation as
@@ -90,33 +90,33 @@ When /^an event notification is generated for entity '([\w\.\-]+)'$/ do |entity|
 
   Flapjack::Data::Notification.add('notifications', event,
     :type => notification_type, :severity => severity, :last_state => last_state,
-    :redis => @redis)
+    :redis => @notifier_redis)
   drain_notifications
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek('sms_notifications')
-  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
+  queue = redis_peek('sms_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an SNS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek('sns_notifications')
-  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
+  queue = redis_peek('sns_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek('email_notifications')
-  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
+  queue = redis_peek('email_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek('sms_notifications')
-  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).to be_empty
+  queue = redis_peek('sms_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Then /^an email notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
-  queue = ResqueSpec.peek('email_notifications')
-  expect(queue.select {|n| n[:args].first['event_id'] =~ /#{entity}:ping/ }).to be_empty
+  queue = redis_peek('email_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
 Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
@@ -134,13 +134,16 @@ Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |e
                        'id'                 => 1,
                        'state_duration'     => 30,
                        'duration'           => 45}
+
+  Flapjack::Data::Alert.add('sms_notifications', @sms_notification,
+                            :redis => @notifier_redis)
 end
 
 Given /^a user SNS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
   Flapjack::Data::Entity.add({'id'   => '5000',
                               'name' => entity},
                              :redis => @redis )
-  @sms_notification = {'notification_type'  => 'problem',
+  @sns_notification = {'notification_type'  => 'problem',
                        'contact_first_name' => 'John',
                        'contact_last_name'  => 'Smith',
                        'state'              => 'critical',
@@ -151,6 +154,9 @@ Given /^a user SNS notification has been queued for entity '([\w\.\-]+)'$/ do |e
                        'id'                 => 1,
                        'state_duration'     => 30,
                        'duration'           => 45}
+
+  Flapjack::Data::Alert.add('sns_notifications', @sns_notification,
+                            :redis => @notifier_redis)
 end
 
 Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
@@ -168,66 +174,54 @@ Given /^a user email notification has been queued for entity '([\w\.\-]+)'$/ do 
                          'id'                 => 2,
                          'state_duration'     => 30,
                          'duration'           => 3600}
+
+  Flapjack::Data::Alert.add('email_notifications', @email_notification,
+                            :redis => @notifier_redis)
 end
 
-# NB using perform, the notifiers were accessing the wrong Redis DB number
-
-# TODO may need to get more complex, depending which SMS provider is used
 When /^the SMS notification handler runs successfully$/ do
   @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/)
 
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::SmsMessagenet.start
+  @sms_messagenet = Flapjack::Gateways::SmsMessagenet.new(:config => {
+      'username' => 'abcd', 'password' => 'efgh'
+    }, :redis_config => @redis_opts, :logger => @logger)
 
-  Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
+  drain_alerts('sms_notifications', @sms_messagenet)
 end
 
 When /^the SNS notification handler runs successfully$/ do
   @request = stub_request(:post, /amazonaws\.com/)
 
-  Flapjack::Gateways::AwsSns.instance_variable_set('@config', {
+  @aws_sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
     'secret_key' => "secret"
-  })
-  Flapjack::Gateways::AwsSns.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::AwsSns.start
+  }, :redis_config => @redis_opts, :logger => @logger)
 
-  Flapjack::Gateways::AwsSns.perform(@sms_notification)
+  drain_alerts('sns_notifications', @aws_sns)
 end
 
 When /^the SMS notification handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape(Flapjack::Gateways::SmsMessagenet::MESSAGENET_DEFAULT_URL)}/).to_return(:status => [500, "Internal Server Error"])
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@config', {'username' => 'abcd', 'password' => 'efgh'})
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::SmsMessagenet.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::SmsMessagenet.start
 
-  Flapjack::Gateways::SmsMessagenet.perform(@sms_notification)
+  @sms_messagenet = Flapjack::Gateways::SmsMessagenet.new(:config => {
+      'username' => 'abcd', 'password' => 'efgh'
+    }, :redis_config => @redis_opts, :logger => @logger)
+
+  drain_alerts('sms_notifications', @sms_messagenet)
 end
 
 When /^the SNS notification handler fails to send an SMS$/ do
   @request = stub_request(:post, /amazonaws\.com/).to_return(:status => [500, "Internal Server Error"])
-  Flapjack::Gateways::AwsSns.instance_variable_set('@config', {
+
+  @aws_sns = Flapjack::Gateways::AwsSns.new(:config => {
     'access_key' => "AKIAIOSFODNN7EXAMPLE",
     'secret_key' => "secret"
-  })
-  Flapjack::Gateways::AwsSns.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::AwsSns.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::AwsSns.start
+  }, :redis_config => @redis_opts, :logger => @logger)
 
-  Flapjack::Gateways::AwsSns.perform(@sms_notification)
+  drain_alerts('sns_notifications', @aws_sns)
 end
 
 When /^the email notification handler runs successfully$/ do
-  Resque.redis = @redis
-  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
-  Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::Email.start
-
   # poor man's stubbing
   EM::P::SmtpClient.class_eval {
     def self.send(args = {})
@@ -237,16 +231,16 @@ When /^the email notification handler runs successfully$/ do
     end
   }
 
-  Flapjack::Gateways::Email.perform(@email_notification)
+  @email = Flapjack::Gateways::Email.new(:config => {
+    'smtp_config' => {'host' => '127.0.0.1',
+                      'port' => 2525,
+                      'from' => 'flapjack@example'}
+  }, :redis_config => @redis_opts, :logger => @logger)
+
+  drain_alerts('email_notifications', @email)
 end
 
 When /^the email notification handler fails to send an email$/ do
-  Resque.redis = @redis
-  Flapjack::Gateways::Email.instance_variable_set('@config', {'smtp_config' => {'host' => '127.0.0.1', 'port' => 2525}})
-  Flapjack::Gateways::Email.instance_variable_set('@redis', @redis)
-  Flapjack::Gateways::Email.instance_variable_set('@logger', @logger)
-  Flapjack::Gateways::Email.start
-
   # poor man's stubbing
   EM::P::SmtpClient.class_eval {
     def self.send(args = {})
@@ -256,33 +250,26 @@ When /^the email notification handler fails to send an email$/ do
     end
   }
 
-  Flapjack::Gateways::Email.perform(@email_notification)
+  @email = Flapjack::Gateways::Email.new(:config => {
+    'smtp_config' => {'host' => '127.0.0.1',
+                      'port' => 2525,
+                      'from' => 'flapjack@example'}
+  }, :redis_config => @redis_opts, :logger => @logger)
+
+  drain_alerts('email_notifications', @email)
 end
 
-Then /^the user should receive an SMS notification$/ do
+Then /^the user should( not)? receive an SMS notification$/ do |negativity|
   expect(@request).to have_been_requested
-  expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(1)
+  expect(@sms_messagenet.instance_variable_get('@sent')).to eq(negativity.nil? ? 1 : 0)
 end
 
-Then /^the user should receive an SNS notification$/ do
+Then /^the user should( not)? receive an SNS notification$/ do |negativity|
   expect(@request).to have_been_requested
-  expect(Flapjack::Gateways::AwsSns.instance_variable_get('@sent')).to eq(1)
+  expect(@aws_sns.instance_variable_get('@sent')).to eq(negativity.nil? ? 1 : 0)
 end
 
-Then /^the user should receive an email notification$/ do
-  expect(Flapjack::Gateways::Email.instance_variable_get('@sent')).to eq(1)
+Then /^the user should( not)? receive an email notification$/ do |negativity|
+  expect(@email.instance_variable_get('@sent')).to eq(negativity.nil? ? 1 : 0)
 end
 
-Then /^the user should not receive an SMS notification$/ do
-  expect(@request).to have_been_requested
-  expect(Flapjack::Gateways::SmsMessagenet.instance_variable_get('@sent')).to eq(0)
-end
-
-Then /^the user should not receive an SNS notification$/ do
-  expect(@request).to have_been_requested
-  expect(Flapjack::Gateways::AwsSns.instance_variable_get('@sent')).to eq(0)
-end
-
-Then /^the user should not receive an email notification$/ do
-  expect(Flapjack::Gateways::Email.instance_variable_get('@sent')).to eq(0)
-end

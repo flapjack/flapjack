@@ -2,7 +2,8 @@
 
 def drain_events
   loop do
-    event = Flapjack::Data::Event.next('events', :block => false, :redis => @redis)
+    event = Flapjack::Data::Event.next('events', :block => false,
+      :redis => @redis)
     break unless event
     @processor.send(:process_event, event)
   end
@@ -12,14 +13,25 @@ end
 def drain_notifications
   return unless @notifier_redis
   loop do
-    notification = Flapjack::Data::Notification.next('notifications', :block => false, :redis => @notifier_redis)
+    notification = Flapjack::Data::Notification.next('notifications',
+      :block => false, :redis => @notifier_redis)
     break unless notification
     @notifier.send(:process_notification, notification)
   end
 end
 
+def drain_alerts(queue, gateway)
+  return unless @notifier_redis
+  loop do
+    alert = Flapjack::Data::Alert.next(queue, :block => false,
+      :redis => @notifier_redis, :logger => @logger)
+    break unless alert
+    gateway.send(:deliver, alert)
+  end
+end
+
 def submit_event(event)
-  @redis.rpush 'events', event.to_json
+  @redis.rpush('events', Flapjack.dump_json(event))
 end
 
 def set_scheduled_maintenance(entity, check, duration)
@@ -300,7 +312,7 @@ Then /^dump notification rules for user (\S+)$/ do |contact|
   puts "There #{(rule_ids.length == 1) ? 'is' : 'are'} #{rule_ids.length} notification rule#{(rule_ids.length == 1) ? '' : 's'} for user #{contact}:"
   rule_ids.each {|rule_id|
     rule = Flapjack::Data::NotificationRule.find_by_id(rule_id, :redis => @redis)
-    puts rule.to_json
+    puts Flapjack.dump_json(rule)
   }
 end
 
@@ -405,18 +417,18 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   when 'no'
     num_queued = 0
   end
-  queue = Resque.peek("#{media}_notifications", 0, 30)
-  queued_length = queue.find_all {|n|
-    type_ok = notification_type ? ( n['args'].first['notification_type'] == notification_type ) : true
+  queued = redis_peek("#{media}_notifications", 0, 30)
+  queued_length = queued.find_all {|n|
+    type_ok = notification_type ? ( n['notification_type'] == notification_type ) : true
     rollup_ok = case rollup
     when 'none'
-      n['args'].first['rollup'].nil?
-    when nil, n['args'].first['rollup']
+      n['rollup'].nil?
+    when nil, n['rollup']
       true
     else
       false
     end
-    type_ok && rollup_ok && ( n['args'].first['address'] == address )
+    type_ok && rollup_ok && ( n['address'] == address )
   }.length
   expect(queued_length).to eq(num_queued.to_i)
 end
@@ -424,5 +436,19 @@ end
 When(/^user (\S+) ceases to be a contact of entity '(.*)'$/) do |contact_id, entity|
   entity = Flapjack::Data::Entity.find_by_name(entity, :redis => @redis)
   @redis.srem("contacts_for:#{entity.id}", contact_id)
+end
+
+Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should not appear in unacknowledged_failing$/) do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
+  expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to_not include("#{entity}:#{check}")
+end
+
+Then(/^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') should appear in unacknowledged_failing$/) do |check, entity|
+  check  ||= @check
+  entity ||= @entity
+  unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
+  expect(unacknowledged_failing_checks.map {|ec| "#{ec.entity.name}:#{ec.check}"}).to include("#{entity}:#{check}")
 end
 

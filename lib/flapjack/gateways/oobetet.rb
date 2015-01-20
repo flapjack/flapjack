@@ -4,7 +4,6 @@ require 'socket'
 require 'eventmachine'
 require 'em-synchrony'
 require 'blather/client/client'
-require 'oj'
 
 require 'flapjack/utility'
 
@@ -210,9 +209,9 @@ module Flapjack
       end
 
       def send_pagerduty_event(event)
-        options  = { :body => Oj.dump(event) }
+        options  = { :body => Flapjack.dump_json(event) }
         http     = EM::HttpRequest.new(@pagerduty_events_api_url).post(options)
-        response = Oj.load(http.response)
+        response = Flapjack.load_json(http.response)
         status   = http.response_header.status
         @logger.debug "send_pagerduty_event got a return code of #{status.to_s} - #{response.inspect}"
         [status, response]
