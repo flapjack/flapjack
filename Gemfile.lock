@@ -15,6 +15,7 @@ PATH
       hiredis
       ice_cube
       mail
+      mysql2
       nokogiri (= 1.6.2.1)
       oj (>= 2.9.0)
       rack-fiber_pool
@@ -229,7 +230,6 @@ DEPENDENCIES
   guard
   guard-cucumber
   guard-rspec
-  mysql2
   pact
   rack-test
   rb-fsevent

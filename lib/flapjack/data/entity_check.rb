@@ -606,8 +606,8 @@ module Flapjack
         details = options[:details]
         perfdata = options[:perfdata]
         count = options[:count]
-        initial_failure_delay = options[:initial_failure_delay]
-        repeat_failure_delay = options[:repeat_failure_delay]
+        initial_delay = options[:initial_failure_delay]
+        repeat_delay = options[:repeat_failure_delay]
 
         old_state = self.state
 
@@ -651,10 +651,13 @@ module Flapjack
 
           # Even if this isn't a state change, we need to update the current state
           # hash summary and details (as they may have changed)
-          multi.hset("check:#{@key}", 'initial_failure_delay', (initial_failure_delay || Flapjack::DEFAULT_INITIAL_FAILURE_DELAY))
-          multi.hset("check:#{@key}", 'repeat_failure_delay', (repeat_failure_delay || Flapjack::DEFAULT_REPEAT_FAILURE_DELAY))
           multi.hset("check:#{@key}", 'summary', (summary || ''))
           multi.hset("check:#{@key}", 'details', (details || ''))
+
+          # NB: delays will revert to defaults if event sources don't continue sending
+          # through their custom delays in the event structure
+          multi.hset("check:#{@key}", 'initial_failure_delay', (initial_delay || Flapjack::DEFAULT_INITIAL_FAILURE_DELAY))
+          multi.hset("check:#{@key}", 'repeat_failure_delay', (repeat_delay || Flapjack::DEFAULT_REPEAT_FAILURE_DELAY))
           if perfdata
             multi.hset("check:#{@key}", 'perfdata', format_perfdata(perfdata).to_json)
   #          multi.set("#{@key}:#{timestamp}:perfdata", perfdata)

@@ -21,12 +21,12 @@ module Flapjack
 
       def block?(event, entity_check, previous_state)
         initial_failure_delay = entity_check.initial_failure_delay
-        if initial_failure_delay.nil? || (initial_failure_delay < 1)
+        if initial_failure_delay.nil? || (initial_failure_delay < 0)
           initial_failure_delay = Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
         end
 
         repeat_failure_delay = entity_check.repeat_failure_delay
-        if repeat_failure_delay.nil? || (repeat_failure_delay < 1)
+        if repeat_failure_delay.nil? || (repeat_failure_delay < 0)
           repeat_failure_delay = Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
         end
 
