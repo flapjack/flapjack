@@ -136,10 +136,10 @@ module Flapjack
       validates :name, :presence => true
 
       validates :initial_failure_delay, :allow_nil => true,
-        :numericality => {:greater_than => 0, :only_integer => true}
+        :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
 
       validates :repeat_failure_delay, :allow_nil => true,
-        :numericality => {:greater_than => 0, :only_integer => true}
+        :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
 
       before_validation :create_ack_hash
       validates :ack_hash, :presence => true
@@ -158,7 +158,7 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:name, :initial_failure_delay, :repeat_failure_delay, :enabled]
+        [:name, :enabled]
       end
 
       def self.jsonapi_singular_associations
