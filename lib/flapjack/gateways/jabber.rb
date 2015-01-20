@@ -423,7 +423,7 @@ module Flapjack
             msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
           end
         end
-          
+
         when /^(?:maint )?entities\s+\/(.+)\/(?:\s*(.*?)(?:\s*start-in:.*?(\w+.*?))?(?:\s*start-at:.*?(\w+.*?))?(?:\s*duration:.*?(\w+.*?))?)$/i
           entity_pattern   = $1.strip
           comment          = $2 ? $2.strip : nil
@@ -439,12 +439,13 @@ module Flapjack
             comment = "#{from}: #{comment}"
           end
 
-          if start_in 
-            maint_start = Time.now.to_i + ChronicDuration.parse(start_in)
-          elsif start_at
-            maint_start = Chronic.parse(start_at).to_i
+          maint_start = case
+          when start_in
+            Time.now.to_i + ChronicDuration.parse(start_in)
+          when start_at
+            Chronic.parse(start_at).to_i
           else
-            maint_start = Time.now.to_i
+            Time.now.to_i
           end
 
           if entity_names
@@ -826,4 +827,3 @@ module Flapjack
 
   end
 end
-
