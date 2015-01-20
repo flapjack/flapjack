@@ -606,6 +606,8 @@ module Flapjack
         details = options[:details]
         perfdata = options[:perfdata]
         count = options[:count]
+        initial_failure_delay = options[:initial_failure_delay]
+        repeat_failure_delay = options[:repeat_failure_delay]
 
         old_state = self.state
 
@@ -649,6 +651,8 @@ module Flapjack
 
           # Even if this isn't a state change, we need to update the current state
           # hash summary and details (as they may have changed)
+          multi.hset("check:#{@key}", 'initial_failure_delay', (initial_failure_delay || Flapjack::DEFAULT_INITIAL_FAILURE_DELAY))
+          multi.hset("check:#{@key}", 'repeat_failure_delay', (repeat_failure_delay || Flapjack::DEFAULT_REPEAT_FAILURE_DELAY))
           multi.hset("check:#{@key}", 'summary', (summary || ''))
           multi.hset("check:#{@key}", 'details', (details || ''))
           if perfdata
@@ -775,6 +779,16 @@ module Flapjack
 
         data = [data] if data.is_a?(Hash)
         data
+      end
+
+      def initial_failure_delay
+        delay = @redis.hget("check:#{@key}", 'initial_failure_delay')
+        delay.to_i unless delay.nil?
+      end
+
+      def repeat_failure_delay
+        delay = @redis.hget("check:#{@key}", 'repeat_failure_delay')
+        delay.to_i unless delay.nil?
       end
 
       # Returns a list of states for this entity check, sorted by timestamp.
