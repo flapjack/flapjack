@@ -11,11 +11,14 @@ module Flapjack
 
       attr_accessor :counter, :id_hash
 
-      attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
+      attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata,
+                  :initial_failure_delay, :repeat_failure_delay
 
       # type was a required key in v1, but is superfluous
       REQUIRED_KEYS = %w(state check summary)
-      OPTIONAL_KEYS = %w(entity time details acknowledgement_id duration tags perfdata type)
+      OPTIONAL_KEYS = %w(entity time initial_failure_delay
+        repeat_failure_delay details acknowledgement_id duration tags perfdata
+        type)
 
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
@@ -30,13 +33,23 @@ module Flapjack
         proc {|e| e['check'].is_a?(String) } =>
           "check must be a string",
 
-        proc {|e| e['summary'].is_a?(String) } =>
-          "summary must be a string",
-
         proc {|e| e['time'].nil? ||
                   e['time'].is_a?(Integer) ||
                  (e['time'].is_a?(String) && !!(e['time'] =~ /^\d+$/)) } =>
           "time must be a positive integer, or a string castable to one",
+
+        proc {|e| e['initial_failure_delay'].nil? ||
+                  e['initial_failure_delay'].is_a?(Integer) ||
+                 (e['initial_failure_delay'].is_a?(String) && !!(e['initial_failure_delay'] =~ /^\d+$/)) } =>
+          "initial_failure_delay must be a positive integer, or a string castable to one",
+
+        proc {|e| e['repeat_failure_delay'].nil? ||
+                  e['repeat_failure_delay'].is_a?(Integer) ||
+                 (e['repeat_failure_delay'].is_a?(String) && !!(e['repeat_failure_delay'] =~ /^\d+$/)) } =>
+          "repeat_failure_delay must be a positive integer, or a string castable to one",
+
+        proc {|e| e['summary'].is_a?(String) } =>
+          "summary must be a string",
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
           "details must be a string",
@@ -100,13 +113,16 @@ module Flapjack
       end
 
       # creates, or modifies, an event object and adds it to the events list in redis
-      #   'entity'    => entity_name,
-      #   'check'     => check_name,
-      #   'state'     => state,
-      #   'summary'   => check_output,
-      #   'details'   => check_long_output,
-      #   'perfdata'  => perf_data,
-      #   'time'      => timestamp
+      #   'entity'                => entity,
+      #   'check'                 => check,
+      #   'time'                  => timestamp,
+      #   'initial_failure_delay' => initial_failure_delay,
+      #   'repeat_failure_delay'  => repeat_failure_delay
+      #   'type'                  => 'service',
+      #   'state'                 => state,
+      #   'summary'               => check_output,
+      #   'details'               => check_long_output,
+      #   'perfdata'              => perf_data
       def self.push(queue, event)
         event['time'] = Time.now.to_i if event['time'].nil?
 
@@ -159,8 +175,10 @@ module Flapjack
         else
           "#{attrs['entity']}:#{attrs['check']}"
         end
-        [:state, :time, :summary, :perfdata, :details, :acknowledgement_id,
+        [:state, :time, :initial_failure_delay, :repeat_failure_delay,
+         :summary, :details, :perfdata, :acknowledgement_id,
          :duration].each do |key|
+
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
         # details and perfdata are optional. set to nil if they only contain whitespace
@@ -173,14 +191,14 @@ module Flapjack
         @state.downcase
       end
 
-      def duration
-        return unless @duration
-        @duration.to_i
-      end
+      [:time, :initial_failure_delay, :repeat_failure_delay, :duration].each do |num_prop|
 
-      def time
-        return unless @time
-        @time.to_i
+        define_method(num_prop) do
+          prop = instance_variable_get("@#{num_prop}")
+          return if prop.nil?
+          prop.to_i
+        end
+
       end
 
       def dump
