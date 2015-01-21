@@ -416,6 +416,19 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'ack checks matching /^example.com:p/')
     end
 
+    it "interprets a received maintenance command" do
+      expect(bot).to receive(:announce).with('room1', 'maint entities /something/ Test maintenance start-in: 1 minute duration: 3 hours')
+
+      t = Time.now.to_i + 60
+      ec = Flapjack::Data::EntityCheck('name', 'check', :redis => @redis)
+
+      expect(ec).to receive(:create_scheduled_maintenance).with(t, 3 * 60 * 60, :summary => 'Test maintenance').and_return(true)
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint entities /nonexistant/ Test maintenance start-in: 1 minute duration: 3 hour')
+    end
+
     it "interprets a received test notifications command (with name)" do
       expect(bot).to receive(:announce).with('room1', /Testing notifications for check with name 'example.com:ping'/)
 
