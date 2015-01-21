@@ -302,6 +302,14 @@ module Flapjack
           end
         end
 
+        # only change notification delays on service (non-action) events;
+        # resets a check's delays to the default values if the event data doesn't
+        # reinforce the change
+        check.initial_failure_delay = event.initial_failure_delay ||
+                                      Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
+        check.repeat_failure_delay  = event.repeat_failure_delay  ||
+                                      Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
+
         new_entry.condition = event_condition.name
 
         if old_state.nil?

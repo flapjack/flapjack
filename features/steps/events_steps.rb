@@ -14,10 +14,6 @@ def drain_notifications
   end
 end
 
-def submit_event(event)
-  Flapjack.redis.rpush('events', Flapjack.dump_json(event))
-end
-
 def set_scheduled_maintenance(entity_name, check_name, duration)
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
@@ -70,48 +66,27 @@ def set_state(entity_name, check_name, condition, last_update = Time.now)
   check.states << state
 end
 
-def submit_ok(entity_name, check_name)
+def submit_event(state, entity_name, check_name, opts = {})
+  err_rate = case state
+  when 'ok'
+    '0'
+  when 'warning'
+    '25'
+  when 'critical'
+    '100'
+  end
   event = {
     'type'    => 'service',
-    'state'   => 'ok',
-    'summary' => '0% packet loss',
+    'state'   => state,
+    'summary' => "#{err_rate}% packet loss",
     'entity'  => entity_name,
     'check'   => check_name,
   }
-  submit_event(event)
-end
-
-def submit_warning(entity_name, check_name)
-  event = {
-    'type'    => 'service',
-    'state'   => 'warning',
-    'summary' => '25% packet loss',
-    'entity'  => entity_name,
-    'check'   => check_name,
-  }
-  submit_event(event)
-end
-
-def submit_critical(entity_name, check_name)
-  event = {
-    'type'    => 'service',
-    'state'   => 'critical',
-    'summary' => '100% packet loss',
-    'entity'  => entity_name,
-    'check'   => check_name,
-  }
-  submit_event(event)
-end
-
-def submit_unknown(entity_name, check_name)
-  event = {
-    'type'    => 'service',
-    'state'   => 'unknown',
-    'summary' => 'check execution error',
-    'entity'  => entity_name,
-    'check'   => check_name,
-  }
-  submit_event(event)
+  ['initial', 'repeat'].each do |delay_type|
+    delay_key = "#{delay_type}_failure_delay".to_sym
+    event.update(delay_key => opts[delay_key]) unless opts[delay_key].nil?
+  end
+  Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
 def submit_acknowledgement(entity_name, check_name)
@@ -122,7 +97,7 @@ def submit_acknowledgement(entity_name, check_name)
     'entity'  => entity_name,
     'check'   => check_name,
   }
-  submit_event(event)
+  Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
 def submit_test(entity_name, check_name)
@@ -133,7 +108,7 @@ def submit_test(entity_name, check_name)
     'entity'  => entity_name,
     'check'   => check_name,
   }
-  submit_event(event)
+  Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
 def icecube_schedule_to_time_restriction(sched, time_zone)
@@ -190,45 +165,18 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   set_unscheduled_maintenance(entity_name, check_name, 60*60*2)
 end
 
-Given /^the (initial|repeat) failure delay is (\d+) seconds$/ do |delay_type, num_secs|
-  delay = num_secs.to_i
-  expect(delay).to be > 0
-
-  @processor.instance_variable_set("@#{delay_type}_failure_delay", delay)
-end
-
-When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
+When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial|repeat) failure delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |state, init_or_repeat, failure_delay, check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
-  submit_ok(entity_name, check_name)
-  drain_events
-end
-
-When /^a failure event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
-  check_name  ||= @check_name
-  entity_name ||= @entity_name
-  submit_critical(entity_name, check_name)
-  drain_events
-end
-
-When /^a critical event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
-  check_name  ||= @check_name
-  entity_name ||= @entity_name
-  submit_critical(entity_name, check_name)
-  drain_events
-end
-
-When /^a warning event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
-  check_name  ||= @check_name
-  entity_name ||= @entity_name
-  submit_warning(entity_name, check_name)
-  drain_events
-end
-
-When /^an unknown event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check_name, entity_name|
-  check_name  ||= @check_name
-  entity_name ||= @entity_name
-  submit_unknown(entity_name, check_name)
+  opts = case init_or_repeat
+  when 'initial'
+    {:initial_failure_delay => failure_delay}
+  when 'repeat'
+    {:repeat_failure_delay => failure_delay}
+  else
+    {}
+  end
+  submit_event(state, entity_name, check_name, opts)
   drain_events
 end
 

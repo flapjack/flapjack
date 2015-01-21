@@ -10,8 +10,6 @@ module FixtureData
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
      :name => 'www.example.com:SSH',
-     :initial_failure_delay => 30,
-     :repeat_failure_delay  => 60,
      :enabled               => true
     }
   end
@@ -20,8 +18,6 @@ module FixtureData
     @check_2_data ||= {
      :id   => '29e913cf-29ea-4ae5-94f6-7069cf4a1514',
      :name => 'www2.example.com:PING',
-     :initial_failure_delay => 30,
-     :repeat_failure_delay  => 60,
      :enabled               => true
     }
   end

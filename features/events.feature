@@ -31,11 +31,10 @@ Feature: events
 
   @time
   Scenario: Check critical to critical after 10 seconds, with an initial delay of 5 seconds
-    Given the initial failure delay is 5 seconds
-    And   the check is in an ok state
-    When  a critical event is received
+    Given the check is in an ok state
+    When  a critical event with an initial failure delay of 5 seconds is received
     And   10 seconds passes
-    And   a critical event is received
+    And   a critical event with an initial failure delay of 5 seconds is received
     Then  1 notification should have been generated
 
   @time
@@ -56,11 +55,10 @@ Feature: events
 
   @time
   Scenario: Check ok to critical for 1 minute, with an initial delay of 2 minutes
-    Given the initial failure delay is 120 seconds
     And   the check is in an ok state
-    When  a critical event is received
+    When  a critical event with an initial failure delay of 120 seconds is received
     And   1 minute passes
-    And   a critical event is received
+    And   a critical event with an initial failure delay of 120 seconds is received
     Then  no notifications should have been generated
 
   @time
@@ -90,14 +88,13 @@ Feature: events
 
   @time
   Scenario: Check critical and alerted to critical for 40 seconds, with a repeat delay of 20 seconds
-    Given the repeat failure delay is 20 seconds
-    And   the check is in an ok state
-    When  a critical event is received
+    Given the check is in an ok state
+    When  a critical event with a repeat failure delay of 20 seconds is received
     And   1 minute passes
-    And   a critical event is received
+    And   a critical event with a repeat failure delay of 20 seconds is received
     Then  1 notification should have been generated
     When  40 seconds passes
-    And   a critical event is received
+    And   a critical event with a repeat failure delay of 20 seconds is received
     Then  2 notifications should have been generated
 
   @time
@@ -113,14 +110,13 @@ Feature: events
 
   @time
   Scenario: Check critical and alerted to critical for 6 minutes, with a repeat delay of 10 minutes
-    Given the repeat failure delay is 600 seconds
     Given the check is in an ok state
-    When  a critical event is received
+    When  a critical event with a repeat failure delay of 600 seconds is received
     And   1 minute passes
-    And   a critical event is received
+    And   a critical event with a repeat failure delay of 600 seconds is received
     Then  1 notification should have been generated
     When  6 minutes passes
-    And   a critical event is received
+    And   a critical event with a repeat failure delay of 600 seconds is received
     Then  1 notification should have been generated
 
   @time

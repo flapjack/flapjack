@@ -17,10 +17,6 @@ module Flapjack
   DEFAULT_INITIAL_FAILURE_DELAY = 30
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 
-  # https://github.com/flapjack/flapjack/issues/449 , not done yet but
-  # designing around this for now
-  SEPARATE_STATE_HISTORY = false
-
   def self.load_json(data)
     Oj.load(data, :mode => :strict, :symbol_keys => false)
   end

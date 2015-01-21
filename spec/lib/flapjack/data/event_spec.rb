@@ -73,10 +73,10 @@ describe Flapjack::Data::Event do
     end
   end
 
-  ['state', 'check', 'summary'].each do |required_key|
+  [:state, :check, :summary].each do |required_key|
     it "rejects an event with missing '#{required_key}' key" do
       bad_event_data = event_data.clone
-      bad_event_data.delete(required_key)
+      bad_event_data.delete(required_key.to_s)
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
       parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
@@ -93,21 +93,24 @@ describe Flapjack::Data::Event do
     end
   end
 
-  ['entity', 'time', 'details', 'perfdata', 'acknowledgement_id', 'duration'].each do |optional_key|
+  [:entity, :time, :initial_failure_delay, :repeat_failure_delay, :details,
+   :perfdata, :acknowledgement_id, :duration].each do |optional_key|
+
     it "rejects an event with invalid '#{optional_key}' key" do
       bad_event_data = event_data.clone
-      bad_event_data[optional_key] = {'hello' => 'there'}
+      bad_event_data[optional_key.to_s] = {'hello' => 'there'}
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
       parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
       expect(errors).not_to be_empty
     end
+
   end
 
-  ['time', 'duration'].each do |key|
+  [:time, :initial_failure_delay, :repeat_failure_delay, :duration].each do |key|
     it "accepts an event with a numeric string #{key} key" do
       numstr_event_data = event_data.clone
-      numstr_event_data[key] = '352'
+      numstr_event_data[key.to_s] = '352'
       numstr_event_json = Flapjack.dump_json(numstr_event_data)
 
       parsed, errors = Flapjack::Data::Event.parse_and_validate(numstr_event_json)
