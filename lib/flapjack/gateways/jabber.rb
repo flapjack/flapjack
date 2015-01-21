@@ -518,7 +518,7 @@ module Flapjack
             end
 
             check_xml = Proc.new do |data|
-              return if data.nil?
+              next if data.nil?
               Flapjack.logger.debug "xml_data: #{data}"
               text = ''
               begin
