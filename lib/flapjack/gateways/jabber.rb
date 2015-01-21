@@ -452,7 +452,7 @@ module Flapjack
             number_found = entity_names.length
             case
             when number_found == 0
-              msg = "found no entities matching /#{pattern}/"
+              msg = "found no entities matching /#{entity_pattern}/"
             when number_found >= 1
               entities = entity_names.map {|name|
                 Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
