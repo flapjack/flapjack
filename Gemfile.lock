@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/sandstorm.git
-  revision: a63dc955d809faf5012d3a083f87497ee3d2d94a
+  revision: 29c0329b67a38a0e99070af03d4a6774de7fb516
   branch: master
   specs:
     sandstorm (0.1.0)
@@ -81,31 +81,30 @@ GEM
     multi_json (1.10.1)
     multi_test (0.1.1)
     numerizer (0.1.1)
-    oj (2.11.2)
-    pact (1.4.0)
+    oj (2.11.4)
+    pact (1.5.0)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
       json
-      pact-mock_service (~> 0.2.0)
-      pact-support (~> 0.1.2)
+      pact-mock_service (~> 0.2.3)
+      pact-support (~> 0.2.1)
       rack-test (~> 0.6.2)
       randexp (~> 0.1.7)
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
       webrick
-    pact-mock_service (0.2.2)
-      awesome_print (~> 1.1)
+    pact-mock_service (0.2.3)
       find_a_port (~> 1.0.1)
       json
-      pact-support (~> 0.1.1)
+      pact-support (~> 0.2.1)
       rack
       rack-test (~> 0.6.2)
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
       webrick
-    pact-support (0.1.3)
+    pact-support (0.2.1)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
       json

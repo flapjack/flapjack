@@ -17,8 +17,8 @@ features/support/etc/netsaint/*
 log/*
 vendor
 .bundle
-etc/*.toml
 coverage
+reports
 tmp/*
 flapjack-*.gem
 _site/*
