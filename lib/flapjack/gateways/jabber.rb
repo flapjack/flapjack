@@ -411,7 +411,8 @@ module Flapjack
             end
 
           rescue => e
-            Flapjack.logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+            Flapjack.logger.error { "Exception when interpreting command '#{command}' - #{e.class}, #{e.message}" }
+            Flapjack.logger.debug { e.backtrace.join("\n") }
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
           end
 
@@ -450,7 +451,6 @@ module Flapjack
 
           @alias = @config['alias'] || 'flapjack'
           @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
-          Flapjack.logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
 
           @state_buffer = []
         end
@@ -472,6 +472,8 @@ module Flapjack
         end
 
         def start
+          Flapjack.logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
+
           @lock.synchronize do
             interpreter = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:interpret)} : nil
 
@@ -518,45 +520,52 @@ module Flapjack
             end
 
             check_xml = Proc.new do |data|
-              next if data.nil?
-              Flapjack.logger.debug "xml_data: #{data}"
-              text = ''
-              begin
-                enc_name = Encoding.default_external.name
-                REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
-                  each_element_with_text do |elem|
+              if data.nil?
+                nil
+              else
+                Flapjack.logger.debug "xml_data: #{data}"
+                text = ''
+                begin
+                  enc_name = Encoding.default_external.name
+                  REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
+                    each_element_with_text do |elem|
 
-                  text += elem.texts.join(" ")
+                    text += elem.texts.join(" ")
+                  end
+                  text = data if text.empty? && !data.empty?
+                rescue REXML::ParseException => exc
+                  # invalid XML, so we'll just clear everything inside angled brackets
+                  text = data.gsub(/<[^>]+>/, '').strip
                 end
-                text = data if text.empty? && !data.empty?
-              rescue REXML::ParseException => exc
-                # invalid XML, so we'll just clear everything inside angled brackets
-                text = data.gsub(/<[^>]+>/, '').strip
+                text
               end
-              text
             end
 
             client.add_message_callback do |m|
+              Flapjack.logger.debug "received message #{m.inspect}"
               text = m.body
-              nick = m.from
-              time = nil
-              m.each_element('x') { |x|
-                if x.kind_of?(::Jabber::Delay::XDelay)
-                  time = x.stamp
-                end
-              }
+              unless text.nil? || text.strip.empty?
+                nick = m.from
+                time = nil
+                m.each_element('x') { |x|
+                  if x.kind_of?(::Jabber::Delay::XDelay)
+                    time = x.stamp
+                  end
+                }
 
-              if interpreter
-                interpreter.receive_message(nil, nick, time, check_xml.call(text))
+                if interpreter
+                  interpreter.receive_message(nil, nick, time, check_xml.call(text))
+                end
               end
             end
 
             muc_clients = @config['rooms'].inject({}) do |memo, room|
               muc_client = ::Jabber::MUC::SimpleMUCClient.new(client)
               muc_client.on_message do |time, nick, text|
+                Flapjack.logger.debug("message #{text} -- #{time} -- #{nick}")
                 next if nick == jabber_id
+                identifier = @identifiers.detect {|id|  /^#{id}:\s*(.*)/m === check_xml.call(text) }
 
-                identifier = @identifiers.detect {|id| check_xml.call(text) === /^#{id}:\s*(.*)/m }
                 unless identifier.nil?
                   the_command = $1
                   Flapjack.logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
