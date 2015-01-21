@@ -235,7 +235,7 @@ module Flapjack
         logger_name = if TYPES[type].size == 1
           "flapjack-#{type}"
         else
-          "flapjack-#{type}-#{pikelet_class.split('::').last.downcase}"
+          "flapjack-#{type}-#{pikelet_class.name.split('::').last.downcase}"
         end
         wrapper.new(pikelet_class, shutdown, :logger_name => logger_name,
           :config => config)
