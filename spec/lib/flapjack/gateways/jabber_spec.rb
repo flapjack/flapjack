@@ -490,6 +490,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       interpreter = double(Flapjack::Gateways::Jabber::Interpreter)
       expect(interpreter).to receive(:respond_to?).with(:interpret).and_return(true)
       expect(interpreter).to receive(:receive_message).with(nil, 'jim', nil, 'hello!')
+      expect(interpreter).to receive(:receive_message).with(config['rooms'].first, 'jim', now.to_i, 'hello!')
 
       expect(client).to receive(:on_exception)
 
