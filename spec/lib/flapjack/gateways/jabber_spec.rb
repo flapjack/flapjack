@@ -252,6 +252,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "interprets a received information command (with name)" do
       expect(bot).to receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:collect).and_yield(check)
@@ -271,6 +276,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     it "handles a received information command (with name, with newline in the command)" do
       expect(bot).to receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:collect).and_yield(check)
@@ -289,6 +299,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     it "interprets a received information command (with tag)" do
       expect(bot).to receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)
@@ -310,6 +325,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     it "interprets a received information command (with regex)" do
       expect(bot).to receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)

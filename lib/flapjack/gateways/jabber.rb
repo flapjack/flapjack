@@ -302,9 +302,13 @@ module Flapjack
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 current_time = Time.now
                 "Details of checks #{descriptor}\n" +
-                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                    get_check_details(check, current_time)
-                  }.join("")
+                  Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance,
+                    Flapjack::Data::UnscheduledMaintenance) {
+
+                    Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
+                      get_check_details(check, current_time)
+                    }.join("")
+                  }
               end
 
             when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
