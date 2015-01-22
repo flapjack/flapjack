@@ -100,11 +100,11 @@ module Flapjack
 
         rows = maintenances.collect do |maint|
           check = maint.check_by_start
-          [check.name, check.state,
+          [check.name,
            Time.at(maint.start_time), maint.end_time - maint.start_time,
            maint.summary, Time.at(maint.end_time)]
         end
-        puts Terminal::Table.new :headings => ['Check', 'State',
+        puts Terminal::Table.new :headings => ['Check',
           'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
         maintenances
       end
@@ -149,7 +149,7 @@ module Flapjack
 
         check_names  = @options[:check].is_a?(String) ? @options[:check].split(',') : @options[:check]
 
-        started = Chronic.parse(options[:started])
+        started = Chronic.parse(@options[:started])
         raise "Failed to parse start time #{@options[:started]}" if started.nil?
 
         duration = ChronicDuration.parse(@options[:duration])
