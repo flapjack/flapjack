@@ -567,7 +567,7 @@ module Flapjack
               muc_client.on_message do |time, nick, text|
                 Flapjack.logger.debug("message #{text} -- #{time} -- #{nick}")
                 next if nick == jabber_id
-                identifier = identifiers.detect {|id|  /^#{id}:\s*(.*)/m === check_xml.call(text) }
+                identifier = identifiers.detect {|id| /^(?:@#{id}|#{id}:)\s*(.*)/m === check_xml.call(text) }
 
                 unless identifier.nil?
                   the_command = $1
@@ -743,7 +743,9 @@ module Flapjack
 
         def _say(client)
           while speak = @say_buffer.pop
-            client.send( ::Jabber::Message::new(speak[:nick], speak[:msg]) )
+            msg = ::Jabber::Message::new(speak[:nick], speak[:msg])
+            msg.type = :chat
+            client.send( msg )
           end
         end
 

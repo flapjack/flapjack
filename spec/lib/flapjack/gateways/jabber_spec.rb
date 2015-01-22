@@ -690,6 +690,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     it "speaks its say buffer" do
       message = double(::Jabber::Message)
+      expect(message).to receive(:type=).with(:chat)
       expect(::Jabber::Message).to receive(:new).
         with('jim', 'hello!').and_return(message)
 
