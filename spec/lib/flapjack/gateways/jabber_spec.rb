@@ -515,7 +515,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(client).to receive(:on_exception)
 
       msg_client = double('msg_client')
-      expect(msg_client).to receive(:body).and_return('hello!')
+      expect(msg_client).to receive(:type).and_return(:chat)
+      expect(msg_client).to receive(:body).exactly(3).times.and_return('hello!')
       expect(msg_client).to receive(:from).and_return('jim')
       expect(msg_client).to receive(:each_element).and_yield([]) # TODO improve
 
@@ -527,7 +528,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(::Jabber::Client).to receive(:new).and_return(client)
       expect(::Jabber::MUC::SimpleMUCClient).to receive(:new).and_return(muc_client)
 
-      expect(lock).to receive(:synchronize).and_yield
+      expect(lock).to receive(:synchronize).twice.and_yield
       stop_cond = double(MonitorMixin::ConditionVariable)
 
       fjb = Flapjack::Gateways::Jabber::Bot.new(:lock => lock,

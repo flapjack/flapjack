@@ -546,9 +546,8 @@ module Flapjack
             end
 
             client.add_message_callback do |m|
-              Flapjack.logger.debug "received message #{m.inspect}"
-              text = m.body
-              unless text.nil? || text.strip.empty?
+              unless (m.type != :chat) || m.body.nil? || m.body.strip.empty?
+                Flapjack.logger.debug "received message #{m.inspect}"
                 nick = m.from
                 time = nil
                 m.each_element('x') { |x|
@@ -557,8 +556,8 @@ module Flapjack
                   end
                 }
 
-                if interpreter
-                  interpreter.receive_message(nil, nick, time, check_xml.call(text))
+                unless interpreter.nil?
+                  interpreter.receive_message(nil, nick, time, check_xml.call(m.body))
                 end
               end
             end
@@ -568,7 +567,7 @@ module Flapjack
               muc_client.on_message do |time, nick, text|
                 Flapjack.logger.debug("message #{text} -- #{time} -- #{nick}")
                 next if nick == jabber_id
-                identifier = @identifiers.detect {|id|  /^#{id}:\s*(.*)/m === check_xml.call(text) }
+                identifier = identifiers.detect {|id|  /^#{id}:\s*(.*)/m === check_xml.call(text) }
 
                 unless identifier.nil?
                   the_command = $1
@@ -677,7 +676,7 @@ module Flapjack
         def _join(client, muc_clients, opts = {})
           client.connect
           client.auth(@config['password'])
-          client.send(::Jabber::Presence.new.set_type(:available))
+          client.send(::Jabber::Presence.new)
           muc_clients.each_pair do |room, muc_client|
             attempts_allowed = 3
             attempts_remaining = attempts_allowed
