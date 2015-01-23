@@ -641,10 +641,10 @@ module Flapjack
 
         def handle_state_change(client, muc_clients)
           connected = client.is_connected?
-          Flapjack.logger.info "connected? #{connected}"
+          Flapjack.logger.debug "connected? #{connected}"
 
           while state = @state_buffer.pop
-            Flapjack.logger.info "state change #{state}"
+            Flapjack.logger.debug "state change #{state}"
             case state
             when 'announce'
               _announce(muc_clients) if connected
