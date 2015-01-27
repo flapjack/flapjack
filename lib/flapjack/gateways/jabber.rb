@@ -388,13 +388,12 @@ module Flapjack
               end
 
             when /^(?:maint )?entities\s+\/(.+)\/(?:\s*(.*?)(?:\s*start-in:.*?(\w+.*?))?(?:\s*start-at:.*?(\w+.*?))?(?:\s*duration:.*?(\w+.*?))?)$/i
-              entity_pattern   = $1.strip
+              check_pattern   = $1.strip
               comment          = $2 ? $2.strip : nil
               start_in         = $3 ? $3.strip : nil
               start_at         = $4 ? $4.strip : nil
               duration_str     = $5 ? $5.strip : '1 hour'
-              maint_duration   = ChronicDuration.parse(duration_str)
-              entity_names     = Flapjack::Data::Entity.find_all_name_matching(entity_pattern, :redis => @redis)
+              duration         = ChronicDuration.parse(duration_str)
 
               if comment.nil? || (comment.length == 0)
                 comment = "#{from}: Set via chatbot"
@@ -402,7 +401,7 @@ module Flapjack
                 comment = "#{from}: #{comment}"
               end
 
-              maint_start = case
+              started = case
               when start_in
                 Time.now.to_i + ChronicDuration.parse(start_in)
               when start_at
@@ -411,41 +410,26 @@ module Flapjack
                 Time.now.to_i
               end
 
-              if entity_names
-                number_found = entity_names.length
-                case
-                when number_found == 0
-                  msg = "found no entities matching /#{entity_pattern}/"
-                when number_found >= 1
-                  entities = entity_names.map {|name|
-                    Flapjack::Data::Entity.find_by_name(name, :redis => @redis)
-                  }.compact.inject({}) {|memo, entity|
-                    memo[entity] = entity.check_list.sort
-                    memo
-                  }
-                  if entities.length >= 1
-                    entities.each_pair do |entity,check_list|
-                      check_list.each do |check|
-                        entity_check = Flapjack::Data::EntityCheck.for_entity(entity, check, :redis => @redis)
-                        entity_check.create_scheduled_maintenance(
-                        maint_start,
-                        maint_duration,
-                        :summary => comment,
-                        )
-                        entity_check.update_current_scheduled_maintenance
-                      end
-                    end
-                    msg = entities.inject("Maint list:\n") {|memo,kv|
-                      kv[1].each {|e| memo << "#{kv[0].name}:#{e}\n" }
-                      memo
-                    }
-                  else
-                    msg = "found no matching entities with active checks"
-                  end
-                else
-                  msg = "that doesn't seem to be a valid pattern - /#{pattern}/"
+              # FIXME: parse check_pattern into check names
+              check_names = []
+
+              check_names.each do |check_name|
+                check = Flapjack::Data::Check.intersect(:name => check_names).all.first
+
+                if check.nil?
+                  # Create the check if it doesn't exist, so we can schedule maintenance against it
+                  check = Flapjack::Data::Check.new(:name => check_name)
+                  check.save
                 end
+
+                sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => started,
+                :end_time => started + duration, :summary => @options[:reason])
+                sched_maint.save
+
+                check.add_scheduled_maintenance(sched_maint)
               end
+
+              msg = "Maint list:\n" + check_names.join(', ')
 
             when /^test\s+notifications\s+for\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
               pattern    = $1
