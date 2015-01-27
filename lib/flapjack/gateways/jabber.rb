@@ -246,7 +246,7 @@ module Flapjack
             when /^help\s*$/
               msg = "commands: \n" +
                     "  find checks matching /pattern/\n" +
-                    "  find checks with tag <tag>\n" +
+                    "  find (number) checks with tag <tag>\n" +
                     "  state of <check>\n" +
                     "  state of checks matching /pattern/\n" +
                     "  state of checks with tag <tag>\n" +
@@ -273,13 +273,17 @@ module Flapjack
                      "System CPU Time: #{t.stime}\n" +
                      `uname -a`.chomp + "\n"
 
-            when /^find\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
-              pattern = $1
-              tag     = $2
+            when /^find\s+(\d+\s+)?checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
+              num_results = $1.nil? ? 30 : $1.strip.to_i
+              pattern     = $2
+              tag         = $3
 
               msg = derive_check_ids_for(pattern, tag, nil) do |check_ids, descriptor|
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
-                "Checks #{descriptor}:\n" + checks.map(&:name).join(", ")
+                resp = "Checks #{descriptor}:\n"
+                resp += "Showing first #{num_results} results of #{checks.length}:\n" if checks.length > num_results
+                resp += checks.map { |c| "#{c.name} is #{c.states.last.condition.upcase}"}.sort.take(num_results).join(", ")
+                resp
               end
 
             when /^state\s+of\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
