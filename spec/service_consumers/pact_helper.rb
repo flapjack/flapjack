@@ -38,7 +38,7 @@ $redis_options = cfg.load(FLAPJACK_CONFIG) ?
                  {:db => 14, :driver => :ruby}
 
 Flapjack::RedisProxy.config = $redis_options
-Sandstorm.redis = Flapjack.redis
+Zermelo.redis = Flapjack.redis
 
 Flapjack::Gateways::JSONAPI.instance_variable_set('@config', 'port' => 19081)
 

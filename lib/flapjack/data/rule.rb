@@ -4,7 +4,7 @@ require 'set'
 
 require 'ice_cube'
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
@@ -15,7 +15,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
@@ -75,7 +75,7 @@ module Flapjack
 
         if self.has_tags
           # find all checks matching these tags -- FIXME there may be a more
-          # Sandstorm-idiomatic way to do this
+          # Zermelo-idiomatic way to do this
 
           check_ids = self.tags.associated_ids_for(:checks).values.reduce(:&)
 

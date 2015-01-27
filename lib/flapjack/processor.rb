@@ -78,7 +78,7 @@ module Flapjack
       Flapjack.logger.info("Booting main loop.")
 
       begin
-        Sandstorm.redis = Flapjack.redis
+        Zermelo.redis = Flapjack.redis
 
         # FIXME: add an administrative function to reset all event counters
 

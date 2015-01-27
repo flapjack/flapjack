@@ -2,7 +2,7 @@
 
 require 'active_support/inflector'
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/utility'
 
@@ -17,7 +17,7 @@ module Flapjack
     class Alert
 
       include Flapjack::Utility
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
 
       define_attributes :condition      => :string,
                         :action         => :string,

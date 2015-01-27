@@ -2,7 +2,7 @@
 module Factory
 
   def self.redis
-    Sandstorm.redis
+    Zermelo.redis
   end
 
   def self.contact(attrs = {})

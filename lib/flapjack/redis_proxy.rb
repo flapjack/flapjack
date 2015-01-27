@@ -3,7 +3,7 @@
 # defer initialisation for Redis connections until they're used.
 require 'redis'
 require 'redis/connection/hiredis'
-require 'sandstorm'
+require 'zermelo'
 
 module Flapjack
 

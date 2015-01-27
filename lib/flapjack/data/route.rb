@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 # TODO whenever a check's tags change, or a rule's tags change,
 # delete all routes belonging to that check/rule and recreate them
@@ -15,7 +15,7 @@ module Flapjack
   module Data
     class Route
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
 
       define_attributes :conditions_list => :string,
                         :is_alerting => :boolean

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 module Flapjack
   module Data
@@ -31,7 +31,7 @@ module Flapjack
 
       # NB: not actually persisted; we probably want a non-persisted record type
       # for this case
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
 
       define_attributes :name      => :string,
                         :priority  => :integer

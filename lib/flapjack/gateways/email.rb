@@ -60,7 +60,7 @@ module Flapjack
         Flapjack.logger.debug("new email gateway pikelet with the following options: #{@config.inspect}")
 
         begin
-          Sandstorm.redis = Flapjack.redis
+          Zermelo.redis = Flapjack.redis
 
           loop do
             @lock.synchronize do

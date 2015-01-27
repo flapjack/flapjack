@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/data/condition'
 
@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class State
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
 
       define_attributes :timestamp => :timestamp,
                         :condition => :string

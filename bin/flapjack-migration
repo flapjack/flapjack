@@ -29,7 +29,7 @@ TAG_PATTERN_FRAGMENT    = '.+'
 require 'i18n'
 I18n.config.enforce_available_locales = true
 
-require 'sandstorm'
+require 'zermelo'
 
 # add lib to the default include path
 unless $:.include?(File.dirname(__FILE__) + '/../lib/')
@@ -134,24 +134,24 @@ end
 @source_redis   = Redis.new(:host => options.source, :port => options.source_port)
 @source_redis.select(options.source_redis_db)
 
-Sandstorm.redis = Redis.new(:host => options.destination, :port => options.destination_port)
-Sandstorm.redis.select(options.destination_redis_db)
+Zermelo.redis = Redis.new(:host => options.destination, :port => options.destination_port)
+Zermelo.redis.select(options.destination_redis_db)
 
-dest_db_size = Sandstorm.redis.dbsize
+dest_db_size = Zermelo.redis.dbsize
 if (dest_db_size > 0)
   if options.force
-    Sandstorm.redis.flushdb
+    Zermelo.redis.flushdb
   else
     puts "Destination db #{options.destination_redis_db} has #{dest_db_size} keys, and the --force option was not provided"
     exit 1
   end
 end
 
-# key is name, value is sandstorm record
+# key is name, value is zermelo record
 @entity_name_cache = {}
 @entity_id_cache = {}
 
-# key is entity_name:name, value is sandstorm record
+# key is entity_name:name, value is zermelo record
 @check_name_cache  = {}
 @check_id_cache  = {}
 

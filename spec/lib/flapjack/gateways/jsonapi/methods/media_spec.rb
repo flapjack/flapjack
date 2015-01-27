@@ -114,7 +114,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     })
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
-      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact_data[:id]))
+      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact_data[:id]))
 
     expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).not_to receive(:save)
@@ -186,7 +186,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not return a medium if the medium is not present" do
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
+      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found
@@ -229,7 +229,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not update a medium that's not present" do
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+      with(medium.id).and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
     put "/media/#{medium.id}",
       Flapjack.dump_json(:media => {:id => medium.id, :address => '12345'}),
