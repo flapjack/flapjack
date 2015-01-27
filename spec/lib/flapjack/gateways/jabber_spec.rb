@@ -86,7 +86,9 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     let(:checks) { double('checks', :ids => [check.id]) }
     let(:tags)   { double('tags', :all => [tag]) }
+    let(:states) { double('states', :last => state) }
     let(:state)  { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
+
 
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
@@ -196,7 +198,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(checks).to receive(:collect).and_yield(check)
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
-      expect(check).to receive(:state).and_return(state)
+      expect(check).to receive(:states).and_return(states)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
@@ -215,7 +217,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
-      expect(check).to receive(:state).and_return(state)
+      expect(check).to receive(:states).and_return(states)
 
       expect(checks).to receive(:empty?).and_return(false)
       expect(tag).to receive(:checks).and_return(checks)
@@ -237,7 +239,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
-      expect(check).to receive(:state).and_return(state)
+      expect(check).to receive(:states).and_return(states)
 
       expect(checks).to receive(:empty?).and_return(false)
 

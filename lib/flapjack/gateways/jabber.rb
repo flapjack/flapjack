@@ -290,7 +290,7 @@ module Flapjack
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
                   Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                  "#{check.name} - #{check.state.condition} "
+                  "#{check.name} - #{check.states.last.condition} "
                 }.join("\n")
               end
 
