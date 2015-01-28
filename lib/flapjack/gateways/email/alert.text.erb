@@ -6,21 +6,27 @@ Monitoring has detected the following:
 
 Check:            <%= check.name %>
 State:            <%= @alert.state_title_case %>
-Summary:          <%= @alert.summary %>
-<% details = @alert.details; if details -%>
+<% summary = @alert.summary -%>
+<% unless summary.nil? || summary.empty? -%>
+Summary:          <%= summary %>
+<% end -%>
+<% details = @alert.details -%>
+<% unless details.nil? || details.empty? -%>
 Details:          <%= details %>
 <% end -%>
-<% time = @alert.time; if time -%>
+<% time = @alert.time -%>
+<% unless time.nil? -%>
 Time:             <%= Time.at(time.to_i).to_s %>
 <% end -%>
 <% condition_duration = @alert.condition_duration -%>
-<% if condition_duration && (condition_duration > 40) -%>
+<% unless condition_duration.nil? || (condition_duration <= 40) -%>
 Duration:         <%= ChronicDuration.output(condition_duration, :keep_zero => true) || '0 secs' %>
 <% end -%>
-<% if @alert.last_state -%>
+<% unless @alert.last_state.nil? -%>
 Previous State:   <%= @alert.last_state_title_case %>
 <% end -%>
-<% last_summary = @alert.last_summary; if last_summary -%>
+<% last_summary = @alert.last_summary -%>
+<% unless last_summary.nil? || last_summary.empty? -%>
 Previous Summary: <%= last_summary %>
 <% end -%>
 
