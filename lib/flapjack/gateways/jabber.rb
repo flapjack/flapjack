@@ -279,10 +279,12 @@ module Flapjack
               tag         = $3
 
               msg = derive_check_ids_for(pattern, tag, nil) do |check_ids, descriptor|
-                checks = Flapjack::Data::Check.find_by_ids(*check_ids)
                 resp = "Checks #{descriptor}:\n"
-                resp += "Showing first #{num_results} results of #{checks.length}:\n" if checks.length > num_results
-                resp += checks.map { |c| "#{c.name} is #{c.states.last.condition.upcase}"}.sort.take(num_results).join(", ")
+                Flapjack::Data::Check.lock(Flapjack::Data::State) do
+                  checks = Flapjack::Data::Check.find_by_ids(*check_ids)
+                  resp += "Showing first #{num_results} results of #{checks.length}:\n" if checks.length > num_results
+                  resp += checks.map { |c| "#{c.name} is #{c.states.last.condition.upcase}"}.sort.take(num_results).join(", ")
+                end
                 resp
               end
 
@@ -292,10 +294,12 @@ module Flapjack
               check_name = $3
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
-                "State of checks #{descriptor}:\n" +
-                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                  "#{check.name} - #{check.states.last.condition} "
-                }.join("\n")
+                Flapjack::Data::Check.lock(Flapjack::Data::State) do
+                  "State of checks #{descriptor}:\n" +
+                    Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
+                    "#{check.name} - #{check.states.last.condition} "
+                  }.join("\n")
+                end
               end
 
             when /^tell\s+me\s+about\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
@@ -305,14 +309,14 @@ module Flapjack
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 current_time = Time.now
-                "Details of checks #{descriptor}\n" +
-                  Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance,
-                    Flapjack::Data::UnscheduledMaintenance) {
+                Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance,
+                  Flapjack::Data::UnscheduledMaintenance) do
 
+                  "Details of checks #{descriptor}\n" +
                     Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
                       get_check_details(check, current_time)
                     }.join("")
-                  }
+                end
               end
 
             when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
