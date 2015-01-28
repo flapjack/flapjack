@@ -4,7 +4,7 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
-require 'uri'
+require 'open-uri'
 
 require 'flapjack/redis_proxy'
 
@@ -44,16 +44,20 @@ module Flapjack
           end
 
           @api_url = @config['api_url']
-           if @api_url
-             if URI.regexp(['http', 'https']).match(@api_url).nil?
-               Flapjack.logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
-               @api_url = nil
-             end
-             unless @api_url.match(/^.*\/$/)
-               Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
-               @api_url = "#{@api_url}/"
-             end
-           end
+          if @api_url && URI.regexp(['http', 'https']).match(@api_url)
+            unless @api_url.match(/^.*\/$/)
+              Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+              @api_url = "#{@api_url}/"
+            end
+
+            begin
+              open(@api_url)
+            rescue Errno::ECONNREFUSED => e
+              Flapjack.logger.error "Could not connect to api_url: (#{@api_url}): #{e.message}"
+            end
+          else
+            Flapjack.logger.error "api_url not specified, or is not a valid http or https URI (#{@api_url})"
+          end
 
           # constants won't be exposed to eRb scope
           @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
