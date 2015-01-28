@@ -6,32 +6,6 @@ require 'logger'
 # fix for webrick's assuming 1.8.7 Logger syntax
 class ::Logger; alias_method :write, :<<; end
 
-# fix for deprecation warning introduced by
-# https://bugs.ruby-lang.org/issues/7688 ; remove when fixed in xmpp4r
-# TODO move to spec_helper.rb, this is only a problem in RSpec
-if (RUBY_VERSION.split('.') <=> ['2', '2', '0']) >= 0
-  require 'xmpp4r'
-  require 'xmpp4r/jid'
-  require 'xmpp4r/xmppstanza'
-
-  module ::Jabber
-    class JID
-      alias :orig_cmp :"<=>"
-      def <=>(o)
-        return nil unless o.kind_of?(::Jabber::JID)
-        orig_cmp(o)
-      end
-    end
-    class Presence < XMPPStanza
-      alias :orig_cmp :"<=>"
-      def <=>(o)
-        return nil unless o.kind_of?(::Jabber::Presence)
-        orig_cmp(o)
-      end
-    end
-  end
-end
-
 module ::GLI
   class Command
     attr_accessor :passthrough

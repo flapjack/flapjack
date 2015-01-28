@@ -58,9 +58,10 @@ module Flapjack
         :after_remove => :tags_removed,
         :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Route']
 
-      # TODO on change to conditions_list, update value for all routes
-      # TODO when a rule is created, recalculate_routes should be called
+      # NB when a rule is created, recalculate_routes should be called
       # by the creating code if no tags are being added.
+      #
+      # TODO on change to conditions_list, update value for all routes
       def recalculate_routes
         self.routes.destroy_all
 

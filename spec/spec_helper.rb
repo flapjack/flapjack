@@ -56,6 +56,9 @@ RSpec.configure do |config|
   #     --seed 1234
   config.order = 'random'
 
+  # # TODO clear these up, where possible
+  # config.warnings = true
+
   unless (ENV.keys & ['SHOW_LOGGER_ALL', 'SHOW_LOGGER_ERRORS']).empty?
     config.instance_variable_set('@formatters', [])
     config.add_formatter(:documentation)

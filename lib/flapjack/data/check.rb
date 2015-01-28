@@ -93,7 +93,6 @@ module Flapjack
         :after_remove => :removed_latest_notification
 
       def removed_latest_notification(entry)
-        Flapjack.logger.info "pre-delete-check: processor check_latest_notifications"
         Flapjack::Data::Entry.delete_if_unlinked(entry)
       end
 
@@ -147,15 +146,6 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       attr_accessor :count
-
-      # TODO handle JSON exception
-      def perfdata
-        if self.perfdata_json.nil?
-          @perfdata = nil
-          return
-        end
-        @perfdata ||= Flapjack.load_json(self.perfdata_json)
-      end
 
       def self.jsonapi_attributes
         [:name, :enabled]
@@ -362,7 +352,7 @@ module Flapjack
 
         r_ids = self.routes.ids
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "severity: #{severity}\n" \
           "Matching routes before severity (#{r_ids.size}): #{r_ids.inspect}"
         }
@@ -378,7 +368,7 @@ module Flapjack
         route_ids = check_routes.ids
         return [{}, {}] if route_ids.empty?
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "Matching routes after severity (#{route_ids.size}): #{route_ids.inspect}"
         }
 
@@ -387,7 +377,7 @@ module Flapjack
 
         rule_ids = route_ids_by_rule_id.keys
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
         }
 
