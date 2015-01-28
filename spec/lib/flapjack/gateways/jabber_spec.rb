@@ -195,6 +195,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:empty?).and_return(false)
 
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State).
+        and_yield
+
       expect(checks).to receive(:collect).and_yield(check)
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
@@ -214,6 +218,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:collect).and_yield(check)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State).
+        and_yield
 
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
@@ -236,6 +244,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:collect).and_yield(check)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State).
+        and_yield
 
       expect(check).to receive(:name).and_return('example.com:ping')
       expect(state).to receive(:condition).and_return('ok')
