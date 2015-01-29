@@ -19,7 +19,12 @@
   </table>
 <% end %>
 
-<a href="<%= @base_url %>edit_contacts"/>
-  Edit contacts
-  <span class="label label-danger">beta</span>
-</a>
+<% if @api_connected == true %>
+  <a href="<%= @base_url %>edit_contacts"/>
+    Edit contacts
+    <span class="label label-danger">beta</span>
+  </a>
+<% else %>
+  <span class="label label-warning">Could not connect to API URL - Edit contacts is unavailable"</span>
+<% end %>
+</div>

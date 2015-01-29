@@ -44,6 +44,7 @@ module Flapjack
           end
 
           @api_url = @config['api_url']
+          @api_connected = true
           if @api_url && URI.regexp(['http', 'https']).match(@api_url)
             unless @api_url.match(/^.*\/$/)
               Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
@@ -53,10 +54,14 @@ module Flapjack
             begin
               open(@api_url)
             rescue Errno::ECONNREFUSED => e
-              Flapjack.logger.error "Could not connect to api_url: (#{@api_url}): #{e.message}"
+              Flapjack.logger.warn "Could not connect to api_url: (#{@api_url}): #{e.message} - some functionality will be unavailable"
+              @api_connected = false
+            rescue OpenURI::HTTPError
+              # The API throws a 404 when hitting the front page.
             end
           else
-            Flapjack.logger.error "api_url not specified, or is not a valid http or https URI (#{@api_url})"
+            Flapjack.logger.warn "api_url not specified, or is not a valid http or https URI (#{@api_url}) - some functionality will be unavailable"
+            @api_connected = false
           end
 
           # constants won't be exposed to eRb scope
