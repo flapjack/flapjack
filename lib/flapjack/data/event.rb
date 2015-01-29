@@ -13,9 +13,10 @@ module Flapjack
       attr_reader :check, :summary, :details, :acknowledgement_id, :perfdata,
                   :initial_failure_delay, :repeat_failure_delay
 
-      REQUIRED_KEYS = ['type', 'state', 'entity', 'check', 'summary']
-      OPTIONAL_KEYS = ['time', 'details', 'acknowledgement_id', 'duration', 'tags', 'perfdata',
-                       'initial_failure_delay', 'repeat_failure_delay']
+      REQUIRED_KEYS = ['type', 'state', 'entity', 'check']
+      OPTIONAL_KEYS = ['time', 'summary', 'details', 'acknowledgement_id',
+                       'duration', 'tags', 'perfdata', 'initial_failure_delay',
+                       'repeat_failure_delay']
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -34,9 +35,6 @@ module Flapjack
         proc {|e| e['check'].is_a?(String) } =>
           "check must be a string",
 
-        proc {|e| e['summary'].is_a?(String) } =>
-          "summary must be a string",
-
         proc {|e| e['time'].nil? ||
                   e['time'].is_a?(Integer) ||
                  (e['time'].is_a?(String) && !!(e['time'] =~ /^\d+$/)) } =>
@@ -51,6 +49,9 @@ module Flapjack
                   e['repeat_failure_delay'].is_a?(Integer) ||
                  (e['repeat_failure_delay'].is_a?(String) && !!(e['repeat_failure_delay'] =~ /^\d+$/)) } =>
           "repeat_failure_delay must be a positive integer, or a string castable to one",
+
+        proc {|e| e['summary'].nil? || e['summary'].is_a?(String) } =>
+          "summary must be a string",
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
           "details must be a string",
@@ -234,6 +235,8 @@ module Flapjack
          'repeat_failure_delay'].each do |key|
           instance_variable_set("@#{key}", attrs[key])
         end
+        # summary is optional. set it to nil if it only contains whitespace
+        @summary = (@summary.is_a?(String) && ! @summary.strip.empty?) ? @summary.strip : nil
         # details is optional. set it to nil if it only contains whitespace
         @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
         # perfdata is optional. set it to nil if it only contains whitespace

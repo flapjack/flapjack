@@ -7,6 +7,6 @@
 <% if ['acknowledgement'].include?(@alert.type) -%>
  has been acknowledged, unscheduled maintenance created for <%= time_period_in_words(@alert.acknowledgement_duration) -%>
 <% end -%>
-<% if @alert.summary && @alert.summary.length > 0 -%>
+<% if @alert.summary && !@alert.summary.empty? -%>
 , <%= @alert.summary -%>
 <% end -%>

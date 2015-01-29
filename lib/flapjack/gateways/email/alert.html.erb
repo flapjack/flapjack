@@ -32,10 +32,12 @@
       <td><%= @alert.state_title_case %></td>
     </tr>
 
-    <tr>
-      <td><strong>Summary</strong></td>
-      <td><%= @alert.summary %></td>
-    </tr>
+    <% if @alert.summary %>
+      <tr>
+        <td><strong>Summary</strong></td>
+        <td><%= @alert.summary %></td>
+      </tr>
+    <% end %>
 
     <% if @alert.details %>
       <tr>
