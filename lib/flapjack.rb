@@ -6,7 +6,7 @@ ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
 ActiveSupport::JSON::Encoding.time_precision = 0
 
 require 'active_support/time'
-require 'oj'
+require 'json'
 
 require 'flapjack/logger'
 
@@ -18,11 +18,11 @@ module Flapjack
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 
   def self.load_json(data)
-    Oj.load(data, :mode => :strict, :symbol_keys => false)
+    JSON.parse(data)
   end
 
   def self.dump_json(data)
-    Oj.dump(data, :mode => :compat, :time_format => :ruby, :indent => 0)
+    JSON.generate(data)
   end
 
 end

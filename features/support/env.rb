@@ -13,7 +13,7 @@ if ENV['COVERAGE']
     add_filter '/features/'
   end
   SimpleCov.at_exit do
-    Oj.default_options = { :mode => :compat }
+    # Oj.default_options = { :mode => :compat }
     SimpleCov.result.format!
   end
 end

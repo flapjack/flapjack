@@ -4,6 +4,7 @@ rvm:
 - '2.0'
 - '2.1'
 - '2.2'
+# - 'jruby-9.0.0.0pre1'
 cache: bundler
 services:
 - redis-server
