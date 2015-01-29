@@ -2,6 +2,8 @@
 
 require 'gli'
 
+$stdout.sync = true
+
 include GLI::App
 subcommand_option_handling :normal
 sort_help :manually
