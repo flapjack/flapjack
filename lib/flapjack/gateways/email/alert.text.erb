@@ -5,7 +5,9 @@ Monitoring has detected the following:
 Entity:           <%= @alert.entity %>
 Check:            <%= @alert.check %>
 State:            <%= @alert.state_title_case %>
+<% if @alert.summary -%>
 Summary:          <%= @alert.summary %>
+<% end -%>
 <% if @alert.details -%>
 Details:          <%= @alert.details %>
 <% end -%>
