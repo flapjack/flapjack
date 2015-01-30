@@ -271,73 +271,72 @@ module Flapjack
         pid = nil
       end
 
-      class EventFeedHandler < Oj::ScHandler
+      # class EventFeedHandler < Oj::ScHandler
 
-        def initialize(&block)
-          @hash_depth = 0
-          @callback = block if block_given?
-        end
+      #   def initialize(&block)
+      #     @hash_depth = 0
+      #     @callback = block if block_given?
+      #   end
 
-        def hash_start
-          @hash_depth += 1
-          Hash.new
-        end
+      #   def hash_start
+      #     @hash_depth += 1
+      #     Hash.new
+      #   end
 
-        def hash_end
-          @hash_depth -= 1
-        end
+      #   def hash_end
+      #     @hash_depth -= 1
+      #   end
 
-        def array_start
-          Array.new
-        end
+      #   def array_start
+      #     Array.new
+      #   end
 
-        def array_end
-        end
+      #   def array_end
+      #   end
 
-        def add_value(value)
-          @callback.call(value) if @callback
-          nil
-        end
+      #   def add_value(value)
+      #     @callback.call(value) if @callback
+      #     nil
+      #   end
 
-        def hash_set(hash, key, value)
-          hash[key] = value
-        end
+      #   def hash_set(hash, key, value)
+      #     hash[key] = value
+      #   end
 
-        def array_append(array, value)
-          array << value
-        end
+      #   def array_append(array, value)
+      #     array << value
+      #   end
 
-      end
+      # end
 
       def json_feeder(opts = {})
+        # input = if opts[:from]
+        #   File.open(opts[:from]) # Explodes if file does not exist.
+        # elsif $stdin.tty?
+        #   exit_now! "No file provided, and STDIN is from terminal! Exiting..."
+        # else
+        #   $stdin
+        # end
 
-        input = if opts[:from]
-          File.open(opts[:from]) # Explodes if file does not exist.
-        elsif $stdin.tty?
-          exit_now! "No file provided, and STDIN is from terminal! Exiting..."
-        else
-          $stdin
-        end
+        # # Sit and churn through the input stream until a valid JSON blob has been assembled.
+        # # This handles both the case of a process sending a single JSON and then exiting
+        # # (eg. cat foo.json | bin/flapjack receiver json) *and* a longer-running process spitting
+        # # out events (eg. /usr/bin/slow-event-feed | bin/flapjack receiver json)
 
-        # Sit and churn through the input stream until a valid JSON blob has been assembled.
-        # This handles both the case of a process sending a single JSON and then exiting
-        # (eg. cat foo.json | bin/flapjack receiver json) *and* a longer-running process spitting
-        # out events (eg. /usr/bin/slow-event-feed | bin/flapjack receiver json)
+        # parser = EventFeedHandler.new do |parsed|
+        #   # Handle "parsed" (a hash)
+        #   errors = Flapjack::Data::Event.validation_errors_for_hash(parsed)
+        #   if errors.empty?
+        #     Flapjack::Data::Event.push('events', parsed)
+        #     puts "Enqueued event data, #{parsed.inspect}"
+        #   else
+        #     puts "Invalid event data received, #{errors.join(', ')} #{parsed.inspect}"
+        #   end
+        # end
 
-        parser = EventFeedHandler.new do |parsed|
-          # Handle "parsed" (a hash)
-          errors = Flapjack::Data::Event.validation_errors_for_hash(parsed)
-          if errors.empty?
-            Flapjack::Data::Event.push('events', parsed)
-            puts "Enqueued event data, #{parsed.inspect}"
-          else
-            puts "Invalid event data received, #{errors.join(', ')} #{parsed.inspect}"
-          end
-        end
+        # Oj.sc_parse(parser, input)
 
-        Oj.sc_parse(parser, input)
-
-        puts "Done."
+        # puts "Done."
       end
 
       def mirror_receive(opts)
