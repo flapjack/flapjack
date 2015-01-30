@@ -14,7 +14,7 @@ matrix:
     - rvm: 'jruby-9.0.0.0.pre1'
       gemfile: Gemfile
       script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features/events.feature features/events_check_names.feature features/notification_rules.feature features/notifications.feature features/packaging-lintian.feature features/rollup.feature && cd src/flapjack && go test -v"
-jdk: oraclejdk8
+      jdk: oraclejdk8
 cache: bundler
 services:
 - redis-server
