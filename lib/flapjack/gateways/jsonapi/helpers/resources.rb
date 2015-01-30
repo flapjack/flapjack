@@ -327,7 +327,8 @@ module Flapjack
 
             resources_as_json = resources.collect do |r|
               l = links.keys.each_with_object({}) do |v, memo|
-                memo[v] = links[v][r.id]
+                vs = links[v][r.id]
+                memo[v] = vs.is_a?(Set) ? vs.to_a : vs
               end
               r.as_json(:only => jsonapi_fields).merge(:links => l)
             end
