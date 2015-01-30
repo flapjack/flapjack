@@ -11,7 +11,7 @@ matrix:
     - rvm: '2.2'
       gemfile: Gemfile
       script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
-    - rvm: 'jruby-9.0.0.0pre1'
+    - rvm: 'jruby-9.0.0.0.pre1'
       gemfile: Gemfile
       script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features/events.feature features/events_check_names.feature features/notification_rules.feature features/notifications.feature features/packaging-lintian.feature features/rollup.feature && cd src/flapjack && go test -v"
 jdk: oraclejdk8
@@ -29,7 +29,6 @@ install:
   - go get gopkg.in/alecthomas/kingpin.v1
   - go get github.com/oguzbilgic/pandik
   - bundle install
-script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
 notifications:
   irc:
     channels:
