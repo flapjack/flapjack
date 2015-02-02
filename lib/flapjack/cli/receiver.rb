@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'dante'
 require 'redis'
 
 require 'flapjack/configuration'
@@ -32,17 +31,6 @@ module Flapjack
           Zermelo.redis = Flapjack.redis
         end
 
-        @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
-
-        @pidfile = case
-        when !@options[:pidfile].nil?
-          @options[:pidfile]
-        when !@config_env['pid_dir'].nil?
-          File.join(@config_env['pid_dir'], "#{@options[:type]}-receiver.pid")
-        else
-          "/var/run/flapjack/#{@options[:type]}-receiver.pid"
-        end
-
         @logfile = case
         when !@options[:logfile].nil?
           @options[:logfile]
@@ -56,56 +44,15 @@ module Flapjack
       end
 
       def start
-        if runner(@options[:type]).daemon_running?
-          puts "#{@options[:type]}-receiver is already running."
-        else
-          print "#{@options[:type]}-receiver starting..."
-          print "\n" unless @options[:daemonize]
-          runner(@options[:type]).execute(:daemonize => @options[:daemonize]) do
-            begin
-              main(:fifo => @options[:fifo], :type => @options[:type])
-            rescue Exception => e
-              p e.message
-              puts e.backtrace.join("\n")
-            end
-          end
-          puts " done."
-        end
-      end
-
-      def stop
-        pid = get_pid
-        if runner(@options[:type]).daemon_running?
-          print "#{@options[:type]}-receiver stopping..."
-          runner(@options[:type]).execute(:kill => true)
-          puts " done."
-        else
-          puts "#{@options[:type]}-receiver is not running."
-        end
-        exit_now! unless wait_pid_gone(pid)
-      end
-
-      def restart
-        print "#{@options[:type]}-receiver restarting..."
-        runner(@options[:type]).execute(:daemonize => true, :restart => true) do
-          begin
-            main(:fifo => @options[:fifo], :type => @options[:type])
-          rescue Exception => e
-            p e.message
-            puts e.backtrace.join("\n")
-          end
+        print "#{@options[:type]}-receiver starting...\n"
+        redirect_output(@logfile)
+        begin
+          main(:fifo => @options[:fifo], :type => @options[:type])
+        rescue Exception => e
+          p e.message
+          puts e.backtrace.join("\n")
         end
         puts " done."
-      end
-
-      def status
-        if runner(@options[:type]).daemon_running?
-          pid = get_pid
-          uptime = Time.now - File.stat(@pidfile).ctime
-          puts "#{@options[:type]}-receiver is running: pid #{pid}, uptime #{uptime}"
-        else
-          exit_now! "#{@options[:type]}-receiver is not running"
-        end
       end
 
       def json
@@ -128,16 +75,32 @@ module Flapjack
 
       private
 
-      def redis
-        @redis ||= Redis.new(@redis_options)
+      # adapted from https://github.com/nesquena/dante/blob/2a5be903fded5bbd44e57b5192763d9107e9d740/lib/dante/runner.rb#L253-L274
+      def redirect_output(log_path)
+        if log_path.nil?
+          # redirect to /dev/null
+          # We're not bothering to sync if we're dumping to /dev/null
+          # because /dev/null doesn't care about buffered output
+          $stdin.reopen '/dev/null'
+          $stdout.reopen '/dev/null', 'a'
+          $stderr.reopen $stdout
+        else
+          # if the log directory doesn't exist, create it
+          FileUtils.mkdir_p(File.dirname(log_path), :mode => 0755)
+          # touch the log file to create it
+          FileUtils.touch log_path
+          # Set permissions on the log file
+          File.chmod(0644, log_path)
+          # Reopen $stdout (NOT +STDOUT+) to start writing to the log file
+          $stdout.reopen(log_path, 'a')
+          # Redirect $stderr to $stdout
+          $stderr.reopen $stdout
+          $stdout.sync = true
+        end
       end
 
-      def runner(type)
-        return @runner if @runner
-
-        @runner = Dante::Runner.new("#{@options[:type]}-receiver", :pid_path => @pidfile,
-          :log_path => @logfile)
-        @runner
+      def redis
+        @redis ||= Redis.new(@redis_options)
       end
 
       def process_input(opts)
@@ -242,101 +205,103 @@ module Flapjack
         end
       end
 
-      def process_exists(pid)
-        return unless pid
-        begin
-          Process.kill(0, pid)
-          return true
-        rescue Errno::ESRCH
-          return false
-        end
-      end
-
-      # wait until the specified pid no longer exists, or until a timeout is reached
-      def wait_pid_gone(pid, timeout = 30)
-        print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
-        started_at = Time.now.to_i
-        while process_exists(pid)
-          break unless (Time.now.to_i - started_at < timeout)
-          print '.'
-          sleep 1
-        end
-        puts ''
-        !process_exists(pid)
-      end
-
-      def get_pid
-        IO.read(@pidfile).chomp.to_i
-      rescue StandardError
-        pid = nil
-      end
-
-      # class EventFeedHandler < Oj::ScHandler
-
-      #   def initialize(&block)
-      #     @hash_depth = 0
-      #     @callback = block if block_given?
-      #   end
-
-      #   def hash_start
-      #     @hash_depth += 1
-      #     Hash.new
-      #   end
-
-      #   def hash_end
-      #     @hash_depth -= 1
-      #   end
-
-      #   def array_start
-      #     Array.new
-      #   end
-
-      #   def array_end
-      #   end
-
-      #   def add_value(value)
-      #     @callback.call(value) if @callback
-      #     nil
-      #   end
-
-      #   def hash_set(hash, key, value)
-      #     hash[key] = value
-      #   end
-
-      #   def array_append(array, value)
-      #     array << value
-      #   end
-
-      # end
-
       def json_feeder(opts = {})
-        # input = if opts[:from]
-        #   File.open(opts[:from]) # Explodes if file does not exist.
-        # elsif $stdin.tty?
-        #   exit_now! "No file provided, and STDIN is from terminal! Exiting..."
-        # else
-        #   $stdin
-        # end
+        require 'json/stream'
 
-        # # Sit and churn through the input stream until a valid JSON blob has been assembled.
-        # # This handles both the case of a process sending a single JSON and then exiting
-        # # (eg. cat foo.json | bin/flapjack receiver json) *and* a longer-running process spitting
-        # # out events (eg. /usr/bin/slow-event-feed | bin/flapjack receiver json)
+        input = if opts[:from]
+          File.open(opts[:from]) # Explodes if file does not exist.
+        elsif !'java'.eql?(RUBY_PLATFORM) && STDIN.tty?
+          # tty check isn't working under JRuby, assume STDIN is OK to use
+          # https://github.com/jruby/jruby/issues/1332
+          exit_now! "No file provided, and STDIN is from terminal! Exiting..."
+        else
+          STDIN
+        end
 
-        # parser = EventFeedHandler.new do |parsed|
-        #   # Handle "parsed" (a hash)
-        #   errors = Flapjack::Data::Event.validation_errors_for_hash(parsed)
-        #   if errors.empty?
-        #     Flapjack::Data::Event.push('events', parsed)
-        #     puts "Enqueued event data, #{parsed.inspect}"
-        #   else
-        #     puts "Invalid event data received, #{errors.join(', ')} #{parsed.inspect}"
-        #   end
-        # end
+        # Sit and churn through the input stream until a valid JSON blob has been assembled.
+        # This handles both the case of a process sending a single JSON and then exiting
+        # (eg. cat foo.json | bin/flapjack receiver json) *and* a longer-running process spitting
+        # out events (eg. /usr/bin/slow-event-feed | bin/flapjack receiver json)
+        #
+        # @data is a stack, but @stack is used by the Parser class
+        parser = JSON::Stream::Parser.new do
+          start_document do
+            @data = []
+            @keys = []
+            @result = nil
+          end
 
-        # Oj.sc_parse(parser, input)
+          end_document {
+            # interfering with json-stream's "one object per stream" model,
+            # but it errors without this
+            @state = :start_document
+          }
 
-        # puts "Done."
+          start_object do
+            @data.push({})
+          end
+
+          end_object do
+            node = @data.pop
+
+            if @data.size > 0
+              top = @data.last
+              case top
+              when Hash
+                top[@keys.pop] = node
+              when Array
+                top << node
+              end
+            else
+              errors = Flapjack::Data::Event.validation_errors_for_hash(node)
+              if errors.empty?
+                Flapjack::Data::Event.push('events', node)
+                puts "Enqueued event data, #{node.inspect}"
+              else
+                puts "Invalid event data received, #{errors.join(', ')} #{node.inspect}"
+              end
+            end
+          end
+
+          start_array do
+            @data.push([])
+          end
+
+          end_array do
+            node = @data.pop
+            if @data.size > 0
+              top = @data.last
+              case top
+              when Hash
+                top[@keys.pop] = node
+              when Array
+                top << node
+              end
+            end
+          end
+
+          key do |k|
+            @keys << k
+          end
+
+          value do |v|
+            top = @data.last
+            case top
+            when Hash
+              top[@keys.pop] = v
+            when Array
+              top << v
+            else
+              @data << v
+            end
+          end
+        end
+
+        while data = input.read(4096)
+          parser << data
+        end
+
+        puts "Done."
       end
 
       def mirror_receive(opts)
@@ -485,159 +450,58 @@ command :receiver do |receiver|
     # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#configuring-nagios
     # '
 
-    nagios.command :start do |start|
+    nagios.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
-      start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-        :default_value => true
+    nagios.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
-      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
-
-      start.action do |global_options,options,args|
-        options.merge!(:type => 'nagios')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.start
-      end
+    nagios.action do |global_options,options,args|
+      options.merge!(:type => 'nagios')
+      receiver_cli = Flapjack::CLI::Receiver.new(global_options, options)
+      receiver_cli.start
     end
-
-    nagios.command :stop do |stop|
-
-      stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      stop.action do |global_options,options,args|
-        options.merge!(:type => 'nagios')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.stop
-      end
-    end
-
-    nagios.command :restart do |restart|
-
-      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
-
-      restart.action do |global_options,options,args|
-        options.merge!(:type => 'nagios')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.restart
-      end
-    end
-
-    nagios.command :status do |status|
-
-      status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      status.action do |global_options,options,args|
-        options.merge!(:type => 'nagios')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.status
-      end
-    end
-
   end
 
   receiver.desc 'NSCA receiver'
   #receiver.arg_name 'Turn Nagios passive check results into Flapjack events'
   receiver.command :nsca do |nsca|
 
-    nsca.command :start do |start|
+    # # Not sure what to do with this, extra help output:
 
-      # # Not sure what to do with this, extra help output:
+    # Required Nagios Configuration Changes
+    # -------------------------------------
 
-      # Required Nagios Configuration Changes
-      # -------------------------------------
+    # flapjack-nsca-receiver reads events from the nagios "command file" read from by Nagios, written to by the Nsca-daemon.
 
-      # flapjack-nsca-receiver reads events from the nagios "command file" read from by Nagios, written to by the Nsca-daemon.
+    # The named pipe is automatically created by _nagios_ if it is enabled
+    # in the configfile:
 
-      # The named pipe is automatically created by _nagios_ if it is enabled
-      # in the configfile:
+    #   # modified lines:
+    #   command_file=/var/lib/nagios3/rw/nagios.cmd
 
-      #   # modified lines:
-      #   command_file=/var/lib/nagios3/rw/nagios.cmd
+    # The Nsca daemon is optionally writing to a tempfile if the named pipe does
+    # not exist.
 
-      # The Nsca daemon is optionally writing to a tempfile if the named pipe does
-      # not exist.
+    # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
+    # '
+    nsca.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
-      # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
-      # '
+    nsca.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
-      start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-        :default_value => true
-
-      start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      start.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
-
-      start.action do |global_options,options,args|
-        options.merge!(:type => 'nsca')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.start
-      end
-    end
-
-    nsca.command :stop do |stop|
-
-      stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      stop.action do |global_options,options,args|
-        options.merge!(:type => 'nsca')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.stop
-      end
-    end
-
-    nsca.command :restart do |restart|
-
-      restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      restart.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
-
-      restart.action do |global_options,options,args|
-        options.merge!(:type => 'nsca')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.restart
-      end
-    end
-
-    nsca.command :status do |status|
-
-      status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-      status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-      status.action do |global_options,options,args|
-        options.merge!(:type => 'nsca')
-        receiver = Flapjack::CLI::Receiver.new(global_options, options)
-        receiver.status
-      end
+    nsca.action do |global_options,options,args|
+      options.merge!(:type => 'nsca')
+      cli_receiver = Flapjack::CLI::Receiver.new(global_options, options)
+      cli_receiver.start
     end
 
   end
 
   receiver.desc 'JSON receiver'
   receiver.command :json do |json|
-
     json.flag [:f, 'from'],     :desc => 'PATH of the file to process [STDIN]'
 
     json.action do |global_options,options,args|
-      receiver = Flapjack::CLI::Receiver.new(global_options, options)
-      receiver.json
+      cli_receiver = Flapjack::CLI::Receiver.new(global_options, options)
+      cli_receiver.json
     end
   end
 
@@ -719,10 +583,6 @@ end
 
 # config_nr = config_env['nsca-receiver'] || {}
 
-# pidfile = options.pidfile.nil? ?
-#             (config_nr['pid_file'] || "/var/run/flapjack/#{exe}.pid") :
-#             options.pidfile
-
 # logfile = options.logfile.nil? ?
 #             (config_nr['log_file'] || "/var/log/flapjack/#{exe}.log") :
 #             options.logfile
@@ -730,7 +590,3 @@ end
 # fifo = options.fifo.nil? ?
 #          (config_nr['fifo'] || '/var/lib/nagios3/rw/nagios.cmd') :
 #          options.fifo
-
-# daemonize = options.daemonize.nil? ?
-#               !!config_nr['daemonize'] :
-#               options.daemonize

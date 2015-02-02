@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'dante'
-
 require 'flapjack/coordinator'
 
 module Flapjack
@@ -20,15 +18,6 @@ module Flapjack
           exit_now! "No config data found in '#{global_options[:config]}'"
         end
 
-        @pidfile = case
-        when !@options[:pidfile].nil?
-          @options[:pidfile]
-        when !@config_env['pid_dir'].nil?
-          File.join(@config_env['pid_dir'], 'flapjack.pid')
-        else
-          "/var/run/flapjack/flapjack.pid"
-        end
-
         @logfile = case
         when !@options[:logfile].nil?
           @options[:logfile]
@@ -37,139 +26,41 @@ module Flapjack
         else
           "/var/run/flapjack/flapjack.log"
         end
-
-        if options[:rbtrace]
-          require 'rbtrace'
-        end
       end
 
       def start
-        if runner.daemon_running?
-          puts "Flapjack is already running."
-        else
-          print "Flapjack starting..."
-          print "\n" unless @options[:daemonize]
-          return_value = nil
-          runner.execute(:daemonize => @options[:daemonize]) {
-            return_value = start_server
-          }
-          puts " done."
-          exit_now!(return_value) unless return_value.nil?
-        end
-      end
-
-      def stop
-        pid = get_pid
-        if runner.daemon_running?
-          print "Flapjack stopping..."
-          runner.execute(:kill => true)
-          puts " done."
-        else
-          puts "Flapjack is not running."
-        end
-        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
-      end
-
-      def restart
-        pid = get_pid
-        if runner.daemon_running?
-          print "Flapjack stopping..."
-          runner.execute(:kill => true)
-          puts " done."
-        end
-        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
-
-        @runner = nil
-
         print "Flapjack starting..."
-        runner.execute(:daemonize => true) {
-          start_server
-        }
+        redirect_output(@logfile)
+        @coordinator = Flapjack::Coordinator.new(@config)
+        return_value = @coordinator.start(:signals => true)
         puts " done."
-      end
-
-      def reload
-        if runner.daemon_running?
-          pid = get_pid
-          print "Reloading Flapjack configuration..."
-          begin
-            Process.kill('HUP', pid)
-            puts " sent HUP to pid #{pid}."
-          rescue => e
-            puts " couldn't send HUP to pid '#{pid}'."
-          end
-        else
-          exit_now! "Flapjack is not running daemonized."
-        end
-      end
-
-      def status
-        if runner.daemon_running?
-          pid = get_pid
-          uptime = Time.now - File.stat(@pidfile).ctime
-          puts "Flapjack is running: pid #{pid}, uptime #{uptime}"
-        else
-          exit_now! "Flapjack is not running"
-        end
+        exit_now!(return_value) unless return_value.nil?
       end
 
       private
 
-      def runner
-        return @runner if @runner
-
-        self.class.skip_dante_traps
-
-        @runner = Dante::Runner.new('flapjack', :pid_path => @pidfile,
-          :log_path => @logfile)
-        @runner
-      end
-
-      def self.skip_dante_traps
-        return if Dante::Runner.respond_to?(:orig_start)
-        Dante::Runner.send(:alias_method, :orig_start, :start)
-        Dante::Runner.send(:define_method, :start) do
-          if log_path = options[:log_path] && options[:daemonize].nil?
-             redirect_output!
-          end
-
-          # skip signal traps
-          @startup_command.call(self.options) if @startup_command
+      # adapted from https://github.com/nesquena/dante/blob/2a5be903fded5bbd44e57b5192763d9107e9d740/lib/dante/runner.rb#L253-L274
+      def redirect_output(log_path)
+        if log_path.nil?
+          # redirect to /dev/null
+          # We're not bothering to sync if we're dumping to /dev/null
+          # because /dev/null doesn't care about buffered output
+          $stdin.reopen '/dev/null'
+          $stdout.reopen '/dev/null', 'a'
+          $stderr.reopen $stdout
+        else
+          # if the log directory doesn't exist, create it
+          FileUtils.mkdir_p(File.dirname(log_path), :mode => 0755)
+          # touch the log file to create it
+          FileUtils.touch log_path
+          # Set permissions on the log file
+          File.chmod(0644, log_path)
+          # Reopen $stdout (NOT +STDOUT+) to start writing to the log file
+          $stdout.reopen(log_path, 'a')
+          # Redirect $stderr to $stdout
+          $stderr.reopen $stdout
+          $stdout.sync = true
         end
-      end
-
-      def start_server
-        @coordinator = Flapjack::Coordinator.new(@config)
-        @coordinator.start(:signals => true)
-      end
-
-      def process_exists(pid)
-        return unless pid
-        begin
-          Process.kill(0, pid)
-          return true
-        rescue Errno::ESRCH
-          return false
-        end
-      end
-
-      # wait until the specified pid no longer exists, or until a timeout is reached
-      def wait_pid_gone(pid, timeout = 30)
-        print "waiting for a max of #{timeout} seconds for process #{pid} to exit" if process_exists(pid)
-        started_at = Time.now.to_i
-        while process_exists(pid)
-          break unless (Time.now.to_i - started_at < timeout)
-          print '.'
-          sleep 1
-        end
-        puts ''
-        !process_exists(pid)
-      end
-
-      def get_pid
-        IO.read(@pidfile).chomp.to_i
-      rescue StandardError
-        pid = nil
       end
 
     end
@@ -179,77 +70,10 @@ end
 desc 'Server for running components (e.g. processor, notifier, gateways)'
 command :server do |server|
 
-  server.desc 'Start the server'
+  server.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
-  server.command :start do |start|
-
-    start.switch [:d, 'daemonize'], :desc => 'Daemonize',
-      :default_value => true
-
-    start.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-    start.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-    start.flag   [:r, 'rbtrace'],   :desc => 'Enable rbtrace profiling'
-
-    start.action do |global_options,options,args|
-      server = Flapjack::CLI::Server.new(global_options, options)
-      server.start
-    end
+  server.action do |global_options,options,args|
+    cli_server = Flapjack::CLI::Server.new(global_options, options)
+    cli_server.start
   end
-
-  server.desc 'Stop the server'
-  server.command :stop do |stop|
-
-    stop.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-    stop.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-    stop.action do |global_options,options,args|
-      server = Flapjack::CLI::Server.new(global_options, options)
-      server.stop
-    end
-  end
-
-  server.desc 'Restart the server'
-  server.command :restart do |restart|
-
-    restart.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-    restart.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-    restart.flag   [:r, 'rbtrace'],   :desc => 'Enable rbtrace profiling'
-
-    restart.action do |global_options,options,args|
-      server = Flapjack::CLI::Server.new(global_options, options)
-      server.restart
-    end
-  end
-
-  server.desc 'Reload the server configuration'
-  server.command :reload do |reload|
-
-    reload.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-    reload.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-    reload.action do |global_options,options,args|
-      server = Flapjack::CLI::Server.new(global_options, options)
-      server.reload
-    end
-  end
-
-  server.desc 'Get server status'
-  server.command :status do |status|
-
-    status.flag   [:p, 'pidfile'],   :desc => 'PATH of the pidfile to write to'
-
-    status.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
-    status.action do |global_options,options,args|
-      server = Flapjack::CLI::Server.new(global_options, options)
-      server.status
-    end
-  end
-
 end

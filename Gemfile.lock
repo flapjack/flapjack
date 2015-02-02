@@ -13,10 +13,10 @@ PATH
       activesupport
       chronic
       chronic_duration
-      dante
       gli (= 2.12.0)
       hiredis
       ice_cube
+      json-stream
       mail
       rack (~> 1.5.2)
       redis (>= 3.0.7)
@@ -57,7 +57,6 @@ GEM
       multi_test (>= 0.1.1)
     cucumber-core (1.0.0.beta.4)
       gherkin (~> 2.12.0)
-    dante (0.2.0)
     delorean (2.1.0)
       chronic
     diff-lcs (1.2.5)
@@ -74,6 +73,7 @@ GEM
     ice_cube (0.12.1)
     json (1.8.2)
     json (1.8.2-java)
+    json-stream (0.2.1)
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
     mime-types (2.4.3)
@@ -156,7 +156,7 @@ GEM
       parslet (~> 1.5.0)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2014.10)
+    tzinfo-data (1.2015.1)
       tzinfo (>= 1.0.0)
     webmock (1.20.4)
       addressable (>= 2.3.6)

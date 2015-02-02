@@ -18,9 +18,9 @@ Gem::Specification.new do |gem|
   gem.require_paths = ['lib']
   gem.version       = Flapjack::VERSION
 
-  gem.add_dependency 'dante'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
+  gem.add_dependency 'json-stream'
   # gem.add_dependency 'zermelo'
   gem.add_dependency 'rack', '~> 1.5.2' # until sinatra is fixed for rack 1.6.0+
   gem.add_dependency 'sinatra'

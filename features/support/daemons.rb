@@ -59,13 +59,9 @@ def kill_lingering_processes
       puts green("Process #{pid} has already exited.") if @debug
     end
 
-    if @debug
-      if process
-        puts blue("Output from #{pid} #{command}\n")
-        puts process.read + "\n"
-      else
-        # TODO capture STDOUT from daemonize?
-      end
+    if @debug && !process.nil?
+      puts blue("Output from #{pid} #{command}\n")
+      puts process.read + "\n"
     end
   end
   puts yellow("Done killing processes") if @debug
@@ -80,36 +76,15 @@ def time_and_pid_from_file(pid_file, cutoff_time = nil)
 end
 
 def spawn_process(command, opts={})
-  @daemons_output ||= []
-  @daemons_exit_status ||= []
-
   puts yellow("Running: #{command}") if @debug
 
   process_h = nil
 
   file = opts[:daemon_pidfile]
 
-  if file
-    time = Time.now
-    attempts = 0
-
-    @daemons_output << `#{command}`
-    @daemons_exit_status << $?
-
-    while attempts < 50
-      time_and_pid = time_and_pid_from_file(file, time)
-      if time_and_pid
-        process_h = {:pid => time_and_pid.last, :command => command}
-        break
-      end
-      attempts += 1
-      sleep 0.2
-    end
-  else
-    process = IO.popen(command)
-    pid = process.pid
-    process_h = {:process => process, :command => command}
-  end
+  process = IO.popen(command)
+  pid = process.pid
+  process_h = {:process => process, :command => command}
 
   raise "failed to spawn process #{command}" if process_h.nil?
 

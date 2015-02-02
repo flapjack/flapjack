@@ -179,6 +179,10 @@ Before('@notifications') do
   Mail::TestMailer.deliveries.clear
 end
 
+Before('@not_jruby') do
+  pending if 'java'.eql?(RUBY_PLATFORM)
+end
+
 After('@time') do
   Delorean.back_to_the_present
 end
