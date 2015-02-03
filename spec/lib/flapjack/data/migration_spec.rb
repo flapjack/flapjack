@@ -4,6 +4,17 @@ require 'flapjack/data/notification_rule'
 
 describe Flapjack::Data::Migration, :redis => true do
 
+  it 'removes an orphaned entity id' do
+    @redis.hset('all_entity_ids_by_name', 'name_1', 'id_2')
+    @redis.hset('all_entity_names_by_id', 'id_1', 'name_1')
+    @redis.hset('all_entity_names_by_id', 'id_2', 'name_1')
+
+    Flapjack::Data::Migration.clear_orphaned_entity_ids(:redis => @redis)
+
+    expect(@redis.hgetall('all_entity_ids_by_name')).to eq('name_1' => 'id_2')
+    expect(@redis.hgetall('all_entity_names_by_id')).to eq('id_2' => 'name_1')
+  end
+
   it "fixes a notification rule wih no contact association" do
     contact = Flapjack::Data::Contact.add( {
         'id'         => 'c362',

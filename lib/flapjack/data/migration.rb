@@ -125,6 +125,42 @@ module Flapjack
         end
       end
 
+      def self.clear_orphaned_entity_ids(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+
+        logger = options[:logger]
+
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for data migration (entity id creation). Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
+          end
+          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
+        end
+
+        logger.info "Checking for orphaned entity ids..." unless logger.nil?
+
+        begin
+          valid_entity_data = redis.hgetall('all_entity_ids_by_name')
+
+          missing_ids = redis.hgetall('all_entity_names_by_id').reject {|e_id, e_name|
+            valid_entity_data[e_name] == e_id
+          }
+
+          unless missing_ids.empty?
+            logger.info "Clearing ids (#{missing_ids.inspect})" unless logger.nil?
+            redis.hdel('all_entity_names_by_id', missing_ids.keys)
+          end
+        ensure
+          semaphore.release
+          logger.info "Finished checking for orphaned entity ids." unless logger.nil?
+        end
+      end
+
       def self.refresh_archive_index(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
         archive_keys = redis.keys('events_archive:*')
