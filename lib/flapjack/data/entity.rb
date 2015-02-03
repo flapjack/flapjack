@@ -469,24 +469,34 @@ module Flapjack
           end
         else
           # most likely from API import
-          existing_name = redis.hget('all_entity_names_by_id', entity_id)
+          this_id_original_name = redis.hget('all_entity_names_by_id', entity_id)
 
           # if there's an entity with a matching name, this will change its
           # id; if no entity exists it creates a new one
 
-          if existing_name.nil?
+          this_name_original_id = redis.hget('all_entity_ids_by_name', entity_name)
+
+          if this_id_original_name.nil?
+            # no entity exists with a matching id
             redis.hset('all_entity_ids_by_name', entity_name, entity_id)
             redis.hset('all_entity_names_by_id', entity_id, entity_name)
 
-          elsif existing_name != entity_name
-            if redis.hexists('all_entity_ids_by_name', entity_name)
-              merge(existing_name, entity_name, :redis => redis)
-            else
-              rename(existing_name, entity_name, :redis => redis) {|multi|
-                multi.hdel('all_entity_ids_by_name', existing_name)
+            unless this_name_original_id.nil?
+              # an entity existed with a matching name but a different id
+              redis.hdel('all_entity_names_by_id', this_name_original_id)
+            end
+          elsif this_id_original_name != entity_name
+            # a record exists with the provided id but a different name
+            if this_name_original_id.nil?
+              # there shouldn't be any entity records left without ids (due to
+              # the migration code) so this code may not be needed now
+              rename(this_id_original_name, entity_name, :redis => redis) {|multi|
+                multi.hdel('all_entity_ids_by_name', this_id_original_name)
                 multi.hset('all_entity_ids_by_name', entity_name, entity_id)
                 multi.hset('all_entity_names_by_id', entity_id, entity_name)
               }
+            else
+              merge(this_id_original_name, entity_name, :redis => redis)
             end
           end
         end

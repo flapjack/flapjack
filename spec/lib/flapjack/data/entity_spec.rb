@@ -223,6 +223,8 @@ describe Flapjack::Data::Entity, :redis => true do
                                    :redis       => @redis)
     end
 
+    context 'check that rename and merge are called by add'
+
     context 'entity renaming on #add' do
 
       let(:time_i) { Time.now.to_i }
@@ -488,6 +490,19 @@ describe Flapjack::Data::Entity, :redis => true do
 
       before(:each) do
         add_name2
+      end
+
+      it 'clears the old id when a name exists' do
+        expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5000')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to eq('name2')
+
+        Flapjack::Data::Entity.add({'id'   => '5001',
+                                    'name' => 'name2'},
+                                    :redis => @redis)
+
+        expect(@redis.hget('all_entity_ids_by_name', 'name2')).to eq('5001')
+        expect(@redis.hget('all_entity_names_by_id', '5000')).to be_nil
+        expect(@redis.hget('all_entity_names_by_id', '5001')).to eq('name2')
       end
 
       it 'does not overwrite current state for a check' do
