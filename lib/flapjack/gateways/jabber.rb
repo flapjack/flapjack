@@ -270,6 +270,8 @@ module Flapjack
                     "  ACKID <id> <comment> [duration: <time spec>]\n" +
                     "  ack checks matching /pattern/ <comment> [duration: <time spec>]\n" +
                     "  ack checks with tag <tag> <comment> [duration: <time spec>]\n" +
+                    "  maint checks matching /pattern/ <comment> [(start-at|start-in): <time spec>] [duration: <time spec>]\n" +
+                    "  maint checks with tag <tag> <comment> [(start-at|start-in): <time spec>] [duration: <time spec>]\n" +
                     "  test notifications for <check>\n" +
                     "  test notifications for checks matching /pattern/\n" +
                     "  test notifications for checks with tag <tag>\n" +
@@ -415,19 +417,14 @@ module Flapjack
                 end
               end
 
-            when /^(?:maint )?entities\s+\/(.+)\/(?:\s*(.*?)(?:\s*start-in:.*?(\w+.*?))?(?:\s*start-at:.*?(\w+.*?))?(?:\s*duration:.*?(\w+.*?))?)$/i
-              check_pattern   = $1.strip
-              comment          = $2 ? $2.strip : nil
-              start_in         = $3 ? $3.strip : nil
-              start_at         = $4 ? $4.strip : nil
-              duration_str     = $5 ? $5.strip : '1 hour'
-              duration         = ChronicDuration.parse(duration_str)
-
-              if comment.nil? || (comment.length == 0)
-                comment = "#{from}: Set via chatbot"
-              else
-                comment = "#{from}: #{comment}"
-              end
+            when /^maint\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))(?:\s*(.*?)(?:\s*start-in:.*?(\w+.*))?(?:\s*start-at:.*?(\w+.*))?(?:\s*duration:.*?(\w+.*))?)$/im
+              pattern      = $1
+              tag          = $2
+              comment      = $3 ? $3.strip : nil
+              start_in     = $4 ? $4.strip : nil
+              start_at     = $5 ? $5.strip : nil
+              duration_str = $4 ? $4.strip : '1 hour'
+              duration     = ChronicDuration.parse(duration_str)
 
               started = case
               when start_in
@@ -438,26 +435,31 @@ module Flapjack
                 Time.now.to_i
               end
 
-              # FIXME: parse check_pattern into check names
-              check_names = []
+              msg = derive_check_ids_for(pattern, tag, nil,
+                      :lock_klasses => [Flapjack::Data::State,
+                                        Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
 
-              check_names.each do |check_name|
-                check = Flapjack::Data::Check.intersect(:name => check_names).all.first
 
-                if check.nil?
-                  # Create the check if it doesn't exist, so we can schedule maintenance against it
-                  check = Flapjack::Data::Check.new(:name => check_name)
-                  check.save
-                end
+                # checks = Flapjack::Data::Check.find_by_ids(*check_ids)
 
-                sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => started,
-                :end_time => started + duration, :summary => @options[:reason])
+                sched_maint = Flapjack::Data::ScheduledMaintenance.new(
+                  :start_time => started,
+                  :end_time   => started + duration,
+                  :summary    => duration
+                )
                 sched_maint.save
 
-                check.add_scheduled_maintenance(sched_maint)
-              end
+                puts check_ids
+                check_ids.each  do |check|
+                  check.add_scheduled_maintenance(sched_maint)
+                end
+                #
+                # checks.each do |check|
+                #   check.add_scheduled_maintenance(sched_maint)
+                # end
 
-              msg = "Maint list:\n" + check_names.join(', ')
+                "Scheduled maintenance on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
+              end
 
             when /^test\s+notifications\s+for\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
               pattern    = $1
