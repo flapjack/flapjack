@@ -12,8 +12,10 @@ module Flapjack
       ENTITY_DATA_MIGRATION = 'entity_data_migration'
 
       # copied from jsonapi/contact_methods.rb, could extract both into separate file
-      def self.obtain_semaphore(resource, options = {})
+      def self.obtain_semaphore(resource, description, options = {})
         raise "Redis connection not set" unless redis = options[:redis]
+
+        logger = options[:logger]
 
         semaphore = nil
         strikes = 0
@@ -27,6 +29,18 @@ module Flapjack
           end
           sempahore = nil
         end
+
+        if semaphore.nil?
+          unless logger.nil?
+            logger.fatal "Could not obtain lock for data migration (#{reason}). Ensure that " +
+              "no other flapjack processes are running that might be executing " +
+              "migrations, check logs for any exceptions, manually delete the " +
+              "'#{resource}' key from your Flapjack Redis " +
+              "database and try running Flapjack again."
+          end
+          raise "Unable to obtain semaphore #{resource}"
+        end
+
         semaphore
       end
 
@@ -37,17 +51,8 @@ module Flapjack
 
         return if redis.exists('created_ids_for_old_entities_without_ids')
 
-        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
-        if semaphore.nil?
-          unless logger.nil?
-            logger.fatal "Could not obtain lock for data migration (entity id creation). Ensure that " +
-              "no other flapjack processes are running that might be executing " +
-              "migrations, check logs for any exceptions, manually delete the " +
-              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
-              "database and try running Flapjack again."
-          end
-          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
-        end
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, 'entity id creation',
+          :redis => redis, :logger => logger)
 
         begin
           logger.warn "Ensuring all entities have ids ..." unless logger.nil?
@@ -72,17 +77,8 @@ module Flapjack
 
         return if redis.exists('all_checks')
 
-        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
-        if semaphore.nil?
-          unless logger.nil?
-            logger.fatal "Could not obtain lock for entity check data migration. Ensure that " +
-              "no other flapjack processes are running that might be executing " +
-              "migrations, check logs for any exceptions, manually delete the " +
-              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
-              "database and try running Flapjack again."
-          end
-          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
-        end
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, 'entity check data',
+          :redis => redis, :logger => logger)
 
         begin
           logger.warn "Upgrading Flapjack's entity/check Redis indexes..." unless logger.nil?
@@ -130,21 +126,12 @@ module Flapjack
 
         logger = options[:logger]
 
-        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION, :redis => redis)
-        if semaphore.nil?
-          unless logger.nil?
-            logger.fatal "Could not obtain lock for data migration (entity id creation). Ensure that " +
-              "no other flapjack processes are running that might be executing " +
-              "migrations, check logs for any exceptions, manually delete the " +
-              "'#{ENTITY_DATA_MIGRATION}' key from your Flapjack Redis " +
-              "database and try running Flapjack again."
-          end
-          raise "Unable to obtain semaphore #{ENTITY_DATA_MIGRATION}"
-        end
-
-        logger.info "Checking for orphaned entity ids..." unless logger.nil?
+        semaphore = obtain_semaphore(ENTITY_DATA_MIGRATION,
+          'orphaned entity ids', :redis => redis, :logger => logger)
 
         begin
+          logger.info "Checking for orphaned entity ids..." unless logger.nil?
+
           valid_entity_data = redis.hgetall('all_entity_ids_by_name')
 
           missing_ids = redis.hgetall('all_entity_names_by_id').reject {|e_id, e_name|
