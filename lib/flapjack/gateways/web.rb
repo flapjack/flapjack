@@ -55,13 +55,11 @@ module Flapjack
               open(@api_url)
             rescue Errno::ECONNREFUSED => e
               Flapjack.logger.warn "Could not connect to api_url: (#{@api_url}): #{e.message} - some functionality will be unavailable"
-              @api_connected = false
             rescue OpenURI::HTTPError
               # The API throws a 404 when hitting the front page.
             end
           else
             Flapjack.logger.warn "api_url not specified, or is not a valid http or https URI (#{@api_url}) - some functionality will be unavailable"
-            @api_connected = false
           end
 
           # constants won't be exposed to eRb scope
