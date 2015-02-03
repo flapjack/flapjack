@@ -22,7 +22,7 @@ module Flapjack
         end
 
         Flapjack::RedisProxy.config = config.for_redis
-        Sandstorm.redis = Flapjack.redis
+        Zermelo.redis = Flapjack.redis
       end
 
       # TODO should these be similar to JSONAPI structures? e.g.

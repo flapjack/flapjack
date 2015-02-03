@@ -88,7 +88,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     it "doesn't return a #{report_type} report for a check that's not found" do
       expect(Flapjack::Data::Check).to receive(:find_by_ids!).
         with(check.id).
-        and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Check, [check.id]))
+        and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Check, [check.id]))
 
       get "/#{report_type}_reports/#{check.id}"
       expect(last_response).to be_not_found

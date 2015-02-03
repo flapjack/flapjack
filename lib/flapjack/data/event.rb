@@ -15,10 +15,10 @@ module Flapjack
                   :initial_failure_delay, :repeat_failure_delay
 
       # type was a required key in v1, but is superfluous
-      REQUIRED_KEYS = %w(state check summary)
+      REQUIRED_KEYS = %w(state check)
       OPTIONAL_KEYS = %w(entity time initial_failure_delay
-        repeat_failure_delay details acknowledgement_id duration tags perfdata
-        type)
+        repeat_failure_delay summary details acknowledgement_id duration tags
+        perfdata type)
 
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
@@ -48,7 +48,7 @@ module Flapjack
                  (e['repeat_failure_delay'].is_a?(String) && !!(e['repeat_failure_delay'] =~ /^\d+$/)) } =>
           "repeat_failure_delay must be a positive integer, or a string castable to one",
 
-        proc {|e| e['summary'].is_a?(String) } =>
+        proc {|e| e['summary'].nil? || e['summary'].is_a?(String) } =>
           "summary must be a string",
 
         proc {|e| e['details'].nil? || e['details'].is_a?(String) } =>
@@ -181,9 +181,17 @@ module Flapjack
 
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
-        # details and perfdata are optional. set to nil if they only contain whitespace
-        @details = (@details.is_a?(String) && ! @details.strip.empty?) ? @details.strip : nil
-        @perfdata = (@perfdata.is_a?(String) && ! @perfdata.strip.empty?) ? @perfdata.strip : nil
+        # summary, details and perfdata are optional. set to nil if they only contain whitespace
+        ['@summary', '@details', '@perfdata'].each do |inst|
+          value = instance_variable_get(inst)
+          v = if value.is_a?(String)
+            vs = value.strip
+            vs.empty? ? nil : vs
+          else
+            nil
+          end
+          instance_variable_set(inst, v)
+        end
       end
 
       def state
@@ -203,7 +211,8 @@ module Flapjack
 
       def dump
         return @dump unless @dump.nil?
-        @dump = "#{id}, #{state}, #{summary}"
+        @dump = "#{id}, #{state}"
+        @dump << ", #{summary}" unless summary.nil?
         @dump << ", #{Time.at(time).to_s}" unless time.nil?
       end
     end

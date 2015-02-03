@@ -30,7 +30,7 @@ require 'i18n'
 I18n.config.enforce_available_locales = true
 
 require 'hiredis'
-require 'sandstorm'
+require 'zermelo'
 
 require 'flapjack'
 require 'flapjack/data/condition'
@@ -79,12 +79,12 @@ module Flapjack
         dest_addr = @options[:destination]
         dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
 
-        Sandstorm.redis = dest_redis
+        Zermelo.redis = dest_redis
 
-        dest_db_size = Sandstorm.redis.dbsize
+        dest_db_size = Zermelo.redis.dbsize
         if dest_db_size > 0
           if @options[:force]
-            Sandstorm.redis.flushdb
+            Zermelo.redis.flushdb
             puts "Cleared #{@options[:destination]} db"
           else
             exit_now! "Destination db #{@options[:destination]} has " \
@@ -95,10 +95,10 @@ module Flapjack
         # key is old contact_id, value = new contact id
         @contact_id_cache = {}
 
-        # key is entity_name:check_name, value is sandstorm record
+        # key is entity_name:check_name, value is zermelo record
         @check_name_cache = {}
 
-        # key is tag name, value is sandstorm record
+        # key is tag name, value is zermelo record
         @tag_name_cache = {}
 
         # cache old entity/check <-> contact linkage, use as limiting set in

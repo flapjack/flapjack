@@ -4,7 +4,7 @@ require 'set'
 
 require 'ice_cube'
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
@@ -15,7 +15,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
@@ -58,9 +58,10 @@ module Flapjack
         :after_remove => :tags_removed,
         :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Route']
 
-      # TODO on change to conditions_list, update value for all routes
-      # TODO when a rule is created, recalculate_routes should be called
+      # NB when a rule is created, recalculate_routes should be called
       # by the creating code if no tags are being added.
+      #
+      # TODO on change to conditions_list, update value for all routes
       def recalculate_routes
         self.routes.destroy_all
 
@@ -75,7 +76,7 @@ module Flapjack
 
         if self.has_tags
           # find all checks matching these tags -- FIXME there may be a more
-          # Sandstorm-idiomatic way to do this
+          # Zermelo-idiomatic way to do this
 
           check_ids = self.tags.associated_ids_for(:checks).values.reduce(:&)
 

@@ -56,7 +56,7 @@ module Flapjack
       end
 
       before do
-        Sandstorm.redis ||= Flapjack.redis
+        Zermelo.redis ||= Flapjack.redis
 
         input = nil
         query_string = (request.query_string.respond_to?(:length) &&
@@ -145,17 +145,17 @@ module Flapjack
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
       end
 
-      error Sandstorm::LockNotAcquired do
+      error Zermelo::LockNotAcquired do
         # TODO
       end
 
-      error Sandstorm::Records::Errors::RecordNotFound do
+      error Zermelo::Records::Errors::RecordNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last
         err(404, "could not find #{type} record, id: '#{e.id}'")
       end
 
-      error Sandstorm::Records::Errors::RecordsNotFound do
+      error Zermelo::Records::Errors::RecordsNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last
         err_ids = e.ids.join("', '")

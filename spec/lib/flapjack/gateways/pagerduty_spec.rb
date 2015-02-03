@@ -82,7 +82,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       expect(alert).to receive(:state_title_case).and_return('Critical')
       expect(alert).to receive(:summary).twice.and_return('')
       expect(alert).to receive(:type).twice.and_return('problem')
-      expect(alert).to receive(:notification_type).and_return('problem')
       expect(alert).to receive(:type_sentence_case).and_return('Problem')
 
       fpn.send(:handle_alert, alert)

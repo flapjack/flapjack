@@ -12,7 +12,7 @@ You have <%= rollup_alerts_count %> alerting check<%= rollup_alerts_count == 1 ?
 <% end -%>
 
 <% rollup_threshold = @alert.medium.rollup_threshold -%>
-<% if @alert.rollup == 'recovery' -%>
+<% if 'recovery'.eql?(@alert.rollup) -%>
 As your email summary threshold is <%= rollup_threshold %>, we're taking your email alerts out of summary mode now. You'll now be emailed individually for each alerting check.
 <% else -%>
 Your email alerts are being summarised as your email summary threshold is set to <%= rollup_threshold %>. You'll receive summary emails like this one until your number of alerting checks falls below <%= rollup_threshold %>.

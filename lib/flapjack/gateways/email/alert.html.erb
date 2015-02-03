@@ -28,19 +28,24 @@
       <td><%= @alert.state_title_case %></td>
     </tr>
 
-    <tr>
-      <td><strong>Summary</strong></td>
-      <td><%= @alert.summary %></td>
-    </tr>
+    <% summary = @alert.summary -%>
+    <% unless summary.nil? || summary.empty? -%>
+      <tr>
+        <td><strong>Summary</strong></td>
+        <td><%= summary %></td>
+      </tr>
+    <% end %>
 
-    <% details = @alert.details; if details -%>
+    <% details = @alert.details -%>
+    <% unless details.nil? || details.empty? -%>
       <tr>
         <td><strong>Details</strong></td>
         <td><%= details %></td>
       </tr>
     <% end %>
 
-    <% time = @alert.time; if time -%>
+    <% time = @alert.time -%>
+    <% unless time.nil? -%>
       <tr>
         <td><strong>Time</strong></td>
         <td><%= Time.at(time.to_i).to_s %></td>
@@ -48,21 +53,22 @@
     <% end %>
 
     <% condition_duration = @alert.condition_duration -%>
-    <% if !condition_duration.nil? && (condition_duration > 40.0) %>
+    <% unless condition_duration.nil? || (condition_duration <= 40.0) -%>
       <tr>
         <td><strong>Duration</strong></td>
         <td><%= ChronicDuration.output(condition_duration, :keep_zero => true) || '0 secs' %></td>
       </tr>
     <% end %>
 
-    <% if @alert.last_state -%>
+    <% unless @alert.last_state.nil? -%>
       <tr>
         <td><strong>Previous State</strong></td>
         <td><%= @alert.last_state_title_case %></td>
       </tr>
     <% end %>
 
-    <% last_summary = @alert.last_summary; if last_summary -%>
+    <% last_summary = @alert.last_summary -%>
+    <% unless last_summary.nil? || last_summary.empty? -%>
       <tr>
         <td><strong>Previous Summary</strong></td>
         <td><%= last_summary %></td>

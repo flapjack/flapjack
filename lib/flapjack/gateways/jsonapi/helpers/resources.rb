@@ -222,7 +222,7 @@ module Flapjack
             missing_ids = ids - resources.ids
 
             unless missing_ids.empty?
-              raise Sandstorm::Records::Errors::RecordsNotFound.new(klass, missing_ids)
+              raise Zermelo::Records::Errors::RecordsNotFound.new(klass, missing_ids)
             end
 
             resources.destroy_all
@@ -243,7 +243,7 @@ module Flapjack
             singular_links = {}
             multiple_links = {}
 
-            # SMELL mucking about with a sandstorm protected method...
+            # SMELL mucking about with a zermelo protected method...
             klass.send(:with_association_data) do |assoc_data|
               assoc_data.each_pair do |name, data|
                 if sa = singular_aliases.detect {|a| a.has_key?(name) }
@@ -451,7 +451,7 @@ module Flapjack
 
             fragment_klass = nil
 
-            # SMELL mucking about with a sandstorm protected method...
+            # SMELL mucking about with a zermelo protected method...
             parent_klass.send(:with_association_data, clause_fragment.to_sym) do |data|
               fragment_klass = data.data_klass
             end

@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -8,7 +8,7 @@ module Flapjack
   module Data
     class UnscheduledMaintenance
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 

@@ -41,7 +41,7 @@ module Flapjack
 
       def start
         begin
-          Sandstorm.redis = Flapjack.redis
+          Zermelo.redis = Flapjack.redis
 
           loop do
             @lock.synchronize do

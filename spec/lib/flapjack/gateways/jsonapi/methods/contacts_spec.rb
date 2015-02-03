@@ -116,7 +116,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "does not return a contact that does not exist" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
-      with(contact.id).and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
+      with(contact.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
 
     get "/contacts/#{contact.id}"
     expect(last_response.status).to eq(404)

@@ -122,7 +122,7 @@ config = Flapjack::Configuration.new
 Flapjack::RedisProxy.config = config.load(FLAPJACK_CONFIG) ?
                                 config.for_redis :
                                 {:db => 14, :driver => :ruby}
-Sandstorm.redis = Flapjack.redis
+Zermelo.redis = Flapjack.redis
 Flapjack.redis.flushdb
 RedisDelorean.before_all
 Flapjack.redis.quit

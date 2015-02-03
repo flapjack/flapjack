@@ -14,7 +14,7 @@ module Flapjack
   module Data
     class Entry
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
 
       define_attributes :timestamp     => :timestamp,
                         :condition     => :string,

@@ -29,7 +29,7 @@ module Flapjack
 
         unless 'mirror'.eql?(@options[:type])
           Flapjack::RedisProxy.config = @config.for_redis
-          Sandstorm.redis = Flapjack.redis
+          Zermelo.redis = Flapjack.redis
         end
 
         @config_runner = @config_env["#{@options[:type]}-receiver"] || {}
@@ -368,7 +368,7 @@ module Flapjack
         end
 
         Flapjack::RedisProxy.config = dest_redis
-        Sandstorm.redis = Flapjack.redis
+        Zermelo.redis = Flapjack.redis
 
         archives = mirror_get_archive_keys_stats(:source => source_redis)
         raise "found no archives!" if archives.empty?

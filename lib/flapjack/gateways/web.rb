@@ -98,7 +98,7 @@ module Flapjack
       end
 
       before do
-        Sandstorm.redis ||= Flapjack.redis
+        Zermelo.redis ||= Flapjack.redis
         @api_url          = self.class.instance_variable_get('@api_url')
         @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')

@@ -3,7 +3,7 @@
 require 'monitor'
 require 'syslog'
 
-require 'sandstorm'
+require 'zermelo'
 
 require 'flapjack/configuration'
 require 'flapjack/patches'

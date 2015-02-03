@@ -78,7 +78,7 @@ module Flapjack
       Flapjack.logger.info("Booting main loop.")
 
       begin
-        Sandstorm.redis = Flapjack.redis
+        Zermelo.redis = Flapjack.redis
 
         # FIXME: add an administrative function to reset all event counters
 
@@ -237,14 +237,15 @@ module Flapjack
             new_entry.save
 
             if new_state.nil?
-              if old_state.entries.count > 1
-                old_state.entries.intersect_range(1, -1).each do |e|
-                  old_state.entries.delete(e)
-                  Flapjack.logger.info "pre-delete-check: processor state entries"
+              entries = old_state.entries
+
+              if entries.count > 1
+                entries.intersect_range(1, -1).each do |e|
+                  entries.delete(e)
                   Flapjack::Data::Entry.delete_if_unlinked(e)
                 end
               end
-              old_state.entries << new_entry
+              entries << new_entry
             else
               new_state.save
               new_state.entries << new_entry
@@ -336,7 +337,7 @@ module Flapjack
             :condition => event_condition.name)
         end
 
-        new_entry.perfdata  = event.perfdata
+        new_entry.perfdata = event.perfdata
       end
 
       new_entry.summary   = event.summary
@@ -351,12 +352,11 @@ module Flapjack
       new_entry.save
 
       if new_state.nil?
-        if old_state.entries.count > 1
-          old_state.entries.intersect_range(1, -1).each do |e|
-            old_state.entries.delete(e)
-          end
+        entries = old_state.entries
+        if entries.count > 1
+          entries.intersect_range(1, -1).each {|e| entries.delete(e)}
         end
-        old_state.entries << new_entry
+        entries << new_entry
       else
         new_state.save
         new_state.entries << new_entry
@@ -368,10 +368,11 @@ module Flapjack
         # sent via association to a state or check
         severity = Flapjack::Data::Condition.most_unhealthy
       else
-        check.latest_notifications.intersect(:condition => new_entry.condition).each do |e|
-          check.latest_notifications.delete(e)
+        lat_notif = check.latest_notifications
+        lat_notif.intersect(:condition => new_entry.condition).each do |e|
+          lat_notif.delete(e)
         end
-        check.latest_notifications << new_entry
+        lat_notif << new_entry
 
         most_severe = check.most_severe
         most_severe_cond = most_severe.nil? ? nil :

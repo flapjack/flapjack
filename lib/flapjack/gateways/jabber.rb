@@ -39,7 +39,7 @@ module Flapjack
 
         def start
           begin
-            Sandstorm.redis = Flapjack.redis
+            Zermelo.redis = Flapjack.redis
 
             loop do
               @lock.synchronize do
@@ -136,7 +136,7 @@ module Flapjack
         end
 
         def start
-          Sandstorm.redis = Flapjack.redis
+          Zermelo.redis = Flapjack.redis
 
           @lock.synchronize do
 
@@ -192,48 +192,62 @@ module Flapjack
           out
         end
 
-        def derive_check_ids_for(pattern, tag_name, check_name)
+        def derive_check_ids_for(pattern, tag_name, check_name, options = {})
+          lock_klasses = options[:lock_klasses] || []
 
-          if !pattern.nil? && !pattern.strip.empty?
-
-            checks = begin
-              Flapjack::Data::Check.intersect(:name => Regexp.new(pattern.strip))
-            rescue RegexpError
-              nil
-            end
-
-            if checks.nil?
-              "Error parsing /#{pattern.strip}/"
-            elsif checks.empty?
-              "No checks match /#{pattern.strip}/"
-            else
-              yield(checks.ids, "matching /#{pattern.strip}/") if block_given?
-            end
-
-          elsif !tag_name.nil? && !tag_name.strip.empty?
-            tag = Flapjack::Data::Tag.intersect(:name => tag_name.strip).all.first
-
-            if tag.nil?
-              "No tag '#{tag_name.strip}'"
-            else
-              checks = tag.checks
-              if checks.empty?
-                "No checks with tag '#{tag_name.strip}'"
-              else
-                yield(checks.ids, "with tag '#{tag_name}'") if block_given?
+          deriver = if !pattern.nil? && !pattern.strip.empty?
+            proc {
+              checks = begin
+                Flapjack::Data::Check.intersect(:name => Regexp.new(pattern.strip))
+              rescue RegexpError
+                nil
               end
-            end
 
+              if checks.nil?
+                "Error parsing /#{pattern.strip}/"
+              elsif checks.empty?
+                "No checks match /#{pattern.strip}/"
+              else
+                yield(checks.ids, "matching /#{pattern.strip}/") if block_given?
+              end
+            }
+          elsif !tag_name.nil? && !tag_name.strip.empty?
+
+            lock_klasses.unshift(Flapjack::Data::Tag)
+
+            proc {
+              tag = Flapjack::Data::Tag.intersect(:name => tag_name.strip).all.first
+
+              if tag.nil?
+                "No tag '#{tag_name.strip}'"
+              else
+                checks = tag.checks
+                if checks.empty?
+                  "No checks with tag '#{tag_name.strip}'"
+                else
+                  yield(checks.ids, "with tag '#{tag_name}'") if block_given?
+                end
+              end
+            }
           elsif !check_name.nil? && !check_name.strip.empty?
-            checks = Flapjack::Data::Check.intersect(:name => check_name.strip)
+            proc {
+              checks = Flapjack::Data::Check.intersect(:name => check_name.strip)
 
-            if checks.empty?
-              "No check exists with name '#{check_name.strip}'"
-            else
-              yield(checks.ids, "with name '#{check_name.strip}'") if block_given?
-            end
+              if checks.empty?
+                "No check exists with name '#{check_name.strip}'"
+              else
+                yield(checks.ids, "with name '#{check_name.strip}'") if block_given?
+              end
+            }
           end
 
+          return if deriver.nil?
+
+          if lock_klasses.empty?
+            Flapjack::Data::Check.lock(&deriver)
+          else
+            Flapjack::Data::Check.lock(*lock_klasses, &deriver)
+          end
         end
 
         def interpret(room, nick, time, command)
@@ -246,7 +260,7 @@ module Flapjack
             when /^help\s*$/
               msg = "commands: \n" +
                     "  find checks matching /pattern/\n" +
-                    "  find checks with tag <tag>\n" +
+                    "  find (number) checks with tag <tag>\n" +
                     "  state of <check>\n" +
                     "  state of checks matching /pattern/\n" +
                     "  state of checks with tag <tag>\n" +
@@ -273,13 +287,21 @@ module Flapjack
                      "System CPU Time: #{t.stime}\n" +
                      `uname -a`.chomp + "\n"
 
-            when /^find\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
-              pattern = $1
-              tag     = $2
+            when /^find\s+(\d+\s+)?checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
+              num_results = $1.nil? ? 30 : $1.strip.to_i
+              pattern     = $2
+              tag         = $3
 
-              msg = derive_check_ids_for(pattern, tag, nil) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, nil,
+                      :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor|
+                resp = "Checks #{descriptor}:\n"
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
-                "Checks #{descriptor}:\n" + checks.map(&:name).join(", ")
+                resp += "Showing first #{num_results} results of #{checks.length}:\n" if checks.length > num_results
+                resp += checks.map {|check|
+                  state = check.states.last
+                  "#{check.name} is #{state.nil? ? '[none]' : state.condition.upcase}"
+                }.sort.take(num_results).join(", ")
+                resp
               end
 
             when /^state\s+of\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
@@ -287,11 +309,13 @@ module Flapjack
               tag        = $2
               check_name = $3
 
-              msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, check_name,
+                       :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
                   Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                  "#{check.name} - #{check.state.condition} "
-                }.join("\n")
+                    state = check.states.last
+                    "#{check.name} - #{state.nil? ? '[none]' : state.condition.upcase}"
+                  }.join("\n")
               end
 
             when /^tell\s+me\s+about\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
@@ -299,7 +323,9 @@ module Flapjack
               tag        = $2
               check_name = $3
 
-              msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, check_name,
+                      :lock_klasses => [Flapjack::Data::ScheduledMaintenance,
+                                        Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
                 current_time = Time.now
                 "Details of checks #{descriptor}\n" +
                   Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
@@ -357,7 +383,9 @@ module Flapjack
               duration_str = $4 ? $4.strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
 
-              msg = derive_check_ids_for(pattern, tag, nil) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, nil,
+                      :lock_klasses => [Flapjack::Data::State,
+                                        Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
 
                 state_ids_by_check_id = Flapjack::Data::Check.
                   intersect(:id => check_ids).associated_ids_for(:state)
@@ -455,7 +483,8 @@ module Flapjack
             end
 
           rescue => e
-            Flapjack.logger.error("Exception when interpreting command '#{command}' - #{e.class}, #{e.message}")
+            Flapjack.logger.error { "Exception when interpreting command '#{command}' - #{e.class}, #{e.message}" }
+            Flapjack.logger.debug { e.backtrace.join("\n") }
             msg = "Oops, something went wrong processing that command (#{e.class}, #{e.message})"
           end
 
@@ -494,7 +523,6 @@ module Flapjack
 
           @alias = @config['alias'] || 'flapjack'
           @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
-          Flapjack.logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
 
           @state_buffer = []
         end
@@ -516,6 +544,8 @@ module Flapjack
         end
 
         def start
+          Flapjack.logger.debug("I will respond to the following identifiers: #{@identifiers.join(', ')}")
+
           @lock.synchronize do
             interpreter = self.siblings ? self.siblings.detect {|sib| sib.respond_to?(:interpret)} : nil
 
@@ -562,45 +592,51 @@ module Flapjack
             end
 
             check_xml = Proc.new do |data|
-              next if data.nil?
-              Flapjack.logger.debug "xml_data: #{data}"
-              text = ''
-              begin
-                enc_name = Encoding.default_external.name
-                REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
-                  each_element_with_text do |elem|
+              if data.nil?
+                nil
+              else
+                Flapjack.logger.debug "xml_data: #{data}"
+                text = ''
+                begin
+                  enc_name = Encoding.default_external.name
+                  REXML::Document.new("<?xml version=\"1.0\" encoding=\"#{enc_name}\"?>" + data).
+                    each_element_with_text do |elem|
 
-                  text += elem.texts.join(" ")
+                    text += elem.texts.join(" ")
+                  end
+                  text = data if text.empty? && !data.empty?
+                rescue REXML::ParseException => exc
+                  # invalid XML, so we'll just clear everything inside angled brackets
+                  text = data.gsub(/<[^>]+>/, '').strip
                 end
-                text = data if text.empty? && !data.empty?
-              rescue REXML::ParseException => exc
-                # invalid XML, so we'll just clear everything inside angled brackets
-                text = data.gsub(/<[^>]+>/, '').strip
+                text
               end
-              text
             end
 
             client.add_message_callback do |m|
-              text = m.body
-              nick = m.from
-              time = nil
-              m.each_element('x') { |x|
-                if x.kind_of?(::Jabber::Delay::XDelay)
-                  time = x.stamp
-                end
-              }
+              unless (m.type != :chat) || m.body.nil? || m.body.strip.empty?
+                Flapjack.logger.debug "received message #{m.inspect}"
+                nick = m.from
+                time = nil
+                m.each_element('x') { |x|
+                  if x.kind_of?(::Jabber::Delay::XDelay)
+                    time = x.stamp
+                  end
+                }
 
-              if interpreter
-                interpreter.receive_message(nil, nick, time, check_xml.call(text))
+                unless interpreter.nil?
+                  interpreter.receive_message(nil, nick, time, check_xml.call(m.body))
+                end
               end
             end
 
             muc_clients = @config['rooms'].inject({}) do |memo, room|
               muc_client = ::Jabber::MUC::SimpleMUCClient.new(client)
               muc_client.on_message do |time, nick, text|
+                Flapjack.logger.debug("message #{text} -- #{time} -- #{nick}")
                 next if nick == jabber_id
+                identifier = identifiers.detect {|id| /^(?:@#{id}|#{id}:)\s*(.*)/m === check_xml.call(text) }
 
-                identifier = @identifiers.detect {|id| check_xml.call(text) === /^#{id}:\s*(.*)/m }
                 unless identifier.nil?
                   the_command = $1
                   Flapjack.logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
@@ -673,10 +709,10 @@ module Flapjack
 
         def handle_state_change(client, muc_clients)
           connected = client.is_connected?
-          Flapjack.logger.info "connected? #{connected}"
+          Flapjack.logger.debug "connected? #{connected}"
 
           while state = @state_buffer.pop
-            Flapjack.logger.info "state change #{state}"
+            Flapjack.logger.debug "state change #{state}"
             case state
             when 'announce'
               _announce(muc_clients) if connected
@@ -708,7 +744,7 @@ module Flapjack
         def _join(client, muc_clients, opts = {})
           client.connect
           client.auth(@config['password'])
-          client.send(::Jabber::Presence.new.set_type(:available))
+          client.send(::Jabber::Presence.new)
           muc_clients.each_pair do |room, muc_client|
             attempts_allowed = 3
             attempts_remaining = attempts_allowed
@@ -775,7 +811,9 @@ module Flapjack
 
         def _say(client)
           while speak = @say_buffer.pop
-            client.send( ::Jabber::Message::new(speak[:nick], speak[:msg]) )
+            msg = ::Jabber::Message::new(speak[:nick], speak[:msg])
+            msg.type = :chat
+            client.send( msg )
           end
         end
 

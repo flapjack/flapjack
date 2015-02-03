@@ -73,7 +73,7 @@ describe Flapjack::Data::Event do
     end
   end
 
-  [:state, :check, :summary].each do |required_key|
+  [:state, :check].each do |required_key|
     it "rejects an event with missing '#{required_key}' key" do
       bad_event_data = event_data.clone
       bad_event_data.delete(required_key.to_s)
@@ -93,8 +93,8 @@ describe Flapjack::Data::Event do
     end
   end
 
-  [:entity, :time, :initial_failure_delay, :repeat_failure_delay, :details,
-   :perfdata, :acknowledgement_id, :duration].each do |optional_key|
+  [:entity, :time, :initial_failure_delay, :repeat_failure_delay, :summary,
+   :details, :perfdata, :acknowledgement_id, :duration].each do |optional_key|
 
     it "rejects an event with invalid '#{optional_key}' key" do
       bad_event_data = event_data.clone

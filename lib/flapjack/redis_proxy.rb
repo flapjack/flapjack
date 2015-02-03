@@ -3,7 +3,7 @@
 # defer initialisation for Redis connections until they're used.
 require 'redis'
 require 'redis/connection/hiredis'
-require 'sandstorm'
+require 'zermelo'
 
 module Flapjack
 
@@ -22,9 +22,19 @@ module Flapjack
       attr_accessor :config
     end
 
+    # need to override Kernel.exec
+    def exec
+      return if @proxied_connection.nil?
+      @proxied_connection.exec
+    end
+
     def quit
       return if @proxied_connection.nil?
       @proxied_connection.quit
+    end
+
+    def respond_to?(name, include_private = false)
+      proxied_connection.respond_to?(name, include_private)
     end
 
     def method_missing(name, *args, &block)

@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/flapjack/sandstorm.git
-  revision: 29c0329b67a38a0e99070af03d4a6774de7fb516
-  branch: master
-  specs:
-    sandstorm (0.1.0)
-      activemodel
-
 PATH
   remote: .
   specs:
@@ -28,6 +20,7 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
+      zermelo
 
 GEM
   remote: https://rubygems.org/
@@ -169,6 +162,8 @@ GEM
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
+    zermelo (1.0.0)
+      activemodel
 
 PLATFORMS
   ruby
@@ -182,6 +177,5 @@ DEPENDENCIES
   rake
   rspec
   ruby-prof
-  sandstorm!
   simplecov
   webmock

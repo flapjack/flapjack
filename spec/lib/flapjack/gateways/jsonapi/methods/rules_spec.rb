@@ -118,7 +118,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     })
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
-      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact_data[:id]))
+      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact_data[:id]))
 
     expect(rule).to receive(:invalid?).and_return(false)
     expect(rule).not_to receive(:save)
@@ -195,7 +195,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "does not get a rule that does not exist" do
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).
-      and_raise(Sandstorm::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
+      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_not_found
@@ -424,7 +424,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "does not set a contact for a notification rule that does not exist" do
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
       with(rule.id).
-      and_raise(Sandstorm::Records::Errors::RecordsNotFound.new(Flapjack::Data::Rule, [rule.id]))
+      and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Rule, [rule.id]))
 
     put "/rules/#{rule.id}",
       Flapjack.dump_json(:rules =>

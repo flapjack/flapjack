@@ -65,7 +65,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(alert).to receive(:id).and_return('123456789')
     expect(alert).to receive(:rollup).and_return(nil)
 
-    expect(alert).to receive(:notification_type).and_return('recovery')
+    expect(alert).to receive(:type).and_return('recovery')
     expect(alert).to receive(:type_sentence_case).and_return('Recovery')
     expect(alert).to receive(:summary).and_return('smile')
 
@@ -98,7 +98,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(alert).to receive(:id).and_return('123456789')
     expect(alert).to receive(:rollup).and_return(nil)
 
-    expect(alert).to receive(:notification_type).and_return('recovery')
+    expect(alert).to receive(:type).and_return('recovery')
     expect(alert).to receive(:type_sentence_case).and_return('Recovery')
     expect(alert).to receive(:summary).and_return('smile')
 

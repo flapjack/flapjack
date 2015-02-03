@@ -2,7 +2,7 @@
 
 require 'digest'
 
-require 'sandstorm/records/redis_record'
+require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -19,7 +19,7 @@ module Flapjack
 
     class Check
 
-      include Sandstorm::Records::RedisRecord
+      include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
 
@@ -93,7 +93,6 @@ module Flapjack
         :after_remove => :removed_latest_notification
 
       def removed_latest_notification(entry)
-        Flapjack.logger.info "pre-delete-check: processor check_latest_notifications"
         Flapjack::Data::Entry.delete_if_unlinked(entry)
       end
 
@@ -147,15 +146,6 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       attr_accessor :count
-
-      # TODO handle JSON exception
-      def perfdata
-        if self.perfdata_json.nil?
-          @perfdata = nil
-          return
-        end
-        @perfdata ||= Flapjack.load_json(self.perfdata_json)
-      end
 
       def self.jsonapi_attributes
         [:name, :enabled]
@@ -271,7 +261,7 @@ module Flapjack
         if sched_maint.end_time >= at_time
           # it spans the current time, so we'll stop it at that point
           # need to remove it from the sorted_set that uses the end_time as a key,
-          # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
+          # change and re-add -- see https://github.com/ali-graham/zermelo/issues/1
           # TODO should this be in a multi/exec block?
           self.scheduled_maintenances_by_end.delete(sched_maint)
           sched_maint.end_time = at_time
@@ -336,7 +326,7 @@ module Flapjack
       def clear_unscheduled_maintenance(end_time)
         return unless unsched_maint = unscheduled_maintenance_at(Time.now)
         # need to remove it from the sorted_set that uses the end_time as a key,
-        # change and re-add -- see https://github.com/ali-graham/sandstorm/issues/1
+        # change and re-add -- see https://github.com/ali-graham/zermelo/issues/1
         self.class.lock(Flapjack::Data::UnscheduledMaintenance) do
           self.unscheduled_maintenances_by_end.delete(unsched_maint)
           unsched_maint.end_time = end_time
@@ -362,7 +352,7 @@ module Flapjack
 
         r_ids = self.routes.ids
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "severity: #{severity}\n" \
           "Matching routes before severity (#{r_ids.size}): #{r_ids.inspect}"
         }
@@ -378,7 +368,7 @@ module Flapjack
         route_ids = check_routes.ids
         return [{}, {}] if route_ids.empty?
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "Matching routes after severity (#{route_ids.size}): #{route_ids.inspect}"
         }
 
@@ -387,7 +377,7 @@ module Flapjack
 
         rule_ids = route_ids_by_rule_id.keys
 
-        Flapjack.logger.info {
+        Flapjack.logger.debug {
           "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
         }
 
