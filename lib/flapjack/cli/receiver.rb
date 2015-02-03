@@ -144,6 +144,7 @@ module Flapjack
         return @redis unless @redis.nil?
         @redis = Redis.new(@redis_options.merge(:driver => :hiredis))
         Flapjack::Data::Migration.migrate_entity_check_data_if_required(:redis => @redis)
+        Flapjack::Data::Migration.clear_orphaned_entity_ids(:redis => @redis)
         @redis
       end
 
