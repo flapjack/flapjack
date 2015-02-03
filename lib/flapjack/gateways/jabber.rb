@@ -436,29 +436,21 @@ module Flapjack
               end
 
               msg = derive_check_ids_for(pattern, tag, nil,
-                      :lock_klasses => [Flapjack::Data::State,
-                                        Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
-
-
-                # checks = Flapjack::Data::Check.find_by_ids(*check_ids)
+                      :lock_klasses => [Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
+                checks = Flapjack::Data::Check.find_by_ids(*check_ids)
 
                 sched_maint = Flapjack::Data::ScheduledMaintenance.new(
                   :start_time => started,
                   :end_time   => started + duration,
-                  :summary    => duration
+                  :summary    => comment
                 )
                 sched_maint.save
 
-                puts check_ids
-                check_ids.each  do |check|
+                checks.each do |check|
                   check.add_scheduled_maintenance(sched_maint)
                 end
-                #
-                # checks.each do |check|
-                #   check.add_scheduled_maintenance(sched_maint)
-                # end
 
-                "Scheduled maintenance on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
+                "Scheduled maintenance for #{duration} starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
               end
 
             when /^test\s+notifications\s+for\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
