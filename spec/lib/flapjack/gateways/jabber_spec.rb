@@ -393,6 +393,44 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'ACKID abcd1234 JJ looking duration: 1 hour')
     end
 
+    it "interprets a received acknowledgement command (with check name)" do
+      expect(bot).to receive(:announce).with('room1', "Ack list:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
+      states = double('states')
+      expect(states).to receive(:associated_ids_for).with(:check).
+        and_return(state.id => check.id)
+      expect(Flapjack::Data::State).to receive(:intersect).
+        with(:id => [state.id],
+             :condition => ['critical', 'warning', 'unknown']).
+      and_return(states)
+
+      expect(checks).to receive(:associated_ids_for).with(:state).
+        and_return(check.id => state.id)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => [check.id]).and_return(checks)
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => 'example.com:ping').and_return(checks)
+
+      expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
+        with('events', [check],
+             :summary => 'jim: Set via chatbot', :duration => (60 * 60))
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'ack example.com:ping')
+    end
+
     it "interprets a received acknowledgement command (with tag)" do
       expect(bot).to receive(:announce).with('room1', "Ack list:\nexample.com:ping")
 

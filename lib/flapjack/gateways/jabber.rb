@@ -119,6 +119,8 @@ module Flapjack
 
       class Interpreter
 
+        CHECK_MATCH_FRAGMENT = "(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))"
+
         attr_accessor :siblings
 
         include Flapjack::Utility
@@ -268,6 +270,7 @@ module Flapjack
                     "  tell me about checks matching /pattern/\n" +
                     "  tell me about checks with tag <tag>\n" +
                     "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                    "  ack <check> <comment> [duration: <time spec>]\n" +
                     "  ack checks matching /pattern/ <comment> [duration: <time spec>]\n" +
                     "  ack checks with tag <tag> <comment> [duration: <time spec>]\n" +
                     "  maint checks matching /pattern/ <comment> [(start-at|start-in): <time spec>] [duration: <time spec>]\n" +
@@ -306,7 +309,7 @@ module Flapjack
                 resp
               end
 
-            when /^state\s+of\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
+            when /^state\s+of\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
               pattern    = $1
               tag        = $2
               check_name = $3
@@ -320,7 +323,7 @@ module Flapjack
                   }.join("\n")
               end
 
-            when /^tell\s+me\s+about\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
+            when /^tell\s+me\s+about\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
               pattern    = $1
               tag        = $2
               check_name = $3
@@ -378,14 +381,15 @@ module Flapjack
                 }
               end
 
-            when /^ack\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
+            when /^ack\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
               pattern      = $1
               tag          = $2
-              comment      = $3 ? $3.strip : nil
-              duration_str = $4 ? $4.strip : '1 hour'
+              check_name   = $3
+              comment      = $4 ? $4.strip : nil
+              duration_str = $5 ? $5.strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
 
-              msg = derive_check_ids_for(pattern, tag, nil,
+              msg = derive_check_ids_for(pattern, tag, check_name,
                       :lock_klasses => [Flapjack::Data::State,
                                         Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
 
