@@ -161,9 +161,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     expect(Flapjack::Data::Medium).to receive(:count).and_return(1)
 
+    page = double('page', :all => [medium])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
-      and_return([medium])
+      and_return(page)
     expect(Flapjack::Data::Medium).to receive(:sort).
       with(:id).and_return(sorted)
 

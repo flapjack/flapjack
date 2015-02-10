@@ -147,9 +147,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:count).and_return(1)
 
+    page = double('page', :all => [tag])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
-      and_return([tag])
+      and_return(page)
     expect(Flapjack::Data::Tag).to receive(:sort).with(:name).and_return(sorted)
 
     full_ids = double('full_ids')

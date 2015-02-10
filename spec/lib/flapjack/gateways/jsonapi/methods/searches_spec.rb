@@ -27,8 +27,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(Flapjack::Data::Check).to receive(:intersect).with(:enabled => false).
       twice.and_return(filtered)
 
+    page = double('page', :all => [check])
     sorted = double('sorted')
-    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([check])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
       with(:name).and_return(sorted)
@@ -53,8 +54,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => /Herbert/).
       twice.and_return(filtered)
 
+    page = double('page', :all => [contact])
     sorted = double('sorted')
-    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([contact])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
       with(:name).and_return(sorted)
@@ -79,8 +81,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Searches', :sinatra => true, :lo
     expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => /database/).
       twice.and_return(filtered)
 
+    page = double('page', :all => [tag])
     sorted = double('sorted')
-    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return([tag])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(filtered).to receive(:count).and_return(1)
     expect(filtered).to receive(:sort).
       with(:name).and_return(sorted)

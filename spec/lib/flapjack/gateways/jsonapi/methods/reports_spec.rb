@@ -43,9 +43,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     if opts[:all]
       expect(Flapjack::Data::Check).to receive(:count).and_return(1)
 
+    page = double('page', :all => [check])
       sorted = double('sorted')
       expect(sorted).to receive(:page).with(1, :per_page => 20).
-        and_return([check])
+        and_return(page)
       expect(Flapjack::Data::Check).to receive(:sort).
         with(:name).and_return(sorted)
     elsif opts[:one]
