@@ -16,6 +16,8 @@ matrix:
       script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
       jdk: oraclejdk8
 cache: bundler
+env:
+- GOPATH=$TRAVIS_BUILD_DIR
 services:
 - redis-server
 before_script:
