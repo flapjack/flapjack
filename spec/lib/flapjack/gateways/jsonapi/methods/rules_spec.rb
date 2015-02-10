@@ -144,9 +144,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(Flapjack::Data::Rule).to receive(:count).and_return(1)
 
+    page = double('page', :all => [rule])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
-      and_return([rule])
+      and_return(page)
     expect(Flapjack::Data::Rule).to receive(:sort).
       with(:id).and_return(sorted)
 

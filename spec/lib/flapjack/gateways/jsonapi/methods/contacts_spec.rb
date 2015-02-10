@@ -70,9 +70,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(Flapjack::Data::Contact).to receive(:count).and_return(1)
 
+    page = double('page', :all => [contact])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
-      and_return([contact])
+      and_return(page)
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
       and_return(sorted)
 

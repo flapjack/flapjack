@@ -2,6 +2,8 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
+gem 'zermelo', :github => 'flapjack/zermelo', :branch => 'master'
+
 group :development do
   gem 'ruby-prof'
 end

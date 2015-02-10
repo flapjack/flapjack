@@ -413,7 +413,7 @@ module Flapjack
             headers['Link']        = links.join(', ') unless links.empty?
             headers['Total-Count'] = total_pages.to_s
 
-            [dataset.page(page, :per_page => per_page),
+            [dataset.page(page, :per_page => per_page).all,
              {
                :pagination => {
                  :page        => page,
