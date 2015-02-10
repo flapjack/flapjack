@@ -417,13 +417,13 @@ module Flapjack
                 end
               end
 
-            when /^maint\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))(?:\s*(.*?)(?:\s*start-in:.*?(\w+.*))?(?:\s*start-at:.*?(\w+.*))?(?:\s*duration:.*?(\w+.*))?)$/im
+            when /^maint\s+checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))s*(.*?)(?:\s*start-in:.*?(\w+.*?))?(?:\s*start-at:.*?(\w+.*?))?(?:\s*duration:.*?(\w+.*?))?$/im
               pattern      = $1
               tag          = $2
               comment      = $3 ? $3.strip : nil
               start_in     = $4 ? $4.strip : nil
               start_at     = $5 ? $5.strip : nil
-              duration_str = $4 ? $4.strip : '1 hour'
+              duration_str = $6 ? $6.strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
 
               started = case
@@ -450,7 +450,7 @@ module Flapjack
                   check.add_scheduled_maintenance(sched_maint)
                 end
 
-                "Scheduled maintenance for #{duration} starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
+                "Scheduled maintenance for #{duration/60} minutes starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
               end
 
             when /^test\s+notifications\s+for\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
