@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (1.2.1)
+    flapjack (1.2.2)
       activesupport
       blather (~> 0.8.3)
       chronic
@@ -211,7 +211,7 @@ GEM
     trollop (2.1.1)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2014.10)
+    tzinfo-data (1.2015.1)
       tzinfo (>= 1.0.0)
     webmock (1.19.0)
       addressable (>= 2.3.6)

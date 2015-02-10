@@ -1,5 +1,15 @@
 ## Flapjack Changelog
 
+# 1.2.2 - 2015-02-10
+- Feature: Add the maint subcommand to the chat bot to fix #664 (@someword)
+- Feature: support for Ruby 2.2, drop support for 1.9, removes Resque due to gem dependencies #760 (@ali-graham)
+- Feature: Gammu SMS gateway #759 (@paologlim)
+- Feature: Use microsecond resolution for logs (maint/1.x) #762 (@jgoldschrafe)
+- Feature: Backport notification delays from master #748 (@jgoldschrafe)
+- Feature: make event summary optional, fixes #513 #779 (@ali-graham)
+- Bug: fix purge script #758 (@pulecp)
+- Bug: Fix for orphaned entity data #784 (@ali-graham)
+
 # 1.2.1 - 2014-12-10
 - Bug: Fix PagerDuty log failure on POST (maint/1.x) #744 (@jgoldschrafe)
 
