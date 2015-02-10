@@ -3,6 +3,8 @@ rvm:
 - '2.0'
 - '2.1'
 - '2.2'
+env:
+- GOPATH=$TRAVIS_BUILD_DIR
 services:
 - redis-server
 before_script:
