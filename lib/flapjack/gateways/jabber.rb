@@ -119,7 +119,7 @@ module Flapjack
 
       class Interpreter
 
-        CHECK_MATCH_FRAGMENT = "(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))"
+        CHECK_MATCH_FRAGMENT = "(?:checks\s+(?:matching\s+\/(.+?)\/|with\s+tag\s+(.+?))|(.+?))"
 
         attr_accessor :siblings
 
@@ -269,10 +269,13 @@ module Flapjack
                     "  tell me about <check>\n" +
                     "  tell me about checks matching /pattern/\n" +
                     "  tell me about checks with tag <tag>\n" +
-                    "  ACKID <id> <comment> [duration: <time spec>]\n" +
-                    "  ack <check> <comment> [duration: <time spec>]\n" +
-                    "  ack checks matching /pattern/ <comment> [duration: <time spec>]\n" +
-                    "  ack checks with tag <tag> <comment> [duration: <time spec>]\n" +
+                    "  ACKID <id>[ duration: <time spec>][ comment: <comment>]\n" +
+                    "  ack <check>[ duration: <time spec>][ comment: <comment>]\n" +
+                    "  ack checks matching /pattern/[ duration: <time spec>][ comment: <comment>]\n" +
+                    "  ack checks with tag <tag>[ duration: <time spec>][ comment: <comment>]\n" +
+                    "  maint <check>[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
+                    "  maint checks matching /pattern/[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
+                    "  maint checks with tag <tag>[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
                     "  test notifications for <check>\n" +
                     "  test notifications for checks matching /pattern/\n" +
                     "  test notifications for checks with tag <tag>\n" +
@@ -379,7 +382,7 @@ module Flapjack
                 }
               end
 
-            when /^ack\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
+            when /^ack\s+#{CHECK_MATCH_FRAGMENT}(?:\s+(.*?)(?:\s*duration:.*?(\w+.*))?)?\s*$/im
               pattern      = $1
               tag          = $2
               check_name   = $3
@@ -417,6 +420,43 @@ module Flapjack
 
                   "Ack list:\n" + failing.collect {|c| "#{c.name}" }.join("\n")
                 end
+              end
+
+            when /^maint\s+#{CHECK_MATCH_FRAGMENT}\s+(?:start-in:.*?(\w+.*?)|start-at:.*?(\w+.*?))?(?:\s+duration:.*?(\w+.*?))?(?:\s+comment:.*?(\w+.*?))?\s*$/im
+              pattern      = $1
+              tag          = $2
+              check_name   = $3
+              start_in     = $4 ? $4.strip : nil
+              start_at     = $5 ? $5.strip : nil
+              duration_str = $6 ? $6.strip : '1 hour'
+              duration     = ChronicDuration.parse(duration_str)
+              comment      = $7 ? $7.strip : 'Test maintenance'
+
+              started = case
+              when start_in
+                Time.now.to_i + ChronicDuration.parse(start_in)
+              when start_at
+                Chronic.parse(start_at).to_i
+              else
+                Time.now.to_i
+              end
+
+              msg = derive_check_ids_for(pattern, tag, check_name,
+                      :lock_klasses => [Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
+                checks = Flapjack::Data::Check.find_by_ids(*check_ids)
+
+                sched_maint = Flapjack::Data::ScheduledMaintenance.new(
+                  :start_time => started,
+                  :end_time   => started + duration,
+                  :summary    => comment
+                )
+                sched_maint.save
+
+                checks.each do |check|
+                  check.add_scheduled_maintenance(sched_maint)
+                end
+
+                "Scheduled maintenance for #{duration/60} minutes starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
               end
 
             when /^test\s+notifications\s+for\s+#{CHECK_MATCH_FRAGMENT}\s*$/im

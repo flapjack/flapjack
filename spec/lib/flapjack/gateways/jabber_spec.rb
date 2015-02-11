@@ -511,6 +511,110 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'ack checks matching /^example.com:p/')
     end
 
+    it "interprets a received maintenance command (with name)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => 'example.com:ping').and_return(checks)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint example.com:ping start-in: 1 minute duration: 3 hour comment: test')
+    end
+
+    it "interprets a received maintenance command (with tag)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::Tag, Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(tag).to receive(:checks).and_return(checks)
+
+      expect(Flapjack::Data::Tag).to receive(:intersect).
+        with(:name => 'example.com').and_return(tags)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint checks with tag example.com start-in: 1 minute duration: 3 hour comment: test')
+    end
+
+    it "interprets a received maintenance command (with regex)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("^example.com:p")).and_return(checks)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint checks matching /^example.com:p/ start-in: 1 minute duration: 3 hour comment: test')
+    end
+
     it "interprets a received test notifications command (with name)" do
       expect(bot).to receive(:announce).with('room1', /Testing notifications for check with name 'example.com:ping'/)
 
