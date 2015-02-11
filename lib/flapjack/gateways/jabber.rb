@@ -269,6 +269,7 @@ module Flapjack
                     "  tell me about <check>\n" +
                     "  tell me about checks matching /pattern/\n" +
                     "  tell me about checks with tag <tag>\n" +
+<<<<<<< HEAD
                     "  ACKID <id>[ duration: <time spec>][ comment: <comment>]\n" +
                     "  ack <check>[ duration: <time spec>][ comment: <comment>]\n" +
                     "  ack checks matching /pattern/[ duration: <time spec>][ comment: <comment>]\n" +
@@ -276,6 +277,12 @@ module Flapjack
                     "  maint <check>[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
                     "  maint checks matching /pattern/[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
                     "  maint checks with tag <tag>[ (start-at|start-in): <time spec>][ duration: <time spec>][ comment: <comment>]\n" +
+=======
+                    "  ACKID <id> <comment> [duration: <time spec>]\n" +
+                    "  ack <check> <comment> [duration: <time spec>]\n" +
+                    "  ack checks matching /pattern/ <comment> [duration: <time spec>]\n" +
+                    "  ack checks with tag <tag> <comment> [duration: <time spec>]\n" +
+>>>>>>> master
                     "  test notifications for <check>\n" +
                     "  test notifications for checks matching /pattern/\n" +
                     "  test notifications for checks with tag <tag>\n" +
@@ -382,7 +389,11 @@ module Flapjack
                 }
               end
 
+<<<<<<< HEAD
             when /^ack\s+#{CHECK_MATCH_FRAGMENT}(?:\s+(.*?)(?:\s*duration:.*?(\w+.*))?)?\s*$/im
+=======
+            when /^ack\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
+>>>>>>> master
               pattern      = $1
               tag          = $2
               check_name   = $3
@@ -422,6 +433,7 @@ module Flapjack
                 end
               end
 
+<<<<<<< HEAD
             when /^maint\s+#{CHECK_MATCH_FRAGMENT}\s+(?:start-in:.*?(\w+.*?)|start-at:.*?(\w+.*?))?(?:\s+duration:.*?(\w+.*?))?(?:\s+comment:.*?(\w+.*?))?\s*$/im
               pattern      = $1
               tag          = $2
@@ -460,6 +472,9 @@ module Flapjack
               end
 
             when /^test\s+notifications\s+for\s+(?:checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.*))|(.+))\s*$/im
+=======
+            when /^test\s+notifications\s+for\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
+>>>>>>> master
               pattern    = $1
               tag        = $2
               check_name = $3
