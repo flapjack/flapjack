@@ -31,21 +31,11 @@ module Flapjack
           Zermelo.redis = Flapjack.redis
         end
 
-        @logfile = case
-        when !@options[:logfile].nil?
-          @options[:logfile]
-        when !@config_env['log_dir'].nil?
-          File.join(@config_env['log_dir'], "#{@options[:type]}-receiver.log")
-        else
-          "/var/run/flapjack/#{@options[:type]}-receiver.log"
-        end
-
         @redis_options = @config.for_redis
       end
 
       def start
-        print "#{@options[:type]}-receiver starting...\n"
-        redirect_output(@logfile)
+        puts "#{@options[:type]}-receiver starting..."
         begin
           main(:fifo => @options[:fifo], :type => @options[:type])
         rescue Exception => e
@@ -74,30 +64,6 @@ module Flapjack
       end
 
       private
-
-      # adapted from https://github.com/nesquena/dante/blob/2a5be903fded5bbd44e57b5192763d9107e9d740/lib/dante/runner.rb#L253-L274
-      def redirect_output(log_path)
-        if log_path.nil?
-          # redirect to /dev/null
-          # We're not bothering to sync if we're dumping to /dev/null
-          # because /dev/null doesn't care about buffered output
-          $stdin.reopen '/dev/null'
-          $stdout.reopen '/dev/null', 'a'
-          $stderr.reopen $stdout
-        else
-          # if the log directory doesn't exist, create it
-          FileUtils.mkdir_p(File.dirname(log_path), :mode => 0755)
-          # touch the log file to create it
-          FileUtils.touch log_path
-          # Set permissions on the log file
-          File.chmod(0644, log_path)
-          # Reopen $stdout (NOT +STDOUT+) to start writing to the log file
-          $stdout.reopen(log_path, 'a')
-          # Redirect $stderr to $stdout
-          $stderr.reopen $stdout
-          $stdout.sync = true
-        end
-      end
 
       def redis
         @redis ||= Redis.new(@redis_options)
@@ -449,9 +415,6 @@ command :receiver do |receiver|
 
     # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#configuring-nagios
     # '
-
-    nagios.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
     nagios.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
     nagios.action do |global_options,options,args|
@@ -483,8 +446,6 @@ command :receiver do |receiver|
 
     # Details on the wiki: http://flapjack.io/docs/1.0/usage/USING#XXX
     # '
-    nsca.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
-
     nsca.flag   [:f, 'fifo'],      :desc => 'PATH of the nagios perfdata named pipe'
 
     nsca.action do |global_options,options,args|

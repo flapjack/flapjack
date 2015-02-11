@@ -17,49 +17,15 @@ module Flapjack
         if @config_env.nil? || @config_env.empty?
           exit_now! "No config data found in '#{global_options[:config]}'"
         end
-
-        @logfile = case
-        when !@options[:logfile].nil?
-          @options[:logfile]
-        when !@config_env['log_dir'].nil?
-          File.join(@config_env['log_dir'], 'flapper.log')
-        else
-          "/var/run/flapjack/flapper.log"
-        end
       end
 
       def start
-        print "flapper starting..."
-        redirect_output(@logfile)
+        puts "flapper starting..."
         main(@options['bind-ip'] || Flapjack::CLI::Flapper.local_ip, @options['bind-port'].to_i, @options[:frequency])
         puts " done."
       end
 
       private
-
-      # adapted from https://github.com/nesquena/dante/blob/2a5be903fded5bbd44e57b5192763d9107e9d740/lib/dante/runner.rb#L253-L274
-      def redirect_output(log_path)
-        if log_path.nil?
-          # redirect to /dev/null
-          # We're not bothering to sync if we're dumping to /dev/null
-          # because /dev/null doesn't care about buffered output
-          $stdin.reopen '/dev/null'
-          $stdout.reopen '/dev/null', 'a'
-          $stderr.reopen $stdout
-        else
-          # if the log directory doesn't exist, create it
-          FileUtils.mkdir_p(File.dirname(log_path), :mode => 0755)
-          # touch the log file to create it
-          FileUtils.touch log_path
-          # Set permissions on the log file
-          File.chmod(0644, log_path)
-          # Reopen $stdout (NOT +STDOUT+) to start writing to the log file
-          $stdout.reopen(log_path, 'a')
-          # Redirect $stderr to $stdout
-          $stderr.reopen $stdout
-          $stdout.sync = true
-        end
-      end
 
       module Receiver
         def receive_data(data)
@@ -181,8 +147,6 @@ end
 
 desc 'Artificial service that oscillates up and down, for use in http://flapjack.io/docs/2.0/usage/oobetet'
 command :flapper do |flapper|
-
-  flapper.flag   [:l, 'logfile'],   :desc => 'PATH of the logfile to write to'
 
   flapper.flag   [:b, 'bind-ip'],   :desc => 'Override ADDRESS (IPv4 or IPv6) for flapper to bind to'
 

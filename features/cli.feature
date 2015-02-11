@@ -21,7 +21,7 @@ log_dir = "tmp/cucumber_cli/"
     When I run `bundle exec bin/flapjack server --help`
     Then the exit status should be 0
     And  the output should contain "Server for running components"
-    And  the output should contain " logfile "
+    And  the output should contain "flapjack [global options] server"
 
   Scenario: Starting flapjack
     When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server`
