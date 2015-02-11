@@ -39,6 +39,7 @@ production:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_nexmo_queue: sms_nexmo_notifications
     sms_twilio_queue: sms_twilio_notifications
     sms_gammu_queue: sms_gammu_notifications
     sns_queue: sns_notifications
@@ -133,6 +134,20 @@ production:
       templates:
         rollup.text: '/etc/flapjack/templates/sms_gammu/rollup.text.erb'
         alert.text: '/etc/flapjack/templates/sms_gammu/alert.text.erb'
+    # Sends SMS notifications via Nexmo
+    sms_nexmo:
+      enabled: yes
+      queue: sms_nexmo_notifications
+      from: "xxxxxxxxx"
+      api_key: "APIKEY"
+      secret: "s3cr3t"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     # Generates SNS notifications
     sns:
       enabled: no
@@ -272,6 +287,7 @@ development:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_nexmo_queue: sms_nexmo_notifications
     sms_twilio_queue: sms_twilio_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
@@ -348,7 +364,20 @@ development:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
-    # Generates SNS notifications
+    # Sends SMS notifications via Nexmo
+    sms_nexmo:
+      enabled: no
+      queue: sms_nexmo_notifications
+      from: "xxxxxxxxx"
+      api_key: "APIKEY"
+      secret: "s3cr3t"
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
     # Connects to an XMPP (jabber) server, sends notifications (to rooms and individuals),
     # handles acknowledgements from jabber users and other commands.
     jabber:

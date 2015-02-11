@@ -25,6 +25,7 @@ require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/sms_gammu'
+require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
@@ -106,6 +107,7 @@ module Flapjack
                       'sms'        => Flapjack::Gateways::SmsMessagenet,
                       'sms_gammu'  => Flapjack::Gateways::SmsGammu,
                       'sms_twilio' => Flapjack::Gateways::SmsTwilio,
+                      'sms_nexmo'  => Flapjack::Gateways::SmsNexmo,
                       'sns'        => Flapjack::Gateways::AwsSns}
 
       def self.create(type, opts = {})

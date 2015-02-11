@@ -11,6 +11,13 @@ Feature: notifications
     Then an SMS notification for entity 'example.com' should be queued for the user
     And an email notification for entity 'example.com' should not be queued for the user
 
+  Scenario: Queue a Nexmo SMS notification
+    Given the user wants to receive Nexmo SMS notifications for entity 'example.com'
+    When an event notification is generated for entity 'example.com'
+    Then a Nexmo SMS notification for entity 'example.com' should be queued for the user
+    And an email notification for entity 'example.com' should not be queued for the user
+    And an SMS notification for entity 'example.com' should not be queued for the user
+
   Scenario: Queue an SNS notification
     Given the user wants to receive SNS notifications for entity 'example.com'
     When an event notification is generated for entity 'example.com'
@@ -36,6 +43,11 @@ Feature: notifications
     Given a user SMS notification has been queued for entity 'example.com'
     When the SMS notification handler runs successfully
     Then the user should receive an SMS notification
+
+  Scenario: Send a queued Nexmo SMS notification
+    Given a user Nexmo SMS notification has been queued for entity 'example.com'
+    When the Nexmo SMS notification handler runs successfully
+    Then the user should receive an Nexmo SMS notification
 
   Scenario: Send a queued SNS notification
     Given a user SNS notification has been queued for entity 'example.com'
