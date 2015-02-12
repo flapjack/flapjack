@@ -21,6 +21,7 @@ test:
     queue: notifications
     email_queue: email_notifications
     sms_queue: sms_notifications
+    sms_nexmo_queue: sms_nexmo_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
     notification_log_file: log/notification_test.log

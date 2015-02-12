@@ -16,6 +16,7 @@ PATH
       ice_cube
       mail
       mysql2
+      nexmo (= 2.0.0)
       nokogiri (= 1.6.2.1)
       oj (>= 2.9.0)
       rack-fiber_pool
@@ -131,6 +132,7 @@ GEM
     multi_json (1.10.1)
     multi_test (0.1.1)
     mysql2 (0.3.17)
+    nexmo (2.0.0)
     niceogiri (1.1.2)
       nokogiri (~> 1.5)
     nokogiri (1.6.2.1)

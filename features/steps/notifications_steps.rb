@@ -26,6 +26,18 @@ Given /^the user wants to receive SMS notifications for entity '([\w\.\-]+)'$/ d
                              :redis => @notifier_redis )
 end
 
+Given /^the user wants to receive Nexmo SMS notifications for entity '([\w\.\-]+)'$/ do |entity|
+  add_contact( 'id'         => '0999',
+               'first_name' => 'John',
+               'last_name'  => 'Smith',
+               'email'      => 'johns@example.dom',
+               'media'      => {'sms_nexmo' => '+61888888888'} )
+  Flapjack::Data::Entity.add({'id'       => '5000',
+                              'name'     => entity,
+                              'contacts' => ["0999"]},
+                             :redis => @notifier_redis )
+end
+
 Given /^the user wants to receive SNS notifications for entity '([\w\.\-]+)'$/ do |entity|
   add_contact( 'id'         => '0999',
                'first_name' => 'John',
@@ -99,6 +111,11 @@ Then /^an SMS notification for entity '([\w\.\-]+)' should be queued for the use
   expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
 end
 
+Then /^a Nexmo SMS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
+  queue = redis_peek('sms_nexmo_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
+end
+
 Then /^an SNS notification for entity '([\w\.\-]+)' should be queued for the user$/ do |entity|
   queue = redis_peek('sns_notifications')
   expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).not_to be_empty
@@ -111,6 +128,11 @@ end
 
 Then /^an SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
   queue = redis_peek('sms_notifications')
+  expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
+end
+
+Then /^an Nexmo SMS notification for entity '([\w\.\-]+)' should not be queued for the user$/ do |entity|
+  queue = redis_peek('sms_nexmo_notifications')
   expect(queue.select {|n| n['event_id'] =~ /#{entity}:ping/ }).to be_empty
 end
 
@@ -136,6 +158,26 @@ Given /^a user SMS notification has been queued for entity '([\w\.\-]+)'$/ do |e
                        'duration'           => 45}
 
   Flapjack::Data::Alert.add('sms_notifications', @sms_notification,
+                            :redis => @notifier_redis)
+end
+
+Given /^a user Nexmo SMS notification has been queued for entity '([\w\.\-]+)'$/ do |entity|
+  Flapjack::Data::Entity.add({'id'   => '5000',
+                              'name' => entity},
+                             :redis => @redis )
+  @sms_nexmo_notification = {'notification_type'  => 'problem',
+                       'contact_first_name' => 'John',
+                       'contact_last_name'  => 'Smith',
+                       'state'              => 'critical',
+                       'summary'            => 'Socket timeout after 10 seconds',
+                       'time'               => Time.now.to_i,
+                       'event_id'           => "#{entity}:ping",
+                       'address'            => '+61412345678',
+                       'id'                 => 1,
+                       'state_duration'     => 30,
+                       'duration'           => 45}
+
+  Flapjack::Data::Alert.add('sms_nexmo_notifications', @sms_nexmo_notification,
                             :redis => @notifier_redis)
 end
 
@@ -187,6 +229,19 @@ When /^the SMS notification handler runs successfully$/ do
     }, :redis_config => @redis_opts, :logger => @logger)
 
   drain_alerts('sms_notifications', @sms_messagenet)
+end
+
+When /^the Nexmo SMS notification handler runs successfully$/ do
+  # poor man's stubbing
+  Nexmo::Client.class_eval {
+    def send_message(args = {})
+    end
+  }
+  @sms_nexmo = Flapjack::Gateways::SmsNexmo.new(:config => {
+      'api_key' => 'THEAPIKEY', 'secret' => 'secret', 'from' => 'someone',
+    }, :redis_config => @redis_opts, :logger => @logger)
+
+  drain_alerts('sms_nexmo_notifications', @sms_nexmo)
 end
 
 When /^the SNS notification handler runs successfully$/ do
@@ -262,6 +317,10 @@ end
 Then /^the user should( not)? receive an SMS notification$/ do |negativity|
   expect(@request).to have_been_requested
   expect(@sms_messagenet.instance_variable_get('@sent')).to eq(negativity.nil? ? 1 : 0)
+end
+
+Then /^the user should( not)? receive an Nexmo SMS notification$/ do |negativity|
+  expect(@sms_nexmo.instance_variable_get('@sent')).to eq(negativity.nil? ? 1 : 0)
 end
 
 Then /^the user should( not)? receive an SNS notification$/ do |negativity|

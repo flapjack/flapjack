@@ -19,7 +19,16 @@ module Flapjack
       attr_accessor :id, :first_name, :last_name, :email, :media,
         :media_intervals, :media_rollup_thresholds, :pagerduty_credentials
 
-      ALL_MEDIA  = ['email', 'sms', 'sms_twilio', 'sms_gammu', 'jabber', 'pagerduty', 'sns']
+      ALL_MEDIA  = [
+        'email',
+        'sms',
+        'sms_twilio',
+        'sms_gammu',
+        'sms_nexmo',
+        'jabber',
+        'pagerduty',
+        'sns',
+      ]
 
       def self.all(options = {})
         raise "Redis connection not set" unless redis = options[:redis]
