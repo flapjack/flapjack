@@ -66,7 +66,7 @@ module Flapjack
         notification = Flapjack::Data::Notification.next(@notifications_queue,
                                                          :redis => @redis,
                                                          :logger => @logger)
-        process_notification(notification) unless notification.nil? || (notification.type == 'shutdown')
+        process_notification(notification) unless notification.nil?
       end
 
       @logger.info("Exiting main loop.")

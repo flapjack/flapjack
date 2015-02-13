@@ -130,6 +130,7 @@ module Flapjack
           end
           return nil
         end
+        return if 'shutdown'.eql?(parsed['notification_type'])
         self.new( parsed, :logger => opts[:logger] )
       end
 

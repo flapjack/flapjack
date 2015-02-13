@@ -45,7 +45,8 @@ module Flapjack
         until @should_quit
           begin
             @logger.debug("sms_nexmo gateway is going into blpop mode on #{queue}")
-            deliver( Flapjack::Data::Alert.next(queue, :redis => @redis, :logger => @logger) )
+            alert = Flapjack::Data::Alert.next(queue, :redis => @redis, :logger => @logger)
+            deliver(alert) unless alert.nil?
           rescue => e
             @logger.error "Error generating or dispatching SMS Nexmo message: #{e.class}: #{e.message}\n" +
               e.backtrace.join("\n")

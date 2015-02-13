@@ -132,12 +132,16 @@ module Flapjack
         elsif options[:archive_events]
           redis.expire(archive_dest, options[:events_archive_maxage])
         end
+        if options[:logger]
+          options[:logger].info parsed.inspect
+        end
         self.new(parsed)
       end
 
       def self.parse_and_validate(raw, opts = {})
         errors = []
         if parsed = ::Flapjack.load_json(raw)
+          return if 'noop'.eql?(parsed['type'])
           if parsed.is_a?(Hash)
             errors = validation_errors_for_hash(parsed, opts)
           else

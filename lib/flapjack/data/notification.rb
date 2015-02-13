@@ -85,8 +85,9 @@ module Flapjack
           if options[:logger]
             options[:logger].warn("Error deserialising notification json: #{e}, raw json: #{raw.inspect}")
           end
-          return nil
+          return
         end
+        return if 'shutdown'.eql?(parsed['type'])
         self.new( parsed )
       end
 
