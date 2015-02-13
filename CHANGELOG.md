@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.3.0rc2 - 2015-02-13
+- Bug: Error uninstalling - Error generating or dispatching SMS Nexmo message #789 (@Hobbsee)
+
 # 1.3.0rc1 - 2015-02-13
 - Feature: Add Nexmo SMS gateway
 - Bug: Revert addition of sms_gammu gateway #759 (@ali-graham)
