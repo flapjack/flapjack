@@ -205,7 +205,7 @@ module Flapjack
 
         return if redis.exists('validated_scheduled_maintenance_periods')
 
-        Flapjack::Data::EntityCheck.all(:redis => redis).select {|ec|
+        Flapjack::Data::EntityCheck.all(:redis => redis).compact.select {|ec|
           ec.in_scheduled_maintenance?
         }.each do |check|
           check.update_current_scheduled_maintenance(:revalidate => true)

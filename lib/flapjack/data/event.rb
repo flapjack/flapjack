@@ -138,6 +138,7 @@ module Flapjack
       def self.parse_and_validate(raw, opts = {})
         errors = []
         if parsed = ::Flapjack.load_json(raw)
+          return if 'noop'.eql?(parsed['type'])
           if parsed.is_a?(Hash)
             errors = validation_errors_for_hash(parsed, opts)
           else
