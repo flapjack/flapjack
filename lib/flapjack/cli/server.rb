@@ -60,7 +60,10 @@ module Flapjack
             return_value = start_server
           }
           puts " done."
-          exit_now!(return_value) unless return_value.nil?
+          unless return_value.nil? || [Signal.list['INT'] + 128,
+                                       Signal.list['TERM'] + 128].include?(return_value)
+            exit_now!(return_value)
+          end
         end
       end
 

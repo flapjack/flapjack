@@ -43,7 +43,7 @@ module Flapjack
           loop do
             while sig = @received_signals.shift do
               case sig
-              when 'INT', 'TERM', 'QUIT'
+              when 'INT', 'TERM'
                 @exit_value = Signal.list[sig] + 128
                 raise Interrupt
               when 'HUP'
@@ -127,7 +127,6 @@ module Flapjack
       Kernel.trap('INT')    { @received_signals << 'INT' unless @received_signals.include?('INT') }
       Kernel.trap('TERM')   { @received_signals << 'TERM' unless @received_signals.include?('TERM') }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { @received_signals << 'QUIT' unless @received_signals.include?('QUIT') }
         Kernel.trap('HUP')  { @received_signals << 'HUP' unless @received_signals.include?('HUP') }
       end
     end
