@@ -171,7 +171,6 @@ describe Flapjack::Coordinator do
 
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
-    expect(Kernel).to receive(:trap).with('QUIT').and_yield
     expect(Kernel).to receive(:trap).with('HUP').and_yield
 
     expect(config).to receive(:all).and_return({})
@@ -179,7 +178,7 @@ describe Flapjack::Coordinator do
     fc = Flapjack::Coordinator.new(config)
 
     fc.send(:setup_signals)
-    expect(fc.instance_variable_get('@received_signals')).to eq(['INT', 'TERM', 'QUIT', 'HUP'])
+    expect(fc.instance_variable_get('@received_signals')).to eq(['INT', 'TERM', 'HUP'])
   end
 
   it "only traps two system signals on Windows" do
@@ -189,7 +188,6 @@ describe Flapjack::Coordinator do
 
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
-    expect(Kernel).not_to receive(:trap).with('QUIT')
     expect(Kernel).not_to receive(:trap).with('HUP')
 
     expect(config).to receive(:all).and_return({})
