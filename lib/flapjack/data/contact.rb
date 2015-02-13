@@ -23,11 +23,10 @@ module Flapjack
         'email',
         'sms',
         'sms_twilio',
-        'sms_gammu',
         'sms_nexmo',
         'jabber',
         'pagerduty',
-        'sns',
+        'sns'
       ]
 
       def self.all(options = {})

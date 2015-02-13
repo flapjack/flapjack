@@ -24,7 +24,6 @@ require 'flapjack/gateways/pagerduty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
-require 'flapjack/gateways/sms_gammu'
 require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/web'
@@ -105,7 +104,6 @@ module Flapjack
                       'oobetet'    => Flapjack::Gateways::Oobetet,
                       'email'      => Flapjack::Gateways::Email,
                       'sms'        => Flapjack::Gateways::SmsMessagenet,
-                      'sms_gammu'  => Flapjack::Gateways::SmsGammu,
                       'sms_twilio' => Flapjack::Gateways::SmsTwilio,
                       'sms_nexmo'  => Flapjack::Gateways::SmsNexmo,
                       'sns'        => Flapjack::Gateways::AwsSns}
