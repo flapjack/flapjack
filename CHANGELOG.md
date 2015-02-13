@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 1.3.0rc1 - 2015-02-13
+- Feature: Add Nexmo SMS gateway
+- Bug: Revert addition of sms_gammu gateway #759 (@ali-graham)
+
 # 1.2.2 - 2015-02-10
 - Feature: Add the maint subcommand to the chat bot to fix #664 (@someword)
 - Feature: support for Ruby 2.2, drop support for 1.9, removes Resque due to gem dependencies #760 (@ali-graham)
