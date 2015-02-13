@@ -132,9 +132,6 @@ module Flapjack
         elsif options[:archive_events]
           redis.expire(archive_dest, options[:events_archive_maxage])
         end
-        if options[:logger]
-          options[:logger].info parsed.inspect
-        end
         self.new(parsed)
       end
 
