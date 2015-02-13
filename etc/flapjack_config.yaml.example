@@ -119,7 +119,7 @@ production:
       #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
     # Sends SMS notifications via Nexmo
     sms_nexmo:
-      enabled: yes
+      enabled: no
       queue: sms_nexmo_notifications
       from: "xxxxxxxxx"
       api_key: "APIKEY"
