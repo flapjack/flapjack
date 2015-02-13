@@ -81,12 +81,12 @@ module Flapjack
           :redis => redis, :logger => logger)
 
         begin
-          logger.warn "Upgrading Flapjack's entity/check Redis indexes..." unless logger.nil?
-
           check_names = redis.keys('check:*').map {|c| c.sub(/^check:/, '') } |
             Flapjack::Data::EntityCheck.find_current_names(:redis => redis)
 
           unless check_names.empty?
+            logger.warn "Upgrading Flapjack's entity/check Redis indexes..." unless logger.nil?
+
             timestamp = Time.now.to_i
 
             check_names.each do |ecn|
@@ -95,9 +95,8 @@ module Flapjack
               redis.zadd("all_checks:#{entity_name}", timestamp, check)
               # not deleting the check hashes, they store useful data
             end
+            logger.warn "Checks indexed." unless logger.nil?
           end
-
-          logger.warn "Checks indexed." unless logger.nil?
 
           entity_name_keys = redis.keys("entity_id:*")
           unless entity_name_keys.empty?
@@ -112,10 +111,10 @@ module Flapjack
               redis.del(enk)
               redis.del("entity:#{entity_id}")
             end
+            logger.warn "Entities indexed." unless logger.nil?
           end
 
-          logger.warn "Entities indexed." unless logger.nil?
-          logger.warn "Indexing complete." unless logger.nil?
+          logger.warn "Indexing complete." unless logger.nil? || (check_names.empty? && entity_name_keys.empty?)
         ensure
           semaphore.release
         end
