@@ -22,8 +22,9 @@ require 'webmock/rspec'
 WebMock.disable_net_connect!
 
 $:.unshift(File.dirname(__FILE__) + '/../lib')
-require 'flapjack/configuration'
 
+require 'redis'
+require 'flapjack/configuration'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.
