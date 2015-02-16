@@ -39,35 +39,19 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
+      validates_each :timezone, :allow_nil => true do |record, att, value|
+        record.errors.add(att, 'must be a valid time zone string') if ActiveSupport::TimeZone[value].nil?
+      end
+
       before_destroy :remove_child_records
       def remove_child_records
         self.media.each  {|medium| medium.destroy }
         self.rules.each  {|rule|   rule.destroy }
       end
 
-      # return the timezone of the contact, or the system default if none is set
-      # TODO cache?
-      def time_zone(opts = {})
-        tz_string = self.timezone
-        tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
-
-        if tz.nil?
-          begin
-            tz = ActiveSupport::TimeZone.new(tz_string)
-          rescue ArgumentError
-            if logger
-              logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
-            end
-            tz = ActiveSupport::TimeZone.new('UTC')
-          end
-        end
-        tz
-      end
-
-      # sets or removes the time zone for the contact
-      # nil should delete TODO test
-      def time_zone=(tz)
-        self.timezone = tz.respond_to?(:name) ? tz.name : tz
+      def time_zone
+        return nil if self.timezone.nil?
+        ActiveSupport::TimeZone[self.timezone]
       end
 
       def checks
