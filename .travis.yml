@@ -1,4 +1,3 @@
-sudo: false
 language: ruby
 rvm:
 - '2.0'
@@ -6,7 +5,6 @@ rvm:
 - '2.2'
 env:
 - GOPATH=$TRAVIS_BUILD_DIR
-cache: bundler
 services:
 - redis-server
 before_script:
