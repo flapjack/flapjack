@@ -18,7 +18,7 @@
 
 PATH=/opt/flapjack/bin:$PATH
 
-if [ ! $(which flapjack) ]; then
+if [ ! $(type flapjack) ]; then
   echo "Error: flapjack isn't in PATH."
   echo "Refusing to do anything!"
   exit 1
