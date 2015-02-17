@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 1.3.0rc3 - 2015-02-17
+- Bug: cleanup gateway shutdown logic, fix #789 #790 (@ali-graham)
+- Chore: move init scripts to omnibus-flapjack repo (@Hobbsee)
+
 # 1.3.0rc2 - 2015-02-13
 - Bug: Error uninstalling - Error generating or dispatching SMS Nexmo message #789 (@Hobbsee)
 
