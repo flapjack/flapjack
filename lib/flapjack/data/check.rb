@@ -82,6 +82,12 @@ module Flapjack
         end
       end
 
+      # if using history, preserve no States except for latest and most severe
+      # delete a State's Entries when deleting the State
+
+      has_one :history, :class_name => 'Flapjack::Data::History',
+        :inverse_of => :check
+
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
         :key => :timestamp, :inverse_of => :check
 

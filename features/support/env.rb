@@ -32,11 +32,12 @@ $: << File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'lib'))
 require 'pathname'
 
 require 'webmock/cucumber'
-WebMock.disable_net_connect!
+WebMock.disable_net_connect!(:allow => 'localhost:8086')
 
 require 'flapjack'
 require 'flapjack/patches'
 require 'flapjack/redis_proxy'
+require 'flapjack/influxdb_proxy'
 
 require 'flapjack/data/check'
 require 'flapjack/data/event'
@@ -118,10 +119,15 @@ SHIFT_TTLS
 
 end
 
-config = Flapjack::Configuration.new
-Flapjack::RedisProxy.config = config.load(FLAPJACK_CONFIG) ?
-                                config.for_redis :
-                                {:db => 14, :driver => :ruby}
+cfg = Flapjack::Configuration.new
+$redis_options, $influxdb_options = if cfg.load(FLAPJACK_CONFIG)
+  [cfg.for_redis, cfg.for_influxdb]
+else
+  [{:db => 14, :driver => :ruby},
+   {'database' => 'flapjack_test',
+    'username' => 'flapjack', 'password' => 'flapjack'}]
+end
+Flapjack::RedisProxy.config = $redis_options
 Zermelo.redis = Flapjack.redis
 Flapjack.redis.flushdb
 RedisDelorean.before_all
@@ -153,6 +159,7 @@ end
 
 Before('@processor') do
   Flapjack.redis.flushdb
+  Flapjack.influxdb.query('DELETE FROM /.*/')
   MockLogger.configure_log('flapjack-processor')
   @processor = Flapjack::Processor.new(:config => {'new_check_scheduled_maintenance_duration' => '0 seconds'})
 end
@@ -163,6 +170,7 @@ end
 
 Before('@notifier') do
   Flapjack.redis.flushdb
+  Flapjack.influxdb.query('DELETE FROM /.*/')
   MockLogger.configure_log('flapjack-notifier')
   @notifier  = Flapjack::Notifier.new(
     :config => {'email_queue' => 'email_notifications',

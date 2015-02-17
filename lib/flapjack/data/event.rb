@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
 require 'oj'
-require 'flapjack/redis_proxy'
 
 require 'flapjack/data/check'
 

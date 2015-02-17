@@ -3,7 +3,6 @@
 require 'active_support/time'
 
 require 'flapjack/exceptions'
-require 'flapjack/redis_proxy'
 require 'flapjack/record_queue'
 require 'flapjack/utility'
 

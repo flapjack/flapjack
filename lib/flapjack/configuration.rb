@@ -43,6 +43,12 @@ module Flapjack
       redis_config
     end
 
+    def for_influxdb
+      return unless @config
+
+      @config['influxdb'] || {}
+    end
+
     def load(file_pattern)
       @file_pattern = nil
       @config = nil

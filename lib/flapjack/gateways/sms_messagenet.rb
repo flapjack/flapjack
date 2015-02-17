@@ -6,7 +6,6 @@ require 'uri/https'
 
 require 'active_support/inflector'
 
-require 'flapjack/redis_proxy'
 require 'flapjack/record_queue'
 require 'flapjack/utility'
 require 'flapjack/exceptions'

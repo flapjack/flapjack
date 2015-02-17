@@ -26,7 +26,7 @@ module Flapjack
 
       validates :timestamp, :presence => true
 
-      # condition shopuld only be blank if no previous check states with condition
+      # condition should only be blank if no previous states with condition
       validates :condition, :allow_blank => true,
         :inclusion => { :in => Flapjack::Data::Condition.healthy.keys +
                                Flapjack::Data::Condition.unhealthy.keys }

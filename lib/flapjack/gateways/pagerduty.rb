@@ -4,7 +4,6 @@ require 'net/http'
 require 'uri'
 require 'uri/https'
 
-require 'flapjack/redis_proxy'
 require 'flapjack/record_queue'
 require 'flapjack/exceptions'
 

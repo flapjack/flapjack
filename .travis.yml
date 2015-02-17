@@ -13,7 +13,14 @@ before_script:
 - mkdir -p ./log
 before_install:
 - git submodule update --init --recursive
-- gem install bundler
+- gem --version
+- wget http://s3.amazonaws.com/influxdb/influxdb_0.8.8_amd64.deb
+- sudo dpkg -i influxdb_0.8.8_amd64.deb
+- sudo /etc/init.d/influxdb start
+- sleep 8
+- 'curl -X POST ''http://localhost:8086/db?u=root&p=root'' -d ''{"name": "flapjack_test"}'''
+- 'curl -X POST ''http://localhost:8086/db/flapjack_test/users?u=root&p=root'' -d ''{"name": "flapjack", "password": "flapjack"}'''
+- 'curl -X POST ''http://localhost:8086/db/flapjack_test/users/zermelo?u=root&p=root'' -d ''{"admin": true}'''
 install:
   - go get github.com/garyburd/redigo/redis
   - go get github.com/go-martini/martini
@@ -22,11 +29,11 @@ install:
   - bundle install
 script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
 notifications:
-  irc:
-    channels:
-      - 'irc.freenode.net#flapjack'
-    template:
-      - '%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})'
+  # irc:
+  #   channels:
+  #     - 'irc.freenode.net#flapjack'
+  #   template:
+  #     - '%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})'
   hipchat:
     template:
       - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}

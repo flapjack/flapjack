@@ -2,8 +2,6 @@
 
 require 'chronic_duration'
 
-require 'flapjack/redis_proxy'
-
 require 'flapjack/filters/acknowledgement'
 require 'flapjack/filters/ok'
 require 'flapjack/filters/scheduled_maintenance'
@@ -43,9 +41,6 @@ module Flapjack
 
       @notifier_queue = Flapjack::RecordQueue.new(@config['notifier_queue'] || 'notifications',
                  Flapjack::Data::Notification)
-
-      @archive_events        = @config['archive_events'] || false
-      @events_archive_maxage = @config['events_archive_maxage']
 
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
@@ -101,11 +96,7 @@ module Flapjack
 
         loop do
           @lock.synchronize do
-            foreach_on_queue(queue,
-                             :archive_events => @archive_events,
-                             :events_archive_maxage => @events_archive_maxage) do |event|
-              process_event(event)
-            end
+            foreach_on_queue(queue) {|event| process_event(event) }
           end
 
           raise Flapjack::GlobalStop if @exit_on_queue_empty
@@ -127,32 +118,22 @@ module Flapjack
     def foreach_on_queue(queue, opts = {})
       base_time_str = Time.now.utc.strftime "%Y%m%d%H"
       rejects = "events_rejected:#{base_time_str}"
-      archive = opts[:archive_events] ? "events_archive:#{base_time_str}" : nil
-      max_age = archive ? opts[:events_archive_maxage] : nil
 
-      while event_json = (archive ? Flapjack.redis.rpoplpush(queue, archive) :
-                                    Flapjack.redis.rpop(queue))
+      while event_json = Flapjack.redis.rpop(queue)
         parsed, errors = Flapjack::Data::Event.parse_and_validate(event_json)
         if !errors.nil? && !errors.empty?
           Flapjack.redis.multi do |multi|
-            if archive
-              multi.lrem(archive, 1, event_json)
-            end
             multi.lpush(rejects, event_json)
             multi.hincrby('event_counters', 'all', 1)
             multi.hincrby("event_counters:#{@instance_id}", 'all', 1)
             multi.hincrby('event_counters', 'invalid', 1)
             multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
-            if archive
-              multi.expire(archive, max_age)
-            end
           end
           Flapjack.logger.error {
             error_str = errors.nil? ? '' : errors.join(', ')
             "Invalid event data received, #{error_str} #{parsed.inspect}"
           }
         else
-          Flapjack.redis.expire(archive, max_age) if archive
           yield Flapjack::Data::Event.new(parsed) if block_given?
         end
       end
@@ -207,6 +188,15 @@ module Flapjack
         if old_state.nil? && !event_condition.nil? &&
           Flapjack::Data::Condition.healthy?(event_condition.name)
 
+          if false
+            history = check.history || Flapjack::Data::History.new
+            [:timestamp, :condition, :action, :summary, :details, :perfdata].each do |att|
+              history.send("#{att}=", new_entry.send(att))
+            end
+            attach = !history.persisted?
+            history.save
+            check.history = history if attach
+          end
           new_entry.save
           new_state.save
           new_state.entries << new_entry

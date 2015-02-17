@@ -9,6 +9,7 @@ require 'flapjack/configuration'
 require 'flapjack/patches'
 
 require 'flapjack/redis_proxy'
+require 'flapjack/influxdb_proxy'
 
 require 'flapjack/pikelet'
 

@@ -6,8 +6,6 @@ require 'sinatra/base'
 require 'erb'
 require 'uri'
 
-require 'flapjack/redis_proxy'
-
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
 require 'flapjack/data/event'

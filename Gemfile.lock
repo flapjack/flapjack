@@ -17,6 +17,7 @@ PATH
       gli (= 2.12.0)
       hiredis
       ice_cube
+      influxdb
       mail
       oj (>= 2.9.0)
       rack (~> 1.5.2)
@@ -72,6 +73,8 @@ GEM
     hiredis (0.6.0)
     i18n (0.7.0)
     ice_cube (0.12.1)
+    influxdb (0.1.8)
+      json
     json (1.8.2)
     mail (2.6.3)
       mime-types (>= 1.16, < 3)

@@ -8,7 +8,6 @@ require 'rexml/document'
 require 'xmpp4r/query'
 require 'xmpp4r/muc'
 
-require 'flapjack/redis_proxy'
 require 'flapjack/record_queue'
 require 'flapjack/utility'
 require 'flapjack/exceptions'
