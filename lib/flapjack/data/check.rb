@@ -201,7 +201,7 @@ module Flapjack
         results_with_times = current_checks.inject(skeleton) do |memo, check|
           check_state = check.states.last
           next memo if check_state.nil?
-          check_age = start_time.to_i - check_state.timestamp
+          check_age = start_time.to_i - check_state.timestamp.to_i
           check_age = 0 unless check_age > 0
           if check_age >= ages.last
             memo[ages.last] << "#{check.name}"
