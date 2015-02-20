@@ -207,10 +207,14 @@ module Flapjack
 
               if checks.nil?
                 "Error parsing /#{pattern.strip}/"
-              elsif checks.empty?
-                "No checks match /#{pattern.strip}/"
               else
-                yield(checks.ids, "matching /#{pattern.strip}/") if block_given?
+                num_checks = checks.count
+                if num_checks == 0
+                  "No checks match /#{pattern.strip}/"
+                else
+                  checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
+                  yield(checks.ids, "matching /#{pattern.strip}/", num_checks) if block_given?
+                end
               end
             }
           elsif !tag_name.nil? && !tag_name.strip.empty?
@@ -224,10 +228,12 @@ module Flapjack
                 "No tag '#{tag_name.strip}'"
               else
                 checks = tag.checks
-                if checks.empty?
+                num_checks = checks.count
+                if num_checks == 0
                   "No checks with tag '#{tag_name.strip}'"
                 else
-                  yield(checks.ids, "with tag '#{tag_name}'") if block_given?
+                  checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
+                  yield(checks.ids, "with tag '#{tag_name}'", num_checks) if block_given?
                 end
               end
             }
@@ -238,7 +244,9 @@ module Flapjack
               if checks.empty?
                 "No check exists with name '#{check_name.strip}'"
               else
-                yield(checks.ids, "with name '#{check_name.strip}'") if block_given?
+                num_checks = checks.count
+                checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
+                yield(checks.ids, "with name '#{check_name.strip}'", num_checks) if block_given?
               end
             }
           end
@@ -261,14 +269,14 @@ module Flapjack
             case command
             when /^help\s*$/
               msg = "commands: \n" +
-                    "  find checks matching /pattern/\n" +
+                    "  find (number) checks matching /pattern/\n" +
                     "  find (number) checks with tag <tag>\n" +
                     "  state of <check>\n" +
                     "  state of checks matching /pattern/\n" +
                     "  state of checks with tag <tag>\n" +
                     "  tell me about <check>\n" +
-                    "  tell me about checks matching /pattern/\n" +
-                    "  tell me about checks with tag <tag>\n" +
+                    "  tell me about (number) checks matching /pattern/\n" +
+                    "  tell me about (number) checks with tag <tag>\n" +
                     "  ACKID <id>[ duration: <time spec>][ comment: <comment>]\n" +
                     "  ack <check>[ duration: <time spec>][ comment: <comment>]\n" +
                     "  ack checks matching /pattern/[ duration: <time spec>][ comment: <comment>]\n" +
@@ -294,19 +302,19 @@ module Flapjack
                      `uname -a`.chomp + "\n"
 
             when /^find\s+(\d+\s+)?checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
-              num_results = $1.nil? ? 30 : $1.strip.to_i
+              limit_checks = $1.nil? ? 30 : $1.strip.to_i
               pattern     = $2
               tag         = $3
 
-              msg = derive_check_ids_for(pattern, tag, nil,
-                      :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, nil, :limit => limit_checks,
+                      :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor, num_checks|
                 resp = "Checks #{descriptor}:\n"
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
-                resp += "Showing first #{num_results} results of #{checks.length}:\n" if checks.length > num_results
+                resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
                 resp += checks.map {|check|
                   state = check.states.last
                   "#{check.name} is #{state.nil? ? '[none]' : state.condition.upcase}"
-                }.sort.take(num_results).join(", ")
+                }.join(', ')
                 resp
               end
 
@@ -324,19 +332,21 @@ module Flapjack
                   }.join("\n")
               end
 
-            when /^tell\s+me\s+about\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              pattern    = $1
-              tag        = $2
-              check_name = $3
+            when /^tell\s+me\s+about\s(\d+\s+)?+#{CHECK_MATCH_FRAGMENT}\s*$/im
+              limit_checks = $1.nil? ? 30 : $1.strip.to_i
+              pattern      = $2
+              tag          = $3
+              check_name   = $4
 
-              msg = derive_check_ids_for(pattern, tag, check_name,
+              msg = derive_check_ids_for(pattern, tag, check_name, :limit => limit_checks,
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance,
-                                        Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
+                                        Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor, num_checks|
                 current_time = Time.now
-                "Details of checks #{descriptor}\n" +
-                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                    get_check_details(check, current_time)
-                  }.join("")
+                resp = "Details of checks #{descriptor}\n"
+                resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
+                resp += Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
+                          get_check_details(check, current_time)
+                        }.join("")
               end
 
             when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
