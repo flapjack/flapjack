@@ -88,6 +88,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     let(:tags)   { double('tags', :all => [tag]) }
     let(:states) { double('states', :last => state) }
     let(:state)  { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
+    let(:page)   { double('page', :ids => [check.id])}
 
 
     # TODO use separate threads in the test instead?
@@ -159,7 +160,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:states).and_return(states)
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("example")).and_return(checks)
 
@@ -193,10 +195,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
@@ -221,6 +224,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:states).and_return(states)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -243,7 +247,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -268,7 +272,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
@@ -293,6 +297,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -316,6 +322,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -339,7 +347,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -364,7 +373,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:page).with(1, :per_page => 30).and_return(page)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
@@ -419,6 +429,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:name).and_return('example.com:ping')
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -457,7 +468,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -497,7 +508,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
@@ -526,6 +537,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -559,7 +571,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -595,7 +607,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
@@ -625,6 +637,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -645,7 +658,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -668,7 +681,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
