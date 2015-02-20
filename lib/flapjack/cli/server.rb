@@ -67,7 +67,7 @@ module Flapjack
         else
           puts "Flapjack is not running."
         end
-        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
+        exit_now! "Failed to stop Flapjack with pid: #{pid}" unless wait_pid_gone(pid)
       end
 
       def restart
@@ -77,7 +77,7 @@ module Flapjack
           runner.execute(:kill => true)
           puts " done."
         end
-        exit_now! "Failed to stop Flapjack #{pid}" unless wait_pid_gone(pid)
+        exit_now! "Failed to stop Flapjack with pid: #{pid}" unless wait_pid_gone(pid)
 
         @runner = nil
 
