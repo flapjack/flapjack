@@ -212,7 +212,7 @@ module Flapjack
                 if num_checks == 0
                   "No checks match /#{pattern.strip}/"
                 else
-                  checks = checks.page(1, :per_page => options[:limit]) if options[:limit]
+                  checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
                   yield(checks.ids, "matching /#{pattern.strip}/", num_checks) if block_given?
                 end
               end
@@ -232,7 +232,7 @@ module Flapjack
                 if num_checks == 0
                   "No checks with tag '#{tag_name.strip}'"
                 else
-                  checks = checks.page(1, :per_page => options[:limit]) if options[:limit]
+                  checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
                   yield(checks.ids, "with tag '#{tag_name}'", num_checks) if block_given?
                 end
               end
@@ -245,7 +245,7 @@ module Flapjack
                 "No check exists with name '#{check_name.strip}'"
               else
                 num_checks = checks.count
-                checks = checks.page(1, :per_page => options[:limit]) if options[:limit]
+                checks = checks.sort(:name, :limit => options[:limit]) if options[:limit]
                 yield(checks.ids, "with name '#{check_name.strip}'", num_checks) if block_given?
               end
             }
