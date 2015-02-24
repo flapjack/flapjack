@@ -13,6 +13,19 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::ResourceLinks
 
+            app.class_eval do
+              swagger_args = ['rules',
+                              Flapjack::Data::Rule,
+                              {'contact' => Flapjack::Data::Contact,
+                               'media'   => Flapjack::Data::Medium,
+                               'tags'    => Flapjack::Data::Tag}]
+
+              swagger_post_links(*swagger_args)
+              swagger_get_links(*swagger_args)
+              swagger_put_links(*swagger_args)
+              swagger_delete_links(*swagger_args)
+            end
+
             app.post %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact|media|tags)$} do
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]

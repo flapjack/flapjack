@@ -2,6 +2,8 @@
 
 require 'sinatra/base'
 
+require 'flapjack/data/check'
+
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
@@ -12,6 +14,14 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+
+            app.class_eval do
+              swagger_args = ['checks', Flapjack::Data::Check]
+
+              swagger_post(*swagger_args)
+              swagger_get(*swagger_args)
+              swagger_put(*swagger_args)
+            end
 
             app.post '/checks' do
               status 201

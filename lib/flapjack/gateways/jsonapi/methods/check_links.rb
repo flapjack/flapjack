@@ -2,6 +2,9 @@
 
 require 'sinatra/base'
 
+require 'flapjack/data/check'
+require 'flapjack/data/tag'
+
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
@@ -12,6 +15,16 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::ResourceLinks
+
+            app.class_eval do
+              swagger_args = ['checks', Flapjack::Data::Check,
+                              {'tags' => Flapjack::Data::Tag}]
+
+              swagger_post_links(*swagger_args)
+              swagger_get_links(*swagger_args)
+              swagger_put_links(*swagger_args)
+              swagger_delete_links(*swagger_args)
+            end
 
             app.post %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)$} do
               check_id   = params[:captures][0]

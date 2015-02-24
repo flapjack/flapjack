@@ -11,6 +11,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
@@ -40,6 +41,32 @@ module Flapjack
       def check=(c)
         self.check_by_start = c
         self.check_by_end   = c
+      end
+
+      swagger_model :UnscheduledMaintenance do
+        key :id, :UnscheduledMaintenance
+        key :required, [:start_time, :end_time]
+        property :id do
+          key :type, :string
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :links do
+          key :"$ref", :UnscheduledMaintenanceLinks
+        end
+      end
+
+      swagger_model :UnscheduledMaintenanceLinks do
+        key :id, :UnscheduledMaintenanceLinks
+        property :check do
+          key :type, :string
+        end
       end
 
       def self.jsonapi_attributes

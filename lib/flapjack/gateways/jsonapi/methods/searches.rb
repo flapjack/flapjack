@@ -12,6 +12,8 @@ module Flapjack
       module Methods
         module Searches
 
+          # TODO probably replace with 'filter' arguments on the GETs of the resources themselves
+
           def self.registered(app)
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous

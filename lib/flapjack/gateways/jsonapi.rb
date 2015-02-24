@@ -12,12 +12,15 @@ require 'sinatra/base'
 
 require 'active_support/core_ext/string/inflections'
 
+require 'swagger/blocks'
+
 require 'flapjack'
 require 'flapjack/utility'
 
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
-%w[headers miscellaneous resources resource_links].each do |helper|
+%w[headers miscellaneous resources resource_links
+   swagger_docs swagger_links_docs].each do |helper|
   require "flapjack/gateways/jsonapi/helpers/#{helper}"
 end
 
@@ -98,6 +101,8 @@ module Flapjack
         204
       end
 
+      # FIXME enforce that Accept header must allow defined return type for the method
+
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
         content_type JSONAPI_MEDIA_TYPE
@@ -121,16 +126,40 @@ module Flapjack
         pass
       end
 
-      patch '*' do
-        halt(405) unless is_jsonpatch_request?
-        content_type JSONAPI_MEDIA_TYPE
-        cors_headers
-        pass
-      end
+      # patch '*' do
+      #   halt(405) unless is_jsonpatch_request?
+      #   content_type JSONAPI_MEDIA_TYPE
+      #   cors_headers
+      #   pass
+      # end
 
       delete '*' do
         cors_headers
         pass
+      end
+
+      include Swagger::Blocks
+      include Flapjack::Gateways::JSONAPI::Helpers::SwaggerDocs
+      include Flapjack::Gateways::JSONAPI::Helpers::SwaggerLinksDocs
+
+      swagger_root do
+        key :swaggerVersion, '1.2'
+        key :apiVersion, '2.0.0'
+        info do
+          key :title, 'Flapjack API'
+          # key :description, "This is a sample server Petstore server.  You can find out more about Swagger \n    at <a href=\"http://swagger.wordnik.com\">http://swagger.wordnik.com</a> or on irc.freenode.net, #swagger.  For this sample,\n    you can use the api key \"special-key\" to test the authorization filters"
+          # key :termsOfServiceUrl, 'http://helloreverb.com/terms/'
+          # key :contact, 'apiteam@wordnik.com'
+          # key :license, 'Apache 2.0'
+          # key :licenseUrl, 'http://www.apache.org/licenses/LICENSE-2.0.html'
+        end
+        ['checks', 'contacts', 'media', 'rules', 'scheduled_maintenances',
+         'tags', 'unscheduled_maintenances'].each do |resource|
+          api do
+            key :path, "/#{resource}"
+            key :description, "Operations on #{resource.split('_').join(' ')}"
+          end
+        end
       end
 
       # hacky, but trying to avoid too much boilerplate -- links paths
@@ -143,6 +172,25 @@ module Flapjack
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
+      end
+
+      SWAGGERED_CLASSES = [
+        Flapjack::Data::Check,
+        Flapjack::Data::Contact,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::Tag,
+        Flapjack::Data::UnscheduledMaintenance,
+        self
+      ].freeze
+
+      get '/doc' do
+        Flapjack.dump_json(Swagger::Blocks.build_root_json(SWAGGERED_CLASSES))
+      end
+
+      get '/doc/:id' do
+        Flapjack.dump_json(Swagger::Blocks.build_api_json(params[:id], SWAGGERED_CLASSES))
       end
 
       error Zermelo::LockNotAcquired do

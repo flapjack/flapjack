@@ -16,6 +16,18 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::ResourceLinks
 
+            app.class_eval do
+              swagger_args = ['media',
+                              Flapjack::Data::Medium,
+                              {'contact' => Flapjack::Data::Contact,
+                               'rules'   => Flapjack::Data::Rule}]
+
+              swagger_post_links(*swagger_args)
+              swagger_get_links(*swagger_args)
+              swagger_put_links(*swagger_args)
+              swagger_delete_links(*swagger_args)
+            end
+
             app.post %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|rules)$} do
               medium_id  = params[:captures][0]
               assoc_type = params[:captures][1]

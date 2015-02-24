@@ -18,6 +18,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change. Do client-side grouping and create a tag!
@@ -183,6 +184,40 @@ module Flapjack
           # add contact's timezone to the time restriction schedule
           schedule = self.class.time_restriction_to_icecube_schedule(tr, timezone)
           schedule && schedule.occurring_at?(usertime)
+        end
+      end
+
+      swagger_model :Rule do
+        key :id, :Rule
+        # key :required, []
+        property :id do
+          key :type, :string
+        end
+        # # TODO separate model for time restrictions
+        # property :time_restrictions do
+        #   key :"$ref", Flapjack::Data::Schedule.name.to_sym
+        # end
+        property :links do
+          key :"$ref", :RuleLinks
+        end
+      end
+
+      swagger_model :RuleLinks do
+        key :id, :RuleLinks
+        property :contact do
+          key :type, :string
+        end
+        property :media do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
+        property :tags do
+          key :type, :array
+          items do
+            key :type, :string
+          end
         end
       end
 

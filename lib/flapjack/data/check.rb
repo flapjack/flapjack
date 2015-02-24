@@ -2,6 +2,8 @@
 
 require 'digest'
 
+require 'swagger/blocks'
+
 require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
@@ -22,6 +24,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
@@ -146,6 +149,33 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       attr_accessor :count
+
+      swagger_model :Check do
+        key :id, :Check
+        key :required, [:name, :enabled]
+        property :id do
+          key :type, :string
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+        end
+        property :links do
+          key :"$ref", :CheckLinks
+        end
+      end
+
+      swagger_model :CheckLinks do
+        key :id, :CheckLinks
+        property :tags do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
+      end
 
       def self.jsonapi_attributes
         [:name, :enabled]

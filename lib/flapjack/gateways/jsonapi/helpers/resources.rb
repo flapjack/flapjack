@@ -319,7 +319,7 @@ module Flapjack
               included  = incl.collect {|i| i.split('.')}.sort_by(&:length)
               included.each do |incl_clause|
                 linked_data, links_data = data_for_include_clause(ids_cache,
-                  klass, resource_ids, [], incl_clause)
+                  klass, klass.intersect(:id => resource_ids), [], incl_clause)
                 linked.update(linked_data)
                 links_out.update(links_data) unless links_data.nil? || links_data.empty?
               end
@@ -446,7 +446,7 @@ module Flapjack
             links
           end
 
-          def data_for_include_clause(ids_cache, parent_klass, parent_ids, clause_done, clause_left)
+          def data_for_include_clause(ids_cache, parent_klass, parent_resources, clause_done, clause_left)
             clause_fragment = clause_left.shift
 
             fragment_klass = nil
@@ -462,26 +462,30 @@ module Flapjack
 
             ic_key = clause_done.join('.')
 
-            unless ids_cache.has_key?(ic_key)
-              ids_cache[ic_key] = parent_klass.intersect(:id => parent_ids).
-                associated_ids_for(clause_fragment.to_sym)
-            end
-
-            fragment_ids_by_parent_id = ids_cache[ic_key]
+            ids_cache[ic_key] ||=
+              parent_resources.associated_ids_for(clause_fragment.to_sym)
 
             # to_many associations have array values, to_one associations have string ids
-            fragment_ids = fragment_ids_by_parent_id.values.inject([]) do |memo, v|
-              memo += (v.is_a?(Array) ? v : [v])
+            fragment_ids = ids_cache[ic_key].values.inject([]) do |memo, v|
+              memo += case v
+              when Array
+                v
+              when Set
+                v.to_a
+              else
+                [v]
+              end
               memo
             end
 
+            fragment_resources = fragment_klass.intersect(:id => fragment_ids)
+
             if clause_left.size > 0
-              data_for_include_clause(ids_cache, fragment_klass, fragment_ids,
+              data_for_include_clause(ids_cache, fragment_klass, fragment_resources,
                                       clause_done, clause_left)
             else
               # reached the end, ensure that data is stored as needed
               fragment_name = fragment_klass.name.split('::').last.downcase.pluralize
-              fragment_resources = fragment_klass.find_by_ids!(*fragment_ids)
               fragment_json, fragment_links, _ = as_jsonapi(fragment_klass,
                 fragment_name, fragment_resources, fragment_ids,
                 :unwrap => false)

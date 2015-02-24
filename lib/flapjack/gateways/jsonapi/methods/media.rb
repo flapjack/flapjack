@@ -2,7 +2,7 @@
 
 require 'sinatra/base'
 
-require 'flapjack/data/contact'
+require 'flapjack/data/medium'
 
 module Flapjack
   module Gateways
@@ -14,6 +14,15 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+
+            app.class_eval do
+              swagger_args = ['media', Flapjack::Data::Medium]
+
+              swagger_post(*swagger_args)
+              swagger_get(*swagger_args)
+              swagger_put(*swagger_args)
+              swagger_delete(*swagger_args)
+            end
 
             app.post '/media' do
               status 201

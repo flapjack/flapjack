@@ -16,6 +16,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
@@ -69,6 +70,43 @@ module Flapjack
         # scheduled maintenance may have occurred without the routes being updated
         Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object([]) do |check, memo|
           memo << check unless check.in_scheduled_maintenance?
+        end
+      end
+
+      swagger_model :Medium do
+        key :id, :Medium
+        # would require interval & rollup_threshold, but pagerduty :(
+        key :required, [:transport, :address]
+        property :id do
+          key :type, :string
+        end
+        property :transport do
+          key :type, :string
+          key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :interval do
+          key :type, :integer
+          key :minimum, 0
+        end
+        property :rollup_threshold do
+          key :type, :integer
+          key :minimum, 1
+        end
+        property :links do
+          key :"$ref", :MediumLinks
+        end
+      end
+
+      swagger_model :MediumLinks do
+        key :id, :MediumLinks
+        property :contact do
+          key :type, :string
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :type, :string
+          end
         end
       end
 

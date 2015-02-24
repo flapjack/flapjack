@@ -154,19 +154,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:intersect).
       with(:id => [check.id]).and_return(checks)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
-      with(tag.id).and_return([tag])
+    full_tags = double('full_tags')
+    expect(full_tags).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [check.id]})
+    expect(full_tags).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
+    expect(full_tags).to receive(:collect) {|&arg| [arg.call(tag)] }
 
-    full_tag_ids = double('full_tag_ids')
-    expect(full_tag_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [check.id]})
-    expect(full_tag_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => [tag.id]).twice.and_return(full_tag_ids)
+      with(:id => [tag.id]).exactly(3).times.and_return(full_tags)
 
-    full_check_ids = double('full_check_ids')
-    expect(full_check_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [tag.id]})
+    full_checks = double('full_check_ids')
+    expect(full_checks).to receive(:associated_ids_for).with(:tags).and_return({check.id => [tag.id]})
+
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id]).and_return(full_check_ids)
+      with(:id => [check.id]).and_return(full_checks)
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
@@ -176,7 +176,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     get "/checks/#{check.id}?include=tags"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:links => {
       'checks.tags' => 'http://example.org/tags/{checks.tags}',
       'tags.checks' => 'http://example.org/checks/{tags.checks}',
       },

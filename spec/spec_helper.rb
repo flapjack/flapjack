@@ -103,6 +103,7 @@ RSpec.configure do |config|
     WebMock.reset!
   end
 
+  config.include JsonSpec::Helpers, :sinatra => true
   config.include Factory, :redis => true
   config.include ErbViewHelper, :erb_view => true
   config.include Rack::Test::Methods, :sinatra => true

@@ -13,6 +13,7 @@ group :test do
   gem 'cucumber', '>= 2.0.0.beta.3'
   gem 'delorean'
   gem 'rack-test'
+  gem 'json_spec'
   gem 'webmock'
   gem 'pact'
   gem 'simplecov', :require => false

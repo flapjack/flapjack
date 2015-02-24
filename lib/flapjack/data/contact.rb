@@ -25,6 +25,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       define_attributes :name     => :string,
                         :timezone => :string
@@ -62,6 +63,39 @@ module Flapjack
           associated_ids_for(:checks).values.reduce(:|)
 
         Flapjack::Data::Check.intersect(:id => check_ids)
+      end
+
+      swagger_model :Contact do
+        key :id, :Contact
+        key :required, [:name]
+        property :id do
+          key :type, :string
+        end
+        property :name do
+          key :type, :string
+        end
+        property :timezone do
+          key :type, :string
+        end
+        property :links do
+          key :"$ref", :ContactLinks
+        end
+      end
+
+      swagger_model :ContactLinks do
+        key :id, :ContactLinks
+        property :media do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
       end
 
       def self.jsonapi_attributes

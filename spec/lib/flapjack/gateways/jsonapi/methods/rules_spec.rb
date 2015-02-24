@@ -219,11 +219,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     contacts = double('contacts')
     expect(contacts).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
     expect(contacts).to receive(:associated_ids_for).with(:rules).and_return({contact.id => [rule.id]})
+    expect(contacts).to receive(:collect) {|&arg| [arg.call(contact)] }
     expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).twice.and_return(contacts)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with(contact.id).and_return([contact])
+      with(:id => [contact_data[:id]]).exactly(3).times.and_return(contacts)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
@@ -270,14 +268,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Contact).to receive(:intersect).
       with(:id => [contact_data[:id]]).and_return(contacts)
 
-    medium_ids = double('medium_ids')
-    expect(medium_ids).to receive(:associated_ids_for).with(:contact).and_return({medium.id => contact.id})
-    expect(medium_ids).to receive(:associated_ids_for).with(:rules).and_return({medium.id => [rule.id]})
+    media = double('media')
+    expect(media).to receive(:associated_ids_for).with(:contact).and_return({medium.id => contact.id})
+    expect(media).to receive(:associated_ids_for).with(:rules).and_return({medium.id => [rule.id]})
+    expect(media).to receive(:collect) {|&arg| [arg.call(medium)] }
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id]).twice.and_return(medium_ids)
-
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
+      with(:id => [medium.id]).exactly(3).times.and_return(media)
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data)
@@ -319,26 +315,22 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rules).to receive(:associated_ids_for).with(:tags).
       and_return(rule.id => [])
     expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).exactly(4).times.and_return(rules)
+      with(:id => [rule.id]).exactly(5).times.and_return(rules)
 
     contacts = double('contacts')
     expect(contacts).to receive(:associated_ids_for).with(:media).twice.
       and_return({contact.id => [medium.id]})
     expect(contacts).to receive(:associated_ids_for).with(:rules).and_return({contact.id => [rule.id]})
+    expect(contacts).to receive(:collect) {|&arg| [arg.call(contact)] }
     expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).exactly(3).times.and_return(contacts)
-
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with(contact.id).and_return([contact])
+      with(:id => [contact_data[:id]]).exactly(4).times.and_return(contacts)
 
     media = double('media')
     expect(media).to receive(:associated_ids_for).with(:contact).and_return({medium.id => contact.id})
     expect(media).to receive(:associated_ids_for).with(:rules).and_return({medium.id => [rule.id]})
+    expect(media).to receive(:collect) {|&arg| [arg.call(medium)] }
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id]).twice.and_return(media)
-
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
+      with(:id => [medium.id]).exactly(3).times.and_return(media)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)

@@ -14,6 +14,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Swagger::Blocks
 
       define_attributes :name => :string
 
@@ -52,6 +53,36 @@ module Flapjack
       before_update :update_allowed?
       def update_allowed?
         !self.changed.include?('name')
+      end
+
+      swagger_model :Tag do
+        key :id, :Tag
+        key :required, [:name]
+        property :id do
+          key :type, :string
+        end
+        property :name do
+          key :type, :string
+        end
+        property :links do
+          key :"$ref", :TagLinks
+        end
+      end
+
+      swagger_model :TagLinks do
+        key :id, :TagLinks
+        property :checks do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :type, :string
+          end
+        end
       end
 
       def self.jsonapi_id

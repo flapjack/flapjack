@@ -13,6 +13,16 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
+            app.class_eval do
+              swagger_args = ['scheduled_maintenances',
+                              Flapjack::Data::ScheduledMaintenance]
+
+              swagger_post(*swagger_args)
+              swagger_get(*swagger_args)
+              swagger_put(*swagger_args)
+              swagger_delete(*swagger_args)
+            end
+
             app.post '/scheduled_maintenances' do
               status 201
               scheduled_maintenances = resource_post(Flapjack::Data::ScheduledMaintenance,
