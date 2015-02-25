@@ -119,9 +119,29 @@ describe Flapjack::Data::Contact, :redis => true do
   it "updates a contact's timezone" do
     contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
 
-    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('UTC'))
+    expect(contact.time_zone).to eq(nil)
     contact.update('timezone' => 'Asia/Shanghai')
-    expect(contact.timezone).to eq(ActiveSupport::TimeZone.new('Asia/Shanghai'))
+    expect(contact.time_zone).to eq(ActiveSupport::TimeZone['Asia/Shanghai'])
+  end
+
+  it "clears a contact's timezone with a nil value" do
+    contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
+
+    expect(contact.time_zone).to eq(nil)
+    contact.update('timezone' => 'Asia/Shanghai')
+    expect(contact.time_zone).to eq(ActiveSupport::TimeZone['Asia/Shanghai'])
+    contact.update('timezone' => nil)
+    expect(contact.time_zone).to eq(nil)
+  end
+
+  it "does not update a contact's timezone with an invalid string" do
+    contact = Flapjack::Data::Contact.find_by_id('c363_a-f@42%*', :redis => @redis)
+
+    expect(contact.time_zone).to eq(nil)
+    contact.update('timezone' => 'Asia/Shanghai')
+    expect(contact.time_zone).to eq(ActiveSupport::TimeZone['Asia/Shanghai'])
+    contact.update('timezone' => '')
+    expect(contact.time_zone).to eq(ActiveSupport::TimeZone['Asia/Shanghai'])
   end
 
   it "updates a contact, does not clear notification rules" do

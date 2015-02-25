@@ -3,12 +3,14 @@
 # NB: use of redis.keys probably indicates we should maintain a data
 # structure to avoid the need for this type of query
 
-require 'set'
-require 'ice_cube'
-require 'flapjack/data/entity'
-require 'flapjack/data/notification_rule'
-
 require 'securerandom'
+require 'set'
+
+require 'ice_cube'
+
+require 'flapjack/data/entity'
+require 'flapjack/data/entity_check'
+require 'flapjack/data/notification_rule'
 
 module Flapjack
 
@@ -430,36 +432,21 @@ module Flapjack
         self.media_list.collect {|medium| "#{self.id}_#{medium}" }
       end
 
-      # return the timezone of the contact, or the system default if none is set
-      # TODO cache?
-      def timezone(opts = {})
-        logger = opts[:logger]
-
-        tz_string = @redis.get("contact_tz:#{self.id}")
-        tz = opts[:default] if (tz_string.nil? || tz_string.empty?)
-
-        if tz.nil?
-          begin
-            tz = ActiveSupport::TimeZone.new(tz_string)
-          rescue ArgumentError
-            if logger
-              logger.warn("Invalid timezone string set for contact #{self.id} or TZ (#{tz_string}), using 'UTC'!")
-            end
-            tz = ActiveSupport::TimeZone.new('UTC')
-          end
-        end
-        tz
+      def timezone
+        @redis.get("contact_tz:#{self.id}")
       end
 
-      # sets or removes the timezone for the contact
-      def timezone=(tz)
-        if tz.nil?
+      def timezone=(tz_string)
+        if tz_string.nil?
           @redis.del("contact_tz:#{self.id}")
-        else
-          # ActiveSupport::TimeZone or String
-          @redis.set("contact_tz:#{self.id}",
-            tz.respond_to?(:name) ? tz.name : tz )
+        elsif tz_string.is_a?(String) && !ActiveSupport::TimeZone[tz_string].nil?
+          @redis.set("contact_tz:#{self.id}", tz_string)
         end
+      end
+
+      def time_zone
+        return nil if self.timezone.nil?
+        ActiveSupport::TimeZone[self.timezone]
       end
 
       def to_jsonapi(opts = {})
@@ -468,7 +455,7 @@ module Flapjack
           "first_name"            => self.first_name,
           "last_name"             => self.last_name,
           "email"                 => self.email,
-          "timezone"              => self.timezone.name,
+          "timezone"              => self.timezone,
           "links"                 => {
             :entities               => opts[:entity_ids]          || [],
             :media                  => self.media_ids             || [],
@@ -521,10 +508,8 @@ module Flapjack
           tz = contact_data['timezone']
           if tz.nil?
             redis.del("contact_tz:#{contact_id}")
-          else
-            # ActiveSupport::TimeZone or String
-            redis.set("contact_tz:#{contact_id}",
-              tz.respond_to?(:name) ? tz.name : tz )
+          elsif tz.is_a?(String) && !ActiveSupport::TimeZone[tz].nil?
+            redis.set("contact_tz:#{contact_id}", tz )
           end
         end
       end
