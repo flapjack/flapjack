@@ -1,5 +1,49 @@
 ## Flapjack Changelog
 
+# 1.3.0 - 2015-02-17
+- No changes
+
+# 1.3.0rc3 - 2015-02-17
+- Bug: cleanup gateway shutdown logic, fix #789 #790 (@ali-graham)
+- Chore: move init scripts to omnibus-flapjack repo (@Hobbsee)
+
+# 1.3.0rc2 - 2015-02-13
+- Bug: Error uninstalling - Error generating or dispatching SMS Nexmo message #789 (@Hobbsee)
+
+# 1.3.0rc1 - 2015-02-13
+- Feature: Add Nexmo SMS gateway #786 (@jsoriano)
+- Bug: Revert addition of sms_gammu gateway #759 (@ali-graham)
+
+# 1.2.2 - 2015-02-10
+- Feature: Add the maint subcommand to the chat bot to fix #664 (@someword)
+- Feature: support for Ruby 2.2, drop support for 1.9, removes Resque due to gem dependencies #760 (@ali-graham)
+- Feature: Gammu SMS gateway #759 (@paologlim)
+- Feature: Use microsecond resolution for logs (maint/1.x) #762 (@jgoldschrafe)
+- Feature: Backport notification delays from master #748 (@jgoldschrafe)
+- Feature: make event summary optional, fixes #513 #779 (@ali-graham)
+- Bug: fix purge script #758 (@pulecp)
+- Bug: Fix for orphaned entity data #784 (@ali-graham)
+
+# 1.2.1 - 2014-12-10
+- Bug: Fix PagerDuty log failure on POST (maint/1.x) #744 (@jgoldschrafe)
+
+# 1.2.1rc3 - 2014-12-09
+- Bug: flapjack 1.2.0 ignores umask and makes logs world writable #708 (@ali-graham)
+- Bug: Can't get full name email syntax working #690 (@jessereynolds)
+
+# 1.2.1rc2 - 2014-12-04
+- Bug: Correct scheduled maintenance periods with expiry that don't match their timestamps #734 (@ali-graham)
+
+# 1.2.1rc1 - 2014-12-04
+- Bug: Exception in pagerduty gateway when looking for acknowledgements #721 (@jessereynolds)
+- Bug: Retrieving scheduled maintenance via api fails when old entities without ids are present #711 (@jessereynolds)
+- Bug: Repeated acknowledgement notifications sent after acknowledging on PagerDuty #714 (@jessereynolds)
+- Bug: Exception thrown to browser when you pass no values to "Add Scheduled Maintenance" #719 (@ali-graham)
+- Bug: API doesn't allow contact timezone to be updated #718 (@ali-graham)
+- Bug: IceCube deprecation warning in 1.2.0 - :exrules is deprecated, #715 (@ali-graham)
+- Bug: Badly formed error response to scheduled maintenance report with invalid check id #712 (@ali-graham)
+- Bug: Searching for checks in maintenance via CLI doesn't seem to work #710 (@jessereynolds, @Hobbsee)
+
 # 1.2.0 - 2014-11-07
 - Bug: multi blocks for safe redis connection pool usage #694 (@ali-graham)
 - Bug: data migration to work around previous notification rule bug #699 (@ali-graham)
@@ -260,7 +304,7 @@
 - Bug: fix potential exception in json serialisation of tags in notifications gh-281 (@jessereynolds)
 
 # 0.7.21 - 2013-08-08
-- Feature: make entity search scopable by tags gh-89 (@jessereynolds)
+- Feature: make eneity search scopable by tags gh-89 (@jessereynolds)
 - Feature: add benchmark rake task gh-259 (@jessereynolds)
 - Feature: make tags more general in notification rules gh-269 (@jessereynolds)
 - Feature: ephemeral tag generation on events gh-268 (@jessereynolds)
