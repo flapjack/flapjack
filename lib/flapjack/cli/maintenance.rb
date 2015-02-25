@@ -106,6 +106,7 @@ module Flapjack
         end
         puts Terminal::Table.new :headings => ['Check',
           'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
+        puts "Found #{rows.count} maintenances"
         maintenances
       end
 
