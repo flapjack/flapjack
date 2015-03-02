@@ -223,51 +223,32 @@ module Flapjack
           Flapjack.logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
 
+          # so credentials_by_check are all the unacknowledged problems in flapjack as check:credentials
           credentials_by_check = Flapjack::Data::Check.
             pagerduty_credentials_for(unacked_failing_checks.map(&:id))
 
-          credentials_by_check.each_pair do |check, credentials|
-
-            if credentials.empty?
-              Flapjack.logger.debug("No pagerduty credentials found for #{check.name}, skipping")
-              next
-            end
-
-            # FIXME: try each set of credentials until one works (may have stale contacts turning up)
-            options = credentials.first.merge('check' => check.name)
-
-            acknowledged = pagerduty_acknowledged?(options)
-            if acknowledged.nil?
-              Flapjack.logger.debug "#{check.name} is not acknowledged in pagerduty, skipping"
-              next
-            end
-
-            pg_acknowledged_by = acknowledged[:pg_acknowledged_by]
-            Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
-            who_text = ""
-            if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
-              who_text = " by #{pg_acknowledged_by['name']}"
-            end
-
-            # FIXME: decide where the default acknowledgement period should reside and use it
-            # everywhere ... a case for moving configuration into redis (from config file) perhaps?
-            four_hours = 4 * 60 * 60
-            Flapjack::Data::Event.create_acknowledgements(
-              @config['processor_queue'] || 'events',
-              [check],
-              :summary  => "Acknowledged on PagerDuty" + who_text,
-              :duration => four_hours)
+          not_empty_credentials_by_check = credentials_by_check.select do |check|
+            !check.empty?
           end
 
-        end
+          pg_acks = pagerduty_acknowledgements
+          incident_keys = pg_acks['incidents']['incident_key']
+          
+          not_empty_credentials_by_check.each_pair do |check, credentials|
+            options = credentials.first.merge('check' => check.name)
+            check2 = opts['check']
 
-        def pagerduty_acknowledged?(opts = {})
-          check = opts['check']
+            # if check2 is in the pg_acks incidents, make a flapjack acknowledgement
+            if incident_keys[check2].nil?
+              next
+            end
 
-          if @subdomain.blank? || @username.blank? || @password.blank? || check.nil?
-            Flapjack.logger.warn("pagerduty_acknowledged?: Unable to look for acknowledgements on pagerduty" +
+        # returns the pagerduty acknowloedgements
+        def pagerduty_acknowledgements
+          if @username.blank? || @password.blank?
+            Flapjack.logger.warn("pagerduty_acknowledgements?: Unable to look for acknowledgements on pagerduty" +
                          " as all of the following options are required:" +
-                         " subdomain (#{@subdomain}), username (#{@username}), password (#{@password}), check (#{check})")
+                         " username (#{@username}), password (#{@password})")
             return nil
           end
 
@@ -276,10 +257,9 @@ module Flapjack
           query = {'fields'       => 'incident_number,status,last_status_change_by',
                    'since'        => (t - (60*60*24*7)).iso8601, # the last week
                    'until'        => (t + (60*60*24)).iso8601,   # 1 day in the future
-                   'incident_key' => check,
                    'status'       => 'acknowledged'}
 
-          uri = URI::HTTPS.build(:host => "#{@subdomain}.pagerduty.com",
+          uri = URI::HTTPS.build(:host => "pagerduty.com",
                                  :path => '/api/v1/incidents',
                                  :port => 443,
                                  :query => URI.encode_www_form(query))
@@ -289,9 +269,9 @@ module Flapjack
           request = Net::HTTP::Get.new(uri.request_uri)
           request.basic_auth(@username, @password)
 
-          Flapjack.logger.debug("pagerduty_acknowledged?: request to #{uri.request_uri}")
-          Flapjack.logger.debug("pagerduty_acknowledged?: query: #{query.inspect}")
-          Flapjack.logger.debug("pagerduty_acknowledged?: auth: #{@username}, #{@password}")
+          Flapjack.logger.debug("pagerduty_acknowledgements: request to #{uri.request_uri}")
+          Flapjack.logger.debug("pagerduty_acknowledgements: query: #{query.inspect}")
+          Flapjack.logger.debug("pagerduty_acknowledgements: auth: #{@username}, #{@password}")
 
           http_response = http.request(request)
 
@@ -303,22 +283,17 @@ module Flapjack
           Flapjack.logger.debug(http_response.inspect)
           status   = http_response.code
 
-          Flapjack.logger.debug("pagerduty_acknowledged?: decoded response as: #{response.inspect}")
+          Flapjack.logger.debug("pagerduty_acknowledgements: decoded response as: #{response.inspect}")
           if response.nil?
             Flapjack.logger.error('no valid response received from pagerduty!')
             return nil
           end
 
-          if response['incidents'].nil?
-            Flapjack.logger.error('no incidents found in response')
-            return nil
-          end
-
           return nil if response['incidents'].empty?
 
-          {:pg_acknowledged_by => response['incidents'].first['last_status_change_by']}
+          response
         end
-
+          
       end
     end
   end
