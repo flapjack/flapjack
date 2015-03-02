@@ -42,7 +42,7 @@ module JsonapiHelper
         expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
         unless last_response.status == 204
           expect(Flapjack.load_json(last_response.body)).to be_a(Enumerable)
-          expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE_PRODUCED)
+          expect(last_response.headers['Content-Type']).to eq( 'application/vnd.api+json; supported-ext=bulk; charset=utf-8')
         end
       end
     end

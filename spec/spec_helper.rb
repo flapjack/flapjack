@@ -1,3 +1,5 @@
+Encoding.default_internal = 'UTF-8'
+
 if ENV['COVERAGE']
   require 'simplecov'
   SimpleCov.start do

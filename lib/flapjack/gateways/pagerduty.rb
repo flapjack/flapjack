@@ -66,25 +66,19 @@ module Flapjack
           Flapjack.logger.debug("processing pagerduty notification service_key: #{address}, " +
                         "check: '#{check.name}', state: #{alert.state}, summary: #{alert.summary}")
 
-          pagerduty_dir = File.join(File.dirname(__FILE__), 'pagerduty')
-          message_template_path = case
-          when @config.has_key?('templates') && @config['templates']['alert.text']
-            @config['templates']['alert.text']
-          else
-            File.join(pagerduty_dir, 'alert.text.erb')
-          end
-
-          message_template = ERB.new(File.read(message_template_path), nil, '-')
+          message_template_erb, message_template =
+            load_template(@config['templates'], 'alert',
+                          'text', File.join(File.dirname(__FILE__), 'pagerduty'))
 
           @alert = alert
           bnd = binding
 
           msg = nil
           begin
-            msg = message_template.result(bnd).chomp
+            msg = message_template_erb.result(bnd).chomp
           rescue => e
             Flapjack.logger.error "Error while executing the ERB for a pagerduty message, " +
-              "ERB being executed: #{message_template_path}"
+              "ERB being executed: #{message_template}"
             raise
           end
 
@@ -228,9 +222,9 @@ module Flapjack
             pagerduty_credentials_for(unacked_failing_checks.map(&:id))
 
           pg_acks = pagerduty_acknowledgements
-          
+
           credentials_by_check.each_pair do |check, credentials|
-            
+
             if credentials.empty?
               Flapjack.logger.debug("No pagerduty credentials found for #{check.name}, skipping")
               next
@@ -241,7 +235,7 @@ module Flapjack
 
             # if check.name is in the pg_acks incidents, make a flapjack acknowledgement
             pg_acks['incidents'].each do |val|
-              
+
               if val['incident_key'] == checkMerge['check']
                 pg_acknowledged_by = val['last_status_change_by']
                 Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
@@ -250,7 +244,7 @@ module Flapjack
                 if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
                   who_text = " by #{pg_acknowledged_by['name']}"
                 end
-                
+
                 # FIXME: decide where the default acknowledgement period should reside and use it
                 # everywhere ... a case for moving configuration into redis (from config file) perhaps?
                 four_hours = 4 * 60 * 60
@@ -266,7 +260,7 @@ module Flapjack
             end
           end
         end
-        
+
         # returns the pagerduty acknowledgements
         def pagerduty_acknowledgements
           if @username.blank? || @password.blank?
@@ -317,7 +311,7 @@ module Flapjack
 
           response
         end
-          
+
       end
     end
   end

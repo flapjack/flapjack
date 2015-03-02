@@ -48,7 +48,12 @@ module Flapjack
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
       JSONAPI_MEDIA_TYPE          = 'application/vnd.api+json'
       JSONAPI_MEDIA_TYPE_BULK     = 'application/vnd.api+json; ext=bulk'
-      JSONAPI_MEDIA_TYPE_PRODUCED = 'application/vnd.api+json; supported-ext=bulk; charset=utf-8'
+
+      def media_type_produced
+        encoding = Encoding.default_external
+        return 'application/vnd.api+json; supported-ext=bulk' if encoding.nil?
+        "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
+      end
 
       # # http://tools.ietf.org/html/rfc6902
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
@@ -130,7 +135,7 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type JSONAPI_MEDIA_TYPE_PRODUCED
+        content_type media_type_produced
         cors_headers
         pass
       end
@@ -139,21 +144,21 @@ module Flapjack
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE_PRODUCED
+        content_type media_type_produced
         cors_headers
         pass
       end
 
       # put '*' do
       #   halt(405) unless request.params.empty? || is_jsonapi_request?
-      #   content_type JSONAPI_MEDIA_TYPE_PRODUCED
+      #   content_type media_type_produced
       #   cors_headers
       #   pass
       # end
 
       patch '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE_PRODUCED
+        content_type media_type_produced
         cors_headers
         pass
       end

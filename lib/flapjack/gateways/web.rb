@@ -89,6 +89,11 @@ module Flapjack
           return '' unless request.path == "/#{path}"
           " class='active'"
         end
+
+        def charset_for_content_type(ct)
+          charset = Encoding.default_external
+          charset.nil? ? ct : "#{ct}; charset=#{charset.name}"
+        end
       end
 
       ['config'].each do |class_inst_var|
@@ -99,6 +104,8 @@ module Flapjack
 
       before do
         Zermelo.redis ||= Flapjack.redis
+        content_type charset_for_content_type('text/html')
+
         @api_url          = self.class.instance_variable_get('@api_url')
         @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')

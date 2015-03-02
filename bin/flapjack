@@ -18,6 +18,11 @@ default_value '/etc/flapjack/flapjack_config.toml'
 arg_name '/path/to/flapjack.toml'
 flag [:c,:config]
 
+desc 'Force UTF-8 encoding'
+switch [:'force-utf8'],
+  :negatable => true,
+  :default_value => true
+
 accept Array do |value|
   value.split(/,/).map(&:strip)
 end

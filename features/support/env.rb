@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+Encoding.default_internal = 'UTF-8'
+
 require 'delorean'
 require 'chronic'
 require 'active_support/time'
@@ -204,5 +206,3 @@ After('@process') do
     File.unlink(file)
   end
 end
-
-

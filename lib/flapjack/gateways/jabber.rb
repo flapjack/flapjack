@@ -86,26 +86,19 @@ module Flapjack
 
           message_type = alert.rollup ? 'rollup' : 'alert'
 
-          jabber_dir = File.join(File.dirname(__FILE__), 'jabber')
-
-          message_template_path = case
-          when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
-            @config['templates']["#{message_type}.text"]
-          else
-            File.join(jabber_dir, "#{message_type}.text.erb")
-          end
-
-          message_template = ERB.new(File.read(message_template_path), nil, '-')
+          message_template_erb, message_template =
+            load_template(@config['templates'], message_type,
+              'text', File.join(File.dirname(__FILE__), 'jabber'))
 
           @alert = alert
           bnd = binding
 
           message = nil
           begin
-            message = message_template.result(bnd).chomp
+            message = message_template_erb.result(bnd).chomp
           rescue => e
             Flapjack.logger.error "Error while executing the ERB for a jabber message, " +
-              "ERB being executed: #{message_template_path}"
+              "ERB being executed: #{message_template}"
             raise
           end
 

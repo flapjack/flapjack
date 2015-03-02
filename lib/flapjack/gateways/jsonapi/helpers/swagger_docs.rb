@@ -144,7 +144,7 @@ module Flapjack
                   key :description, "Create a #{single}"
                   key :operationId, "create_#{single}"
                   key :consumes, [JSONAPI_MEDIA_TYPE]
-                  key :produces, [JSONAPI_MEDIA_TYPE_PRODUCED]
+                  key :produces, [media_type_produced]
                   parameter do
                     key :name, :body
                     key :in, :body
@@ -183,7 +183,7 @@ module Flapjack
                 operation :get do
                   key :description, "Get all #{resource}"
                   key :operationId, "get_all_#{resource}"
-                  key :produces, [JSONAPI_MEDIA_TYPE_PRODUCED]
+                  key :produces, [media_type_produced]
                   parameter do
                     key :name, :fields
                     key :in, :query
@@ -250,7 +250,7 @@ module Flapjack
                 operation :get do
                   key :description, "Get a #{single}"
                   key :operationId, "get_#{single}"
-                  key :produces, [JSONAPI_MEDIA_TYPE_PRODUCED]
+                  key :produces, [media_type_produced]
                   parameter do
                     key :name, "#{single}_id".to_sym
                     key :in, :path
