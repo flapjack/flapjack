@@ -119,6 +119,11 @@ module Flapjack
         def include_active?(path)
           request.path == "/#{path}" ? " class='active'" : ""
         end
+
+        def charset_for_content_type(ct)
+          charset = Encoding.default_external
+          charset.nil? ? ct : "#{ct}; charset=#{charset}"
+        end
       end
 
       def redis
@@ -130,6 +135,8 @@ module Flapjack
       end
 
       before do
+        content_type charset_for_content_type('text/html')
+
         @api_url          = self.class.instance_variable_get('@api_url')
         @base_url         = self.class.instance_variable_get('@base_url')
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')

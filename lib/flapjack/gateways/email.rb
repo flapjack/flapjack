@@ -131,44 +131,33 @@ module Flapjack
 
         message_type = alert.rollup ? 'rollup' : 'alert'
 
-        mydir = File.dirname(__FILE__)
-        subject_template_path = case
-        when @config.has_key?('templates') && @config['templates']["#{message_type}_subject.text"]
-          @config['templates']["#{message_type}_subject.text"]
-        else
-          mydir + "/email/#{message_type}_subject.text.erb"
-        end
-        text_template_path = case
-        when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
-          @config['templates']["#{message_type}.text"]
-        else
-          mydir + "/email/#{message_type}.text.erb"
-        end
-        html_template_path = case
-        when @config.has_key?('templates') && @config['templates']["#{message_type}.html"]
-          @config['templates']["#{message_type}.html"]
-        else
-          mydir + "/email/#{message_type}.html.erb"
-        end
-        subject_template = ERB.new(File.read(subject_template_path), nil, '-')
-        text_template    = ERB.new(File.read(text_template_path), nil, '-')
-        html_template    = ERB.new(File.read(html_template_path), nil, '-')
+        subject_template_erb, subject_template =
+          load_template(@config['templates'], "#{message_type}_subject",
+                        'text', File.join(File.dirname(__FILE__), 'email'))
+
+        text_template_erb, text_template =
+          load_template(@config['templates'], message_type,
+                        'text', File.join(File.dirname(__FILE__), 'email'))
+
+        html_template_erb, html_template =
+          load_template(@config['templates'], message_type,
+                        'html', File.join(File.dirname(__FILE__), 'email'))
 
         @alert  = alert
         bnd     = binding
 
         # do some intelligence gathering in case an ERB execution blows up
         begin
-          erb_to_be_executed = subject_template_path
-          subject = subject_template.result(bnd).chomp
+          erb_to_be_executed = subject_template
+          subject = subject_template_erb.result(bnd).chomp
 
-          erb_to_be_executed = text_template_path
-          body_text = text_template.result(bnd)
+          erb_to_be_executed = text_template
+          body_text = text_template_erb.result(bnd)
 
-          erb_to_be_executed = html_template_path
-          body_html = html_template.result(bnd)
+          erb_to_be_executed = html_template
+          body_html = html_template_erb.result(bnd)
         rescue => e
-          @logger.error "Error while excuting ERBs for an email: " +
+          @logger.error "Error while executing ERBs for an email: " +
             "ERB being executed: #{erb_to_be_executed}"
           raise
         end

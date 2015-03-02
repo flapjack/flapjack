@@ -5,8 +5,6 @@ require 'flapjack/gateways/jsonapi'
 
 require './spec/service_consumers/provider_states_for_flapjack-diner.rb'
 
-$testing = true
-
 FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
 FLAPJACK_CONFIG = File.join(FLAPJACK_ROOT, 'etc', 'flapjack_config.yaml')

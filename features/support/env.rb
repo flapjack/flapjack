@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
-#
+
+Encoding.default_internal = 'UTF-8'
 
 require 'delorean'
 require 'chronic'

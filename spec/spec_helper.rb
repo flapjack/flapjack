@@ -1,3 +1,5 @@
+Encoding.default_internal = 'UTF-8'
+
 if ENV['COVERAGE']
   require 'simplecov'
   SimpleCov.start do
@@ -7,8 +9,6 @@ if ENV['COVERAGE']
     SimpleCov.result.format!
   end
 end
-
-$testing = true
 
 FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
