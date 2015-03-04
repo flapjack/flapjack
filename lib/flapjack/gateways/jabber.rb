@@ -24,7 +24,6 @@ module Flapjack
       log.level = ::Logger::INFO
       Blather.logger = log
 
-      # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
       class TextHandler < Nokogiri::XML::SAX::Document
         def initialize
           @chunks = []
@@ -131,7 +130,7 @@ module Flapjack
             presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
-              say(room, "flapjack jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
+              say(room, "flapjack's jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
             end
           end
         end

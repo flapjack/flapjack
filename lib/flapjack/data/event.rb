@@ -234,7 +234,8 @@ module Flapjack
         ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
          'perfdata', 'acknowledgement_id', 'duration', 'initial_failure_delay',
          'repeat_failure_delay'].each do |key|
-          instance_variable_set("@#{key}", attrs[key])
+
+          instance_variable_set("@#{key}", Flapjack.sanitize(attrs[key]))
         end
         # summary is optional. set it to nil if it only contains whitespace
         @summary = (@summary.is_a?(String) && ! @summary.strip.empty?) ? @summary.strip : nil

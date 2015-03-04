@@ -103,8 +103,10 @@ module Flapjack
       # TODO may want to make this protected/private, it's only
       # used in this class
       def refresh
-        self.first_name, self.last_name, self.email =
-          @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
+        fn, ln, em = @redis.hmget("contact:#{@id}", 'first_name', 'last_name', 'email')
+        self.first_name = Flapjack.sanitize(fn)
+        self.last_name  = Flapjack.sanitize(ln)
+        self.email      = Flapjack.sanitize(em)
         self.media = @redis.hgetall("contact_media:#{@id}")
         self.media_intervals = @redis.hgetall("contact_media_intervals:#{self.id}")
         self.media_rollup_thresholds = @redis.hgetall("contact_media_rollup_thresholds:#{self.id}")
