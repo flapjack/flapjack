@@ -163,16 +163,18 @@ module Flapjack
         @pikelet_class.instance_variable_set('@config', @config)
 
         if @config
+          host = @config['host']
           port = @config['port']
           port = port.nil? ? nil : port.to_i
           timeout = @config['timeout']
           timeout = timeout.nil? ? 300 : timeout.to_i
         end
+        host = '127.0.0.1' if (host.nil?)
         port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
         super do
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
-          @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => '127.0.0.1',
+          @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => host,
             :AccessLog => [], :Logger => WEBrick::Log::new("/dev/null", 7))
           @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
           yield @server if block_given?
