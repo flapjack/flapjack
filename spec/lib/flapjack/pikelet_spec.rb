@@ -60,6 +60,7 @@ describe Flapjack::Pikelet do
     expect(Flapjack::Logger).to receive(:new).and_return(logger)
 
     expect(config).to receive(:[]).with('logger').and_return(nil)
+    expect(config).to receive(:[]).with('bind_address').and_return('0.0.0.0')
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
 
