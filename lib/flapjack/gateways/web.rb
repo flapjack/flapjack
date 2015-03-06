@@ -301,13 +301,13 @@ module Flapjack
         redirect back
       end
 
-      patch '/unscheduled_maintenance/checks/:id' do
+      patch '/unscheduled_maintenances/checks/:id' do
         check_id  = params[:id]
 
         check = Flapjack::Data::Check.find_by_id(check_id)
         halt(404, "Could not find check '#{check_id}'") if check.nil?
 
-        check.end_unscheduled_maintenance(Time.now.to_i)
+        check.clear_unscheduled_maintenance(Time.now.to_i)
 
         redirect back
       end
