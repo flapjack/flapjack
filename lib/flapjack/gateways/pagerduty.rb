@@ -235,14 +235,32 @@ module Flapjack
           incident_keys = pg_acks['incidents']['incident_key']
           
           not_empty_credentials_by_check.each_pair do |check, credentials|
-            options = credentials.first.merge('check' => check.name)
-            check2 = opts['check']
-
-            # if check2 is in the pg_acks incidents, make a flapjack acknowledgement
-            if incident_keys[check2].nil?
+            # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+            
+            # if check.name is in the pg_acks incidents, make a flapjack acknowledgement
+            if incident_keys[check.name].nil?
               next
             end
 
+            pg_acknowledged_by = pg_acks['incidents'].first['last_status_change_by']
+            Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+            who_text = ""
+            if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
+              who_text = " by #{pg_acknowledged_by['name']}"
+            end
+
+            # FIXME: decide where the default acknowledgement period should reside and use it
+            # everywhere ... a case for moving configuration into redis (from config file) perhaps?
+            four_hours = 4 * 60 * 60
+            Flapjack::Data::Event.create_acknowledgements(
+              @config['processor_queue'] || 'events',
+              [check],
+              :summary  => "Acknowledged on PagerDuty" + who_text,
+              :duration => four_hours)
+          end
+
+        end
+            
         # returns the pagerduty acknowloedgements
         def pagerduty_acknowledgements
           if @username.blank? || @password.blank?
