@@ -196,13 +196,15 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config)
 
-      result = fpa.send(:pagerduty_acknowledged?, 'check' => check)
+      result = fpa.send(:pagerduty_acknowledgements)
 
+      pg_acknowledged_by = result['incidents'].first['last_status_change_by']
+      
       expect(result).to be_a(Hash)
-      expect(result).to have_key(:pg_acknowledged_by)
-      expect(result[:pg_acknowledged_by]).to be_a(Hash)
-      expect(result[:pg_acknowledged_by]).to have_key('id')
-      expect(result[:pg_acknowledged_by]['id']).to eq('ABCDEFG')
+      expect(result).to have_key(:incidents)
+      expect(pg_acknowledged_by).to be_a(Hash)
+      expect(pg_acknowledged_by).to have_key('id')
+      expect(pg_acknowledged_by['id']).to eq('ABCDEFG')
 
       expect(req).to have_been_requested
     end
