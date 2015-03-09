@@ -169,7 +169,7 @@ module Flapjack
           timeout = @config['timeout']
           timeout = timeout.nil? ? 300 : timeout.to_i
         end
-        bind_address = '127.0.0.1' if (bind_address.nil?)
+        bind_address = '127.0.0.1' if bind_address.nil?
         port = 3001 if (port.nil? || port <= 0 || port > 65535)
 
         super do
