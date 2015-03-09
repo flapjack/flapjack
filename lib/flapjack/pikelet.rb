@@ -168,14 +168,16 @@ module Flapjack
         pikelet_klass.instance_variable_set('@logger', @logger)
 
         if @config
+          @bind_address = @config['bind_address']
           @port = @config['port']
           @port = @port.nil? ? nil : @port.to_i
           @timeout = @config['timeout']
           @timeout = @timeout.nil? ? 300 : @timeout.to_i
         end
+        @bind_address = '0.0.0.0' if (@bind_address.nil?)
         @port = 3001 if (@port.nil? || @port <= 0 || @port > 65535)
 
-        @server = ::Thin::Server.new('0.0.0.0', @port,
+        @server = ::Thin::Server.new(@bind_address, @port,
                     @klass, :signals => false)
         @server.timeout = @timeout
       end
