@@ -77,23 +77,18 @@ module Flapjack
             @logger.debug("processing pagerduty notification service_key: #{alert.address}, entity: #{alert.entity}, " +
                           "check: '#{alert.check}', state: #{alert.state}, summary: #{alert.summary}")
 
-            mydir = File.dirname(__FILE__)
-            message_template_path = case
-            when @config.has_key?('templates') && @config['templates']['alert.text']
-              @config['templates']['alert.text']
-            else
-              mydir + "/pagerduty/alert.text.erb"
-            end
-            message_template = ERB.new(File.read(message_template_path), nil, '-')
+            message_template_erb, message_template =
+              load_template(@config['templates'], 'alert',
+                            'text', File.join(File.dirname(__FILE__), 'pagerduty'))
 
             @alert = alert
             bnd    = binding
 
             begin
-              message = message_template.result(bnd).chomp
+              message = message_template_erb.result(bnd).chomp
             rescue => e
-              @logger.error "Error while excuting the ERB for a pagerduty message, " +
-                "ERB being executed: #{message_template_path}"
+              @logger.error "Error while executing the ERB for a pagerduty message, " +
+                "ERB being executed: #{message_template}"
               raise
             end
 

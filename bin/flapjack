@@ -14,14 +14,19 @@ program_desc 'Flexible monitoring notification routing system'
 version Flapjack::VERSION
 
 desc 'Configuration file to use'
-default_value '/etc/flapjack/flapjack_config.yaml'
-arg_name '/path/to/flapjack.yaml'
-flag [:c,:config]
+flag [:c,:config],
+  :arg_name => '/path/to/flapjack.yaml',
+  :default_value => '/etc/flapjack/flapjack_config.yaml'
 
 desc 'Environment to boot'
-default_value 'production'
-arg_name '<environment>'
-flag [:n, :env, :environment]
+flag [:n, :env, :environment],
+  :arg_name => '<environment>',
+  :default_value => 'production'
+
+desc 'Force UTF-8 encoding'
+switch [:'force-utf8'],
+  :negatable => true,
+  :default_value => true
 
 accept Array do |value|
   value.split(/,/).map(&:strip)

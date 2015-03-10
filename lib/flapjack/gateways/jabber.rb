@@ -24,7 +24,6 @@ module Flapjack
       log.level = ::Logger::INFO
       Blather.logger = log
 
-      # TODO if we use 'xmpp4r' rather than 'blather', port this to 'rexml'
       class TextHandler < Nokogiri::XML::SAX::Document
         def initialize
           @chunks = []
@@ -131,7 +130,7 @@ module Flapjack
             presence << "<x xmlns='http://jabber.org/protocol/muc'><history maxstanzas='0'></x>"
             EventMachine::Synchrony.next_tick do
               write presence
-              say(room, "flapjack jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
+              say(room, "flapjack's jabber gateway started at #{Time.now}, hello! Try typing 'help'.", :groupchat)
             end
           end
         end
@@ -784,23 +783,18 @@ module Flapjack
 
             message_type = alert.rollup ? 'rollup' : 'alert'
 
-            mydir = File.dirname(__FILE__)
-            message_template_path = case
-            when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
-              @config['templates']["#{message_type}.text"]
-            else
-              mydir + "/jabber/#{message_type}.text.erb"
-            end
-            message_template = ERB.new(File.read(message_template_path), nil, '-')
+            message_template_erb, message_template =
+              load_template(@config['templates'], message_type,
+                            'text', File.join(File.dirname(__FILE__), 'jabber'))
 
             @alert = alert
             bnd    = binding
 
             begin
-              message = message_template.result(bnd).chomp
+              message = message_template_erb.result(bnd).chomp
             rescue => e
-              @logger.error "Error while excuting the ERB for a jabber message, " +
-                "ERB being executed: #{message_template_path}"
+              @logger.error "Error while executing the ERB for a jabber message, " +
+                "ERB being executed: #{message_template}"
               raise
             end
 

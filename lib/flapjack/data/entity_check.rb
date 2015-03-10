@@ -1000,8 +1000,8 @@ module Flapjack
 
       def initialize(entity, check, options = {})
         raise "Redis connection not set" unless @redis = options[:redis]
-        raise "Invalid entity (#{entity.inspect})" unless @entity = entity
-        raise "Invalid check (#{check.inspect} on #{entity.inspect})" unless @check = check
+        raise "Invalid entity (#{entity.inspect})" unless @entity = Flapjack.sanitize(entity)
+        raise "Invalid check (#{check.inspect} on #{entity.inspect})" unless @check = Flapjack.sanitize(check)
         @key = "#{entity.name}:#{check}"
         if @redis.zscore("all_checks", @key).nil?
           timestamp = options[:timestamp] || Time.now.to_i

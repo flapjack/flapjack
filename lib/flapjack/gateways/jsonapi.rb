@@ -35,9 +35,9 @@ module Flapjack
 
       JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
-      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json'
       # http://tools.ietf.org/html/rfc6902
-      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
+      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json'
 
       class ContactNotFound < RuntimeError
         attr_reader :contact_id
@@ -138,7 +138,7 @@ module Flapjack
 
           headers = if 'DELETE'.eql?(request_info[:request_method])
             # not set by default for delete, but the error structure is JSON
-            {'Content-Type' => JSONAPI_MEDIA_TYPE}
+            {'Content-Type' => "#{JSONAPI_MEDIA_TYPE}; charset=#{Encoding.default_external}"}
           else
             {}
           end
@@ -281,6 +281,10 @@ module Flapjack
           [status, {}, Flapjack.dump_json(:errors => msg)]
         end
 
+        def charset_for_content_type(ct)
+          "#{ct}; charset=#{Encoding.default_external}"
+        end
+
         def is_json_request?
           Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first)
         end
@@ -404,7 +408,7 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type JSONAPI_MEDIA_TYPE
+        content_type charset_for_content_type(JSONAPI_MEDIA_TYPE)
         cors_headers
         pass
       end
@@ -413,14 +417,14 @@ module Flapjack
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
         halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
+        content_type charset_for_content_type(JSONAPI_MEDIA_TYPE)
         cors_headers
         pass
       end
 
       patch '*' do
         halt(405) unless is_jsonpatch_request?
-        content_type JSONAPI_MEDIA_TYPE
+        content_type charset_for_content_type(JSONAPI_MEDIA_TYPE)
         cors_headers
         pass
       end
