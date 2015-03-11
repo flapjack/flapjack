@@ -67,6 +67,7 @@ describe Flapjack::Pikelet, :logger => true do
   it "creates and starts a http server gateway" do
     expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
+    expect(config).to receive(:[]).with('bind_address').and_return('127.0.0.1')
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
 
@@ -103,6 +104,7 @@ describe Flapjack::Pikelet, :logger => true do
     exc = RuntimeError.new
     expect(config).to receive(:[]).with('logger').and_return(nil)
     expect(config).to receive(:[]).with('max_runs').and_return(nil)
+    expect(config).to receive(:[]).with('bind_address').and_return('127.0.0.1')
     expect(config).to receive(:[]).with('port').and_return(7654)
     expect(config).to receive(:[]).with('timeout').and_return(90)
 

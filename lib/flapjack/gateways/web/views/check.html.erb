@@ -297,7 +297,7 @@
       <tr>
         <td><%= h start_time %></td>
         <td><%= h end_time %></td>
-        <td><%= h(ChronicDuration.output(duration, :keep_zero => true) || '0 secs') %></td>
+        <td><%= h(ChronicDuration.output(duration.round, :keep_zero => true) || '0 secs') %></td>
         <td><%= h summary %></td>
         <td>
         <% if end_time > @current_time %>

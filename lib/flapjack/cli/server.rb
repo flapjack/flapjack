@@ -48,9 +48,15 @@ module Flapjack
           puts "Flapjack is already running."
         else
           print "Flapjack starting..."
-          print "\n" unless @options[:daemonize]
+          main_umask = nil
+          if @options[:daemonize]
+            main_umask = File.umask
+          else
+            print "\n"
+          end
           return_value = nil
           runner.execute(:daemonize => @options[:daemonize]) {
+            File.umask(main_umask) if @options[:daemonize]
             return_value = start_server
           }
           puts " done."
@@ -82,7 +88,10 @@ module Flapjack
         @runner = nil
 
         print "Flapjack starting..."
+
+        main_umask = File.umask
         runner.execute(:daemonize => true) {
+          File.umask(main_umask)
           start_server
         }
         puts " done."
