@@ -37,7 +37,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     get "/contacts/#{contact.id}/links/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:media => [medium.id]))
   end
 
   it 'updates media for a contact' do
@@ -95,7 +95,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     get "/contacts/#{contact.id}/links/rules"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:rules => [rule.id]))
   end
 
   it 'updates rules for a contact' do

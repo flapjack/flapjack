@@ -187,6 +187,23 @@ module Flapjack
         end
       end
 
+      swagger_model :jsonapi_Rule do
+        key :id, :jsonapi_Rule
+        property :rules do
+          key :type, :Rule
+        end
+      end
+
+      swagger_model :jsonapi_Rules do
+        key :id, :jsonapi_Rules
+        property :rules do
+          key :type, :array
+          items do
+            key :type, :Rule
+          end
+        end
+      end
+
       swagger_model :Rule do
         key :id, :Rule
         # key :required, []
@@ -219,6 +236,10 @@ module Flapjack
             key :type, :string
           end
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

@@ -65,6 +65,23 @@ module Flapjack
         Flapjack::Data::Check.intersect(:id => check_ids)
       end
 
+      swagger_model :jsonapi_Contact do
+        key :id, :jsonapi_Contact
+        property :contacts do
+          key :type, :Contact
+        end
+      end
+
+      swagger_model :jsonapi_Contacts do
+        key :id, :jsonapi_Contacts
+        property :contacts do
+          key :type, :array
+          items do
+            key :type, :Contact
+          end
+        end
+      end
+
       swagger_model :Contact do
         key :id, :Contact
         key :required, [:name]
@@ -96,6 +113,10 @@ module Flapjack
             key :type, :string
           end
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

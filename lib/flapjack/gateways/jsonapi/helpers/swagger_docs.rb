@@ -16,11 +16,8 @@ module Flapjack
           class_methods do
 
             def swagger_post(resource, klass)
-
-            end
-
-            def swagger_get(resource, klass)
-              swagger_type = klass.name.demodulize.to_sym
+              swagger_type_single = "jsonapi_#{klass.name.demodulize.singularize}".to_sym
+              single = resource.singularize
 
               swagger_api_root resource.to_sym do
                 key :swaggerVersion, '1.2'
@@ -29,19 +26,52 @@ module Flapjack
                 key :resourcePath, "/#{resource}"
                 api do
                   key :path, "/#{resource}"
-                  key :description, "Operations on #{resource}"
+                  operation do
+                    key :method, 'POST'
+                    key :summary, "Create a #{single}"
+                    key :nickname, "create_#{single}".to_sym
+                    # key :notes, ''
+                    key :consumes, [
+                      JSONAPI_MEDIA_TYPE
+                    ]
+                    key :produces, [
+                      JSONAPI_MEDIA_TYPE
+                    ]
+                    key :"$ref", swagger_type_single
+                    parameter do
+                      key :paramType, :form
+                      key :name, resource.to_sym
+                      key :description, "#{single} object to add"
+                      key :required, true
+                      key :type, swagger_type_single
+                    end
+                    # TODO valid responses
+                  end
+                end
+              end
+            end
+
+            def swagger_get(resource, klass)
+              swagger_type = "jsonapi_#{klass.name.demodulize}".to_sym
+              swagger_type_single = "jsonapi_#{klass.name.demodulize.singularize}".to_sym
+              single = resource.singularize
+
+              swagger_api_root resource.to_sym do
+                key :swaggerVersion, '1.2'
+                key :apiVersion, '2.0.0'
+                key :basePath, '/'
+                key :resourcePath, "/#{resource}"
+                api do
+                  key :path, "/#{resource}"
                   operation do
                     key :method, 'GET'
                     key :summary, "Get all #{resource}"
                     # key :notes, ''
+                    key :nickname, "get_#{resource}".to_sym
                     key :produces, [
                       JSONAPI_MEDIA_TYPE
                     ]
-                    key :type, :array
-                    key :nickname, "get_#{resource}".to_sym
-                    items do
-                      key :'$ref', swagger_type
-                    end
+                    key :'$ref', swagger_type
                     parameter do
                       key :paramType, :query
                       key :name, :page
@@ -80,19 +110,17 @@ module Flapjack
                   end
                 end
 
-                single = resource.singularize
-
                 api do
                   key :path, "/#{resource}/{id}"
                   operation do
                     key :method, 'GET'
-                    key :summary, "Find #{resource} by ID(s)"
-                    key :notes, "Returns one or more #{resource} based on ID(s)"
-                    key :type, swagger_type
+                    key :summary, "Find #{single} by ID"
+                    key :notes, "Returns a #{single} based on ID"
                     key :nickname, "get_#{single}"
                     key :produces, [
                       JSONAPI_MEDIA_TYPE
                     ]
+                    key :"$ref", swagger_type_single
                     parameter do
                       key :paramType, :path
                       key :name, :id

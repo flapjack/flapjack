@@ -65,7 +65,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
     get path, par
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(result))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(result))
   end
 
   [:status, :scheduled_maintenance, :unscheduled_maintenance, :outage,

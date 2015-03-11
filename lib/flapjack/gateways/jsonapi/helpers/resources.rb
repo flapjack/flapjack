@@ -8,16 +8,23 @@ module Flapjack
       module Helpers
         module Resources
 
+          class LinkedData
+            attr_accessor :name, :type, :data
+
+            def initialize(attrs = {})
+              [:name, :type, :data].each do |att|
+                instance_variable_set("@#{att}", attrs[att])
+              end
+            end
+          end
+
           def resource_post(klass, resources_name, options = {})
             resources_data, unwrap = wrapped_params(resources_name)
 
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
-            singular_links, multiple_links = association_klasses(klass)
 
-            validate_data(resources_data, :attributes => attributes,
-              :singular_links => singular_links.keys,
-              :multiple_links => multiple_links.keys)
+            validate_data(resources_data, :attributes => attributes, :klass => klass)
 
             resources = nil
 
@@ -27,78 +34,40 @@ module Flapjack
             data_ids = resources_data.reject {|d| d[idf.to_s].nil? }.
                                       map    {|i| i[idf.to_s].to_s }
 
-            assoc_klasses = singular_links.values.inject([]) {|sl_memo, slv|
-              sl_memo << slv[:data]
-              sl_memo slv[:related] unless (slv[:related].nil? || slv[:related].empty?)
-              sl_memo
-            } | multiple_links.values.inject([]) {|ml_memo, mlv|
-              ml_memo << mlv[:data]
-              ml_memo += mlv[:related] unless (mlv[:related].nil? || mlv[:related].empty?)
-              ml_memo
-            }
-
             attribute_types = klass.attribute_types
 
-            klass.lock(*assoc_klasses) do
+            jsonapi_type = klass.jsonapi_type
+
+            klass.lock do
               unless data_ids.empty?
                 conflicted_ids = klass.intersect(idf => data_ids).ids
-                halt(err(403, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
+                halt(err(409, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
                          conflicted_ids.join(', '))) unless conflicted_ids.empty?
               end
               links_by_resource = resources_data.each_with_object({}) do |rd, memo|
                 record_data = normalise_json_data(attribute_types, rd)
+                type = record_data.delete(:type)
+                halt(err(409, "Resource missing data type")) if type.nil?
+                halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
                 record_data[:id] = record_data[id_field] unless id_field.nil?
                 r = klass.new(record_data)
                 halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
                 memo[r] = rd['links']
               end
 
-              # get linked objects, fail before save if we don't find them
-              resource_links = links_by_resource.each_with_object({}) do |(r, links), memo|
-                next if links.nil?
-
-                singular_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc.to_s)
-                  memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s])
-                end
-
-                multiple_links.each_pair do |assoc, assoc_klass|
-                  next unless links.has_key?(assoc.to_s)
-                  memo[r.object_id] ||= {}
-                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_ids!(*links[assoc.to_s])
-                end
-              end
-
-              links_by_resource.keys.each do |r|
-                r.save
-                rl = resource_links[r.object_id]
-                next if rl.nil?
-                rl.each_pair do |assoc, value|
-                  case value
-                  when Array
-                    r.send(assoc.to_sym).add(*value)
-                  else
-                    r.send("#{assoc}=".to_sym, value)
-                  end
-                end
-              end
-
               resources = links_by_resource.keys
+              resources.each {|r| r.save }
             end
 
-            response.headers['Location'] = "#{request.base_url}/#{resources_name}/#{resources.map(&:id).join(',')}"
+            resource_ids = resources.map(&:id)
 
-            data, links_out, linked = as_jsonapi(klass, resources_name,
-                                                 resources,
-                                                 resources.map(&:id),
-                                                 :unwrap => unwrap)
+            response.headers['Location'] = "#{request.base_url}/#{resources_name}/#{resource_ids.join(',')}"
 
-            json_data = {}
-            json_data.update(:links => links_out) unless links_out.nil? || links_out.empty?
-            json_data.update(resources_name.to_sym => data)
-            json_data.update(:linked => linked) unless linked.nil? || linked.empty?
-            Flapjack.dump_json(json_data)
+            data, _, _ = as_jsonapi(klass, jsonapi_type, resources_name,
+                                      resources, resource_ids,
+                                      :unwrap => unwrap)
+
+            Flapjack.dump_json(:data => {resources_name.to_sym => data})
           end
 
           def resource_get(klass, resources_name, ids, options = {})
@@ -126,17 +95,20 @@ module Flapjack
 
             fields = params[:fields].nil?  ? nil : params[:fields].split(',')
             incl   = params[:include].nil? ? nil : params[:include].split(',')
-            data, links_out, linked = as_jsonapi(klass, resources_name, resources,
-                                      (ids || resources.map(&:id)),
-                                      :fields => fields, :include => incl,
-                                      :unwrap => unwrap)
+            data, _, included = as_jsonapi(klass, klass.jsonapi_type,
+                                         resources_name, resources,
+                                         (ids || resources.map(&:id)),
+                                         :fields => fields, :include => incl,
+                                         :unwrap => unwrap)
 
             json_data = {}
-            json_data.update(:links => links_out) unless links_out.nil? || links_out.empty?
+            # json_data.update(:links => links_out) unless links_out.nil? || links_out.empty?
             json_data.update(resources_name.to_sym => data)
-            json_data.update(:linked => linked) unless linked.nil? || linked.empty?
-            json_data.update(:meta => meta) unless meta.nil? || meta.empty?
-            Flapjack.dump_json(json_data)
+
+            output = {:data => json_data}
+            output.update(:included => included) unless included.nil? || included.empty?
+            output.update(:meta => meta) unless meta.nil? || meta.empty?
+            Flapjack.dump_json(output)
           end
 
           def resource_put(klass, resources_name, ids, options = {})
@@ -146,7 +118,8 @@ module Flapjack
               klass.jsonapi_attributes : []
             validate_data(resources_data, :attributes => attributes,
               :singular_links => singular_links.keys,
-              :multiple_links => multiple_links.keys)
+              :multiple_links => multiple_links.keys,
+              :klass => klass)
             resources = klass.find_by_ids!(*ids)
 
             if resources_data.map {|d| d['id'] }.sort != ids.sort
@@ -165,9 +138,17 @@ module Flapjack
 
             attribute_types = klass.attribute_types
 
+            jsonapi_type = klass.jsonapi_type
+
             resource_links = resources_data.each_with_object({}) do |d, memo|
               r = resources_by_id[d['id']]
-              normalise_json_data(attribute_types, d).each_pair do |att, value|
+              rd = normalise_json_data(attribute_types, d)
+
+              type = rd.delete(:type)
+              halt(err(409, "Resource missing data type")) if type.nil?
+              halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
+
+              rd.each_pair do |att, value|
                 next unless attributes.include?(att.to_sym)
                 r.send("#{att}=".to_sym, value)
               end
@@ -178,7 +159,7 @@ module Flapjack
               singular_links.each_pair do |assoc, assoc_klass|
                 next unless links.has_key?(assoc.to_s)
                 memo[r.id] ||= {}
-                memo[r.id][assoc] = assoc_klass[:data].find_by_id!(links[assoc])
+                memo[r.id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['id'])
               end
 
               multiple_links.each_pair do |assoc, assoc_klass|
@@ -186,8 +167,10 @@ module Flapjack
                 current_assoc_ids = r.send(assoc.to_sym).ids
                 memo[r.id] ||= {}
 
-                to_remove = current_assoc_ids - links[assoc.to_s]
-                to_add    = links[assoc.to_s] - current_assoc_ids
+                link_ids = links[assoc.to_s]['id']
+
+                to_remove = current_assoc_ids - link_ids
+                to_add    = link_ids - current_assoc_ids
 
                 memo[r.id][assoc] = [
                   to_remove.empty? ? [] : assoc_klass[:data].find_by_ids!(*to_remove),
@@ -231,6 +214,100 @@ module Flapjack
 
           private
 
+          # TODO refactor some of these methods into a module, included in data/ classes
+
+          def validate_data(data, options = {})
+            valid_keys = ((options[:attributes] || []).map(&:to_s) + ['id', 'type', 'links'])
+            sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
+            ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
+            all_links = sl + ml
+            klass = options[:klass]
+
+            data.each do |d|
+              invalid_keys = d.keys - valid_keys
+              halt(err(403, "Invalid attribute(s): #{invalid_keys.join(', ')}")) unless invalid_keys.empty?
+              links = d['links']
+              unless links.nil?
+                halt(err(403, "Link(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
+                  links.keys.all? {|k| k.is_a?(String)}
+                invalid_links = links.keys - all_links
+                halt(err(404, "Link(s) not found: #{invalid_links.join(', ')}")) unless invalid_links.empty?
+                links.each_pair do |k, v|
+
+                  if sl.include?(k)
+                    unless v.nil?
+                      if !v['id'].nil? && !v['type'].nil?
+                        unless is_link_type?(k, v['type'], :klass => klass)
+                          halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
+                        end
+
+                        unless v['id'].is_a?(String)
+                          halt(err(403, "Linked '#{k}' 'id' must be a String" ))
+                        end
+                      else
+                        halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields"))
+                      end
+                    end
+                  elsif !v.is_a?(Hash)
+                    halt(err(403, "Linked '#{k}' must be a Hash"))
+                  # # Flapjack does not support heterogenous to_many types
+                  # elsif !v['data'].nil?
+                  #   if v['data'].is_a?(Array) && !v['data'].empty?
+                  #     halt(err(403, "Linked '#{k}' 'data' Array objects must all have 'id' and 'type' fields")) unless v['data'].all? {|vv|
+                  #       vv.has_key?('id') && vv['id'].is_a?(String) &&
+                  #       vv.has_key?('type') && vv['type'].is_a?(String)
+                  #     }
+
+                  #     bad_type = v['data'].detect {|vv| !is_link_type?(k, vv['type'], :klass => klass)}
+
+                  #     unless bad_type.nil?
+                  #       halt(err(403, "Linked '#{k}' 'data' Array object has wrong type #{bad_type['type']}"))
+                  #     end
+                  #   else
+                  #     halt(err(403, "Linked '#{k}' 'data' must be an Array"))
+                  #   end
+                  elsif !v['id'].nil? && !v['type'].nil?
+                    unless is_link_type?(k, v['type'], :klass => klass)
+                      halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
+                    end
+
+                    unless v['id'].is_a?(Array) && v['id'].all? {|vv| vv.is_a?(String)}
+                      halt(err(403, "Linked '#{k}' 'id' must be an Array of Strings"))
+                    end
+                  else
+                    halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields, or a 'data' Array"))
+                  end
+                end
+              end
+            end
+          end
+
+          def is_link_type?(link_name, type, options = {})
+            klass = options[:klass]
+            klass_type = nil
+
+            # SMELL mucking about with a zermelo protected method...
+            klass.send(:with_association_data, link_name.to_sym) do |ad|
+              klass_type = ad.data_klass.name.demodulize.underscore
+            end
+
+            type == klass_type
+          end
+
+          def normalise_json_data(attribute_types, data)
+            record_data = data.reject {|k| 'links'.eql?(k)}
+            attribute_types.each_pair do |name, type|
+              t = record_data[name.to_s]
+              next unless t.is_a?(String) && :timestamp.eql?(type)
+              begin
+                record_data[name.to_s] = DateTime.parse(t)
+              rescue ArgumentError
+                record_data[name.to_s] = nil
+              end
+            end
+            symbolize(record_data)
+          end
+
           def association_klasses(klass)
             singular = klass.respond_to?(:jsonapi_singular_associations) ?
               klass.jsonapi_singular_associations : []
@@ -261,7 +338,7 @@ module Flapjack
             [singular_links, multiple_links]
           end
 
-          def jsonapi_linkages(klass, resource_ids)
+          def jsonapi_linkages(klass, resource_ids, opts = {})
             singular = klass.respond_to?(:jsonapi_singular_associations) ?
               klass.jsonapi_singular_associations : []
             multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
@@ -271,8 +348,21 @@ module Flapjack
             multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
 
             links = (singular_names + multiple_names).each_with_object({}) do |n, memo|
-              memo[n] = resource_ids.empty? ? {} :
-                klass.intersect(:id => resource_ids).associated_ids_for(n)
+              memo[n] = if !opts[:resolve].nil? && opts[:resolve].include?(n.to_s)
+                data = resource_ids.empty? ? {} :
+                  klass.intersect(:id => resource_ids).associated_ids_for(n)
+
+                type = nil
+
+                # SMELL mucking about with a zermelo protected method...
+                klass.send(:with_association_data, n.to_sym) do |ad|
+                  type = ad.data_klass.name.demodulize.underscore
+                end
+
+                LinkedData.new(:name => n, :type => type, :data => data)
+              else
+                nil
+              end
             end
 
             aliases = [singular_aliases.inject({}, :merge),
@@ -280,15 +370,30 @@ module Flapjack
 
             aliased_links = aliases.each_with_object({}) do |(n, a), memo|
               next if memo.has_key?(a)
-              memo[a] = resource_ids.empty? ? {} :
-                klass.intersect(:id => resource_ids).associated_ids_for(n)
+              memo[a] = if !opts[:resolve].nil? && opts[:resolve].include?(a.to_s)
+
+                data = resource_ids.empty? ? {} :
+                  klass.intersect(:id => resource_ids).associated_ids_for(n)
+
+                type = nil
+
+                # SMELL mucking about with a zermelo protected method...
+                klass.send(:with_association_data, n.to_sym) do |ad|
+                  type = ad.data_klass.name.demodulize.underscore
+                end
+
+                LinkedData.new(:name => a, :type => type, :data => data)
+              else
+                nil
+              end
             end
 
             links.update(aliased_links)
             links
           end
 
-          def as_jsonapi(klass, resources_name, resources, resource_ids, options = {})
+          def as_jsonapi(klass, jsonapi_type, resources_name, resources,
+                         resource_ids, options = {})
             linked = nil
 
             incl   = options[:include] || []
@@ -303,40 +408,74 @@ module Flapjack
               Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
             end
 
-            links_out = {}
+            # links_out = {}
 
-            links = jsonapi_linkages(klass, resource_ids)
+            links = jsonapi_linkages(klass, resource_ids, :resolve => incl)
 
-            links.each_pair do |k, v|
-              next unless v.any? {|id, vv| vv.is_a?(String) || (vv.is_a?(Array) && !vv.empty?) }
-              lo_name = "#{resources_name}.#{k}"
-              links_out[lo_name] = "#{request.base_url}/#{k.to_s.pluralize}/{#{lo_name}}"
-            end
+            # links.each_pair do |k, v|
+            #   next unless v.any? {|id, vv| vv.is_a?(String) || (vv.is_a?(Array) && !vv.empty?) }
+            #   lo_name = "#{resources_name}.#{k}"
+            #   links_out[lo_name] = "#{request.base_url}/#{k.to_s.pluralize}/{#{lo_name}}"
+            # end
 
             unless incl.empty?
-              linked    = {}
+              linked    = []
               ids_cache = {}
               included  = incl.collect {|i| i.split('.')}.sort_by(&:length)
+
+              # TODO can this be replaced by the resources method param?
+              retr_resources = klass.intersect(:id => resource_ids)
+
               included.each do |incl_clause|
                 linked_data, links_data = data_for_include_clause(ids_cache,
-                  klass, klass.intersect(:id => resource_ids), [], incl_clause)
-                linked.update(linked_data)
-                links_out.update(links_data) unless links_data.nil? || links_data.empty?
+                  klass, retr_resources, [], incl_clause)
+                case linked_data
+                when Array
+                  linked += linked_data
+                when Hash
+                  linked += [linked_data]
+                end
+                # links_out.update(links_data) unless links_data.nil? || links_data.empty?
               end
             end
 
             resources_as_json = resources.collect do |r|
               l = links.keys.each_with_object({}) do |v, memo|
-                memo[v] = links[v][r.id]
+
+                link_data = links[v]
+
+                if link_data.nil?
+                  memo[v] = "#{request.base_url}/#{resources_name}/#{r.id}/#{v}"
+                else
+                  memo[v] = {
+                    :self    => "#{request.base_url}/#{resources_name}/#{r.id}/links/#{v}",
+                    :related => "#{request.base_url}/#{resources_name}/#{r.id}/#{v}",
+                    :type    => link_data.type,
+                  }
+
+                  ids = link_data.data[r.id]
+                  case ids
+                  when Array
+                    memo[v].update(:ids => ids)
+                  when String
+                    memo[v].update(:id => ids)
+                  end
+                end
               end
-              r.as_json(:only => jsonapi_fields).merge(:links => l)
+              data = r.as_json(:only => jsonapi_fields).merge(
+                :id    => r.id,
+                :type  => jsonapi_type,
+                :links => {:self => "#{request.base_url}/#{resources_name}/#{r.id}"}
+              )
+              data[:links].update(l) unless l.nil? || l.empty?
+              data
             end
 
             if (resources_as_json.size == 1) && options[:unwrap].is_a?(TrueClass)
               resources_as_json = resources_as_json.first
             end
 
-            [resources_as_json, links_out, linked]
+            [resources_as_json, nil, linked]
           end
 
           def resource_sort(klass, options = {})
@@ -352,46 +491,6 @@ module Flapjack
             end
 
             klass.sort(sort_opts)
-          end
-
-          def validate_data(data, options = {})
-            valid_keys = ((options[:attributes] || []).map(&:to_s) + ['links']) | ['id']
-            sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
-            ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
-            all_links = sl + ml
-
-            data.each do |d|
-              invalid_keys = d.keys - valid_keys
-              halt(err(403, "Invalid attribute(s): #{invalid_keys.join(', ')}")) unless invalid_keys.empty?
-              links = d['links']
-              unless links.nil?
-                halt(err(403, "Link(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
-                  links.keys.all? {|k| k.is_a?(String)}
-                invalid_links = links.keys - all_links
-                halt(err(403, "Invalid link(s): #{invalid_links.join(', ')}")) unless invalid_links.empty?
-                links.each_pair do |k, v|
-                  if sl.include?(k)
-                    halt(err(403, "Value for linked '#{k}' must be a String")) unless v.is_a?(String)
-                  elsif !v.is_a?(Array) || v.any? {|vv| !vv.is_a?(String)}
-                    halt(err(403, "Value for linked '#{k}' must be an Array of Strings"))
-                  end
-                end
-              end
-            end
-          end
-
-          def normalise_json_data(attribute_types, data)
-            record_data = data.reject {|k| 'links'.eql?(k)}
-            attribute_types.each_pair do |name, type|
-              t = record_data[name.to_s]
-              next unless t.is_a?(String) && :timestamp.eql?(type)
-              begin
-                record_data[name.to_s] = DateTime.parse(t)
-              rescue ArgumentError
-                record_data[name.to_s] = nil
-              end
-            end
-            symbolize(record_data)
           end
 
           def paginate_get(dataset, options = {})
@@ -447,7 +546,8 @@ module Flapjack
           end
 
           def data_for_include_clause(ids_cache, parent_klass, parent_resources, clause_done, clause_left)
-            clause_fragment = clause_left.shift
+            cl = clause_left.dup
+            clause_fragment = cl.shift
 
             fragment_klass = nil
 
@@ -480,16 +580,16 @@ module Flapjack
 
             fragment_resources = fragment_klass.intersect(:id => fragment_ids)
 
-            if clause_left.size > 0
+            if cl.size > 0
               data_for_include_clause(ids_cache, fragment_klass, fragment_resources,
-                                      clause_done, clause_left)
+                                      clause_done, cl)
             else
               # reached the end, ensure that data is stored as needed
-              fragment_name = fragment_klass.name.split('::').last.downcase.pluralize
+              fragment_name = fragment_klass.name.demodulize.underscore.pluralize
               fragment_json, fragment_links, _ = as_jsonapi(fragment_klass,
-                fragment_name, fragment_resources, fragment_ids,
-                :unwrap => false)
-              [{fragment_name.to_sym => fragment_json}, fragment_links]
+                fragment_klass.jsonapi_type, fragment_name, fragment_resources,
+                fragment_ids, :unwrap => false)
+              [fragment_json, fragment_links]
             end
           end
         end

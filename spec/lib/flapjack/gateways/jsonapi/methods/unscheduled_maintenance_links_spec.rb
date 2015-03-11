@@ -35,7 +35,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => check.id))
   end
 
   it 'changes the check for a unscheduled maintenance period' do

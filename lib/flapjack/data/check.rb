@@ -150,6 +150,23 @@ module Flapjack
 
       attr_accessor :count
 
+      swagger_model :jsonapi_Check do
+        key :id, :jsonapi_Check
+        property :checks do
+          key :type, :Check
+        end
+      end
+
+      swagger_model :jsonapi_Checks do
+        key :id, :jsonapi_Checks
+        property :checks do
+          key :type, :array
+          items do
+            key :type, :Check
+          end
+        end
+      end
+
       swagger_model :Check do
         key :id, :Check
         key :required, [:name, :enabled]
@@ -175,6 +192,10 @@ module Flapjack
             key :type, :string
           end
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

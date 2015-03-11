@@ -35,7 +35,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     get "/media/#{medium.id}/links/contact"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:contacts => contact.id))
   end
 
   it 'changes the contact for a medium' do
@@ -89,7 +89,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     get "/media/#{medium.id}/links/rules"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:rules => [rule.id]))
   end
 
   it 'updates rules for a medium' do

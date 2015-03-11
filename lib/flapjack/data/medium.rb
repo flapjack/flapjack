@@ -73,6 +73,23 @@ module Flapjack
         end
       end
 
+      swagger_model :jsonapi_Medium do
+        key :id, :jsonapi_Medium
+        property :media do
+          key :type, :Medium
+        end
+      end
+
+      swagger_model :jsonapi_Media do
+        key :id, :jsonapi_Medium
+        property :media do
+          key :type, :array
+          items do
+            key :type, :Medium
+          end
+        end
+      end
+
       swagger_model :Medium do
         key :id, :Medium
         # would require interval & rollup_threshold, but pagerduty :(
@@ -108,6 +125,10 @@ module Flapjack
             key :type, :string
           end
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

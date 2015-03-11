@@ -9,19 +9,19 @@ module JsonapiHelper
     let(:redis)           { double(::Redis) }
 
     let(:jsonapi_post_env) {
-      {'CONTENT_TYPE' => 'application/json',
-       'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+      {'CONTENT_TYPE' => 'application/vnd.api+json; ext=bulk; charset=UTF-8',
+       'HTTP_ACCEPT'  => 'application/vnd.api+json'}
     }
 
     let(:jsonapi_put_env) {
-      {'CONTENT_TYPE' => 'application/json',
-       'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+      {'CONTENT_TYPE' => 'application/vnd.api+json; ext=bulk; charset=UTF-8',
+       'HTTP_ACCEPT'  => 'application/vnd.api+json'}
     }
 
-    let(:jsonapi_patch_env) {
-      {'CONTENT_TYPE' => 'application/json-patch+json',
-       'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
-    }
+    # let(:jsonapi_patch_env) {
+    #   {'CONTENT_TYPE' => 'application/json-patch+json',
+    #    'HTTP_ACCEPT'  => 'application/json; q=0.8, application/vnd.api+json'}
+    # }
 
     before(:all) do
       Flapjack::Gateways::JSONAPI.class_eval {

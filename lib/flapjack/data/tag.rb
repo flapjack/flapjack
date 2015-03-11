@@ -55,6 +55,27 @@ module Flapjack
         !self.changed.include?('name')
       end
 
+      swagger_model :jsonapi_Tag do
+        key :id, :jsonapi_Tag
+        property :tags do
+          key :type, :Tag
+        end
+      end
+
+      swagger_model :jsonapi_Tags do
+        key :id, :jsonapi_Tags
+        property :tags do
+          key :type, :array
+          items do
+            key :type, :Tag
+          end
+        end
+      end
+
+      def self.jsonapi_type
+        self.class.name.demodulize.underscore
+      end
+
       swagger_model :Tag do
         key :id, :Tag
         key :required, [:name]
@@ -83,6 +104,10 @@ module Flapjack
             key :type, :string
           end
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_id

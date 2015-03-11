@@ -32,9 +32,15 @@ module Flapjack
 
       include Flapjack::Utility
 
+      # TODO check that all of these are still allowed
       JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
+
+      # TODO clean up media type handling for variable character sets
+
+      # http://jsonapi.org/extensions/bulk/
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
-      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
+      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; ext=bulk; charset=utf-8'
+
       # http://tools.ietf.org/html/rfc6902
       JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
@@ -52,10 +58,8 @@ module Flapjack
         end
       end
 
-      ['config'].each do |class_inst_var|
-        define_method(class_inst_var.to_sym) do
-          self.class.instance_variable_get("@#{class_inst_var}")
-        end
+      def config
+        self.class.instance_variable_get("@config")
       end
 
       before do
@@ -168,7 +172,7 @@ module Flapjack
          rule_links rules tag_links tags
          scheduled_maintenance_links scheduled_maintenances
          unscheduled_maintenance_links unscheduled_maintenances
-         reports searches test_notifications].each do |method|
+         reports test_notifications].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"

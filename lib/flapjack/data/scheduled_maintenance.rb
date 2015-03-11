@@ -41,6 +41,23 @@ module Flapjack
         self.check_by_end   = c
       end
 
+      swagger_model :jsonapi_ScheduledMaintenance do
+        key :id, :jsonapi_ScheduledMaintenance
+        property :scheduled_maintenances do
+          key :type, :ScheduledMaintenance
+        end
+      end
+
+      swagger_model :jsonapi_ScheduledMaintenances do
+        key :id, :jsonapi_ScheduledMaintenances
+        property :scheduled_maintenances do
+          key :type, :array
+          items do
+            key :type, :ScheduledMaintenance
+          end
+        end
+      end
+
       swagger_model :ScheduledMaintenance do
         key :id, :ScheduledMaintenance
         key :required, [:start_time, :end_time]
@@ -65,6 +82,10 @@ module Flapjack
         property :check do
           key :type, :string
         end
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

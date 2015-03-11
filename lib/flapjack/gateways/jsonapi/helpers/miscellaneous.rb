@@ -7,12 +7,13 @@ module Flapjack
         module Miscellaneous
 
           def wrapped_params(name, options = {})
-            result = params[name.to_s]
+            data_wrap = params['data']
+            result = data_wrap.nil? ? nil : data_wrap[name.to_s]
             if result.nil?
               if options[:error_on_nil].is_a?(FalseClass)
                 result = []
               else
-                logger.debug("No '#{name}' object found in the following supplied JSON:")
+                logger.debug("No '#{name}' object found in 'data' in the supplied JSON:")
                 logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
                 halt err(403, "No '#{name}' object received")
               end

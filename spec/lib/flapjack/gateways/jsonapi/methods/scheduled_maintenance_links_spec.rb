@@ -35,7 +35,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => check.id))
   end
 
   it 'changes the check for a scheduled maintenance period' do

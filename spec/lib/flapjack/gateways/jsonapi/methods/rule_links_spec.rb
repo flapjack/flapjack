@@ -37,7 +37,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     get "/rules/#{rule.id}/links/contact"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:contacts => contact.id))
   end
 
   it 'changes the contact for a rule' do
@@ -91,7 +91,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     get "/rules/#{rule.id}/links/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:media => [medium.id]))
   end
 
   it 'updates media for a rule' do
@@ -150,7 +150,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     get "/rules/#{rule.id}/links/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag.id]))
   end
 
   it 'updates tags for a rule' do

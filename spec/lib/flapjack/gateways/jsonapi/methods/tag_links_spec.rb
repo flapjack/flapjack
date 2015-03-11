@@ -39,7 +39,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
     get "/tags/#{tag.id}/links/checks"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => [check.id]))
   end
 
   it 'updates checks for a tag' do
@@ -99,7 +99,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
     get "/tags/#{tag.id}/links/rules"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:rules => [rule.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:rules => [rule.id]))
   end
 
   it 'updates rules for a tag' do

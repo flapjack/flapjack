@@ -11,15 +11,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "creates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
+      with(no_args).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
-    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
     expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).exactly(3).times.and_return(empty_ids, full_ids, full_ids)
+      with(:id => [contact_data[:id]]).and_return(empty_ids)
 
     expect(contact).to receive(:invalid?).and_return(false)
     expect(contact).to receive(:save).and_return(true)
@@ -29,19 +26,22 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
 
-    post "/contacts", Flapjack.dump_json(:contacts => contact_data), jsonapi_post_env
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
+    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_post_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data.merge(:links =>
-    {
-      :media => [],
-      :rules => []
-    }
-    )))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
+      :contacts => contact_data.merge(
+        :type => 'contact',
+        :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                   :media => "http://example.org/contacts/#{contact.id}/media",
+                   :rules => "http://example.org/contacts/#{contact.id}/rules"})
+      }
+    ))
   end
 
   it "does not create a contact if the data is improperly formatted" do
-    expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule).and_yield
+    expect(Flapjack::Data::Contact).to receive(:lock).with(no_args).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -56,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
-    post "/contacts", Flapjack.dump_json(:contacts => contact_data), jsonapi_post_env
+    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_post_env
     expect(last_response.status).to eq(403)
   end
 
@@ -77,42 +77,41 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
       and_return(sorted)
 
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
-    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
-    expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).twice.and_return(full_ids)
-
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
 
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
     get '/contacts'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => [contact_data.merge(:links => {
-      :media => [],
-      :rules => []
-    })], :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
+      :contacts => [contact_data.merge(
+        :type => 'contact',
+        :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                   :media => "http://example.org/contacts/#{contact.id}/media",
+                   :rules => "http://example.org/contacts/#{contact.id}/rules"})
+      ]}, :meta => meta))
   end
 
   it "returns a contact" do
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)
 
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:media).and_return({contact.id => []})
-    expect(full_ids).to receive(:associated_ids_for).with(:rules).and_return({contact.id => []})
-    expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).twice.and_return(full_ids)
-
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
 
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact_data.merge(:links => {
-      :media => [],
-      :rules => []
-    })))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
+      :contacts => contact_data.merge(
+        :type => 'contact',
+        :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                   :media => "http://example.org/contacts/#{contact.id}/media",
+                   :rules => "http://example.org/contacts/#{contact.id}/rules"})
+      }
+    ))
   end
 
   it "does not return a contact that does not exist" do
@@ -132,7 +131,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:save).and_return(true)
 
     put "/contacts/#{contact.id}",
-      Flapjack.dump_json(:contacts => {:id => contact.id, :name => 'Elias Ericsson'}),
+      Flapjack.dump_json(:data => {:contacts => {:id => contact.id,
+        :type => 'contact', :name => 'Elias Ericsson'}}),
       jsonapi_put_env
     expect(last_response.status).to eq(204)
   end

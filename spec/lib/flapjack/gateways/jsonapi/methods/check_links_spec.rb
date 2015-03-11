@@ -36,7 +36,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
 
     get "/checks/#{check.id}/links/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag.id]))
   end
 
   it 'updates tags for a check' do

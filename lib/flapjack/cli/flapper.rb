@@ -130,10 +130,8 @@ module Flapjack
                 fds = [acceptor]
 
                 while true
-                  # puts 'loop'
                   if ios = select(fds, [], [], 10)
                     reads = ios.first
-                    # p reads
                     reads.each do |client|
                       if client == acceptor
                         puts 'Someone connected to server. Adding socket to fds.'
@@ -147,9 +145,7 @@ module Flapjack
                         # Perform a blocking-read until new-line is encountered.
                         # We know the client is writing, so as long as it adheres to the
                         # new-line protocol, we shouldn't block for very long.
-                        # puts "Reading..."
                         data = client.gets("\n")
-                        # client.puts(">>you sent: #{data}")
                         if data =~ /quit/i
                           fds.delete(client)
                           client.close
