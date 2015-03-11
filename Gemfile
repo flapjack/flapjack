@@ -10,7 +10,7 @@ end
 
 group :test do
   gem 'rspec'
-  gem 'cucumber', '>= 2.0.0.beta.3'
+  gem 'cucumber', '>= 2.0.0.rc.4'
   gem 'delorean'
   gem 'rack-test'
   gem 'webmock'
