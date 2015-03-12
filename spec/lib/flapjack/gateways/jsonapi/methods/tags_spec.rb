@@ -32,7 +32,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
-    post "/tags", Flapjack.dump_json(:data => {:tags => tag_data.merge(:type => 'tag')}), jsonapi_post_env
+    post "/tags", Flapjack.dump_json(:data => {:tags => tag_data.merge(:type => 'tag')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :tags => tag_data_with_id.merge(
@@ -137,10 +137,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
-    put "/tags/#{tag.id}",
+    patch "/tags/#{tag.id}",
       Flapjack.dump_json(:data => {:tags => {:id => tag.id, :type => 'tag', :links =>
         {:checks => {:type => 'check', :id => [check.id]}}}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

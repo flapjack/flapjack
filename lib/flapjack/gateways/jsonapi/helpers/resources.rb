@@ -115,7 +115,7 @@ module Flapjack
             Flapjack.dump_json(output)
           end
 
-          def resource_put(klass, resources_name, ids, options = {})
+          def resource_patch(klass, resources_name, ids, options = {})
             resources_data, _ = wrapped_params(resources_name)
             singular_links, multiple_links = association_klasses(klass)
             attributes = klass.respond_to?(:jsonapi_attributes) ?

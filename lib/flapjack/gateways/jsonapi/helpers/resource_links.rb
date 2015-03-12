@@ -84,7 +84,7 @@ module Flapjack
             Flapjack.dump_json(:links => links, :data => data)
           end
 
-          def resource_put_links(klass, resources_name, id, assoc_name)
+          def resource_patch_links(klass, resources_name, id, assoc_name)
             assoc_ids, _ = wrapped_link_params(assoc_name)
 
             resource = klass.find_by_id!(id)

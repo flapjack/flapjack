@@ -41,10 +41,10 @@ module Flapjack
                            :sort => :id)
             end
 
-            app.put %r{^/media/(.+)$} do
+            app.patch %r{^/media/(.+)$} do
               medium_ids    = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Medium, 'media', medium_ids)
+              resource_patch(Flapjack::Data::Medium, 'media', medium_ids)
               status 204
             end
 

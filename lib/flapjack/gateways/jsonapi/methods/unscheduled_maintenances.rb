@@ -43,10 +43,10 @@ module Flapjack
                            :sort => :timestamp)
             end
 
-            app.put %r{^/unscheduled_maintenances/(.+)$} do
+            app.patch %r{^/unscheduled_maintenances/(.+)$} do
               unscheduled_maintenance_ids = params[:captures][0].split(',')
 
-              resource_put(Flapjack::Data::UnscheduledMaintenance,
+              resource_patch(Flapjack::Data::UnscheduledMaintenance,
                 'unscheduled_maintenances', unscheduled_maintenance_ids)
               status 204
             end

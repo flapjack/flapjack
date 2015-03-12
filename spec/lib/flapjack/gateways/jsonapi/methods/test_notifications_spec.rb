@@ -17,7 +17,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
 
   #   post "/test_notifications",
   #     Flapjack.dump_json(:test_notifications => notification_data.merge(:links => {:checks => [check.id]})),
-  #     jsonapi_post_env
+  #     jsonapi_env
   #   expect(last_response.status).to eq(201)
   #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
   #     :test_notifications => notification_data.merge(:links => {:checks => [check.id]})
@@ -33,7 +33,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
 
   #   post "/test_notifications",
   #     Flapjack.dump_json(:test_notifications => notification_data.merge(:links => {:checks => [check.id, check_2.id]})),
-  #     jsonapi_post_env
+  #     jsonapi_env
   #   expect(last_response.status).to eq(201)
   #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => :test_notifications =>
   #     notification_data.merge(:links => {:checks => [check.id, check_2.id]})
@@ -52,7 +52,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
   #       notification_data.merge(:links => {:checks => [check.id]}),
   #       notification_2_data.merge(:links => {:checks => [check.id]})
   #     ]),
-  #     jsonapi_post_env
+  #     jsonapi_env
   #   expect(last_response.status).to eq(201)
   #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:test_notifications => [
   #     notification_data.merge(:links => {:checks => [check.id]}),
@@ -72,7 +72,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
   #       notification_data.merge(:links => {:checks => [check.id, check_2.id]}),
   #       notification_2_data.merge(:links => {:checks => [check.id, check_2.id]})
   #     ]),
-  #     jsonapi_post_env
+  #     jsonapi_env
   #   expect(last_response.status).to eq(201)
   #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:test_notifications => [
   #     notification_data.merge(:links => {:checks => [check.id, check_2.id]}),

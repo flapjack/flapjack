@@ -28,7 +28,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
 
-    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_post_env
+    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :contacts => contact_data.merge(
@@ -56,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
-    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_post_env
+    post "/contacts", Flapjack.dump_json(:data => {:contacts => contact_data.merge(:type => 'contact')}), jsonapi_env
     expect(last_response.status).to eq(403)
   end
 
@@ -130,10 +130,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:invalid?).and_return(false)
     expect(contact).to receive(:save).and_return(true)
 
-    put "/contacts/#{contact.id}",
+    patch "/contacts/#{contact.id}",
       Flapjack.dump_json(:data => {:contacts => {:id => contact.id,
         :type => 'contact', :name => 'Elias Ericsson'}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

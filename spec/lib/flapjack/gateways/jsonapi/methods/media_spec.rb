@@ -29,7 +29,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     expect(Flapjack::Data::Medium).to receive(:jsonapi_type).and_return('medium')
 
-    post "/media", Flapjack.dump_json(:data => {:media => email_data.merge(:type => 'medium')}), jsonapi_post_env
+    post "/media", Flapjack.dump_json(:data => {:media => email_data.merge(:type => 'medium')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :media => email_data.merge(
@@ -57,7 +57,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    post "/media", Flapjack.dump_json(:data => {:media => email_data.merge(:type => 'medium')}), jsonapi_post_env
+    post "/media", Flapjack.dump_json(:data => {:media => email_data.merge(:type => 'medium')}), jsonapi_env
     expect(last_response.status).to eq(403)
     # TODO error body
   end
@@ -129,9 +129,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium).to receive(:invalid?).and_return(false)
     expect(medium).to receive(:save).and_return(true)
 
-    put "/media/#{medium.id}",
+    patch "/media/#{medium.id}",
       Flapjack.dump_json(:data => {:media => {:id => medium.id, :type => 'medium', :address => '12345'}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -147,12 +147,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium_2).to receive(:invalid?).and_return(false)
     expect(medium_2).to receive(:save).and_return(true)
 
-    put "/media/#{medium.id},#{medium_2.id}",
+    patch "/media/#{medium.id},#{medium_2.id}",
       Flapjack.dump_json(:data => {:media => [
         {:id => medium.id, :type => 'medium', :address => '12345'},
         {:id => medium_2.id, :type => 'medium', :interval => 120}
       ]}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -160,9 +160,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id).and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
 
-    put "/media/#{medium.id}",
+    patch "/media/#{medium.id}",
       Flapjack.dump_json(:data => {:media => {:id => medium.id, :type => 'medium', :address => '12345'}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(404)
   end
 

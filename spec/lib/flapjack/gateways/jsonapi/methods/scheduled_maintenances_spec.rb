@@ -30,7 +30,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:jsonapi_type).and_return('scheduled_maintenance')
 
-    post "/scheduled_maintenances", Flapjack.dump_json(:data => {:scheduled_maintenances => scheduled_maintenance_data.merge(:type => 'scheduled_maintenance')}), jsonapi_post_env
+    post "/scheduled_maintenances", Flapjack.dump_json(:data => {:scheduled_maintenances => scheduled_maintenance_data.merge(:type => 'scheduled_maintenance')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :scheduled_maintenances => scheduled_maintenance_data.merge(
@@ -60,7 +60,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     post "/scheduled_maintenances",
       Flapjack.dump_json(:data => {:scheduled_maintenances => bad_data.merge(:type => 'scheduled_maintenance')}),
-      jsonapi_post_env
+      jsonapi_env
     expect(last_response.status).to eq(403)
   end
 

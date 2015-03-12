@@ -42,10 +42,10 @@ module Flapjack
                            requested_contacts, :sort => :name)
             end
 
-            app.put %r{^/contacts/(.+)$} do
+            app.patch %r{^/contacts/(.+)$} do
               contact_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Contact, 'contacts', contact_ids)
+              resource_patch(Flapjack::Data::Contact, 'contacts', contact_ids)
               status 204
             end
 

@@ -42,11 +42,11 @@ module Flapjack
               resource_get_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
             end
 
-            app.put %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)$} do
+            app.patch %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)$} do
               check_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
+              resource_patch_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
               status 204
             end
 

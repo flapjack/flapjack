@@ -40,10 +40,10 @@ module Flapjack
                            :sort => 'name')
             end
 
-            app.put %r{^/checks/(.+)$} do
+            app.patch %r{^/checks/(.+)$} do
               check_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Check, 'checks', check_ids)
+              resource_patch(Flapjack::Data::Check, 'checks', check_ids)
               status 204
             end
           end

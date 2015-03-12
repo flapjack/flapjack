@@ -31,7 +31,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:jsonapi_type).and_return('unscheduled_maintenance')
 
-    post "/unscheduled_maintenances", Flapjack.dump_json(:data => {:unscheduled_maintenances => unscheduled_maintenance_data.merge(:type => 'unscheduled_maintenance')}), jsonapi_post_env
+    post "/unscheduled_maintenances", Flapjack.dump_json(:data => {:unscheduled_maintenances => unscheduled_maintenance_data.merge(:type => 'unscheduled_maintenance')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :unscheduled_maintenances => unscheduled_maintenance_data.merge(
@@ -131,9 +131,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(unscheduled_maintenance).to receive(:save).and_return(true)
 
-    put "/unscheduled_maintenances/#{unscheduled_maintenance.id}",
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}",
       Flapjack.dump_json(:data => {:unscheduled_maintenances => {:id => unscheduled_maintenance.id, :type => 'unscheduled_maintenance', :end_time => end_time.to_i}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

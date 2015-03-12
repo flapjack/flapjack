@@ -42,10 +42,10 @@ module Flapjack
 
             # NB: tags cannot be renamed, this is only present for updating of
             # associations, which can also be done through tag_links.rb methods
-            app.put %r{^/tags/(.+)$} do
+            app.patch %r{^/tags/(.+)$} do
               tag_ids = params[:captures][0].split(',').uniq
 
-              resource_put(Flapjack::Data::Tag, 'tags', tag_ids)
+              resource_patch(Flapjack::Data::Tag, 'tags', tag_ids)
               status 204
             end
 

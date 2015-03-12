@@ -27,7 +27,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(Flapjack::Data::Rule).to receive(:jsonapi_type).and_return('rule')
 
-    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_post_env
+    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :rules => rule_data.merge(
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_post_env
+    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_env
     expect(last_response.status).to eq(403)
   end
 
@@ -280,10 +280,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(rule).to receive(:contact=).with(contact)
 
-    put "/rules/#{rule.id}",
+    patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data => {:rules => {:id => rule.id, :type => 'rule', :links =>
         {:contact => {:type => 'contact', :id => contact.id}}}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -303,14 +303,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:contact=).with(contact)
     expect(rule_2).to receive(:contact=).with(contact)
 
-    put "/rules/#{rule.id},#{rule_2.id}",
+    patch "/rules/#{rule.id},#{rule_2.id}",
       Flapjack.dump_json(:data => {:rules => [
         {:id => rule.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}},
         {:id => rule_2.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}}
         ]}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -319,10 +319,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(rule.id).
       and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Rule, [rule.id]))
 
-    put "/rules/#{rule.id}",
+    patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data => {:rules => {:id => rule.id, :type => 'rule', :links =>
         {:contact => {:type => 'contact', :id => contact.id}}}}),
-      jsonapi_put_env
+      jsonapi_env
     expect(last_response.status).to eq(404)
   end
 

@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium).to receive(:contact).and_return(nil)
     expect(medium).to receive(:contact=).with(contact)
 
-    post "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_post_env
+    post "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -55,7 +55,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(medium).to receive(:contact=).with(contact)
 
-    put "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_put_env
+    patch "/media/#{medium.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -82,7 +82,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:add).with(rule)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
-    post "/media/#{medium.id}/links/rules", Flapjack.dump_json(:rules => rule.id), jsonapi_post_env
+    post "/media/#{medium.id}/links/rules", Flapjack.dump_json(:rules => rule.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -117,7 +117,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:add).with(rule)
     expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
-    put "/media/#{medium.id}/links/rules", Flapjack.dump_json(:rules => [rule.id]), jsonapi_put_env
+    patch "/media/#{medium.id}/links/rules", Flapjack.dump_json(:rules => [rule.id]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

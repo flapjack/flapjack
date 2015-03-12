@@ -44,11 +44,11 @@ module Flapjack
               resource_get_links(Flapjack::Data::Medium, 'media', medium_id, assoc_type)
             end
 
-            app.put %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|rules)$} do
+            app.patch %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|rules)$} do
               medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::Medium, 'media', medium_id, assoc_type)
+              resource_patch_links(Flapjack::Data::Medium, 'media', medium_id, assoc_type)
               status 204
             end
 

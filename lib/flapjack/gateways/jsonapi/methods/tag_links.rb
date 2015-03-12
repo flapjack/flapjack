@@ -41,11 +41,11 @@ module Flapjack
               resource_get_links(Flapjack::Data::Tag, 'tags', tag_id, assoc_type)
             end
 
-            app.put %r{^/tags/(\S+)/links/(checks|rules)$} do
+            app.patch %r{^/tags/(\S+)/links/(checks|rules)$} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::Tag, 'tags', tag_id, assoc_type)
+              resource_patch_links(Flapjack::Data::Tag, 'tags', tag_id, assoc_type)
               status 204
             end
 

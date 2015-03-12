@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
     expect(scheduled_maintenance).to receive(:check).and_return(nil)
     expect(scheduled_maintenance).to receive(:check=).with(check)
 
-    post "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_post_env
+    post "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     expect(scheduled_maintenance).to receive(:check=).with(check)
 
-    put "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_put_env
+    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

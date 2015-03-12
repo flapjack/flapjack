@@ -42,11 +42,11 @@ module Flapjack
                 'scheduled_maintenances', scheduled_maintenance_id, assoc_type)
             end
 
-            app.put %r{^/scheduled_maintenances/(#{Flapjack::UUID_RE})/links/(check)$} do
+            app.patch %r{^/scheduled_maintenances/(#{Flapjack::UUID_RE})/links/(check)$} do
               scheduled_maintenance_id = params[:captures][0]
               assoc_type               = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::ScheduledMaintenance,
+              resource_patch_links(Flapjack::Data::ScheduledMaintenance,
                 'scheduled_maintenances', scheduled_maintenance_id, assoc_type)
               status 204
             end

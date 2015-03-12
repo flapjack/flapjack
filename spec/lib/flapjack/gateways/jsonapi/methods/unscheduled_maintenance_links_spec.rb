@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
     expect(unscheduled_maintenance).to receive(:check).and_return(nil)
     expect(unscheduled_maintenance).to receive(:check=).with(check)
 
-    post "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_post_env
+    post "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     expect(unscheduled_maintenance).to receive(:check=).with(check)
 
-    put "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_put_env
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
