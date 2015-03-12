@@ -105,6 +105,10 @@ module Flapjack
             # json_data.update(:links => links_out) unless links_out.nil? || links_out.empty?
             json_data.update(resources_name.to_sym => data)
 
+            # TODO pagination links move from meta to top-level "links"
+
+            # TODO top-level links, add "self" => URL
+
             output = {:data => json_data}
             output.update(:included => included) unless included.nil? || included.empty?
             output.update(:meta => meta) unless meta.nil? || meta.empty?

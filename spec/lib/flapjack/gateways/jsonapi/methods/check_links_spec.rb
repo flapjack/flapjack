@@ -34,9 +34,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
 
-    get "/checks/#{check.id}/links/tags"
+    get "/checks/#{check.id}/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'tag', :id => tag.id}],
+      :links => {
+        :self    => "http://example.org/checks/#{check.id}/links/tags",
+        :related => "http://example.org/checks/#{check.id}/tags",
+      }
+    ))
   end
 
   it 'updates tags for a check' do

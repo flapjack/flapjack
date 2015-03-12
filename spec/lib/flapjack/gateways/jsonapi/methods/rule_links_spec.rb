@@ -35,9 +35,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/contact"
+    get "/rules/#{rule.id}/contact"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:contacts => contact.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => {:type => 'contact', :id => contact.id},
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/contact",
+        :related => "http://example.org/rules/#{rule.id}/contact",
+      }
+    ))
   end
 
   it 'changes the contact for a rule' do
@@ -89,9 +95,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/media"
+    get "/rules/#{rule.id}/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:media => [medium.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'medium', :id => medium.id}],
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/media",
+        :related => "http://example.org/rules/#{rule.id}/media",
+      }
+    ))
   end
 
   it 'updates media for a rule' do
@@ -148,9 +160,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/tags"
+    get "/rules/#{rule.id}/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'tag', :id => tag.id}],
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/tags",
+        :related => "http://example.org/rules/#{rule.id}/tags",
+      }
+    ))
   end
 
   it 'updates tags for a rule' do

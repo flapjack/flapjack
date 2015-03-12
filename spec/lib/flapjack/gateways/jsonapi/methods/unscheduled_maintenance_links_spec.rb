@@ -33,9 +33,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).with(unscheduled_maintenance.id).
       and_return(unscheduled_maintenance)
 
-    get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check"
+    get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => check.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => {:type => 'check', :id => check.id},
+      :links => {
+        :self    => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+        :related => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check",
+      }
+    ))
   end
 
   it 'changes the check for a unscheduled maintenance period' do

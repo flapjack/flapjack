@@ -30,23 +30,23 @@ module Flapjack
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_post_links(Flapjack::Data::Rule, rule_id, assoc_type)
+              resource_post_links(Flapjack::Data::Rule, 'rules', rule_id, assoc_type)
               status 204
             end
 
-            app.get %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact|media|tags)} do
+            app.get %r{^/rules/(#{Flapjack::UUID_RE})/(contact|media|tags)} do
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
               status 200
-              resource_get_links(Flapjack::Data::Rule, rule_id, assoc_type)
+              resource_get_links(Flapjack::Data::Rule, 'rules', rule_id, assoc_type)
             end
 
             app.put %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact|media|tags)$} do
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::Rule, rule_id, assoc_type)
+              resource_put_links(Flapjack::Data::Rule, 'rules', rule_id, assoc_type)
               status 204
             end
 
@@ -54,7 +54,7 @@ module Flapjack
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_delete_link(Flapjack::Data::Rule, rule_id, assoc_type)
+              resource_delete_link(Flapjack::Data::Rule, 'rules', rule_id, assoc_type)
               status 204
             end
 
@@ -63,7 +63,7 @@ module Flapjack
               assoc_type = params[:captures][1]
               assoc_ids  = params[:captures][2].split(',').uniq
 
-              resource_delete_links(Flapjack::Data::Rule, rule_id,
+              resource_delete_links(Flapjack::Data::Rule, 'rules', rule_id,
                 assoc_type, assoc_ids)
               status 204
             end

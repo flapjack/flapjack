@@ -30,23 +30,23 @@ module Flapjack
               check_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_post_links(Flapjack::Data::Check, check_id, assoc_type)
+              resource_post_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
               status 204
             end
 
-            app.get %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)} do
+            app.get %r{^/checks/(#{Flapjack::UUID_RE})/(tags)} do
               check_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 
               status 200
-              resource_get_links(Flapjack::Data::Check, check_id, assoc_type)
+              resource_get_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
             end
 
             app.put %r{^/checks/(#{Flapjack::UUID_RE})/links/(tags)$} do
               check_id   = params[:captures][0]
               assoc_type = params[:captures][1]
 
-              resource_put_links(Flapjack::Data::Check, check_id, assoc_type)
+              resource_put_links(Flapjack::Data::Check, 'checks', check_id, assoc_type)
               status 204
             end
 
@@ -55,7 +55,7 @@ module Flapjack
               assoc_type = params[:captures][1]
               assoc_ids  = params[:captures][2].split(',').uniq
 
-              resource_delete_links(Flapjack::Data::Check, check_id, assoc_type,
+              resource_delete_links(Flapjack::Data::Check, 'checks', check_id, assoc_type,
                                     assoc_ids)
               status 204
             end

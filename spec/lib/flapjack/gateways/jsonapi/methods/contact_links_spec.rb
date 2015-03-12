@@ -35,9 +35,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
-    get "/contacts/#{contact.id}/links/media"
+    get "/contacts/#{contact.id}/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:media => [medium.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'medium', :id => medium.id}],
+      :links => {
+        :self    => "http://example.org/contacts/#{contact.id}/links/media",
+        :related => "http://example.org/contacts/#{contact.id}/media",
+      }
+    ))
   end
 
   it 'updates media for a contact' do
@@ -93,9 +99,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
-    get "/contacts/#{contact.id}/links/rules"
+    get "/contacts/#{contact.id}/rules"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:rules => [rule.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'rule', :id => rule.id}],
+      :links => {
+        :self    => "http://example.org/contacts/#{contact.id}/links/rules",
+        :related => "http://example.org/contacts/#{contact.id}/rules",
+      }
+    ))
   end
 
   it 'updates rules for a contact' do

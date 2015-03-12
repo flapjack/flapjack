@@ -6,7 +6,7 @@ module Flapjack
       module Helpers
         module ResourceLinks
 
-          def resource_post_links(klass, id, assoc_name)
+          def resource_post_links(klass, resources_name, id, assoc_name)
             assoc_ids, _ = wrapped_link_params(assoc_name)
             halt(err(403, "No link ids")) if assoc_ids.empty?
 
@@ -37,7 +37,7 @@ module Flapjack
             end
           end
 
-          def resource_get_links(klass, id, assoc_name)
+          def resource_get_links(klass, resources_name, id, assoc_name)
             singular_links, multiple_links = association_klasses(klass)
 
             assoc_accessor, name = if multiple_links.has_key?(assoc_name.to_sym)
@@ -45,16 +45,46 @@ module Flapjack
             elsif singular_links.has_key?(assoc_name.to_sym)
               [:id, assoc_name.pluralize]
             else
-              halt(400, 'Unknown association')
+              halt(err(404, 'Unknown association'))
             end
 
-            assoc_ids = klass.find_by_id!(id).send(assoc_name).
-                          send(assoc_accessor)
+            associated = klass.find_by_id!(id).send(assoc_name).
+                           send(assoc_accessor)
 
-            Flapjack.dump_json(name => assoc_ids)
+            links = {
+              :self    => "#{request.base_url}/#{resources_name}/#{id}/links/#{assoc_name}",
+              :related => "#{request.base_url}/#{resources_name}/#{id}/#{assoc_name}"
+            }
+
+            assoc_type = nil
+
+            singular = klass.respond_to?(:jsonapi_singular_associations) ?
+              klass.jsonapi_singular_associations : []
+            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
+              klass.jsonapi_multiple_associations : []
+            als = (singular.select {|s| s.is_a?(Hash)} +
+                   multiple.select {|m| m.is_a?(Hash)}).detect {|h| h.values.include?(assoc_name.to_sym) }
+
+            assoc_alias = als.nil? ? nil : als.keys.first
+
+            # SMELL mucking about with a zermelo protected method...
+            klass.send(:with_association_data, (assoc_alias || assoc_name).to_sym) do |ad|
+              assoc_type = ad.data_klass.name.demodulize.underscore
+            end
+
+            data = case associated
+            when Array
+              associated.map {|assoc_id| {:type => assoc_type, :id => assoc_id} }
+            when String
+              {:type => assoc_type, :id => associated}
+            else
+              nil
+            end
+
+            Flapjack.dump_json(:links => links, :data => data)
           end
 
-          def resource_put_links(klass, id, assoc_name)
+          def resource_put_links(klass, resources_name, id, assoc_name)
             assoc_ids, _ = wrapped_link_params(assoc_name)
 
             resource = klass.find_by_id!(id)
@@ -87,7 +117,7 @@ module Flapjack
           end
 
           # singular association
-          def resource_delete_link(klass, id, assoc_name)
+          def resource_delete_link(klass, resources_name, id, assoc_name)
             resource = klass.find_by_id!(id)
 
             # validate that the associated record exists
@@ -96,7 +126,7 @@ module Flapjack
           end
 
           # multiple association
-          def resource_delete_links(klass, id, assoc_name, assoc_ids)
+          def resource_delete_links(klass, resources_name, id, assoc_name, assoc_ids)
             halt(err(403, "No link ids")) if assoc_ids.empty?
 
             # validate that the association ids actually exist in the associations

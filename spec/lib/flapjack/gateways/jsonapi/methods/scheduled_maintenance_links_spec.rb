@@ -33,9 +33,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).with(scheduled_maintenance.id).
       and_return(scheduled_maintenance)
 
-    get "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check"
+    get "/scheduled_maintenances/#{scheduled_maintenance.id}/check"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => check.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => {:type => 'check', :id => check.id},
+      :links => {
+        :self    => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+        :related => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check",
+      }
+    ))
   end
 
   it 'changes the check for a scheduled maintenance period' do

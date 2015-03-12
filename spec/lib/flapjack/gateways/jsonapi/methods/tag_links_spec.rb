@@ -37,9 +37,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
 
-    get "/tags/#{tag.id}/links/checks"
+    get "/tags/#{tag.id}/checks"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:checks => [check.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'check', :id => check.id}],
+      :links => {
+        :self    => "http://example.org/tags/#{tag.id}/links/checks",
+        :related => "http://example.org/tags/#{tag.id}/checks",
+      }
+    ))
   end
 
   it 'updates checks for a tag' do
@@ -97,9 +103,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
       and_return(tag)
 
-    get "/tags/#{tag.id}/links/rules"
+    get "/tags/#{tag.id}/rules"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:rules => [rule.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'rule', :id => rule.id}],
+      :links => {
+        :self    => "http://example.org/tags/#{tag.id}/links/rules",
+        :related => "http://example.org/tags/#{tag.id}/rules",
+      }
+    ))
   end
 
   it 'updates rules for a tag' do
