@@ -1,5 +1,11 @@
 ## Flapjack Changelog
 
+# 1.4.0rc1 - 2015-03-12
+- Bug: API : Wrong Timezone doesn't cause 422 status and makes GET /contacts crash #791 (@ali-graham)
+- Bug: uncaught exception in Event#initialize: invalid byte sequence in UTF-8 #801 (@ali-graham)
+- Bug: uncaught exception in Web UI: invalid byte sequence in US-ASCII #802 (@ali-graham)
+- Feature: Add bind_address config option for http server pikelets #807 (@mrichar1)
+
 # 1.3.0 - 2015-02-17
 - No changes
 
