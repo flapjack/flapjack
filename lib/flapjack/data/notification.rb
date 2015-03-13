@@ -142,21 +142,26 @@ module Flapjack
             # matchers are rules of the contact that have matched the current event
             # for time, entity and tags
             matchers = rules.select do |rule|
-              logger.debug("considering rule with entities: #{rule.entities}, entities regex: #{rule.regex_entities},
-                           tags: #{Flapjack.dump_json(rule.tags)} and regex tags: #{Flapjack.dump_json(rule.regex_tags)}")
-              rule_has_tags           = rule.tags           ? (rule.tags.length > 0)           : false
-              rule_has_regex_tags     = rule.regex_tags     ? (rule.regex_tags.length > 0)     : false
-              rule_has_entities       = rule.entities       ? (rule.entities.length > 0)       : false
-              rule_has_regex_entities = rule.regex_entities ? (rule.regex_entities.length > 0) : false
+              begin
+                logger.debug("considering rule with entities: #{rule.entities}, entities regex: #{rule.regex_entities},
+                             tags: #{Flapjack.dump_json(rule.tags)} and regex tags: #{Flapjack.dump_json(rule.regex_tags)}")
+                rule_has_tags           = rule.tags           ? (rule.tags.length > 0)           : false
+                rule_has_regex_tags     = rule.regex_tags     ? (rule.regex_tags.length > 0)     : false
+                rule_has_entities       = rule.entities       ? (rule.entities.length > 0)       : false
+                rule_has_regex_entities = rule.regex_entities ? (rule.regex_entities.length > 0) : false
 
-              matches_tags           = rule_has_tags           ? rule.match_tags?(@tags)               : true
-              matches_regex_tags     = rule_has_regex_tags     ? rule.match_regex_tags?(@tags)         : true
-              matches_entity         = rule_has_entities       ? rule.match_entity?(@event_id)         : true
-              matches_regex_entities = rule_has_regex_entities ? rule.match_regex_entities?(@event_id) : true
+                matches_tags           = rule_has_tags           ? rule.match_tags?(@tags)               : true
+                matches_regex_tags     = rule_has_regex_tags     ? rule.match_regex_tags?(@tags)         : true
+                matches_entity         = rule_has_entities       ? rule.match_entity?(@event_id)         : true
+                matches_regex_entities = rule_has_regex_entities ? rule.match_regex_entities?(@event_id) : true
 
-              ((matches_entity && matches_regex_entities && matches_tags && matches_regex_tags) || ! rule.is_specific?) &&
-                rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone,
-                  :logger => logger)
+                ((matches_entity && matches_regex_entities && matches_tags && matches_regex_tags) || ! rule.is_specific?) &&
+                  rule_occurring_now?(rule, :contact => contact, :default_timezone => default_timezone,
+                    :logger => logger)
+              rescue RegexpError => e
+                logger.error "rule with entities regex: #{rule.regex_entities} and regex tags: #{Flapjack.dump_json(rule.regex_tags)} has invalid regex: #{e.message}"
+                false
+              end
             end
 
             logger.debug "#{matchers.length} matchers remain for this contact after time, entity and tags are matched:"

@@ -371,11 +371,12 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
     @redis.del("notification_rule:#{nr.id}")
   end
   rules.hashes.each do |rule|
-    entities           = rule['entities']           ? rule['entities'].split(',').map       { |x| x.strip } : []
-    tags               = rule['tags']               ? rule['tags'].split(',').map           { |x| x.strip } : []
-    unknown_media      = rule['unknown_media']      ? rule['unknown_media'].split(',').map  { |x| x.strip } : []
-    warning_media      = rule['warning_media']      ? rule['warning_media'].split(',').map  { |x| x.strip } : []
-    critical_media     = rule['critical_media']     ? rule['critical_media'].split(',').map { |x| x.strip } : []
+    entities           = rule['entities']           ? rule['entities'].split(',').map       {|x| x.strip } : []
+    regex_entities     = rule['regex_entities']     ? rule['regex_entities'].split(',').map {|x| x.strip } : []
+    tags               = rule['tags']               ? rule['tags'].split(',').map           {|x| x.strip } : []
+    unknown_media      = rule['unknown_media']      ? rule['unknown_media'].split(',').map  {|x| x.strip } : []
+    warning_media      = rule['warning_media']      ? rule['warning_media'].split(',').map  {|x| x.strip } : []
+    critical_media     = rule['critical_media']     ? rule['critical_media'].split(',').map {|x| x.strip } : []
     unknown_blackhole  = rule['unknown_blackhole']  ? (rule['unknown_blackhole'].downcase == 'true')  : false
     warning_blackhole  = rule['warning_blackhole']  ? (rule['warning_blackhole'].downcase == 'true')  : false
     critical_blackhole = rule['critical_blackhole'] ? (rule['critical_blackhole'].downcase == 'true') : false
@@ -391,6 +392,7 @@ Given /^user (\S+) has the following notification rules:$/ do |contact_id, rules
     } : []
     rule_data = {:contact_id         => contact_id,
                  :entities           => entities,
+                 :regex_entities     => regex_entities,
                  :tags               => tags,
                  :unknown_media      => unknown_media,
                  :warning_media      => warning_media,

@@ -18,7 +18,7 @@ Feature: Notification rules on a per contact basis
       | 3   | baz            | c1,c3    |
       | 4   | buf            | c1,c2,c3 |
       | 5   | foo-app-01.xyz | c4,c6    |
-      | 6   | blakes7        | c2       |
+      | 6   | blakes7        | c2,c6    |
 
     And user c1 has the following notification intervals:
       | email | sms |
@@ -69,9 +69,11 @@ Feature: Notification rules on a per contact basis
       | email         | email, sms     |
 
     And user c6 has the following notification rules:
-      | entities       | tags            | warning_media | critical_media   |
-      |                |                 |               |                  |
-      | foo-app-01.xyz | check_disk      | email         | email            |
+      | entities       | regex_entities  | tags            | warning_media | critical_media   |
+      |                |                 |                 |               |                  |
+      | foo-app-01.xyz |                 | check_disk      | email         | email            |
+      | blakes7        |                 |                 |               | email            |
+      | blakes7        | ++*             |                 |               | sms              |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -100,6 +102,16 @@ Feature: Notification rules on a per contact basis
     Then  3 email alerts should be queued for malak@example.com
 
   Scenario: time restrictions continue to work as expected when a contact changes timezone
+
+  @time
+  Scenario: skip rule with invalid regex
+    Given the check is check 'ping' on entity 'blakes7'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   5 minutes passes
+    And   a critical event is received
+    Then  1 email alert should be queued for jive@example.com
+    And   0 sms alerts should be queued for +61400000006
 
   @severity @time
   Scenario: Don't alert when media,severity does not match any matching rule's severity's media
