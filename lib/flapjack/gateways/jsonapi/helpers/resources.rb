@@ -63,9 +63,9 @@ module Flapjack
 
             response.headers['Location'] = "#{request.base_url}/#{resources_name}/#{resource_ids.join(',')}"
 
-            data, _, _ = as_jsonapi(klass, jsonapi_type, resources_name,
-                                      resources, resource_ids,
-                                      :unwrap => unwrap)
+            data, _ = as_jsonapi(klass, jsonapi_type, resources_name,
+                                 resources, resource_ids,
+                                 :unwrap => unwrap)
 
             Flapjack.dump_json(:data => {resources_name.to_sym => data})
           end
@@ -95,14 +95,13 @@ module Flapjack
 
             fields = params[:fields].nil?  ? nil : params[:fields].split(',')
             incl   = params[:include].nil? ? nil : params[:include].split(',')
-            data, _, included = as_jsonapi(klass, klass.jsonapi_type,
-                                         resources_name, resources,
-                                         (ids || resources.map(&:id)),
-                                         :fields => fields, :include => incl,
-                                         :unwrap => unwrap)
+            data, included = as_jsonapi(klass, klass.jsonapi_type,
+                                        resources_name, resources,
+                                        (ids || resources.map(&:id)),
+                                        :fields => fields, :include => incl,
+                                        :unwrap => unwrap)
 
             json_data = {}
-            # json_data.update(:links => links_out) unless links_out.nil? || links_out.empty?
             json_data.update(resources_name.to_sym => data)
 
             # TODO pagination links move from meta to top-level "links"
@@ -304,15 +303,7 @@ module Flapjack
               Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
             end
 
-            # links_out = {}
-
             links = jsonapi_linkages(klass, resource_ids, :resolve => incl)
-
-            # links.each_pair do |k, v|
-            #   next unless v.any? {|id, vv| vv.is_a?(String) || (vv.is_a?(Array) && !vv.empty?) }
-            #   lo_name = "#{resources_name}.#{k}"
-            #   links_out[lo_name] = "#{request.base_url}/#{k.to_s.pluralize}/{#{lo_name}}"
-            # end
 
             unless incl.empty?
               linked    = []
@@ -323,7 +314,7 @@ module Flapjack
               retr_resources = klass.intersect(:id => resource_ids)
 
               included.each do |incl_clause|
-                linked_data, links_data = data_for_include_clause(ids_cache,
+                linked_data, _ = data_for_include_clause(ids_cache,
                   klass, retr_resources, [], incl_clause)
                 case linked_data
                 when Array
@@ -331,7 +322,6 @@ module Flapjack
                 when Hash
                   linked += [linked_data]
                 end
-                # links_out.update(links_data) unless links_data.nil? || links_data.empty?
               end
             end
 
@@ -371,7 +361,7 @@ module Flapjack
               resources_as_json = resources_as_json.first
             end
 
-            [resources_as_json, nil, linked]
+            [resources_as_json, linked]
           end
 
           def resource_sort(klass, options = {})
@@ -482,10 +472,8 @@ module Flapjack
             else
               # reached the end, ensure that data is stored as needed
               fragment_name = fragment_klass.name.demodulize.underscore.pluralize
-              fragment_json, fragment_links, _ = as_jsonapi(fragment_klass,
-                fragment_klass.jsonapi_type, fragment_name, fragment_resources,
-                fragment_ids, :unwrap => false)
-              [fragment_json, fragment_links]
+              as_jsonapi(fragment_klass, fragment_klass.jsonapi_type,
+                fragment_name, fragment_resources, fragment_ids, :unwrap => false)
             end
           end
         end
