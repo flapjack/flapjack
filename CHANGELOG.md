@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.4.0 - 2015-03-13
+- No changes
+
 # 1.4.0rc1 - 2015-03-12
 - Bug: API : Wrong Timezone doesn't cause 422 status and makes GET /contacts crash #791 (@ali-graham)
 - Bug: uncaught exception in Event#initialize: invalid byte sequence in UTF-8 #801 (@ali-graham)
