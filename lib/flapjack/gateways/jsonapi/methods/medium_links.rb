@@ -22,13 +22,17 @@ module Flapjack
                               {'contact' => Flapjack::Data::Contact,
                                'rules'   => Flapjack::Data::Rule}]
 
-              swagger_post_links(*swagger_args)
+              swagger_multi_args = ['media',
+                              Flapjack::Data::Medium,
+                              {'rules'   => Flapjack::Data::Rule}]
+
+              swagger_post_links(*swagger_multi_args)
               swagger_get_links(*swagger_args)
-              swagger_put_links(*swagger_args)
-              swagger_delete_links(*swagger_args)
+              swagger_patch_links(*swagger_args)
+              swagger_delete_links(*swagger_multi_args)
             end
 
-            app.post %r{^/media/(#{Flapjack::UUID_RE})/links/(contact|rules)$} do
+            app.post %r{^/media/(#{Flapjack::UUID_RE})/links/(rules)$} do
               medium_id  = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -36,7 +40,7 @@ module Flapjack
               status 204
             end
 
-            app.get %r{^/media/(#{Flapjack::UUID_RE})/(contact|rules)} do
+            app.get %r{^/media/(#{Flapjack::UUID_RE})/(?:links/)?(contact|rules)} do
               medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -52,22 +56,12 @@ module Flapjack
               status 204
             end
 
-            app.delete %r{^/media/(#{Flapjack::UUID_RE})/links/(contact)$} do
+            app.delete %r{^/media/(#{Flapjack::UUID_RE})/links/(rules)$} do
               medium_id = params[:captures][0]
               assoc_type = params[:captures][1]
-
-              resource_delete_link(Flapjack::Data::Medium, 'media', medium_id,
-                                   assoc_type)
-              status 204
-            end
-
-            app.delete %r{^/media/(#{Flapjack::UUID_RE})/links/(rules)/(.+)$} do
-              medium_id = params[:captures][0]
-              assoc_type = params[:captures][1]
-              assoc_ids  = params[:captures][2].split(',').uniq
 
               resource_delete_links(Flapjack::Data::Medium, 'media', medium_id,
-                                    assoc_type, assoc_ids)
+                                    assoc_type)
               status 204
             end
 

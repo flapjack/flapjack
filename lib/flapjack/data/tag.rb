@@ -7,6 +7,8 @@ require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/check'
 require 'flapjack/data/rule'
 
+require 'flapjack/gateways/jsonapi/data/associations'
+
 module Flapjack
   module Data
     class Tag
@@ -14,6 +16,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
       define_attributes :name => :string

@@ -20,10 +20,15 @@ module Flapjack
                                'media'   => Flapjack::Data::Medium,
                                'tags'    => Flapjack::Data::Tag}]
 
-              swagger_post_links(*swagger_args)
+              swagger_multi_args = ['rules',
+                              Flapjack::Data::Rule,
+                              {'media'   => Flapjack::Data::Medium,
+                               'tags'    => Flapjack::Data::Tag}]
+
+              swagger_post_links(*swagger_multi_args)
               swagger_get_links(*swagger_args)
-              swagger_put_links(*swagger_args)
-              swagger_delete_links(*swagger_args)
+              swagger_patch_links(*swagger_args)
+              swagger_delete_links(*swagger_multi_args)
             end
 
             app.post %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact|media|tags)$} do
@@ -34,7 +39,7 @@ module Flapjack
               status 204
             end
 
-            app.get %r{^/rules/(#{Flapjack::UUID_RE})/(contact|media|tags)} do
+            app.get %r{^/rules/(#{Flapjack::UUID_RE})/(?:links/)?(contact|media|tags)} do
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -50,21 +55,12 @@ module Flapjack
               status 204
             end
 
-            app.delete %r{^/rules/(#{Flapjack::UUID_RE})/links/(contact)$} do
+            app.delete %r{^/rules/(#{Flapjack::UUID_RE})/links/(media|tags)$} do
               rule_id    = params[:captures][0]
               assoc_type = params[:captures][1]
-
-              resource_delete_link(Flapjack::Data::Rule, 'rules', rule_id, assoc_type)
-              status 204
-            end
-
-            app.delete %r{^/rules/(#{Flapjack::UUID_RE})/links/(media|tags)/(.+)$} do
-              rule_id    = params[:captures][0]
-              assoc_type = params[:captures][1]
-              assoc_ids  = params[:captures][2].split(',').uniq
 
               resource_delete_links(Flapjack::Data::Rule, 'rules', rule_id,
-                assoc_type, assoc_ids)
+                assoc_type)
               status 204
             end
 

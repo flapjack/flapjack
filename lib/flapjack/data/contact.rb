@@ -3,7 +3,10 @@
 # NB: use of redis.keys probably indicates we should maintain a data
 # structure to avoid the need for this type of query
 
+
 require 'set'
+require 'securerandom'
+
 require 'ice_cube'
 
 require 'zermelo/records/redis_record'
@@ -14,7 +17,7 @@ require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/tag'
 
-require 'securerandom'
+require 'flapjack/gateways/jsonapi/data/associations'
 
 module Flapjack
 
@@ -25,6 +28,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
       define_attributes :name     => :string,

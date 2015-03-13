@@ -19,7 +19,7 @@ module Flapjack
               include Swagger::Blocks
               swagger_post(*swagger_args)
               swagger_get(*swagger_args)
-              swagger_put(*swagger_args)
+              swagger_patch(*swagger_args)
               swagger_delete(*swagger_args)
             end
 

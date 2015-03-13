@@ -7,70 +7,47 @@ module Flapjack
         module ResourceLinks
 
           def resource_post_links(klass, resources_name, id, assoc_name)
-            assoc_ids, _ = wrapped_link_params(assoc_name)
-            halt(err(403, "No link ids")) if assoc_ids.empty?
-
-            singular_links, multiple_links = association_klasses(klass)
-            singular_klass = singular_links[assoc_name.to_sym]
+            _, multiple_links = klass.association_klasses
             multiple_klass = multiple_links[assoc_name.to_sym]
+
+            assoc_ids, _ = wrapped_link_params(assoc_name,
+              :multiple => multiple_klass)
+
+            halt(err(403, 'No link ids')) if assoc_ids.empty?
 
             resource = klass.find_by_id!(id)
 
             # Not checking for duplication on adding existing to a multiple
             # association, the JSONAPI spec doesn't ask for it
-            if !multiple_klass.nil?
+            if multiple_klass.nil?
+              # TODO halt
+            else
               assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
               klass.lock(*assoc_classes) do
                 associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
                 resource.send(assoc_name.to_sym).add(*associated)
               end
-            elsif !singular_klass.nil?
-              halt(err(409, "Association '#{assoc_name}' is already populated")) unless resource.send(assoc_name.to_sym).nil?
-              halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
-              klass.lock(*assoc_classes) do
-                associated = singular_klass[:data].find_by_id!(*assoc_ids)
-                resource.send("#{assoc_name}=".to_sym, associated)
-              end
-            else
-              # TODO halt
             end
           end
 
           def resource_get_links(klass, resources_name, id, assoc_name)
-            singular_links, multiple_links = association_klasses(klass)
+            singular_links, multiple_links = klass.association_klasses
 
-            assoc_accessor, name = if multiple_links.has_key?(assoc_name.to_sym)
-              [:ids, assoc_name]
+            # is 'name' needed?
+            accessor, name, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
+              [:ids, assoc_name, multiple_links[assoc_name.to_sym][:type]]
             elsif singular_links.has_key?(assoc_name.to_sym)
-              [:id, assoc_name.pluralize]
+              [:id, assoc_name.pluralize, singular_links[assoc_name.to_sym][:type]]
             else
               halt(err(404, 'Unknown association'))
             end
 
-            associated = klass.find_by_id!(id).send(assoc_name).
-                           send(assoc_accessor)
+            associated = klass.find_by_id!(id).send(assoc_name).send(accessor)
 
             links = {
               :self    => "#{request.base_url}/#{resources_name}/#{id}/links/#{assoc_name}",
               :related => "#{request.base_url}/#{resources_name}/#{id}/#{assoc_name}"
             }
-
-            assoc_type = nil
-
-            singular = klass.respond_to?(:jsonapi_singular_associations) ?
-              klass.jsonapi_singular_associations : []
-            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
-              klass.jsonapi_multiple_associations : []
-            als = (singular.select {|s| s.is_a?(Hash)} +
-                   multiple.select {|m| m.is_a?(Hash)}).detect {|h| h.values.include?(assoc_name.to_sym) }
-
-            assoc_alias = als.nil? ? nil : als.keys.first
-
-            # SMELL mucking about with a zermelo protected method...
-            klass.send(:with_association_data, (assoc_alias || assoc_name).to_sym) do |ad|
-              assoc_type = ad.data_klass.name.demodulize.underscore
-            end
 
             data = case associated
             when Array
@@ -85,13 +62,14 @@ module Flapjack
           end
 
           def resource_patch_links(klass, resources_name, id, assoc_name)
-            assoc_ids, _ = wrapped_link_params(assoc_name)
-
-            resource = klass.find_by_id!(id)
-
-            singular_links, multiple_links = association_klasses(klass)
+            singular_links, multiple_links = klass.association_klasses
             singular_klass = singular_links[assoc_name.to_sym]
             multiple_klass = multiple_links[assoc_name.to_sym]
+
+            assoc_ids, _ = wrapped_link_params(assoc_name,
+              :singular => singular_klass, :multiple => multiple_klass)
+
+            resource = klass.find_by_id!(id)
 
             if !multiple_klass.nil?
               assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
@@ -116,21 +94,18 @@ module Flapjack
             end
           end
 
-          # singular association
-          def resource_delete_link(klass, resources_name, id, assoc_name)
-            resource = klass.find_by_id!(id)
-
-            # validate that the associated record exists
-            halt(err(403, "No association '#{assoc_name}' to delete for id '#{resource.id}'")) if resource.send(assoc_name.to_sym).nil?
-            resource.send("#{assoc_name}=".to_sym, nil)
-          end
-
           # multiple association
-          def resource_delete_links(klass, resources_name, id, assoc_name, assoc_ids)
-            halt(err(403, "No link ids")) if assoc_ids.empty?
+          def resource_delete_links(klass, resources_name, id, assoc_name)
+            _, multiple_links = klass.association_klasses
+            multiple_klass = multiple_links[assoc_name.to_sym]
 
-            # validate that the association ids actually exist in the associations
+            assoc_ids, _ = wrapped_link_params(assoc_name,
+              :multiple => multiple_klass)
+
+            halt(err(403, 'No link ids')) if assoc_ids.empty?
+
             resource = klass.find_by_id!(id)
+
             assoc = resource.send(assoc_name.to_sym)
             associated = assoc.find_by_ids!(*assoc_ids)
             assoc.delete(*associated)

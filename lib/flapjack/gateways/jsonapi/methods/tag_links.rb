@@ -21,7 +21,7 @@ module Flapjack
 
               swagger_post_links(*swagger_args)
               swagger_get_links(*swagger_args)
-              swagger_put_links(*swagger_args)
+              swagger_patch_links(*swagger_args)
               swagger_delete_links(*swagger_args)
             end
 
@@ -33,7 +33,7 @@ module Flapjack
               status 204
             end
 
-            app.get %r{^/tags/(\S+)/(checks|rules)} do
+            app.get %r{^/tags/(\S+)/(?:links/)?(checks|rules)} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
 
@@ -49,13 +49,12 @@ module Flapjack
               status 204
             end
 
-            app.delete %r{^/tags/(\S+)/links/(checks|rules)/(.+)$} do
+            app.delete %r{^/tags/(\S+)/links/(checks|rules)$} do
               tag_id     = params[:captures][0]
               assoc_type = params[:captures][1]
-              assoc_ids  = params[:captures][2].split(',').uniq
 
               resource_delete_links(Flapjack::Data::Tag, 'tags', tag_id,
-                assoc_type, assoc_ids)
+                assoc_type)
               status 204
             end
           end

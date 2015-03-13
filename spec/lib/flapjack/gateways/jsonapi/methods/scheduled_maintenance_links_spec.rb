@@ -12,21 +12,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
   let(:sm_check_by_start) { double('sm_check_by_start') }
   let(:sm_check_by_end)   { double('sm_check_by_end') }
 
-  it 'sets a check for a scheduled maintenance period' do
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
-
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).with(scheduled_maintenance.id).
-      and_return(scheduled_maintenance)
-    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
-      and_return(check)
-
-    expect(scheduled_maintenance).to receive(:check).and_return(nil)
-    expect(scheduled_maintenance).to receive(:check=).with(check)
-
-    post "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
-    expect(last_response.status).to eq(204)
-  end
-
   it 'shows the check for a scheduled maintenance period' do
     expect(scheduled_maintenance).to receive(:check).and_return(check)
 
@@ -54,18 +39,25 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     expect(scheduled_maintenance).to receive(:check=).with(check)
 
-    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_env
+    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+    Flapjack.dump_json(:data => {
+      :type => 'check', :id => check.id
+    }), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
   it 'clears the check for a scheduled maintenance period' do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
+
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).with(scheduled_maintenance.id).
       and_return(scheduled_maintenance)
 
-    expect(scheduled_maintenance).to receive(:check).and_return(check)
     expect(scheduled_maintenance).to receive(:check=).with(nil)
 
-    delete "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check"
+    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+    Flapjack.dump_json(:data => {
+      :type => 'check', :id => nil
+    }), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

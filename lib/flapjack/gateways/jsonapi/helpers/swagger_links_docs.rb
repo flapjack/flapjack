@@ -23,7 +23,7 @@ module Flapjack
 
             end
 
-            def swagger_put_links(resource, klass, linked = {})
+            def swagger_patch_links(resource, klass, linked = {})
 
             end
 

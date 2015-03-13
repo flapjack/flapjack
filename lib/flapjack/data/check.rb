@@ -15,6 +15,8 @@ require 'flapjack/data/state'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
+require 'flapjack/gateways/jsonapi/data/associations'
+
 module Flapjack
 
   module Data
@@ -24,6 +26,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
       # NB: state could be retrieved from states.last instead -- summary, details

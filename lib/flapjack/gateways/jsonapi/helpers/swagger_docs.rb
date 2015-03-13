@@ -138,7 +138,7 @@ module Flapjack
               end
             end
 
-            def swagger_put(resource, klass)
+            def swagger_patch(resource, klass)
 
             end
 

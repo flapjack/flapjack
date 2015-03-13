@@ -19,8 +19,7 @@ module Flapjack
 
               swagger_post(*swagger_args)
               swagger_get(*swagger_args)
-              swagger_put(*swagger_args)
-              swagger_delete(*swagger_args)
+              swagger_patch(*swagger_args)
             end
 
             app.post '/unscheduled_maintenances' do

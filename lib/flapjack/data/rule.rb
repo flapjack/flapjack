@@ -9,6 +9,8 @@ require 'zermelo/records/redis_record'
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
 
+require 'flapjack/gateways/jsonapi/data/associations'
+
 module Flapjack
   module Data
     class Rule
@@ -18,6 +20,7 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
       # I've removed regex_* properties as they encourage loose binding against

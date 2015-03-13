@@ -10,7 +10,7 @@ require 'time'
 
 require 'sinatra/base'
 
-require 'active_support/core_ext/string/inflections'
+require 'active_support/inflector'
 
 require 'swagger/blocks'
 

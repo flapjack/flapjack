@@ -117,7 +117,7 @@ module Flapjack
 
           def resource_patch(klass, resources_name, ids, options = {})
             resources_data, _ = wrapped_params(resources_name)
-            singular_links, multiple_links = association_klasses(klass)
+            singular_links, multiple_links = klass.association_klasses
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
             validate_data(resources_data, :attributes => attributes,
@@ -220,84 +220,6 @@ module Flapjack
 
           # TODO refactor some of these methods into a module, included in data/ classes
 
-          def validate_data(data, options = {})
-            valid_keys = ((options[:attributes] || []).map(&:to_s) + ['id', 'type', 'links'])
-            sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
-            ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
-            all_links = sl + ml
-            klass = options[:klass]
-
-            data.each do |d|
-              invalid_keys = d.keys - valid_keys
-              halt(err(403, "Invalid attribute(s): #{invalid_keys.join(', ')}")) unless invalid_keys.empty?
-              links = d['links']
-              unless links.nil?
-                halt(err(403, "Link(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
-                  links.keys.all? {|k| k.is_a?(String)}
-                invalid_links = links.keys - all_links
-                halt(err(404, "Link(s) not found: #{invalid_links.join(', ')}")) unless invalid_links.empty?
-                links.each_pair do |k, v|
-
-                  if sl.include?(k)
-                    unless v.nil?
-                      if !v['id'].nil? && !v['type'].nil?
-                        unless is_link_type?(k, v['type'], :klass => klass)
-                          halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
-                        end
-
-                        unless v['id'].is_a?(String)
-                          halt(err(403, "Linked '#{k}' 'id' must be a String" ))
-                        end
-                      else
-                        halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields"))
-                      end
-                    end
-                  elsif !v.is_a?(Hash)
-                    halt(err(403, "Linked '#{k}' must be a Hash"))
-                  # # Flapjack does not support heterogenous to_many types
-                  # elsif !v['data'].nil?
-                  #   if v['data'].is_a?(Array) && !v['data'].empty?
-                  #     halt(err(403, "Linked '#{k}' 'data' Array objects must all have 'id' and 'type' fields")) unless v['data'].all? {|vv|
-                  #       vv.has_key?('id') && vv['id'].is_a?(String) &&
-                  #       vv.has_key?('type') && vv['type'].is_a?(String)
-                  #     }
-
-                  #     bad_type = v['data'].detect {|vv| !is_link_type?(k, vv['type'], :klass => klass)}
-
-                  #     unless bad_type.nil?
-                  #       halt(err(403, "Linked '#{k}' 'data' Array object has wrong type #{bad_type['type']}"))
-                  #     end
-                  #   else
-                  #     halt(err(403, "Linked '#{k}' 'data' must be an Array"))
-                  #   end
-                  elsif !v['id'].nil? && !v['type'].nil?
-                    unless is_link_type?(k, v['type'], :klass => klass)
-                      halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
-                    end
-
-                    unless v['id'].is_a?(Array) && v['id'].all? {|vv| vv.is_a?(String)}
-                      halt(err(403, "Linked '#{k}' 'id' must be an Array of Strings"))
-                    end
-                  else
-                    halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields, or a 'data' Array"))
-                  end
-                end
-              end
-            end
-          end
-
-          def is_link_type?(link_name, type, options = {})
-            klass = options[:klass]
-            klass_type = nil
-
-            # SMELL mucking about with a zermelo protected method...
-            klass.send(:with_association_data, link_name.to_sym) do |ad|
-              klass_type = ad.data_klass.name.demodulize.underscore
-            end
-
-            type == klass_type
-          end
-
           def normalise_json_data(attribute_types, data)
             record_data = data.reject {|k| 'links'.eql?(k)}
             attribute_types.each_pair do |name, type|
@@ -310,36 +232,6 @@ module Flapjack
               end
             end
             symbolize(record_data)
-          end
-
-          def association_klasses(klass)
-            singular = klass.respond_to?(:jsonapi_singular_associations) ?
-              klass.jsonapi_singular_associations : []
-            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
-              klass.jsonapi_multiple_associations : []
-
-            singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
-            multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
-
-            singular_links = {}
-            multiple_links = {}
-
-            # SMELL mucking about with a zermelo protected method...
-            klass.send(:with_association_data) do |assoc_data|
-              assoc_data.each_pair do |name, data|
-                if sa = singular_aliases.detect {|a| a.has_key?(name) }
-                  singular_links[sa[name]] = {:data => data.data_klass, :related => data.related_klasses}
-                elsif singular_names.include?(name)
-                  singular_links[name] = {:data => data.data_klass, :related => data.related_klasses}
-                elsif ma = multiple_aliases.detect {|a| a.has_key?(name) }
-                  multiple_links[ma[name]] = {:data => data.data_klass, :related => data.related_klasses}
-                elsif multiple_names.include?(name)
-                  multiple_links[name] = {:data => data.data_klass, :related => data.related_klasses}
-                end
-              end
-            end
-
-            [singular_links, multiple_links]
           end
 
           def jsonapi_linkages(klass, resource_ids, opts = {})
