@@ -223,45 +223,51 @@ module Flapjack
           Flapjack.logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
 
-          # so credentials_by_check are all the unacknowledged problems in flapjack as check:credentials
+          # so credentials_by_check are all the unacknowledged problems in flapjack as check => credentials
           credentials_by_check = Flapjack::Data::Check.
             pagerduty_credentials_for(unacked_failing_checks.map(&:id))
 
-          not_empty_credentials_by_check = credentials_by_check.select do |check|
-            !check.empty?
-          end
-
           pg_acks = pagerduty_acknowledgements
-          incident_keys = pg_acks['incidents']['incident_key']
           
-          not_empty_credentials_by_check.each_pair do |check, credentials|
-            # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+          credentials_by_check.each_pair do |check, credentials|
             
-            # if check.name is in the pg_acks incidents, make a flapjack acknowledgement
-            if incident_keys[check.name].nil?
+            if credentials.empty?
+              Flapjack.logger.debug("No pagerduty credentials found for #{check.name}, skipping")
               next
             end
 
-            pg_acknowledged_by = pg_acks['incidents'].first['last_status_change_by']
-            Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
-            who_text = ""
-            if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
-              who_text = " by #{pg_acknowledged_by['name']}"
+            # FIXME: try each set of credentials until one works (may have stale contacts turning up)
+            checkMerge = credentials.first.merge('check' => check.name)
+
+            # if check.name is in the pg_acks incidents, make a flapjack acknowledgement
+            pg_acks['incidents'].each do |val|
+              
+              if val['incident_key'] == checkMerge['check']
+                pg_acknowledged_by = val['last_status_change_by']
+                Flapjack.logger.info "#{check.name} is acknowledged in pagerduty, creating flapjack acknowledgement... "
+                who_text = ""
+
+                if !pg_acknowledged_by.nil? && !pg_acknowledged_by['name'].nil?
+                  who_text = " by #{pg_acknowledged_by['name']}"
+                end
+                
+                # FIXME: decide where the default acknowledgement period should reside and use it
+                # everywhere ... a case for moving configuration into redis (from config file) perhaps?
+                four_hours = 4 * 60 * 60
+                Flapjack::Data::Event.create_acknowledgements(
+                  @config['processor_queue'] || 'events',
+                  [check],
+                  :summary  => "Acknowledged on PagerDuty" + who_text,
+                  :duration => four_hours)
+                break
+              else
+                Flapjack.logger.debug "#{check.name} is not acknowledged in pagerduty, skipping"
+              end
             end
-
-            # FIXME: decide where the default acknowledgement period should reside and use it
-            # everywhere ... a case for moving configuration into redis (from config file) perhaps?
-            four_hours = 4 * 60 * 60
-            Flapjack::Data::Event.create_acknowledgements(
-              @config['processor_queue'] || 'events',
-              [check],
-              :summary  => "Acknowledged on PagerDuty" + who_text,
-              :duration => four_hours)
           end
-
         end
-            
-        # returns the pagerduty acknowloedgements
+        
+        # returns the pagerduty acknowledgements
         def pagerduty_acknowledgements
           if @username.blank? || @password.blank?
             Flapjack.logger.warn("pagerduty_acknowledgements?: Unable to look for acknowledgements on pagerduty" +

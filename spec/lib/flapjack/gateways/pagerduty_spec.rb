@@ -98,6 +98,16 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                            'html_url'  => 'http://flpjck.pagerduty.com/users/ABCDEFG'}
                         }
 
+    let (:response) { {"incidents" =>
+                       [{"incident_number" => 12,
+                         "incident_key"=> 'app-02:ping',
+                         "status" => "acknowledged",
+                         "last_status_change_by" => status_change}],
+                       "limit"=>100,
+                       "offset"=>0,
+                       "total"=>1}
+                     }
+
     it "doesn't look for acknowledgements if this search is already running" do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
@@ -159,13 +169,11 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       expect(Kernel).to receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
-      response = {:pg_acknowledged_by => status_change}
-
       expect(lock).to receive(:synchronize).and_yield
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
-        :config => config)
-      expect(fpa).to receive(:pagerduty_acknowledged?).and_return(response)
+                                                         :config => config)
+      expect(fpa).to receive(:pagerduty_acknowledgements).and_return(response)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
@@ -174,24 +182,14 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       expect(Time).to receive(:now).and_return(now)
 
-      check = 'PING'
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
       unt   = (now.utc + (60*60*24)).iso8601   # 1 day in the future
 
-      response = {"incidents" =>
-        [{"incident_number" => 12,
-          "status" => "acknowledged",
-          "last_status_change_by" => status_change}],
-        "limit"=>100,
-        "offset"=>0,
-        "total"=>1}
-
-      req = stub_request(:get, "https://flapjack:password123@flpjck.pagerduty.com/api/v1/incidents").
-        with(:query => {:fields => 'incident_number,status,last_status_change_by',
-                        :incident_key => check, :since => since, :until => unt,
-                        :status => 'acknowledged'}).
-        to_return(:status => 200, :body => Flapjack.dump_json(response), :headers => {})
-
+      req = stub_request(:get, "https://flapjack:password123@pagerduty.com/api/v1/incidents").
+            with(:query => {:fields => 'incident_number,status,last_status_change_by',
+                            :since => since, :until => unt, :status => 'acknowledged'}).
+            to_return(:status => 200, :body => Flapjack.dump_json(response), :headers => {})
+      
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config)
@@ -201,7 +199,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       pg_acknowledged_by = result['incidents'].first['last_status_change_by']
       
       expect(result).to be_a(Hash)
-      expect(result).to have_key(:incidents)
+      expect(result).to have_key('incidents')
       expect(pg_acknowledged_by).to be_a(Hash)
       expect(pg_acknowledged_by).to have_key('id')
       expect(pg_acknowledged_by['id']).to eq('ABCDEFG')
