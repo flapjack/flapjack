@@ -97,12 +97,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       :last  => 'http://example.org/checks?page=1'
     }
 
-    expect(Flapjack::Data::Check).to receive(:count).and_return(1)
-
     page = double('page', :all => [check])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
     expect(Flapjack::Data::Check).to receive(:sort).
       with(:name).and_return(sorted)
 
@@ -112,6 +111,48 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     get '/checks'
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      {:checks => [check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :tags => "http://example.org/checks/#{check.id}/tags"})]
+      }, :links => links, :meta => meta))
+  end
+
+  it "retrieves paginated checks matching a filter" do
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    links = {
+      :self  => 'http://example.org/checks?filter%5Benabled%5D=t',
+      :first => 'http://example.org/checks?filter%5Benabled%5D=t&page=1',
+      :last  => 'http://example.org/checks?filter%5Benabled%5D=t&page=1'
+    }
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:enabled => true).
+      and_return(filtered)
+
+    page = double('page', :all => [check])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(filtered).to receive(:sort).with(:name).and_return(sorted)
+
+    expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(check_data)
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    get '/checks?filter%5Benabled%5D=t'
+    expect(last_response).to be_ok
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:checks => [check_data.merge(

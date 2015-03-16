@@ -59,12 +59,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       :last  => 'http://example.org/tags?page=1'
     }
 
-    expect(Flapjack::Data::Tag).to receive(:count).and_return(1)
-
     page = double('page', :all => [tag])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
     expect(Flapjack::Data::Tag).to receive(:sort).with(:name).and_return(sorted)
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
@@ -80,6 +79,26 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
                    :rules => "http://example.org/tags/#{tag.id}/rules"})]
     }, :links => links, :meta => meta))
   end
+
+  it "retrieves paginated tags matching a filter" # do
+  #   filtered = double('filtered')
+  #   expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => /database/).
+  #     twice.and_return(filtered)
+
+  #   page = double('page', :all => [tag])
+  #   sorted = double('sorted')
+  #   expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+  #   expect(filtered).to receive(:count).and_return(1)
+  #   expect(filtered).to receive(:sort).
+  #     with(:name).and_return(sorted)
+
+  #   expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(tag).
+  #     and_return([tag_data])
+
+  #   get '/search/tags', :name => 'database'
+  #   expect(last_response).to be_ok
+  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag_data], :meta => meta))
+  # end
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).

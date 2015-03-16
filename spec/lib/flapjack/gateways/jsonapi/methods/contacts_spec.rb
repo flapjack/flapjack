@@ -73,12 +73,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       :last  => 'http://example.org/contacts?page=1'
     }
 
-    expect(Flapjack::Data::Contact).to receive(:count).and_return(1)
-
     page = double('page', :all => [contact])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
       and_return(sorted)
 
@@ -97,6 +96,26 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
                    :rules => "http://example.org/contacts/#{contact.id}/rules"})
       ]}, :links => links, :meta => meta))
   end
+
+  it "retrieves paginated contacts matching a filter" # do
+  #   filtered = double('filtered')
+  #   expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => /Herbert/).
+  #     twice.and_return(filtered)
+
+  #   page = double('page', :all => [contact])
+  #   sorted = double('sorted')
+  #   expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+  #   expect(filtered).to receive(:count).and_return(1)
+  #   expect(filtered).to receive(:sort).
+  #     with(:name).and_return(sorted)
+
+  #   expect(Flapjack::Data::Contact).to receive(:as_jsonapi).with(contact).
+  #     and_return([contact_data])
+
+  #   get '/search/contacts', :name => 'Herbert'
+  #   expect(last_response).to be_ok
+  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:contacts => [contact_data], :meta => meta))
+  # end
 
   it "returns the second page of a multi-page contact list" do
     meta = {:pagination => {
@@ -117,12 +136,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     contact_3_data = {:id => SecureRandom.uuid, :name => 'Bill Brown'}
     contact_3 = double(Flapjack::Data::Contact, :id => contact_3_data[:id])
 
-    expect(Flapjack::Data::Contact).to receive(:count).and_return(8)
-
     page = double('page', :all => [contact, contact_2, contact_3])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(2, :per_page => 3).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(8)
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
       and_return(sorted)
 
@@ -171,12 +189,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       :last  => 'http://example.org/contacts?page=1&sort=-name'
     }
 
-    expect(Flapjack::Data::Contact).to receive(:count).and_return(2)
-
     page = double('page', :all => [contact_2, contact])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(2)
     expect(Flapjack::Data::Contact).to receive(:sort).with(:name => :desc).
       and_return(sorted)
 

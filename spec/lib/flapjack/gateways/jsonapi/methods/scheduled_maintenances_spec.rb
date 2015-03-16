@@ -126,12 +126,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       :last  => 'http://example.org/scheduled_maintenances?page=1'
     }
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:count).and_return(1)
-
     page = double('page', :all => [scheduled_maintenance])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:sort).
       with(:timestamp).and_return(sorted)
 

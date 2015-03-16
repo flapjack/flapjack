@@ -73,13 +73,14 @@ module Flapjack
           def resource_get(klass, resources_name, ids, options = {})
             unwrap = !ids.nil? && (ids.size == 1)
 
-            sort_scope = proc { resource_sort(klass, :sort => options[:sort]) }
+            filter_sort_scope = proc { resource_filter_sort(klass,
+              :filter => options[:filter], :sort => options[:sort]) }
 
             resources, links, meta = if ids
               requested = if (ids.size == 1)
                 [klass.find_by_id!(*ids)]
               else
-                sort_scope.call.find_by_ids!(*ids)
+                filter_sort_scope.call.find_by_ids!(*ids)
               end
 
               if requested.empty?
@@ -88,12 +89,18 @@ module Flapjack
 
               [requested, {}, {}]
             else
-              paginate_get(sort_scope.call,
-                :total => klass.count, :page => params[:page],
+              scoped = filter_sort_scope.call
+              paginate_get(scoped,
+                :total => scoped.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
 
-            links[:self] = request.url
+            request_url = request.url.split('?').first
+            unless request.params.empty?
+              request_url << "?#{request.params.to_param}"
+            end
+
+            links[:self] = request_url
 
             fields = params[:fields].nil?  ? nil : params[:fields].split(',')
             incl   = params[:include].nil? ? nil : params[:include].split(',')
@@ -105,8 +112,6 @@ module Flapjack
 
             json_data = {}
             json_data.update(resources_name.to_sym => data)
-
-            # TODO pagination links move from meta to top-level "links"
 
             output = {:links => links, :data => json_data}
             output.update(:included => included) unless included.nil? || included.empty?
@@ -364,7 +369,49 @@ module Flapjack
             [resources_as_json, linked]
           end
 
-          def resource_sort(klass, options = {})
+          def filter_params(klass, fps = {})
+            string_attrs = klass.respond_to?(:jsonapi_search_string_attributes) ?
+              klass.jsonapi_search_string_attributes : []
+
+            boolean_attrs = klass.respond_to?(:jsonapi_search_boolean_attributes) ?
+              klass.jsonapi_search_boolean_attributes : []
+
+            return if string_attrs.empty? && boolean_attrs.empty?
+
+            opts = string_attrs.each_with_object({}) do |sp, memo|
+              next unless fps.has_key?(sp.to_s)
+              memo[sp] = Regexp.new(fps[sp.to_s])
+            end
+
+            bool_opts = boolean_attrs.each_with_object({}) do |sp, memo|
+              next unless fps.has_key?(sp.to_s)
+              memo[sp] = case fps[sp.to_s].downcase
+              when '0', 'f', 'false', 'n', 'no'
+                false
+              when '1', 't', 'true', 'y', 'yes'
+                true
+              else
+                nil
+              end
+            end
+
+            opts.update(bool_opts)
+            opts
+          end
+
+          def resource_filter_sort(klass, options = {})
+
+           scope = klass
+
+           unless params[:filter].nil?
+              if params[:filter].is_a?(Hash)
+                filter_ops = filter_params(klass, params[:filter])
+                scope = scope.intersect(filter_ops)
+              else
+                halt(err(403, "Filter parameters must be passed as Hash key-values"))
+              end
+            end
+
             sort_opts = if params[:sort].nil?
               options[:sort].to_sym || :id
             else
@@ -382,7 +429,8 @@ module Flapjack
               end
             end
 
-            klass.sort(sort_opts)
+            scope = scope.sort(sort_opts)
+            scope
           end
 
           def paginate_get(dataset, options = {})

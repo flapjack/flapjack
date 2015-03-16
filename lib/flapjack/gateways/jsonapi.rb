@@ -174,7 +174,7 @@ module Flapjack
          scheduled_maintenance_links scheduled_maintenances
          unscheduled_maintenance_links unscheduled_maintenances].each do |method|
 
-          # TODO fix test_notifications, reports, searches
+          # TODO fix test_notifications, reports
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"

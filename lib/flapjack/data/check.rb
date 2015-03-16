@@ -205,6 +205,14 @@ module Flapjack
         [:name, :enabled]
       end
 
+      def self.jsonapi_search_string_attributes
+        [:name]
+      end
+
+      def self.jsonapi_search_boolean_attributes
+        [:enabled]
+      end
+
       def self.jsonapi_singular_associations
         []
       end
