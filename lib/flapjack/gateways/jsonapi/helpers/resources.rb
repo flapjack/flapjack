@@ -75,7 +75,7 @@ module Flapjack
 
             sort_scope = proc { resource_sort(klass, :sort => options[:sort]) }
 
-            resources, meta = if ids
+            resources, links, meta = if ids
               requested = if (ids.size == 1)
                 [klass.find_by_id!(*ids)]
               else
@@ -86,12 +86,14 @@ module Flapjack
                 raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(klass, ids)
               end
 
-              [requested, nil]
+              [requested, {}, {}]
             else
               paginate_get(sort_scope.call,
                 :total => klass.count, :page => params[:page],
                 :per_page => params[:per_page])
             end
+
+            links[:self] = request.url
 
             fields = params[:fields].nil?  ? nil : params[:fields].split(',')
             incl   = params[:include].nil? ? nil : params[:include].split(',')
@@ -106,9 +108,7 @@ module Flapjack
 
             # TODO pagination links move from meta to top-level "links"
 
-            # TODO top-level links, add "self" => URL
-
-            output = {:data => json_data}
+            output = {:links => links, :data => json_data}
             output.update(:included => included) unless included.nil? || included.empty?
             output.update(:meta => meta) unless meta.nil? || meta.empty?
             Flapjack.dump_json(output)
@@ -368,11 +368,17 @@ module Flapjack
             sort_opts = if params[:sort].nil?
               options[:sort].to_sym || :id
             else
-              params[:sort].split(',').each_with_object({}) do |sort_param|
-                sort_param =~ /^(-)?([a-z_]+)/i
+              sort_params = params[:sort].split(',')
+
+              if sort_params.any? {|sp| sp !~ /^(?:\+|-)/ }
+                halt(err(403, "Sort parameters must start with +/-"))
+              end
+
+              sort_params.each_with_object({}) do |sort_param, memo|
+                sort_param =~ /^(\+|\-)([a-z_]+)$/i
                 rev  = $1
                 term = $2
-                memo[term.to_sym] = rev.nil? ? :asc : :desc
+                memo[term.to_sym] = (rev == '-') ? :desc : :asc
               end
             end
 
@@ -395,40 +401,47 @@ module Flapjack
 
             pages = set_page_numbers(page, total_pages)
             links = create_links(pages)
-            headers['Link']        = links.join(', ') unless links.empty?
+            headers['Link']        = create_link_header(links) unless links.empty?
             headers['Total-Count'] = total_pages.to_s
 
             [dataset.page(page, :per_page => per_page).all,
-             {
-               :pagination => {
-                 :page        => page,
-                 :per_page    => per_page,
-                 :total_pages => total_pages,
-                 :total_count => total,
-               }
-             }
+              links,
+              {
+                :pagination => {
+                  :page        => page,
+                  :per_page    => per_page,
+                  :total_pages => total_pages,
+                  :total_count => total
+                }
+              }
             ]
           end
 
           def set_page_numbers(page, total_pages)
             pages = {}
-            pages[:first] = 1 if (total_pages > 1) && (page > 1)
+            pages[:first] = 1 # if (total_pages > 1) && (page > 1)
             pages[:prev]  = page - 1 if (page > 1)
             pages[:next]  = page + 1 if page < total_pages
-            pages[:last]  = total_pages if (total_pages > 1) && (page < total_pages)
+            pages[:last]  = total_pages # if (total_pages > 1) && (page < total_pages)
             pages
           end
 
           def create_links(pages)
             url_without_params = request.url.split('?').first
-            per_page = params[:per_page] ? params[:per_page].to_i : 20
+            per_page = params[:per_page] # ? params[:per_page].to_i : 20
 
-            links = []
+            links = {}
             pages.each do |key, value|
-              new_params = request.query_parameters.merge({ page: value, per_page: per_page })
-              links << "<#{url_without_params}?#{new_params.to_param}>; rel=\"#{key}\""
+              page_params = {'page' => value }
+              page_params.update('per_page' => per_page) unless per_page.nil?
+              new_params = request.params.merge(page_params)
+              links[key] = "#{url_without_params}?#{new_params.to_param}"
             end
             links
+          end
+
+          def create_link_header(links)
+            links.collect {|(k, v)| "<#{v}; rel=\"#{k}\"" }.join(', ')
           end
 
           def data_for_include_clause(ids_cache, parent_klass, parent_resources, clause_done, clause_left)

@@ -53,6 +53,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       }
     }
 
+    links = {
+      :self  => 'http://example.org/tags',
+      :first => 'http://example.org/tags?page=1',
+      :last  => 'http://example.org/tags?page=1'
+    }
+
     expect(Flapjack::Data::Tag).to receive(:count).and_return(1)
 
     page = double('page', :all => [tag])
@@ -72,7 +78,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
         :links => {:self  => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
                    :rules => "http://example.org/tags/#{tag.id}/rules"})]
-    }, :meta => meta))
+    }, :links => links, :meta => meta))
   end
 
   it "retrieves one tag" do
@@ -90,7 +96,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
         :links => {:self  => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
                    :rules => "http://example.org/tags/#{tag.id}/rules"})
-    }))
+    }, :links => {:self  => "http://example.org/tags/#{tag.id}"}))
   end
 
   it "retrieves several tags" do
@@ -119,7 +125,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
         :links => {:self  => "http://example.org/tags/#{tag_2.id}",
                    :checks => "http://example.org/tags/#{tag_2.id}/checks",
                    :rules => "http://example.org/tags/#{tag_2.id}/rules"})]
-    }))
+    }, :links => {:self  => "http://example.org/tags/#{tag.id},#{tag_2.id}"}))
   end
 
   it 'sets a linked check for a tag' do

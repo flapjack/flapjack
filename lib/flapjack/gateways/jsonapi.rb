@@ -172,8 +172,9 @@ module Flapjack
       %w[check_links checks contact_links contacts medium_links media
          rule_links rules tag_links tags
          scheduled_maintenance_links scheduled_maintenances
-         unscheduled_maintenance_links unscheduled_maintenances
-         reports test_notifications].each do |method|
+         unscheduled_maintenance_links unscheduled_maintenances].each do |method|
+
+          # TODO fix test_notifications, reports, searches
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"

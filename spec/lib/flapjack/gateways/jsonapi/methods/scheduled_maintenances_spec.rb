@@ -78,7 +78,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
         :type => 'scheduled_maintenance',
         :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
                    :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})
-    }))
+    }, :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}"}))
   end
 
   it 'returns multiple scheduled_maintenance periods' do
@@ -107,7 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
           :type => 'scheduled_maintenance',
           :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance_2.id}",
                      :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance_2.id}/check"})]
-    }))
+    }, :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"}))
   end
 
   it 'returns paginated scheduled maintenance periods' do
@@ -118,6 +118,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
         :total_pages => 1,
         :total_count => 1
       }
+    }
+
+    links = {
+      :self  => 'http://example.org/scheduled_maintenances',
+      :first => 'http://example.org/scheduled_maintenances?page=1',
+      :last  => 'http://example.org/scheduled_maintenances?page=1'
     }
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:count).and_return(1)
@@ -140,7 +146,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
           :type => 'scheduled_maintenance',
           :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
                      :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})]
-    }, :meta => meta))
+    }, :links => links, :meta => meta))
   end
 
   it "deletes a scheduled maintenance period" do

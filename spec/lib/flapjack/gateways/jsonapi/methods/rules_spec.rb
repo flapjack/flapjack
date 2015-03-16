@@ -68,6 +68,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       }
     }
 
+    links = {
+      :self  => 'http://example.org/rules',
+      :first => 'http://example.org/rules?page=1',
+      :last  => 'http://example.org/rules?page=1'
+    }
+
     expect(Flapjack::Data::Rule).to receive(:count).and_return(1)
 
     page = double('page', :all => [rule])
@@ -90,7 +96,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media => "http://example.org/rules/#{rule.id}/media",
                    :tags => "http://example.org/rules/#{rule.id}/tags"})]
-    }, :meta => meta))
+    }, :links => links, :meta => meta))
   end
 
   it "gets a single rule" do
@@ -109,7 +115,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media => "http://example.org/rules/#{rule.id}/media",
                    :tags => "http://example.org/rules/#{rule.id}/tags"})
-    }))
+    }, :links => {:self  => "http://example.org/rules/#{rule.id}"}))
   end
 
   it "does not get a rule that does not exist" do
@@ -163,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
         :media => "http://example.org/contacts/#{contact.id}/media",
         :rules => "http://example.org/contacts/#{contact.id}/rules"
       }
-    )]))
+    )], :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact"}))
   end
 
   it "retrieves a rule and all its contact's media records" do
@@ -207,7 +213,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
         :contact => "http://example.org/media/#{medium.id}/contact",
         :rules => "http://example.org/media/#{medium.id}/rules"
       }
-    )]))
+    )], :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact.media"}))
   end
 
   it "retrieves a rule, its contact, and the contact's media records" do
@@ -241,7 +247,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(rule_data)
 
-    get "/rules/#{rule.id}?include=contact,contact.media"
+    get "/rules/#{rule.id}?include=contact%2Ccontact.media"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
       :rules => rule_data.merge(
@@ -265,7 +271,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
         :contact => "http://example.org/media/#{medium.id}/contact",
         :rules => "http://example.org/media/#{medium.id}/rules"
       }
-    )]))
+    )], :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact%2Ccontact.media"}))
   end
 
   it "sets a contact for a rule" do

@@ -77,7 +77,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         :links => {:self  => "http://example.org/media/#{medium.id}",
                    :contact => "http://example.org/media/#{medium.id}/contact",
                    :rules => "http://example.org/media/#{medium.id}/rules"})
-    }))
+    }, :links => {:self  => "http://example.org/media/#{medium.id}"}))
   end
 
   it "returns all media" do
@@ -88,6 +88,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         :total_pages => 1,
         :total_count => 1
       }
+    }
+
+    links = {
+      :self  => 'http://example.org/media',
+      :first => 'http://example.org/media?page=1',
+      :last  => 'http://example.org/media?page=1'
     }
 
     expect(Flapjack::Data::Medium).to receive(:count).and_return(1)
@@ -110,7 +116,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         :links => {:self  => "http://example.org/media/#{medium.id}",
                    :contact => "http://example.org/media/#{medium.id}/contact",
                    :rules => "http://example.org/media/#{medium.id}/rules"})]
-    }, :meta => meta))
+    }, :links => links, :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do

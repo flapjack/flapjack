@@ -3,11 +3,10 @@ require 'flapjack/gateways/jsonapi'
 
 describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :logger => true, :pact_fixture => true do
 
-  # before { skip 'broken, fixing' }
-
   include_context "jsonapi"
 
-  let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
+  let(:contact)   { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
+  let(:contact_2) { double(Flapjack::Data::Contact, :id => contact_2_data[:id]) }
 
   it "creates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
@@ -68,6 +67,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       :total_count => 1
     }}
 
+    links = {
+      :self  => 'http://example.org/contacts',
+      :first => 'http://example.org/contacts?page=1',
+      :last  => 'http://example.org/contacts?page=1'
+    }
+
     expect(Flapjack::Data::Contact).to receive(:count).and_return(1)
 
     page = double('page', :all => [contact])
@@ -90,7 +95,122 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
         :links => {:self  => "http://example.org/contacts/#{contact.id}",
                    :media => "http://example.org/contacts/#{contact.id}/media",
                    :rules => "http://example.org/contacts/#{contact.id}/rules"})
-      ]}, :meta => meta))
+      ]}, :links => links, :meta => meta))
+  end
+
+  it "returns the second page of a multi-page contact list" do
+    meta = {:pagination => {
+      :page        => 2,
+      :per_page    => 3,
+      :total_pages => 3,
+      :total_count => 8
+    }}
+
+    links = {
+      :self  => 'http://example.org/contacts?page=2&per_page=3',
+      :first => 'http://example.org/contacts?page=1&per_page=3',
+      :last  => 'http://example.org/contacts?page=3&per_page=3',
+      :next  => 'http://example.org/contacts?page=3&per_page=3',
+      :prev  => 'http://example.org/contacts?page=1&per_page=3'
+    }
+
+    contact_3_data = {:id => SecureRandom.uuid, :name => 'Bill Brown'}
+    contact_3 = double(Flapjack::Data::Contact, :id => contact_3_data[:id])
+
+    expect(Flapjack::Data::Contact).to receive(:count).and_return(8)
+
+    page = double('page', :all => [contact, contact_2, contact_3])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(2, :per_page => 3).
+      and_return(page)
+    expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
+      and_return(sorted)
+
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
+    expect(contact_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_2_data)
+    expect(contact_3).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_3_data)
+
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
+    get '/contacts?page=2&per_page=3'
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
+      :contacts => [
+        contact_data.merge(
+          :type => 'contact',
+          :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                     :media => "http://example.org/contacts/#{contact.id}/media",
+                     :rules => "http://example.org/contacts/#{contact.id}/rules"}),
+        contact_2_data.merge(
+          :type => 'contact',
+          :links => {:self  => "http://example.org/contacts/#{contact_2.id}",
+                     :media => "http://example.org/contacts/#{contact_2.id}/media",
+                     :rules => "http://example.org/contacts/#{contact_2.id}/rules"}),
+        contact_3_data.merge(
+          :type => 'contact',
+          :links => {:self  => "http://example.org/contacts/#{contact_3.id}",
+                     :media => "http://example.org/contacts/#{contact_3.id}/media",
+                     :rules => "http://example.org/contacts/#{contact_3.id}/rules"})
+      ]}, :links => links, :meta => meta))
+  end
+
+  it "returns paginated sorted contacts" do
+    meta = {:pagination => {
+      :page        => 1,
+      :per_page    => 20,
+      :total_pages => 1,
+      :total_count => 2
+    }}
+
+    links = {
+      :self  => 'http://example.org/contacts?sort=-name',
+      :first => 'http://example.org/contacts?page=1&sort=-name',
+      :last  => 'http://example.org/contacts?page=1&sort=-name'
+    }
+
+    expect(Flapjack::Data::Contact).to receive(:count).and_return(2)
+
+    page = double('page', :all => [contact_2, contact])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return(page)
+    expect(Flapjack::Data::Contact).to receive(:sort).with(:name => :desc).
+      and_return(sorted)
+
+    expect(contact_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_2_data)
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
+
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
+    get '/contacts?sort=-name'
+    expect(last_response).to be_ok
+
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
+      :contacts => [
+        contact_2_data.merge(
+          :type => 'contact',
+          :links => {:self  => "http://example.org/contacts/#{contact_2.id}",
+                     :media => "http://example.org/contacts/#{contact_2.id}/media",
+                     :rules => "http://example.org/contacts/#{contact_2.id}/rules"}),
+        contact_data.merge(
+          :type => 'contact',
+          :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                     :media => "http://example.org/contacts/#{contact.id}/media",
+                     :rules => "http://example.org/contacts/#{contact.id}/rules"})
+      ]}, :links => links, :meta => meta))
+  end
+
+  it "does not return contacts if sort parameter is incorrectly specified" do
+    expect(Flapjack::Data::Contact).not_to receive(:sort)
+
+    get '/contacts?sort=enabled'
+    expect(last_response.status).to eq(403)
+    # TODO error structure
   end
 
   it "returns a contact" do
@@ -110,8 +230,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
         :links => {:self  => "http://example.org/contacts/#{contact.id}",
                    :media => "http://example.org/contacts/#{contact.id}/media",
                    :rules => "http://example.org/contacts/#{contact.id}/rules"})
-      }
-    ))
+      }, :links => {
+      :self  => "http://example.org/contacts/#{contact.id}",
+    }))
   end
 
   it "does not return a contact that does not exist" do

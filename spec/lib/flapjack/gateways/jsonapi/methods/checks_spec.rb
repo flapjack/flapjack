@@ -91,6 +91,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       }
     }
 
+    links = {
+      :self  => 'http://example.org/checks',
+      :first => 'http://example.org/checks?page=1',
+      :last  => 'http://example.org/checks?page=1'
+    }
+
     expect(Flapjack::Data::Check).to receive(:count).and_return(1)
 
     page = double('page', :all => [check])
@@ -112,7 +118,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :tags => "http://example.org/checks/#{check.id}/tags"})]
-      }, :meta => meta))
+      }, :links => links, :meta => meta))
   end
 
   it "retrieves one check" do
@@ -131,8 +137,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :tags => "http://example.org/checks/#{check.id}/tags"})
-      }
-    ))
+      }, :links => {:self => "http://example.org/checks/#{check.id}"}))
   end
 
   it "retrieves one check with a subset of fields" do
@@ -144,15 +149,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
-    get "/checks/#{check.id}?fields=name,enabled"
+    get "/checks/#{check.id}?fields=name%2Cenabled"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:checks => check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :tags => "http://example.org/checks/#{check.id}/tags"})
-      }
-    ))
+      }, :links => {:self => "http://example.org/checks/#{check.id}?fields=name%2Cenabled"}))
   end
 
   it "retrieves one check and all its linked tag records" do
@@ -203,7 +207,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
           :self   => "http://example.org/tags/#{tag.id}",
           :checks => "http://example.org/tags/#{tag.id}/checks",
           :rules  => "http://example.org/tags/#{tag.id}/rules",
-          })]
+          })],
+       :links => {:self => "http://example.org/checks/#{check.id}?include=tags"}
       ))
   end
 
@@ -234,8 +239,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check_2.id}",
                    :tags => "http://example.org/checks/#{check_2.id}/tags"})
-      ]}
-    ))
+      ]}, :links => {:self => "http://example.org/checks/#{check.id},#{check_2.id}"}))
 
   end
 

@@ -56,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
         :type => 'unscheduled_maintenance',
         :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
                    :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})
-    }))
+    }, :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}"}))
   end
 
   it 'returns multiple unscheduled_maintenance periods' do
@@ -85,7 +85,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
           :type => 'unscheduled_maintenance',
           :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance_2.id}",
                      :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance_2.id}/check"})]
-    }))
+    }, :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"}))
   end
 
   it 'returns paginated unscheduled maintenance periods' do
@@ -96,6 +96,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
         :total_pages => 1,
         :total_count => 1
       }
+    }
+
+    links = {
+      :self  => 'http://example.org/unscheduled_maintenances',
+      :first => 'http://example.org/unscheduled_maintenances?page=1',
+      :last  => 'http://example.org/unscheduled_maintenances?page=1'
     }
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:count).and_return(1)
@@ -118,7 +124,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
           :type => 'unscheduled_maintenance',
           :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
                      :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})]
-    }, :meta => meta))
+    }, :links => links, :meta => meta))
   end
 
   it "ends an unscheduled maintenance period for a check" do

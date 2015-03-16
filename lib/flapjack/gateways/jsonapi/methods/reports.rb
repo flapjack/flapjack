@@ -1,83 +1,82 @@
 #!/usr/bin/env ruby
 
-require 'sinatra/base'
+# require 'sinatra/base'
 
-require 'flapjack/data/check'
+# require 'flapjack/data/check'
 
-require 'flapjack/gateways/jsonapi/helpers/check_presenter'
+# require 'flapjack/gateways/jsonapi/helpers/check_presenter'
 
-module Flapjack
-  module Gateways
-    class JSONAPI < Sinatra::Base
-      module Methods
-        module Reports
+# module Flapjack
+#   module Gateways
+#     class JSONAPI < Sinatra::Base
+#       module Methods
+#         module Reports
 
-          module Helpers
+#           module Helpers
 
-            def report_data(check_ids, options = {}, &block)
-              checks, meta = if check_ids.nil?
-                paginate_get(Flapjack::Data::Check.sort(:name),
-                  :total => Flapjack::Data::Check.count, :page => options[:page],
-                  :per_page => options[:per_page])
-              elsif !check_ids.empty?
-                [Flapjack::Data::Check.find_by_ids!(*check_ids), {}]
-              else
-                [[], {}]
-              end
+#             def report_data(check_ids, options = {}, &block)
+#               checks, links, meta = if check_ids.nil?
+#                 paginate_get(Flapjack::Data::Check.sort(:name),
+#                   :total => Flapjack::Data::Check.count, :page => options[:page],
+#                   :per_page => options[:per_page])
+#               elsif !check_ids.empty?
+#                 [Flapjack::Data::Check.find_by_ids!(*check_ids), {}, {}]
+#               else
+#                 [[], {}, {}]
+#               end
 
-              rd = checks.each_with_object([]) do |check, memo|
-                memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
-                  merge('links'  => {'check'  => check.id})
-              end
+#               rd = checks.each_with_object([]) do |check, memo|
+#                 memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
+#                   merge(:links => {:self => "#{request.base_url}/#{}_reports/#{check.id}"})
+#               end
 
-              [rd, meta]
-            end
+#               [rd, links, meta]
+#             end
 
-          end
+#           end
 
-          def self.registered(app)
-            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
-            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
-            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
-            app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
+#           def self.registered(app)
+#             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
+#             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
+#             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+#             app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
 
-            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports(?:/([^/]+))?$} do
-              action = params[:captures][0]
-              action_pres = case action
-              when 'status', 'downtime'
-                action
-              else
-                "#{action}s"
-              end
+#             app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports(?:/([^/]+))?$} do
+#               action = params[:captures][0]
+#               action_pres = case action
+#               when 'status', 'downtime'
+#                 action
+#               else
+#                 "#{action}s"
+#               end
 
-              args = []
-              unless 'status'.eql?(action)
-                start_time = validate_and_parsetime(params[:start_time])
-                start_time = start_time.to_i unless start_time.nil?
-                end_time = validate_and_parsetime(params[:end_time])
-                end_time = end_time.to_i unless end_time.nil?
-                args += [start_time, end_time]
-              end
+#               args = []
+#               unless 'status'.eql?(action)
+#                 start_time = validate_and_parsetime(params[:start_time])
+#                 start_time = start_time.to_i unless start_time.nil?
+#                 end_time = validate_and_parsetime(params[:end_time])
+#                 end_time = end_time.to_i unless end_time.nil?
+#                 args += [start_time, end_time]
+#               end
 
-              check_ids = params[:captures][1].nil? ? nil : params[:captures][1].split(',')
-              rd, meta = report_data(check_ids, :page => params[:page],
-                                     :per_page => params[:per_page]) {|presenter|
-                presenter.send(action_pres.to_sym, *args)
-              }
+#               check_ids = params[:captures][1].nil? ? nil : params[:captures][1].split(',')
+#               rd, links, meta = report_data(check_ids, :page => params[:page],
+#                                      :per_page => params[:per_page]) {|presenter|
+#                 presenter.send(action_pres.to_sym, *args)
+#               }
 
-              # unwrap, if 1 requested
-              rd = rd.first if !check_ids.nil? && check_ids.size == 1
+#               # unwrap, if 1 requested
+#               rd = rd.first if !check_ids.nil? && check_ids.size == 1
 
-              status 200
-              json_data = {}
-              json_data.update("#{action}_reports".to_sym => rd)
-              json_data.update(:meta => meta) unless meta.nil? || meta.empty?
-              Flapjack.dump_json(json_data)
-            end
+#               status 200
+#               json_data = {"#{action}_reports".to_sym => rd, :links => links}
+#               json_data.update(:meta => meta) unless meta.nil? || meta.empty?
+#               Flapjack.dump_json(json_data)
+#             end
 
-          end
-        end
-      end
-    end
-  end
-end
+#           end
+#         end
+#       end
+#     end
+#   end
+# end
