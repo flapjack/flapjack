@@ -206,7 +206,7 @@ module Flapjack
       end
 
       def self.jsonapi_search_string_attributes
-        [:name]
+        [:name, :ack_hash]
       end
 
       def self.jsonapi_search_boolean_attributes

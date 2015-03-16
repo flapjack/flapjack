@@ -127,6 +127,10 @@ module Flapjack
         [:name, :timezone]
       end
 
+      def self.jsonapi_search_string_attributes
+        [:name, :timezone]
+      end
+
       def self.jsonapi_singular_associations
         []
       end

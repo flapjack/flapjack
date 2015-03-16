@@ -153,7 +153,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     get '/checks?filter%5Benabled%5D=t'
     expect(last_response).to be_ok
-    expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:checks => [check_data.merge(
         :type => 'check',

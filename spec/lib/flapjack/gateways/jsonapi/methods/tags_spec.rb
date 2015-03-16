@@ -80,25 +80,47 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     }, :links => links, :meta => meta))
   end
 
-  it "retrieves paginated tags matching a filter" # do
-  #   filtered = double('filtered')
-  #   expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => /database/).
-  #     twice.and_return(filtered)
+  it "retrieves paginated tags matching a filter" do
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
 
-  #   page = double('page', :all => [tag])
-  #   sorted = double('sorted')
-  #   expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
-  #   expect(filtered).to receive(:count).and_return(1)
-  #   expect(filtered).to receive(:sort).
-  #     with(:name).and_return(sorted)
+    links = {
+      :self  => 'http://example.org/tags?filter%5Bname%5D=database',
+      :first => 'http://example.org/tags?filter%5Bname%5D=database&page=1',
+      :last  => 'http://example.org/tags?filter%5Bname%5D=database&page=1'
+    }
 
-  #   expect(Flapjack::Data::Tag).to receive(:as_jsonapi).with(tag).
-  #     and_return([tag_data])
+    filtered = double('filtered')
+    expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => Regexp.new('database')).
+      and_return(filtered)
 
-  #   get '/search/tags', :name => 'database'
-  #   expect(last_response).to be_ok
-  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:tags => [tag_data], :meta => meta))
-  # end
+    page = double('page', :all => [tag])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(filtered).to receive(:sort).with(:name).and_return(sorted)
+
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
+
+    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
+
+    get '/tags?filter%5Bname%5D=database'
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      {:tags => [tag_data.merge(
+        :type => 'tag',
+        :links => {:self   => "http://example.org/tags/#{tag.id}",
+                   :checks => "http://example.org/tags/#{tag.id}/checks",
+                   :rules  => "http://example.org/tags/#{tag.id}/rules"})]
+      }, :links => links, :meta => meta))
+  end
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
