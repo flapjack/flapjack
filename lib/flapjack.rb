@@ -17,8 +17,8 @@ module Flapjack
 
   def self.sanitize(str)
     return str if str.nil? || !str.is_a?(String) || str.valid_encoding?
-    return str.scrub('?') if str.respond_to(:scrub)
-    str.chars.collect {|c| c.valid_encoding? ? c : '_' }.join
+    return str.scrub('?') if str.respond_to?(:scrub)
+    str.chars.collect {|c| c.valid_encoding? ? c : '?' }.join
   end
 
 end
