@@ -46,28 +46,35 @@ module Flapjack
         self.check_by_end   = c
       end
 
-      swagger_model :jsonapi_UnscheduledMaintenance do
-        key :id, :jsonapi_UnscheduledMaintenance
-        property :unscheduled_maintenances do
-          key :type, :UnscheduledMaintenance
-        end
-      end
-
-      swagger_model :jsonapi_UnscheduledMaintenances do
-        key :id, :jsonapi_UnscheduledMaintenances
-        property :unscheduled_maintenances do
-          key :type, :array
-          items do
-            key :type, :UnscheduledMaintenance
-          end
-        end
-      end
-
-      swagger_model :UnscheduledMaintenance do
-        key :id, :UnscheduledMaintenance
-        key :required, [:start_time, :end_time]
+      swagger_schema :UnscheduledMaintenanceInput do
+        key :required, [:type, :start_time, :end_time]
         property :id do
           key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['unscheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+      end
+
+      swagger_schema :UnscheduledMaintenance do
+        key :required, [:id, :type, :start_time, :end_time]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['unscheduled_maintenance']
         end
         property :start_time do
           key :type, :string
@@ -82,10 +89,15 @@ module Flapjack
         end
       end
 
-      swagger_model :UnscheduledMaintenanceLinks do
-        key :id, :UnscheduledMaintenanceLinks
+      swagger_schema :UnscheduledMaintenanceLinks do
+        key :required, [:self, :check]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :check do
           key :type, :string
+          key :format, :url
         end
       end
 

@@ -17,6 +17,7 @@ module Flapjack
               swagger_args = ['scheduled_maintenances',
                               Flapjack::Data::ScheduledMaintenance]
 
+              swagger_wrappers(*swagger_args)
               swagger_post(*swagger_args)
               swagger_get(*swagger_args)
               swagger_delete(*swagger_args)

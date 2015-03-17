@@ -19,6 +19,7 @@ module Flapjack
             app.class_eval do
               swagger_args = ['rules', Flapjack::Data::Rule]
 
+              swagger_wrappers(*swagger_args)
               swagger_post(*swagger_args)
               swagger_get(*swagger_args)
               swagger_patch(*swagger_args)

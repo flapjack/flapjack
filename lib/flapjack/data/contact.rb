@@ -69,53 +69,60 @@ module Flapjack
         Flapjack::Data::Check.intersect(:id => check_ids)
       end
 
-      swagger_model :jsonapi_Contact do
-        key :id, :jsonapi_Contact
-        property :contacts do
-          key :type, :Contact
-        end
-      end
-
-      swagger_model :jsonapi_Contacts do
-        key :id, :jsonapi_Contacts
-        property :contacts do
-          key :type, :array
-          items do
-            key :type, :Contact
-          end
-        end
-      end
-
-      swagger_model :Contact do
-        key :id, :Contact
-        key :required, [:name]
+      swagger_schema :ContactInput do
+        key :required, [:type, :name]
         property :id do
           key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['contact']
         end
         property :name do
           key :type, :string
         end
         property :timezone do
           key :type, :string
+          key :format, :tzinfo
+        end
+      end
+
+      swagger_schema :Contact do
+        key :required, [:id, :type, :name]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['contact']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :timezone do
+          key :type, :string
+          key :format, :tzinfo
         end
         property :links do
           key :"$ref", :ContactLinks
         end
       end
 
-      swagger_model :ContactLinks do
-        key :id, :ContactLinks
+      swagger_schema :ContactLinks do
+        key :required, [:self, :media, :rules]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :media do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
         property :rules do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
       end
 

@@ -148,23 +148,23 @@ module Flapjack
       include Flapjack::Gateways::JSONAPI::Helpers::SwaggerLinksDocs
 
       swagger_root do
-        key :swaggerVersion, '1.2'
-        key :apiVersion, '2.0.0'
+        key :swagger, '2.0'
         info do
+          key :version, '2.0.0'
           key :title, 'Flapjack API'
-          # key :description, "This is a sample server Petstore server.  You can find out more about Swagger \n    at <a href=\"http://swagger.wordnik.com\">http://swagger.wordnik.com</a> or on irc.freenode.net, #swagger.  For this sample,\n    you can use the api key \"special-key\" to test the authorization filters"
-          # key :termsOfServiceUrl, 'http://helloreverb.com/terms/'
-          # key :contact, 'apiteam@wordnik.com'
-          # key :license, 'Apache 2.0'
-          # key :licenseUrl, 'http://www.apache.org/licenses/LICENSE-2.0.html'
-        end
-        ['checks', 'contacts', 'media', 'rules', 'scheduled_maintenances',
-         'tags', 'unscheduled_maintenances'].each do |resource|
-          api do
-            key :path, "/#{resource}"
-            key :description, "Operations on #{resource.split('_').join(' ')}"
+          key :description, ''
+          contact do
+            key :name, ''
+          end
+          license do
+            key :name, 'MIT'
           end
         end
+        key :host, ''
+        key :basePath, ''
+        key :schemes, ['http']
+        key :consumes, [JSONAPI_MEDIA_TYPE]
+        key :produces, [JSONAPI_MEDIA_TYPE]
       end
 
       # hacky, but trying to avoid too much boilerplate -- links paths
@@ -180,6 +180,84 @@ module Flapjack
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
       end
 
+      swagger_schema :jsonapi_Reference do
+        key :required, [:type, :id]
+        property :type do
+          key :type, :string
+          key :enum, ['check', 'contact', 'medium', 'rule',
+            'scheduled_maintenance', 'tag', 'unscheduled_maintenance']
+        end
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+      end
+
+      swagger_schema :jsonapi_Links do
+        key :required, [:self]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :first do
+          key :type, :string
+          key :format, :url
+        end
+        property :last do
+          key :type, :string
+          key :format, :url
+        end
+        property :next do
+          key :type, :string
+          key :format, :url
+        end
+        property :prev do
+          key :type, :string
+          key :format, :url
+        end
+      end
+
+      swagger_schema :jsonapi_Pagination do
+        key :required, [:page, :per_page, :total_pages, :total_count]
+        property :page do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :per_page do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :total_pages do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :total_count do
+          key :type, :integer
+          key :format, :int64
+        end
+      end
+
+      swagger_schema :jsonapi_Meta do
+        property :pagination do
+          key :"$ref", :jsonapi_Pagination
+        end
+      end
+
+      swagger_schema :jsonapi_Data do
+        property :included do
+          key :type, :array
+          items do
+            key :"$ref", :jsonapi_Reference
+          end
+        end
+        property :links do
+          key :"$ref", :jsonapi_Links
+        end
+        property :meta do
+          key :"$ref", :jsonapi_Meta
+        end
+      end
+
       SWAGGERED_CLASSES = [
         Flapjack::Data::Check,
         Flapjack::Data::Contact,
@@ -187,6 +265,7 @@ module Flapjack
         Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
         Flapjack::Data::Tag,
+        Flapjack::Data::TimeRestrictions,
         Flapjack::Data::UnscheduledMaintenance,
         self
       ].freeze
@@ -195,13 +274,9 @@ module Flapjack
         Flapjack.dump_json(Swagger::Blocks.build_root_json(SWAGGERED_CLASSES))
       end
 
-      get '/doc/:id' do
-        Flapjack.dump_json(Swagger::Blocks.build_api_json(params[:id], SWAGGERED_CLASSES))
-      end
-
-      error Zermelo::LockNotAcquired do
-        # TODO
-      end
+      # error Zermelo::LockNotAcquired do
+      #   # TODO
+      # end
 
       error Zermelo::Records::Errors::RecordNotFound do
         e = env['sinatra.error']

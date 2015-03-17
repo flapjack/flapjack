@@ -44,28 +44,35 @@ module Flapjack
         self.check_by_end   = c
       end
 
-      swagger_model :jsonapi_ScheduledMaintenance do
-        key :id, :jsonapi_ScheduledMaintenance
-        property :scheduled_maintenances do
-          key :type, :ScheduledMaintenance
-        end
-      end
-
-      swagger_model :jsonapi_ScheduledMaintenances do
-        key :id, :jsonapi_ScheduledMaintenances
-        property :scheduled_maintenances do
-          key :type, :array
-          items do
-            key :type, :ScheduledMaintenance
-          end
-        end
-      end
-
-      swagger_model :ScheduledMaintenance do
-        key :id, :ScheduledMaintenance
-        key :required, [:start_time, :end_time]
+      swagger_schema :ScheduledMaintenanceInput do
+        key :required, [:type, :start_time, :end_time]
         property :id do
           key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['scheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+      end
+
+      swagger_schema :ScheduledMaintenance do
+        key :required, [:id, :type, :start_time, :end_time]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['scheduled_maintenance']
         end
         property :start_time do
           key :type, :string
@@ -80,10 +87,15 @@ module Flapjack
         end
       end
 
-      swagger_model :ScheduledMaintenanceLinks do
-        key :id, :ScheduledMaintenanceLinks
+      swagger_schema :ScheduledMaintenanceLinks do
+        key :required, [:self, :check]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :check do
           key :type, :string
+          key :format, :url
         end
       end
 

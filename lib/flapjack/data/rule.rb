@@ -8,6 +8,7 @@ require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
+require 'flapjack/data/time_restrictions'
 
 require 'flapjack/gateways/jsonapi/data/associations'
 
@@ -190,54 +191,62 @@ module Flapjack
         end
       end
 
-      swagger_model :jsonapi_Rule do
-        key :id, :jsonapi_Rule
-        property :rules do
-          key :type, :Rule
+      swagger_schema :RuleInput do
+        key :required, [:type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
         end
-      end
-
-      swagger_model :jsonapi_Rules do
-        key :id, :jsonapi_Rules
-        property :rules do
+        property :type do
+          key :type, :string
+          key :enum, ['rule']
+        end
+        property :time_restrictions do
           key :type, :array
           items do
-            key :type, :Rule
+            key :"$ref", :TimeRestrictions
           end
         end
       end
 
-      swagger_model :Rule do
-        key :id, :Rule
-        # key :required, []
+      swagger_schema :Rule do
+        key :required, [:id, :type]
         property :id do
           key :type, :string
+          key :format, :uuid
         end
-        # # TODO separate model for time restrictions
-        # property :time_restrictions do
-        #   key :"$ref", Flapjack::Data::Schedule.name.to_sym
-        # end
+        property :type do
+          key :type, :string
+          key :enum, ['rule']
+        end
+        property :time_restrictions do
+          key :type, :array
+          items do
+            key :"$ref", :TimeRestrictions
+          end
+        end
         property :links do
           key :"$ref", :RuleLinks
         end
       end
 
-      swagger_model :RuleLinks do
-        key :id, :RuleLinks
+      swagger_schema :RuleLinks do
+        key :required, [:self, :contact, :media, :tags]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :contact do
           key :type, :string
+          key :format, :url
         end
         property :media do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
         property :tags do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
       end
 

@@ -153,47 +153,56 @@ module Flapjack
 
       attr_accessor :count
 
-      swagger_model :jsonapi_Check do
-        key :id, :jsonapi_Check
-        property :checks do
-          key :type, :Check
-        end
-      end
-
-      swagger_model :jsonapi_Checks do
-        key :id, :jsonapi_Checks
-        property :checks do
-          key :type, :array
-          items do
-            key :type, :Check
-          end
-        end
-      end
-
-      swagger_model :Check do
-        key :id, :Check
-        key :required, [:name, :enabled]
+      swagger_schema :CheckInput do
+        key :required, [:type, :name, :enabled]
         property :id do
           key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['check']
         end
         property :name do
           key :type, :string
         end
         property :enabled do
           key :type, :boolean
+          key :enum, [true, false]
+        end
+      end
+
+      swagger_schema :Check do
+        key :required, [:id, :type, :name, :enabled]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['check']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
         end
         property :links do
           key :"$ref", :CheckLinks
         end
       end
 
-      swagger_model :CheckLinks do
-        key :id, :CheckLinks
+      swagger_schema :CheckLinks do
+        key :required, [:self, :tags]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :tags do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
       end
 

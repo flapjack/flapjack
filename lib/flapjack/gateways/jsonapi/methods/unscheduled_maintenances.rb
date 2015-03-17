@@ -17,6 +17,7 @@ module Flapjack
               swagger_args = ['unscheduled_maintenances',
                               Flapjack::Data::UnscheduledMaintenance]
 
+              swagger_wrappers(*swagger_args)
               swagger_post(*swagger_args)
               swagger_get(*swagger_args)
               swagger_patch(*swagger_args)

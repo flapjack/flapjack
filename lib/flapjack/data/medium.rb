@@ -76,29 +76,38 @@ module Flapjack
         end
       end
 
-      swagger_model :jsonapi_Medium do
-        key :id, :jsonapi_Medium
-        property :media do
-          key :type, :Medium
-        end
-      end
-
-      swagger_model :jsonapi_Media do
-        key :id, :jsonapi_Medium
-        property :media do
-          key :type, :array
-          items do
-            key :type, :Medium
-          end
-        end
-      end
-
-      swagger_model :Medium do
-        key :id, :Medium
+      swagger_schema :MediumInput do
         # would require interval & rollup_threshold, but pagerduty :(
-        key :required, [:transport, :address]
+        # TODO fix when userdata added
+        key :required, [:type, :transport]
         property :id do
           key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['medium']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :timezone do
+          key :type, :string
+          key :format, :tzinfo
+        end
+      end
+
+      swagger_schema :Medium do
+        # would require interval & rollup_threshold, but pagerduty :(
+        # TODO fix when userdata added
+        key :required, [:id, :type, :transport]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['medium']
         end
         property :transport do
           key :type, :string
@@ -117,16 +126,19 @@ module Flapjack
         end
       end
 
-      swagger_model :MediumLinks do
-        key :id, :MediumLinks
+      swagger_schema :MediumLinks do
+        key :required, [:self, :contact, :rules]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
         property :contact do
           key :type, :string
+          key :format, :url
         end
         property :rules do
-          key :type, :array
-          items do
-            key :type, :string
-          end
+          key :type, :string
+          key :format, :url
         end
       end
 
