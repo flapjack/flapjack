@@ -21,10 +21,10 @@ module Flapjack
         current_entity_names = (options.has_key?(:enabled) && !options[:enabled].nil?) ?
           Flapjack::Data::Entity.current_names(:redis => redis) : nil
 
-        entity_names_by_id = redis.hgetall("all_entity_names_by_id")
-        return [] if entity_names_by_id.empty?
+        all_entity_names_by_id = redis.hgetall("all_entity_names_by_id")
+        return [] if all_entity_names_by_id.empty?
 
-        entity_names_by_id.inject([]) {|memo, (eid, ename)|
+        all_entity_names_by_id.inject([]) {|memo, (eid, ename)|
           if options[:enabled].nil? ||
             (options[:enabled].is_a?(TrueClass) && current_entity_names.include?(ename) ) ||
             (options[:enabled].is_a?(FalseClass) && !current_entity_names.include?(ename))
@@ -602,7 +602,7 @@ module Flapjack
         raise "Redis connection not set" unless redis = options[:redis]
 
         entity_ids.inject({}) do |memo, entity_id|
-          entity_name = redis.hget('entity_names_by_id', entity_id)
+          entity_name = redis.hget('all_entity_names_by_id', entity_id)
           next memo if entity_name.nil? || entity_name.empty?
           en = Regexp.escape(entity_name)
           check_names = redis.keys("check:#{entity_name}:*").map {|c| c.sub(/^check:#{en}:/, '') } |
