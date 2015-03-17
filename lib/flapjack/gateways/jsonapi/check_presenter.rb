@@ -27,6 +27,8 @@ module Flapjack
            'perfdata'                          => @entity_check.perfdata,
            'in_unscheduled_maintenance'        => @entity_check.in_unscheduled_maintenance?,
            'in_scheduled_maintenance'          => @entity_check.in_scheduled_maintenance?,
+           'initial_failure_delay'             => @entity_check.initial_failure_delay,
+           'repeat_failure_delay'              => @entity_check.repeat_failure_delay,
            'last_update'                       => @entity_check.last_update,
            'last_change'                       => @entity_check.last_change,
            'last_problem_notification'         => @entity_check.last_notification_for_state(:problem)[:timestamp],
