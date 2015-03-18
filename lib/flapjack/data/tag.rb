@@ -58,17 +58,6 @@ module Flapjack
         !self.changed.include?('name')
       end
 
-      swagger_schema :TagInput do
-        key :required, [:type, :name]
-        property :type do
-          key :type, :string
-          key :enum, ['tag']
-        end
-        property :name do
-          key :type, :string
-        end
-      end
-
       swagger_schema :Tag do
         key :required, [:id, :type, :name]
         property :id do
@@ -99,6 +88,47 @@ module Flapjack
         property :rules do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :TagCreate do
+        key :required, [:type, :name]
+        property :type do
+          key :type, :string
+          key :enum, ['tag']
+        end
+        property :name do
+          key :type, :string
+        end
+      end
+
+      swagger_schema :TagUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['tag']
+        end
+        property :links do
+          key :"$ref", :TagUpdateLinks
+        end
+      end
+
+      swagger_schema :TagUpdateLinks do
+        property :checks do
+          key :type, :array
+          items do
+            key :"$ref", :CheckReference
+          end
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :"$ref", :RuleReference
+          end
         end
       end
 

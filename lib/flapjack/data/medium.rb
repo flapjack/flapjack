@@ -76,27 +76,6 @@ module Flapjack
         end
       end
 
-      swagger_schema :MediumInput do
-        # would require interval & rollup_threshold, but pagerduty :(
-        # TODO fix when userdata added
-        key :required, [:type, :transport]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['medium']
-        end
-        property :name do
-          key :type, :string
-        end
-        property :timezone do
-          key :type, :string
-          key :format, :tzinfo
-        end
-      end
-
       swagger_schema :Medium do
         # would require interval & rollup_threshold, but pagerduty :(
         # TODO fix when userdata added
@@ -139,6 +118,74 @@ module Flapjack
         property :rules do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :MediumCreate do
+        # would require interval & rollup_threshold, but pagerduty :(
+        # TODO fix when userdata added
+        key :required, [:type, :transport]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['medium']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :transport do
+          key :type, :string
+          key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :interval do
+          key :type, :integer
+          key :minimum, 0
+        end
+        property :rollup_threshold do
+          key :type, :integer
+          key :minimum, 1
+        end
+      end
+
+      swagger_schema :MediumtUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['medium']
+        end
+        property :transport do
+          key :type, :string
+          key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :interval do
+          key :type, :integer
+          key :minimum, 0
+        end
+        property :rollup_threshold do
+          key :type, :integer
+          key :minimum, 1
+        end
+        property :links do
+          key :"$ref", :MediumUpdateLinks
+        end
+      end
+
+      swagger_schema :MediumUpdateLinks do
+        property :contact do
+          key :"$ref", :ContactReference
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :"$ref", :RuleReference
+          end
         end
       end
 

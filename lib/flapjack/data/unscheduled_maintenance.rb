@@ -46,26 +46,6 @@ module Flapjack
         self.check_by_end   = c
       end
 
-      swagger_schema :UnscheduledMaintenanceInput do
-        key :required, [:type, :start_time, :end_time]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['unscheduled_maintenance']
-        end
-        property :start_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-        property :end_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-      end
-
       swagger_schema :UnscheduledMaintenance do
         key :required, [:id, :type, :start_time, :end_time]
         property :id do
@@ -98,6 +78,55 @@ module Flapjack
         property :check do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :UnscheduledMaintenanceCreate do
+        key :required, [:type, :start_time, :end_time]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['unscheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+      end
+
+      swagger_schema :UnscheduledMaintenanceUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['unscheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :links do
+          key :"$ref", :UnscheduledMaintenanceUpdateLinks
+        end
+      end
+
+      swagger_schema :UnscheduledMaintenanceUpdateLinks do
+        property :check do
+          key :"$ref", :CheckReference
         end
       end
 

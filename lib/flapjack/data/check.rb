@@ -153,25 +153,6 @@ module Flapjack
 
       attr_accessor :count
 
-      swagger_schema :CheckInput do
-        key :required, [:type, :name, :enabled]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['check']
-        end
-        property :name do
-          key :type, :string
-        end
-        property :enabled do
-          key :type, :boolean
-          key :enum, [true, false]
-        end
-      end
-
       swagger_schema :Check do
         key :required, [:id, :type, :name, :enabled]
         property :id do
@@ -203,6 +184,56 @@ module Flapjack
         property :tags do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :CheckCreate do
+        key :required, [:type, :name, :enabled]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['check']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+      end
+
+      swagger_schema :CheckUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['check']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+        property :links do
+          key :"$ref", :CheckUpdateLinks
+        end
+      end
+
+      swagger_schema :CheckUpdateLinks do
+        property :tags do
+          key :type, :array
+          items do
+            key :"$ref", :TagReference
+          end
         end
       end
 

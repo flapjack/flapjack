@@ -19,15 +19,32 @@ module Flapjack
               single = resource.singularize
 
               model_type = klass.name.demodulize
-              model_type_input = "#{model_type}Input".to_sym
+              model_type_create = "#{model_type}Create".to_sym
+              model_type_update = "#{model_type}Update".to_sym
+              model_type_reference = "#{model_type}Reference".to_sym
+
               swagger_type = "jsonapi_#{model_type}".to_sym
               swagger_type_data = "jsonapi_#{model_type}Data".to_sym
-              swagger_type_input = "jsonapi_#{model_type}Input".to_sym
+              swagger_type_create = "jsonapi_#{model_type}Create".to_sym
+              swagger_type_update = "jsonapi_#{model_type}Update".to_sym
 
               model_type_plural = model_type.pluralize
               swagger_type_plural = "jsonapi_#{model_type_plural}".to_sym
               swagger_type_plural_data = "jsonapi_#{model_type_plural}Data".to_sym
-              swagger_type_plural_input = "jsonapi_#{model_type_plural}Input".to_sym
+              swagger_type_plural_create = "jsonapi_#{model_type_plural}Create".to_sym
+              swagger_type_plural_update = "jsonapi_#{model_type_plural}Update".to_sym
+
+              swagger_schema model_type_reference do
+                key :required, [:id, :type]
+                property :id do
+                  key :type, :string
+                  key :format, :uuid
+                end
+                property :type do
+                  key :type, :string
+                  key :enum, [model_type.downcase]
+                end
+              end
 
               swagger_schema swagger_type_data do
                 key :required, [:data]
@@ -64,19 +81,19 @@ module Flapjack
                 end
               end
 
-              swagger_schema swagger_type_input  do
+              swagger_schema swagger_type_create  do
                 key :required, [resource.to_sym]
                 property resource.to_sym do
-                  key :"$ref", model_type_input
+                  key :"$ref", model_type_create
                 end
               end
 
-              swagger_schema swagger_type_plural_input do
+              swagger_schema swagger_type_plural_create do
                 key :required, [resource.to_sym]
                 property resource.to_sym do
                   key :type, :array
                   items do
-                    key :"$ref", model_type_input
+                    key :"$ref", model_type_create
                   end
                 end
               end
@@ -98,39 +115,124 @@ module Flapjack
                 end
               end
 
+              swagger_schema swagger_type_update  do
+                key :required, [resource.to_sym]
+                property resource.to_sym do
+                  key :"$ref", model_type_update
+                end
+              end
+
+              swagger_schema swagger_type_plural_update do
+                key :required, [resource.to_sym]
+                property resource.to_sym do
+                  key :type, :array
+                  items do
+                    key :"$ref", model_type_update
+                  end
+                end
+              end
+
             end
 
             def swagger_post(resource, klass)
-              # swagger_type_input = "jsonapi_#{klass.name.demodulize.pluralize}Input".to_sym
-              # swagger_type_data = "jsonapi_#{klass.name.demodulize.pluralize}Data".to_sym
-
               single = resource.singularize
-              swagger_type_input_single = "jsonapi_#{klass.name.demodulize}Input".to_sym
-              swagger_type_data_single = "jsonapi_#{klass.name.demodulize}Data".to_sym
+
+              swagger_type_create = "jsonapi_#{klass.name.demodulize}Create".to_sym
+              swagger_type_data = "jsonapi_#{klass.name.demodulize}Data".to_sym
+
+              # swagger_type_plural_create = "jsonapi_#{klass.name.demodulize.pluralize}Create".to_sym
+              # swagger_type_plural_data = "jsonapi_#{klass.name.demodulize.pluralize}Data".to_sym
 
               swagger_path "/#{resource}" do
                 operation :post do
                   key :description, "Create a #{single}"
                   key :operationId, "create_#{single}"
-                  key :consumes, [
-                    JSONAPI_MEDIA_TYPE
-                  ]
-                  key :produces, [
-                    JSONAPI_MEDIA_TYPE
-                  ]
+                  key :consumes, [JSONAPI_MEDIA_TYPE]
+                  key :produces, [JSONAPI_MEDIA_TYPE]
                   parameter do
                     key :name, :data
                     key :in, :body
                     key :description, "#{single} to create"
                     key :required, true
                     schema do
-                      key :'$ref', swagger_type_input_single
+                      key :'$ref', swagger_type_create
                     end
                   end
                   response 200 do
                     key :description, "#{single} creation response"
                     schema do
-                      key :'$ref', swagger_type_data_single
+                      key :'$ref', swagger_type_data
+                    end
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
+            end
+
+            def swagger_get(resource, klass)
+              single = resource.singularize
+
+              model_type = klass.name.demodulize
+
+              model_type_plural = model_type.pluralize
+              swagger_type_plural_data = "jsonapi_#{model_type_plural}Data".to_sym
+
+              swagger_path "/#{resource}" do
+                operation :get do
+                  key :description, "Get all #{resource}"
+                  key :operationId, "get_all_#{resource}"
+                  key :produces, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, :fields
+                    key :in, :query
+                    key :description, 'Comma-separated list of fields to return'
+                    key :required, false
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :sort
+                    key :in, :query
+                    key :description, ''
+                    key :required, false
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :filter
+                    key :in, :query
+                    key :description, ''
+                    key :required, false
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :include
+                    key :in, :query
+                    key :description, ''
+                    key :required, false
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :page
+                    key :in, :query
+                    key :description, 'Page number'
+                    key :required, false
+                    key :type, :integer
+                  end
+                  parameter do
+                    key :name, :per_page
+                    key :in, :query
+                    key :description, "Number of #{resource} per page"
+                    key :required, false
+                    key :type, :integer
+                  end
+                  response 200 do
+                    key :description, "GET #{resource} response"
+                    schema do
+                      key :'$ref', swagger_type_plural_data
                     end
                   end
                   # response :default do
@@ -142,131 +244,103 @@ module Flapjack
                 end
               end
 
-              # swagger_api_root resource.to_sym do
-              #   key :swagger, '2.0'
-              #   key :apiVersion, '2.0.0'
-              #   key :basePath, '/'
-              #   key :resourcePath, "/#{resource}"
-              #   api do
-              #     key :path, "/#{resource}"
-              #     operation do
-              #       key :method, 'POST'
-              #       key :summary, "Create a #{single}"
-              #       key :nickname, "create_#{single}".to_sym
-              #       # key :notes, ''
-              #       key :consumes, [
-              #         JSONAPI_MEDIA_TYPE
-              #       ]
-              #       key :produces, [
-              #         JSONAPI_MEDIA_TYPE
-              #       ]
-              #       key :"$ref", swagger_type_single
-              #       parameter do
-              #         key :paramType, :form
-              #         key :name, resource.to_sym
-              #         key :description, "#{single} object to add"
-              #         key :required, true
-              #         key :type, swagger_type_single
-              #       end
-              #       # TODO valid responses
-              #     end
-              #   end
-              # end
-            end
-
-            def swagger_get(resource, klass)
-              swagger_type = "jsonapi_#{klass.name.demodulize}".to_sym
-              swagger_type_single = "jsonapi_#{klass.name.demodulize.singularize}".to_sym
-              single = resource.singularize
-
-              # swagger_api_root resource.to_sym do
-              #   key :swaggerVersion, '1.2'
-              #   key :apiVersion, '2.0.0'
-              #   key :basePath, '/'
-              #   key :resourcePath, "/#{resource}"
-              #   api do
-              #     key :path, "/#{resource}"
-              #     operation do
-              #       key :method, 'GET'
-              #       key :summary, "Get all #{resource}"
-              #       # key :notes, ''
-              #       key :nickname, "get_#{resource}".to_sym
-              #       key :produces, [
-              #         JSONAPI_MEDIA_TYPE
-              #       ]
-              #       key :'$ref', swagger_type
-              #       parameter do
-              #         key :paramType, :query
-              #         key :name, :page
-              #         key :description, 'Page number'
-              #         key :required, false
-              #         key :type, :integer
-              #       end
-              #       parameter do
-              #         key :paramType, :query
-              #         key :name, :per_page
-              #         key :description, "Number of #{resource} per page"
-              #         key :required, false
-              #         key :type, :integer
-              #       end
-              #       parameter do
-              #         key :paramType, :query
-              #         key :name, :fields
-              #         key :description, 'Comma-separated list of fields to return'
-              #         key :required, false
-              #         key :type, :string
-              #       end
-              #       parameter do
-              #         key :paramType, :query
-              #         key :name, :include
-              #         key :description, 'Comma-separated list of linked associations to include'
-              #         key :required, false
-              #         key :type, :string
-              #       end
-              #       parameter do
-              #         key :paramType, :query
-              #         key :name, :sort
-              #         key :description, 'Comma-separated list of fields to sort on; each term must be prepended by + or -'
-              #         key :required, false
-              #         key :type, :string
-              #       end
-              #     end
-              #   end
-
-              #   api do
-              #     key :path, "/#{resource}/{id}"
-              #     operation do
-              #       key :method, 'GET'
-              #       key :summary, "Find #{single} by ID"
-              #       key :notes, "Returns a #{single} based on ID"
-              #       key :nickname, "get_#{single}"
-              #       key :produces, [
-              #         JSONAPI_MEDIA_TYPE
-              #       ]
-              #       key :"$ref", swagger_type_single
-              #       parameter do
-              #         key :paramType, :path
-              #         key :name, :id
-              #         key :description, "Comma-separated IDs of #{resource} to be retrieved"
-              #         key :required, true
-              #         key :type, :string
-              #       end
-              #       response_message do
-              #         key :code, 404
-              #         key :message, "#{single} not found"
-              #       end
-              #     end
-              #   end
-
-              # end
+              swagger_path "/#{resource}/{#{single}_ids}" do
+                operation :get do
+                  key :description, "Get one or more #{resource} by id"
+                  key :operationId, "get_#{single}"
+                  key :produces, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, "#{single}_ids".to_sym
+                    key :in, :path
+                    key :description, 'Comma-separated list of ids'
+                    key :required, true
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :fields
+                    key :in, :query
+                    key :description, 'Comma-separated list of fields to return'
+                    key :required, false
+                    key :type, :string
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
             end
 
             def swagger_patch(resource, klass)
+              single = resource.singularize
 
+              model_type = klass.name.demodulize
+              swagger_type_update = "jsonapi_#{model_type}Update".to_sym
+
+              swagger_path "/#{resource}/{#{single}_ids}" do
+                operation :patch do
+                  key :description, "Update one or more #{resource} by id"
+                  key :operationId, "update_#{single}"
+                  key :consumes, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, "#{single}_ids".to_sym
+                    key :in, :path
+                    key :description, 'Comma-separated list of ids'
+                    key :required, true
+                    key :type, :string
+                  end
+                  parameter do
+                    key :name, :data
+                    key :in, :body
+                    key :description, "#{model_type} to update"
+                    key :required, true
+                    schema do
+                      key :'$ref', swagger_type_update
+                    end
+                  end
+                  response 204 do
+                    key :description, "#{model_type} update response"
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
             end
 
             def swagger_delete(resource, klass)
+              single = resource.singularize
 
+              model_type = klass.name.demodulize
+
+              swagger_path "/#{resource}/{#{single}_ids}" do
+                operation :delete do
+                  key :description, "Delete one or more #{resource} by id"
+                  key :operationId, "delete_#{single}"
+                  key :consumes, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, "#{single}_ids".to_sym
+                    key :in, :path
+                    key :description, 'Comma-separated list of ids'
+                    key :required, true
+                    key :type, :string
+                  end
+                  response 204 do
+                    key :description, "#{model_type} deletion response"
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
             end
 
           end

@@ -191,24 +191,6 @@ module Flapjack
         end
       end
 
-      swagger_schema :RuleInput do
-        key :required, [:type]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['rule']
-        end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
-        end
-      end
-
       swagger_schema :Rule do
         key :required, [:id, :type]
         property :id do
@@ -247,6 +229,63 @@ module Flapjack
         property :tags do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :RuleCreate do
+        key :required, [:type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['rule']
+        end
+        property :time_restrictions do
+          key :type, :array
+          items do
+            key :"$ref", :TimeRestrictions
+          end
+        end
+      end
+
+      swagger_schema :RuleUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['rule']
+        end
+        property :time_restrictions do
+          key :type, :array
+          items do
+            key :"$ref", :TimeRestrictions
+          end
+        end
+        property :links do
+          key :"$ref", :RuleUpdateLinks
+        end
+      end
+
+      swagger_schema :RuleUpdateLinks do
+        property :contact do
+          key :"$ref", :ContactReference
+        end
+        property :media do
+          key :type, :array
+          items do
+            key :"$ref", :MediumReference
+          end
+        end
+        property :tags do
+          key :type, :array
+          items do
+            key :"$ref", :TagReference
+          end
         end
       end
 

@@ -69,25 +69,6 @@ module Flapjack
         Flapjack::Data::Check.intersect(:id => check_ids)
       end
 
-      swagger_schema :ContactInput do
-        key :required, [:type, :name]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['contact']
-        end
-        property :name do
-          key :type, :string
-        end
-        property :timezone do
-          key :type, :string
-          key :format, :tzinfo
-        end
-      end
-
       swagger_schema :Contact do
         key :required, [:id, :type, :name]
         property :id do
@@ -123,6 +104,62 @@ module Flapjack
         property :rules do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :ContactCreate do
+        key :required, [:type, :name]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['contact']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :timezone do
+          key :type, :string
+          key :format, :tzinfo
+        end
+      end
+
+      swagger_schema :ContactUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['contact']
+        end
+        property :name do
+          key :type, :string
+        end
+        property :timezone do
+          key :type, :string
+          key :format, :tzinfo
+        end
+        property :links do
+          key :"$ref", :ContactUpdateLinks
+        end
+      end
+
+      swagger_schema :ContactUpdateLinks do
+        property :media do
+          key :type, :array
+          items do
+            key :"$ref", :MediumReference
+          end
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :"$ref", :RuleReference
+          end
         end
       end
 

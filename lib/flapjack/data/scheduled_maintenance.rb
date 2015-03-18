@@ -44,26 +44,6 @@ module Flapjack
         self.check_by_end   = c
       end
 
-      swagger_schema :ScheduledMaintenanceInput do
-        key :required, [:type, :start_time, :end_time]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, ['scheduled_maintenance']
-        end
-        property :start_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-        property :end_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-      end
-
       swagger_schema :ScheduledMaintenance do
         key :required, [:id, :type, :start_time, :end_time]
         property :id do
@@ -96,6 +76,55 @@ module Flapjack
         property :check do
           key :type, :string
           key :format, :url
+        end
+      end
+
+      swagger_schema :ScheduledMaintenanceCreate do
+        key :required, [:type, :start_time, :end_time]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['scheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+      end
+
+      swagger_schema :ScheduledMaintenanceUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, ['scheduled_maintenance']
+        end
+        property :start_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :end_time do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :links do
+          key :"$ref", :ScheduledMaintenanceUpdateLinks
+        end
+      end
+
+      swagger_schema :ScheduledMaintenanceUpdateLinks do
+        property :check do
+          key :"$ref", :CheckReference
         end
       end
 
