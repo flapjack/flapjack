@@ -191,6 +191,10 @@ module Flapjack
         end
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
       swagger_schema :Rule do
         key :required, [:id, :type]
         property :id do
@@ -199,7 +203,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['rule']
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
         property :time_restrictions do
           key :type, :array
@@ -240,7 +244,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['rule']
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
         property :time_restrictions do
           key :type, :array
@@ -258,7 +262,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['rule']
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
         property :time_restrictions do
           key :type, :array
@@ -287,10 +291,6 @@ module Flapjack
             key :"$ref", :TagReference
           end
         end
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

@@ -127,8 +127,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "updates a medium" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_return([medium])
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
+      with(medium.id).and_return(medium)
 
     expect(medium).to receive(:address=).with('12345')
     expect(medium).to receive(:invalid?).and_return(false)
@@ -152,7 +152,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium_2).to receive(:invalid?).and_return(false)
     expect(medium_2).to receive(:save).and_return(true)
 
-    patch "/media/#{medium.id},#{medium_2.id}",
+    patch "/media",
       Flapjack.dump_json(:data => {:media => [
         {:id => medium.id, :type => 'medium', :address => '12345'},
         {:id => medium_2.id, :type => 'medium', :interval => 120}
@@ -162,8 +162,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "does not update a medium that's not present" do
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id).and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Medium, [medium.id]))
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
+      with(medium.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
     patch "/media/#{medium.id}",
       Flapjack.dump_json(:data => {:media => {:id => medium.id, :type => 'medium', :address => '12345'}}),
@@ -173,10 +173,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes a medium" do
     media = double('media')
-    expect(media).to receive(:ids).and_return([medium.id])
-    expect(media).to receive(:destroy_all)
-    expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id]).and_return(media)
+    expect(medium).to receive(:destroy)
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
+      with(medium.id).and_return(medium)
 
     delete "/media/#{medium.id}"
     expect(last_response.status).to eq(204)
@@ -184,21 +183,22 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes multiple media" do
     media = double('media')
-    expect(media).to receive(:ids).and_return([medium.id, medium_2.id])
     expect(media).to receive(:destroy_all)
-    expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id, medium_2.id]).and_return(media)
+    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
+      with(medium.id, medium_2.id).and_return(media)
 
-    delete "/media/#{medium.id},#{medium_2.id}"
+    delete "/media",
+      Flapjack.dump_json(:data => [
+        {:id => medium.id, :type => 'medium'},
+        {:id => medium_2.id, :type => 'medium'}
+      ]),
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
   it "does not delete a medium that's not found" do
-    media = double('media')
-    expect(media).to receive(:ids).and_return([])
-    expect(media).not_to receive(:destroy_all)
-    expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => [medium.id]).and_return(media)
+    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
+      with(medium.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
     delete "/media/#{medium.id}"
     expect(last_response).to be_not_found

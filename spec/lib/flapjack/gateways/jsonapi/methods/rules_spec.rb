@@ -274,8 +274,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "sets a contact for a rule" do
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
-      with(rule.id).and_return([rule])
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_return(rule)
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact_data[:id]).
       and_return(contact)
@@ -308,7 +308,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:contact=).with(contact)
     expect(rule_2).to receive(:contact=).with(contact)
 
-    patch "/rules/#{rule.id},#{rule_2.id}",
+    patch "/rules",
       Flapjack.dump_json(:data => {:rules => [
         {:id => rule.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}},
@@ -320,13 +320,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not set a contact for a rule that does not exist" do
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).
-      and_raise(Zermelo::Records::Errors::RecordsNotFound.new(Flapjack::Data::Rule, [rule.id]))
+      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
 
     patch "/rules/#{rule.id}",
-      Flapjack.dump_json(:data => {:rules => {:id => rule.id, :type => 'rule', :links =>
-        {:contact => {:type => 'contact', :id => contact.id}}}}),
+      Flapjack.dump_json(:data =>
+        {:rules => {:id => rule.id, :type => 'rule', :links =>
+          {:contact => {:type => 'contact', :id => contact.id}}}}),
       jsonapi_env
     expect(last_response.status).to eq(404)
   end
@@ -337,11 +338,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
            Flapjack::Data::Route, Flapjack::Data::Check).
       and_yield
 
-    rules = double('rules')
-    expect(rules).to receive(:ids).and_return([rule.id])
-    expect(rules).to receive(:destroy_all)
-    expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).and_return(rules)
+    expect(rule).to receive(:destroy)
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_return(rule)
+
 
     delete "/rules/#{rule.id}"
     expect(last_response.status).to eq(204)
@@ -354,14 +354,16 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       and_yield
 
     rules = double('rules')
-    expect(rules).to receive(:ids).
-      and_return([rule.id, rule_2.id])
     expect(rules).to receive(:destroy_all)
-    expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id, rule_2.id]).
-      and_return(rules)
+    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
+      with(rule.id, rule_2.id).and_return(rules)
 
-    delete "/rules/#{rule.id},#{rule_2.id}"
+    delete "/rules",
+      Flapjack.dump_json(:data => [
+        {:id => rule.id, :type => 'rule'},
+        {:id => rule_2.id, :type => 'rule'}
+      ]),
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -371,11 +373,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
            Flapjack::Data::Route, Flapjack::Data::Check).
       and_yield
 
-    rules = double('rules')
-    expect(rules).to receive(:ids).and_return([])
-    expect(rules).not_to receive(:destroy_all)
-    expect(Flapjack::Data::Rule).to receive(:intersect).
-      with(:id => [rule.id]).and_return(rules)
+    expect(Flapjack::Data::Rule).to receive(:find_by_id!).
+      with(rule.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
 
     delete "/rules/#{rule.id}"
     expect(last_response).to be_not_found

@@ -160,8 +160,8 @@ module Flapjack
             key :name, 'MIT'
           end
         end
-        key :host, ''
-        key :basePath, ''
+        key :host, 'localhost'
+        key :basePath, '/doc'
         key :schemes, ['http']
         key :consumes, [JSONAPI_MEDIA_TYPE]
         key :produces, [JSONAPI_MEDIA_TYPE]
@@ -169,10 +169,9 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- links paths
       # must be before regular ones to avoid greedy path captures
-      %w[check_links checks contact_links contacts medium_links media
-         rule_links rules tag_links tags
-         scheduled_maintenance_links scheduled_maintenances
-         unscheduled_maintenance_links unscheduled_maintenances].each do |method|
+      %w[check_links contact_links medium_links
+         rule_links tag_links scheduled_maintenance_links
+         unscheduled_maintenance_links resources].each do |method|
 
           # TODO fix test_notifications, reports
 
@@ -240,21 +239,6 @@ module Flapjack
       swagger_schema :jsonapi_Meta do
         property :pagination do
           key :"$ref", :jsonapi_Pagination
-        end
-      end
-
-      swagger_schema :jsonapi_Data do
-        property :included do
-          key :type, :array
-          items do
-            key :"$ref", :jsonapi_Reference
-          end
-        end
-        property :links do
-          key :"$ref", :jsonapi_Links
-        end
-        property :meta do
-          key :"$ref", :jsonapi_Meta
         end
       end
 

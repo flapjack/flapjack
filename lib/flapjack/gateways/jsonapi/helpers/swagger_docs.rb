@@ -16,23 +16,17 @@ module Flapjack
           class_methods do
 
             def swagger_wrappers(resource, klass)
-              single = resource.singularize
+              model_type           = klass.name.demodulize
+              model_type_plural    = model_type.pluralize
 
-              model_type = klass.name.demodulize
-              model_type_create = "#{model_type}Create".to_sym
-              model_type_update = "#{model_type}Update".to_sym
+              model_type_create    = "#{model_type}Create".to_sym
+              model_type_update    = "#{model_type}Update".to_sym
               model_type_reference = "#{model_type}Reference".to_sym
 
-              swagger_type = "jsonapi_#{model_type}".to_sym
-              swagger_type_data = "jsonapi_#{model_type}Data".to_sym
-              swagger_type_create = "jsonapi_#{model_type}Create".to_sym
-              swagger_type_update = "jsonapi_#{model_type}Update".to_sym
-
-              model_type_plural = model_type.pluralize
-              swagger_type_plural = "jsonapi_#{model_type_plural}".to_sym
-              swagger_type_plural_data = "jsonapi_#{model_type_plural}Data".to_sym
-              swagger_type_plural_create = "jsonapi_#{model_type_plural}Create".to_sym
-              swagger_type_plural_update = "jsonapi_#{model_type_plural}Update".to_sym
+              swagger_type             = "jsonapi_#{model_type}".to_sym
+              swagger_type_plural      = "jsonapi_#{model_type_plural}".to_sym
+              swagger_type_data        = "jsonapi_data_#{model_type}".to_sym
+              swagger_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
 
               swagger_schema model_type_reference do
                 key :required, [:id, :type]
@@ -43,58 +37,6 @@ module Flapjack
                 property :type do
                   key :type, :string
                   key :enum, [model_type.downcase]
-                end
-              end
-
-              swagger_schema swagger_type_data do
-                key :required, [:data]
-                property :data do
-                  key :"$ref", swagger_type
-                end
-                property :included do
-                  key :type, :array
-                  items do
-                    key :"$ref", :jsonapi_Reference
-                  end
-                end
-                property :links do
-                  key :"$ref", :jsonapi_Links
-                end
-              end
-
-              swagger_schema swagger_type_plural_data do
-                key :required, [:data]
-                property :data do
-                  key :"$ref", swagger_type_plural
-                end
-                property :included do
-                  key :type, :array
-                  items do
-                    key :"$ref", :jsonapi_Reference
-                  end
-                end
-                property :links do
-                  key :"$ref", :jsonapi_Links
-                end
-                property :meta do
-                  key :"$ref", :jsonapi_Meta
-                end
-              end
-
-              swagger_schema swagger_type_create  do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
-                  key :"$ref", model_type_create
-                end
-              end
-
-              swagger_schema swagger_type_plural_create do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
-                  key :type, :array
-                  items do
-                    key :"$ref", model_type_create
-                  end
                 end
               end
 
@@ -115,33 +57,61 @@ module Flapjack
                 end
               end
 
-              swagger_schema swagger_type_update  do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
-                  key :"$ref", model_type_update
+              swagger_schema swagger_type_data do
+                key :required, [:data]
+                property :data do
+                  key :"$ref", swagger_type
                 end
-              end
-
-              swagger_schema swagger_type_plural_update do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
+                property :included do
                   key :type, :array
                   items do
-                    key :"$ref", model_type_update
+                    key :"$ref", :jsonapi_Reference
                   end
+                end
+                property :links do
+                  key :"$ref", :jsonapi_Links
                 end
               end
 
+              swagger_schema swagger_type_data_plural do
+                key :required, [:data]
+                property :data do
+                  key :"$ref", swagger_type_plural
+                end
+                property :included do
+                  key :type, :array
+                  items do
+                    key :"$ref", :jsonapi_Reference
+                  end
+                end
+                property :links do
+                  key :"$ref", :jsonapi_Links
+                end
+                property :meta do
+                  key :"$ref", :jsonapi_Meta
+                end
+              end
             end
 
             def swagger_post(resource, klass)
               single = resource.singularize
+              model_type = klass.name.demodulize
 
-              swagger_type_create = "jsonapi_#{klass.name.demodulize}Create".to_sym
-              swagger_type_data = "jsonapi_#{klass.name.demodulize}Data".to_sym
+              model_type_create = "#{model_type}Create".to_sym
 
-              # swagger_type_plural_create = "jsonapi_#{klass.name.demodulize.pluralize}Create".to_sym
-              # swagger_type_plural_data = "jsonapi_#{klass.name.demodulize.pluralize}Data".to_sym
+              swagger_type_data = "jsonapi_data_#{model_type}".to_sym
+
+              # TODO how to reconcile conflicting schemata for normal and bulk POST?
+
+              # swagger_schema swagger_type_plural_create do
+              #   key :required, [resource.to_sym]
+              #   property resource.to_sym do
+              #     key :type, :array
+              #     items do
+              #       key :"$ref", model_type_create
+              #     end
+              #   end
+              # end
 
               swagger_path "/#{resource}" do
                 operation :post do
@@ -155,7 +125,10 @@ module Flapjack
                     key :description, "#{single} to create"
                     key :required, true
                     schema do
-                      key :'$ref', swagger_type_create
+                      key :required, [resource.to_sym]
+                      property resource.to_sym do
+                        key :"$ref", model_type_create
+                      end
                     end
                   end
                   response 200 do
@@ -178,9 +151,10 @@ module Flapjack
               single = resource.singularize
 
               model_type = klass.name.demodulize
-
               model_type_plural = model_type.pluralize
-              swagger_type_plural_data = "jsonapi_#{model_type_plural}Data".to_sym
+
+              swagger_type_data = "jsonapi_data_#{model_type}".to_sym
+              swagger_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
 
               swagger_path "/#{resource}" do
                 operation :get do
@@ -232,7 +206,7 @@ module Flapjack
                   response 200 do
                     key :description, "GET #{resource} response"
                     schema do
-                      key :'$ref', swagger_type_plural_data
+                      key :'$ref', swagger_type_data_plural
                     end
                   end
                   # response :default do
@@ -244,17 +218,18 @@ module Flapjack
                 end
               end
 
-              swagger_path "/#{resource}/{#{single}_ids}" do
+              swagger_path "/#{resource}/{#{single}_id}" do
                 operation :get do
-                  key :description, "Get one or more #{resource} by id"
+                  key :description, "Get a #{single}"
                   key :operationId, "get_#{single}"
                   key :produces, [JSONAPI_MEDIA_TYPE]
                   parameter do
-                    key :name, "#{single}_ids".to_sym
+                    key :name, "#{single}_id".to_sym
                     key :in, :path
-                    key :description, 'Comma-separated list of ids'
+                    key :description, "Id of a #{single}"
                     key :required, true
                     key :type, :string
+                    key :format, :uuid
                   end
                   parameter do
                     key :name, :fields
@@ -262,6 +237,12 @@ module Flapjack
                     key :description, 'Comma-separated list of fields to return'
                     key :required, false
                     key :type, :string
+                  end
+                  response 200 do
+                    key :description, "GET #{single} response"
+                    schema do
+                      key :'$ref', swagger_type_data
+                    end
                   end
                   # response :default do
                   #   key :description, 'unexpected error'
@@ -277,19 +258,20 @@ module Flapjack
               single = resource.singularize
 
               model_type = klass.name.demodulize
-              swagger_type_update = "jsonapi_#{model_type}Update".to_sym
+              model_type_update = "#{model_type}Update".to_sym
 
-              swagger_path "/#{resource}/{#{single}_ids}" do
+              swagger_path "/#{resource}/{#{single}_id}" do
                 operation :patch do
-                  key :description, "Update one or more #{resource} by id"
+                  key :description, "Update a #{single}"
                   key :operationId, "update_#{single}"
                   key :consumes, [JSONAPI_MEDIA_TYPE]
                   parameter do
-                    key :name, "#{single}_ids".to_sym
+                    key :name, "#{single}_id".to_sym
                     key :in, :path
-                    key :description, 'Comma-separated list of ids'
+                    key :description, "Id of a #{single}"
                     key :required, true
                     key :type, :string
+                    key :format, :uuid
                   end
                   parameter do
                     key :name, :data
@@ -297,7 +279,10 @@ module Flapjack
                     key :description, "#{model_type} to update"
                     key :required, true
                     schema do
-                      key :'$ref', swagger_type_update
+                      key :required, [resource.to_sym]
+                      property resource.to_sym do
+                        key :"$ref", model_type_update
+                      end
                     end
                   end
                   response 204 do
@@ -311,27 +296,91 @@ module Flapjack
                   # end
                 end
               end
+
+              swagger_path "/#{resource}" do
+                operation :patch do
+                  key :description, "Update multiple #{resource}"
+                  key :operationId, "update_#{resource}"
+                  key :consumes, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, :data
+                    key :in, :body
+                    key :description, "#{resource} to update"
+                    key :required, true
+                    schema do
+                      key :required, [resource.to_sym]
+                      property resource.to_sym do
+                        key :type, :array
+                        items do
+                          key :"$ref", model_type_update
+                        end
+                      end
+                    end
+                  end
+                  response 204 do
+                    key :description, "#{model_type} update response"
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
+
             end
 
             def swagger_delete(resource, klass)
               single = resource.singularize
 
               model_type = klass.name.demodulize
+              model_type_reference = "#{model_type}Reference".to_sym
 
-              swagger_path "/#{resource}/{#{single}_ids}" do
+              swagger_path "/#{resource}/{#{single}_id}" do
                 operation :delete do
-                  key :description, "Delete one or more #{resource} by id"
+                  key :description, "Delete a #{single}"
                   key :operationId, "delete_#{single}"
                   key :consumes, [JSONAPI_MEDIA_TYPE]
                   parameter do
-                    key :name, "#{single}_ids".to_sym
+                    key :name, "#{single}_id".to_sym
                     key :in, :path
-                    key :description, 'Comma-separated list of ids'
+                    key :description, "Id of a #{single}"
                     key :required, true
                     key :type, :string
+                    key :format, :uuid
                   end
                   response 204 do
                     key :description, "#{model_type} deletion response"
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
+
+              swagger_path "/#{resource}" do
+                operation :delete do
+                  key :description, "Delete #{resource}"
+                  key :operationId, "delete_#{resource}"
+                  key :consumes, [JSONAPI_MEDIA_TYPE]
+                  parameter do
+                    key :name, :data
+                    key :in, :body
+                    key :description, "#{resource} to delete"
+                    key :required, true
+                    schema do
+                      key :type, :array
+                      items do
+                        key :'$ref', model_type_reference
+                      end
+                    end
+                  end
+                  response 204 do
+                    key :description, "#{resource} deletion response"
                   end
                   # response :default do
                   #   key :description, 'unexpected error'

@@ -76,6 +76,10 @@ module Flapjack
         end
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
       swagger_schema :Medium do
         # would require interval & rollup_threshold, but pagerduty :(
         # TODO fix when userdata added
@@ -86,7 +90,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['medium']
+          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
         end
         property :transport do
           key :type, :string
@@ -131,7 +135,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['medium']
+          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -150,7 +154,7 @@ module Flapjack
         end
       end
 
-      swagger_schema :MediumtUpdate do
+      swagger_schema :MediumUpdate do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -158,7 +162,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['medium']
+          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
         end
         property :transport do
           key :type, :string
@@ -187,10 +191,6 @@ module Flapjack
             key :"$ref", :RuleReference
           end
         end
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

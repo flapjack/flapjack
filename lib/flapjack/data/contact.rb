@@ -69,6 +69,10 @@ module Flapjack
         Flapjack::Data::Check.intersect(:id => check_ids)
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
       swagger_schema :Contact do
         key :required, [:id, :type, :name]
         property :id do
@@ -77,7 +81,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['contact']
+          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -115,7 +119,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['contact']
+          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -134,7 +138,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['contact']
+          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -161,10 +165,6 @@ module Flapjack
             key :"$ref", :RuleReference
           end
         end
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

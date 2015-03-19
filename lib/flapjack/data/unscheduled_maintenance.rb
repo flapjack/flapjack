@@ -46,6 +46,10 @@ module Flapjack
         self.check_by_end   = c
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
       swagger_schema :UnscheduledMaintenance do
         key :required, [:id, :type, :start_time, :end_time]
         property :id do
@@ -54,7 +58,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['unscheduled_maintenance']
+          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
         end
         property :start_time do
           key :type, :string
@@ -89,7 +93,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['unscheduled_maintenance']
+          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
         end
         property :start_time do
           key :type, :string
@@ -109,7 +113,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['unscheduled_maintenance']
+          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
         end
         property :start_time do
           key :type, :string
@@ -128,10 +132,6 @@ module Flapjack
         property :check do
           key :"$ref", :CheckReference
         end
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

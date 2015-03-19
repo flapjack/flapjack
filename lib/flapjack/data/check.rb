@@ -153,6 +153,10 @@ module Flapjack
 
       attr_accessor :count
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
       swagger_schema :Check do
         key :required, [:id, :type, :name, :enabled]
         property :id do
@@ -161,7 +165,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['check']
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -195,7 +199,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['check']
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -214,7 +218,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, ['check']
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
         end
         property :name do
           key :type, :string
@@ -235,10 +239,6 @@ module Flapjack
             key :"$ref", :TagReference
           end
         end
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_attributes

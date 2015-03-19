@@ -78,7 +78,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
     expect(sorted).to receive(:count).and_return(1)
-    expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
+    expect(Flapjack::Data::Contact).to receive(:sort).with(:id).
       and_return(sorted)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
@@ -121,7 +121,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(sorted).to receive(:count).and_return(1)
-    expect(filtered).to receive(:sort).with(:name).and_return(sorted)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
@@ -163,7 +163,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(sorted).to receive(:page).with(2, :per_page => 3).
       and_return(page)
     expect(sorted).to receive(:count).and_return(8)
-    expect(Flapjack::Data::Contact).to receive(:sort).with(:name).
+    expect(Flapjack::Data::Contact).to receive(:sort).with(:id).
       and_return(sorted)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
@@ -283,8 +283,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "updates a contact" do
-    expect(Flapjack::Data::Contact).to receive(:find_by_ids!).
-      with(contact.id).and_return([contact])
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
+      with(contact.id).and_return(contact)
 
     expect(contact).to receive(:name=).with('Elias Ericsson')
     expect(contact).to receive(:invalid?).and_return(false)
@@ -299,10 +299,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "deletes a contact" do
     contacts = double('contacts')
-    expect(contacts).to receive(:ids).and_return([contact.id])
-    expect(contacts).to receive(:destroy_all)
-    expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact.id]).and_return(contacts)
+    expect(contact).to receive(:destroy)
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
+      with(contact.id).and_return(contact)
 
     delete "/contacts/#{contact.id}"
     expect(last_response.status).to eq(204)

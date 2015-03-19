@@ -70,29 +70,15 @@ module Flapjack
             Flapjack.dump_json(:data => {resources_name.to_sym => data})
           end
 
-          def resource_get(klass, resources_name, ids, options = {})
-            unwrap = !ids.nil? && (ids.size == 1)
-
-            filter_sort_scope = proc { resource_filter_sort(klass,
-              :filter => options[:filter], :sort => options[:sort]) }
-
-            resources, links, meta = if ids
-              requested = if (ids.size == 1)
-                [klass.find_by_id!(*ids)]
-              else
-                filter_sort_scope.call.find_by_ids!(*ids)
-              end
-
-              if requested.empty?
-                raise Flapjack::Gateways::JSONAPI::RecordsNotFound.new(klass, ids)
-              end
-
-              [requested, {}, {}]
-            else
-              scoped = filter_sort_scope.call
+          def resource_get(klass, resources_name, id, options = {})
+            resources, links, meta = if id.nil?
+              scoped = resource_filter_sort(klass,
+               :filter => options[:filter], :sort => options[:sort])
               paginate_get(scoped,
                 :total => scoped.count, :page => params[:page],
                 :per_page => params[:per_page])
+            else
+              [[klass.find_by_id!(id)], {}, {}]
             end
 
             request_url = request.url.split('?').first
@@ -106,9 +92,9 @@ module Flapjack
             incl   = params[:include].nil? ? nil : params[:include].split(',')
             data, included = as_jsonapi(klass, klass.jsonapi_type,
                                         resources_name, resources,
-                                        (ids || resources.map(&:id)),
+                                        (id.nil? ? resources.map(&:id) : [id]),
                                         :fields => fields, :include => incl,
-                                        :unwrap => unwrap)
+                                        :unwrap => !id.nil?)
 
             json_data = {}
             json_data.update(resources_name.to_sym => data)
@@ -119,7 +105,7 @@ module Flapjack
             Flapjack.dump_json(output)
           end
 
-          def resource_patch(klass, resources_name, ids, options = {})
+          def resource_patch(klass, resources_name, id, options = {})
             resources_data, _ = wrapped_params(resources_name)
             singular_links, multiple_links = klass.association_klasses
             attributes = klass.respond_to?(:jsonapi_attributes) ?
@@ -128,10 +114,14 @@ module Flapjack
               :singular_links => singular_links.keys,
               :multiple_links => multiple_links.keys,
               :klass => klass)
-            resources = klass.find_by_ids!(*ids)
 
-            if resources_data.map {|d| d['id'] }.sort != ids.sort
-              halt err(403, "Id path/data mismatch")
+            ids = resources_data.map {|d| d['id'] }
+
+            resources = if id.nil?
+              klass.find_by_ids!(*ids)
+            else
+              halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
+              [klass.find_by_id!(id)]
             end
 
             resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
@@ -208,15 +198,32 @@ module Flapjack
             true
           end
 
-          def resource_delete(klass, ids)
-            resources = klass.intersect(:id => ids)
-            missing_ids = ids - resources.ids
+          def resource_delete(klass, id)
+            ids = nil
+            wrapped_references = params['data']
 
-            unless missing_ids.empty?
-              raise Zermelo::Records::Errors::RecordsNotFound.new(klass, missing_ids)
+            unless wrapped_references.nil?
+              type = klass.jsonapi_type
+
+              unless wrapped_references.is_a?(Array) &&
+                wrapped_references.all? {|r| type.eql?(r['type']) && !r['id'].nil? }
+
+                halt(err(403, "Malformed data, expecting '#{type}' references"))
+              end
+              ids = wrapped_references.map {|d| d['id'] }
             end
 
-            resources.destroy_all
+            if id.nil? && ids.nil?
+              halt(err(403, "No id parameter or data references passed"))
+            end
+
+            if id.nil?
+              klass.find_by_ids!(*ids).destroy_all
+            else
+              halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([id])
+              klass.find_by_id!(id).destroy
+            end
+
             true
           end
 
@@ -400,7 +407,7 @@ module Flapjack
           end
 
           def resource_filter_sort(klass, options = {})
-
+           options[:sort] ||= 'id'
            scope = klass
 
            unless params[:filter].nil?
@@ -413,7 +420,7 @@ module Flapjack
             end
 
             sort_opts = if params[:sort].nil?
-              options[:sort].to_sym || :id
+              options[:sort].to_sym
             else
               sort_params = params[:sort].split(',')
 
