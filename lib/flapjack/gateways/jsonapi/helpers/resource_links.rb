@@ -33,8 +33,6 @@ module Flapjack
           def resource_get_links(klass, resources_name, id, assoc_name)
             singular_links, multiple_links = klass.association_klasses
 
-            # TODO allow params from regular resource GET to work here
-
             # is 'name' needed?
             accessor, name, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
               [:ids, assoc_name, multiple_links[assoc_name.to_sym][:type]]

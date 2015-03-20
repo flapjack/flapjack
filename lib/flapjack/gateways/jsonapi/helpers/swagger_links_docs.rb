@@ -77,48 +77,6 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
-                    parameter do
-                      key :name, :fields
-                      key :in, :query
-                      key :description, 'Comma-separated list of fields to return'
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :sort
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :filter
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :include
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :page
-                      key :in, :query
-                      key :description, 'Page number'
-                      key :required, false
-                      key :type, :integer
-                    end
-                    parameter do
-                      key :name, :per_page
-                      key :in, :query
-                      key :description, "Number of #{resource} per page"
-                      key :required, false
-                      key :type, :integer
-                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -139,48 +97,6 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
-                    parameter do
-                      key :name, :fields
-                      key :in, :query
-                      key :description, 'Comma-separated list of fields to return'
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :sort
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :filter
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :include
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :page
-                      key :in, :query
-                      key :description, 'Page number'
-                      key :required, false
-                      key :type, :integer
-                    end
-                    parameter do
-                      key :name, :per_page
-                      key :in, :query
-                      key :description, "Number of #{resource} per page"
-                      key :required, false
-                      key :type, :integer
-                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -204,48 +120,6 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "add_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
-                    parameter do
-                      key :name, :fields
-                      key :in, :query
-                      key :description, 'Comma-separated list of fields to return'
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :sort
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :filter
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :include
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :page
-                      key :in, :query
-                      key :description, 'Page number'
-                      key :required, false
-                      key :type, :integer
-                    end
-                    parameter do
-                      key :name, :per_page
-                      key :in, :query
-                      key :description, "Number of #{resource} per page"
-                      key :required, false
-                      key :type, :integer
-                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -268,48 +142,6 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "add_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
-                    parameter do
-                      key :name, :fields
-                      key :in, :query
-                      key :description, 'Comma-separated list of fields to return'
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :sort
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :filter
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :include
-                      key :in, :query
-                      key :description, ''
-                      key :required, false
-                      key :type, :string
-                    end
-                    parameter do
-                      key :name, :page
-                      key :in, :query
-                      key :description, 'Page number'
-                      key :required, false
-                      key :type, :integer
-                    end
-                    parameter do
-                      key :name, :per_page
-                      key :in, :query
-                      key :description, "Number of #{resource} per page"
-                      key :required, false
-                      key :type, :integer
-                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
