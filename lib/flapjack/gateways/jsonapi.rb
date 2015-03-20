@@ -17,6 +17,14 @@ require 'swagger/blocks'
 require 'flapjack'
 require 'flapjack/utility'
 
+require 'flapjack/data/check'
+require 'flapjack/data/contact'
+require 'flapjack/data/medium'
+require 'flapjack/data/rule'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/tag'
+require 'flapjack/data/unscheduled_maintenance'
+
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
 %w[headers miscellaneous resources resource_links
@@ -44,6 +52,16 @@ module Flapjack
 
       # # http://tools.ietf.org/html/rfc6902
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
+
+      RESOURCE_CLASSES = [
+        Flapjack::Data::Check,
+        Flapjack::Data::Contact,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::Tag,
+        Flapjack::Data::UnscheduledMaintenance
+      ]
 
       set :raise_errors, true
       set :show_exceptions, false
@@ -169,9 +187,7 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- links paths
       # must be before regular ones to avoid greedy path captures
-      %w[check_links contact_links medium_links
-         rule_links tag_links scheduled_maintenance_links
-         unscheduled_maintenance_links resources].each do |method|
+      %w[resource_links resources].each do |method|
 
           # TODO fix test_notifications, reports
 
@@ -183,8 +199,7 @@ module Flapjack
         key :required, [:type, :id]
         property :type do
           key :type, :string
-          key :enum, ['check', 'contact', 'medium', 'rule',
-            'scheduled_maintenance', 'tag', 'unscheduled_maintenance']
+          key :enum, Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.map(&:jsonapi_type)
         end
         property :id do
           key :type, :string
@@ -242,17 +257,12 @@ module Flapjack
         end
       end
 
-      SWAGGERED_CLASSES = [
-        Flapjack::Data::Check,
-        Flapjack::Data::Contact,
-        Flapjack::Data::Medium,
-        Flapjack::Data::Rule,
-        Flapjack::Data::ScheduledMaintenance,
-        Flapjack::Data::Tag,
-        Flapjack::Data::TimeRestrictions,
-        Flapjack::Data::UnscheduledMaintenance,
-        self
-      ].freeze
+      Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
+        endpoint = resource_class.jsonapi_type.pluralize.downcase
+        swagger_wrappers(endpoint, resource_class)
+      end
+
+      SWAGGERED_CLASSES = [self] + Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES
 
       get '/doc' do
         Flapjack.dump_json(Swagger::Blocks.build_root_json(SWAGGERED_CLASSES))
