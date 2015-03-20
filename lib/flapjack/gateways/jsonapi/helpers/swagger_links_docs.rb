@@ -63,96 +63,271 @@ module Flapjack
               end
             end
 
+            # GET and PATCH both duplicate a lot of code, but swagger-blocks
+            # make it difficult to DRY things due to the different contexts in use
             def swagger_get_links(resource, klass)
+              single = resource.singularize
 
-              # # TODO needs to return full linked klass type
-              # # TODO needs to distinguish between single/multiple for param type
+              singular_links, multiple_links = klass.association_klasses
 
-              # singular_links = klass.jsonapi_singular_associations
-              # multiple_links = klass.jsonapi_multiple_associations
+              singular_links.each_pair do |link_name, link_data|
+                link_type = link_data[:type]
+                swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
+                  operation :get do
+                    key :description, "Get the #{link_name} of a #{single}"
+                    key :operationId, "get_#{single}_#{link_name}"
+                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, :fields
+                      key :in, :query
+                      key :description, 'Comma-separated list of fields to return'
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :sort
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :filter
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :include
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :page
+                      key :in, :query
+                      key :description, 'Page number'
+                      key :required, false
+                      key :type, :integer
+                    end
+                    parameter do
+                      key :name, :per_page
+                      key :in, :query
+                      key :description, "Number of #{resource} per page"
+                      key :required, false
+                      key :type, :integer
+                    end
+                    response 200 do
+                      key :description, "GET #{resource} response"
+                      schema do
+                        key :"$ref", "#{link_type}Reference".to_sym
+                      end
+                    end
+                    # response :default do
+                    #   key :description, 'unexpected error'
+                    #   schema do
+                    #     key :'$ref', :ErrorModel
+                    #   end
+                    # end
+                  end
+                end
 
-              # single = resource.singularize
+                swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                  operation :get do
+                    key :description, "Get the #{link_name} of a #{single}"
+                    key :operationId, "get_#{single}_#{link_name}"
+                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, :fields
+                      key :in, :query
+                      key :description, 'Comma-separated list of fields to return'
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :sort
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :filter
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :include
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :page
+                      key :in, :query
+                      key :description, 'Page number'
+                      key :required, false
+                      key :type, :integer
+                    end
+                    parameter do
+                      key :name, :per_page
+                      key :in, :query
+                      key :description, "Number of #{resource} per page"
+                      key :required, false
+                      key :type, :integer
+                    end
+                    response 200 do
+                      key :description, "GET #{resource} response"
+                      schema do
+                        key :"$ref", "#{link_type}Reference".to_sym
+                      end
+                    end
+                    # response :default do
+                    #   key :description, 'unexpected error'
+                    #   schema do
+                    #     key :'$ref', :ErrorModel
+                    #   end
+                    # end
+                  end
+                end
+              end
 
-              # get_docs = proc do |ln|
-              #   operation :get do
-              #     key :description, "Get all #{resource}"
-              #     key :operationId, "get_all_#{resource}"
-              #     key :produces, [JSONAPI_MEDIA_TYPE]
-              #     parameter do
-              #       key :name, :fields
-              #       key :in, :query
-              #       key :description, 'Comma-separated list of fields to return'
-              #       key :required, false
-              #       key :type, :string
-              #     end
-              #     parameter do
-              #       key :name, :sort
-              #       key :in, :query
-              #       key :description, ''
-              #       key :required, false
-              #       key :type, :string
-              #     end
-              #     parameter do
-              #       key :name, :filter
-              #       key :in, :query
-              #       key :description, ''
-              #       key :required, false
-              #       key :type, :string
-              #     end
-              #     parameter do
-              #       key :name, :include
-              #       key :in, :query
-              #       key :description, ''
-              #       key :required, false
-              #       key :type, :string
-              #     end
-              #     parameter do
-              #       key :name, :page
-              #       key :in, :query
-              #       key :description, 'Page number'
-              #       key :required, false
-              #       key :type, :integer
-              #     end
-              #     parameter do
-              #       key :name, :per_page
-              #       key :in, :query
-              #       key :description, "Number of #{resource} per page"
-              #       key :required, false
-              #       key :type, :integer
-              #     end
-              #     response 200 do
-              #       key :description, "GET #{resource} response"
-              #       schema do
-              #         key :'$ref', swagger_type_data_plural
-              #       end
-              #     end
-              #     # response :default do
-              #     #   key :description, 'unexpected error'
-              #     #   schema do
-              #     #     key :'$ref', :ErrorModel
-              #     #   end
-              #     # end
-              #   end
-              # end
-
-              # TODO get klasses for these associations
-
-              # model_type = klass.name.demodulize
-              # model_type_plural = model_type.pluralize
-
-              # swagger_type_data = "jsonapi_data_#{model_type}".to_sym
-              # swagger_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
-
-              # linked.each_pair do |link_name, link_klass|
-
-              #   swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
-              #     get_docs.call(link_name)
-              #   end
-
-              #   swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
-              #     get_docs.call(link_name)
-              #   end
-              # end
+              multiple_links.each_pair do |link_name, link_data|
+                link_type = link_data[:type]
+                swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
+                  operation :get do
+                    key :description, "Get the #{link_name} of a #{single}"
+                    key :operationId, "add_#{single}_#{link_name}"
+                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, :fields
+                      key :in, :query
+                      key :description, 'Comma-separated list of fields to return'
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :sort
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :filter
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :include
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :page
+                      key :in, :query
+                      key :description, 'Page number'
+                      key :required, false
+                      key :type, :integer
+                    end
+                    parameter do
+                      key :name, :per_page
+                      key :in, :query
+                      key :description, "Number of #{resource} per page"
+                      key :required, false
+                      key :type, :integer
+                    end
+                    response 200 do
+                      key :description, "GET #{resource} response"
+                      schema do
+                        key :type, :array
+                        items do
+                          key :"$ref", "#{link_type}Reference".to_sym
+                        end
+                      end
+                    end
+                    # response :default do
+                    #   key :description, 'unexpected error'
+                    #   schema do
+                    #     key :'$ref', :ErrorModel
+                    #   end
+                    # end
+                  end
+                end
+                swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                  operation :get do
+                    key :description, "Get the #{link_name} of a #{single}"
+                    key :operationId, "add_#{single}_#{link_name}"
+                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, :fields
+                      key :in, :query
+                      key :description, 'Comma-separated list of fields to return'
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :sort
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :filter
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :include
+                      key :in, :query
+                      key :description, ''
+                      key :required, false
+                      key :type, :string
+                    end
+                    parameter do
+                      key :name, :page
+                      key :in, :query
+                      key :description, 'Page number'
+                      key :required, false
+                      key :type, :integer
+                    end
+                    parameter do
+                      key :name, :per_page
+                      key :in, :query
+                      key :description, "Number of #{resource} per page"
+                      key :required, false
+                      key :type, :integer
+                    end
+                    response 200 do
+                      key :description, "GET #{resource} response"
+                      schema do
+                        key :type, :array
+                        items do
+                          key :"$ref", "#{link_type}Reference".to_sym
+                        end
+                      end
+                    end
+                    # response :default do
+                    #   key :description, 'unexpected error'
+                    #   schema do
+                    #     key :'$ref', :ErrorModel
+                    #   end
+                    # end
+                  end
+                end
+              end
             end
 
             def swagger_patch_links(resource, klass)
