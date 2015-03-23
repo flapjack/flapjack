@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 1.5.0rc1 - 2015-03-20
+- Feature: Expose failure delay (#748) in JSONAPI check report status #827 (@Hobbsee)
+- Bug: fail on rule with invalid regex (fixes #819) #820 (@ali-graham)
+- Bug: Checks array missing from entities endpoint on API in Flapjack 1.4.0 #823 (@Hobbsee)
+
 # 1.4.0 - 2015-03-13
 - No changes
 
