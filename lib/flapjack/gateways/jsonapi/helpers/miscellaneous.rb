@@ -6,6 +6,12 @@ module Flapjack
       module Helpers
         module Miscellaneous
 
+          def request_url
+            rurl = request.url.split('?').first
+            rurl << "?#{request.params.to_param}" unless request.params.empty?
+            rurl
+          end
+
           def wrapped_params(name, options = {})
             data_wrap = params['data']
             result = data_wrap.nil? ? nil : data_wrap[name.to_s]

@@ -108,13 +108,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     }
 
     links = {
-      :self  => 'http://example.org/contacts?filter%5Bname%5D=John',
-      :first => 'http://example.org/contacts?filter%5Bname%5D=John&page=1',
-      :last  => 'http://example.org/contacts?filter%5Bname%5D=John&page=1'
+      :self  => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith',
+      :first => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith&page=1',
+      :last  => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith&page=1'
     }
 
     filtered = double('filtered')
-    expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => Regexp.new('John')).
+    expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => 'Jim Smith').
       and_return(filtered)
 
     page = double('page', :all => [contact])
@@ -128,7 +128,49 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
 
-    get '/contacts?filter%5Bname%5D=John'
+    get '/contacts?filter=name%3AJim+Smith'
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      {:contacts => [contact_data.merge(
+        :type => 'contact',
+        :links => {:self  => "http://example.org/contacts/#{contact.id}",
+                   :media => "http://example.org/contacts/#{contact.id}/media",
+                   :rules => "http://example.org/contacts/#{contact.id}/rules"})]
+      }, :links => links, :meta => meta))
+  end
+
+  it "retrieves paginated contacts matching two filter values" do
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    links = {
+      :self  => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith&filter%5B%5D=timezone%3A%2FUTC%2F',
+      :first => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith&filter%5B%5D=timezone%3A%2FUTC%2F&page=1',
+      :last  => 'http://example.org/contacts?filter%5B%5D=name%3AJim+Smith&filter%5B%5D=timezone%3A%2FUTC%2F&page=1'
+    }
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => 'Jim Smith', :timezone => Regexp.new(/UTC/)).
+      and_return(filtered)
+
+    page = double('page', :all => [contact])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
+
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+
+    get '/contacts?filter%5B%5D=name%3AJim+Smith&filter%5B%5D=timezone%3A%2FUTC%2F'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:contacts => [contact_data.merge(

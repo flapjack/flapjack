@@ -20,7 +20,7 @@ module Flapjack
             # Not checking for duplication on adding existing to a multiple
             # association, the JSONAPI spec doesn't ask for it
             if multiple_klass.nil?
-              # TODO halt
+              # TODO ensure wrapped_link_params will make this unreachable, remove
             else
               assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
               klass.lock(*assoc_classes) do
@@ -33,11 +33,10 @@ module Flapjack
           def resource_get_links(klass, resources_name, id, assoc_name)
             singular_links, multiple_links = klass.association_klasses
 
-            # is 'name' needed?
-            accessor, name, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
-              [:ids, assoc_name, multiple_links[assoc_name.to_sym][:type]]
+            accessor, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
+              [:ids, multiple_links[assoc_name.to_sym][:type]]
             elsif singular_links.has_key?(assoc_name.to_sym)
-              [:id, assoc_name.pluralize, singular_links[assoc_name.to_sym][:type]]
+              [:id, singular_links[assoc_name.to_sym][:type]]
             else
               halt(err(404, 'Unknown association'))
             end
@@ -90,7 +89,7 @@ module Flapjack
                 resource.send("#{assoc_name}=".to_sym, value)
               end
             else
-              # TODO halt
+              # TODO ensure wrapped_link_params will make this unreachable, remove
             end
           end
 

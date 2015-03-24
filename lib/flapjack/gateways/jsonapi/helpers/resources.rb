@@ -81,11 +81,6 @@ module Flapjack
               [[klass.find_by_id!(id)], {}, {}]
             end
 
-            request_url = request.url.split('?').first
-            unless request.params.empty?
-              request_url << "?#{request.params.to_param}"
-            end
-
             links[:self] = request_url
 
             fields = params[:fields].nil?  ? nil : params[:fields].split(',')
@@ -96,13 +91,10 @@ module Flapjack
                                         :fields => fields, :include => incl,
                                         :unwrap => !id.nil?)
 
-            json_data = {}
-            json_data.update(resources_name.to_sym => data)
-
-            output = {:links => links, :data => json_data}
-            output.update(:included => included) unless included.nil? || included.empty?
-            output.update(:meta => meta) unless meta.nil? || meta.empty?
-            Flapjack.dump_json(output)
+            json_data = {:links => links, :data => {resources_name.to_sym => data}}
+            json_data.update(:included => included) unless included.nil? || included.empty?
+            json_data.update(:meta => meta) unless meta.nil? || meta.empty?
+            Flapjack.dump_json(json_data)
           end
 
           def resource_patch(klass, resources_name, id, options = {})
@@ -376,46 +368,44 @@ module Flapjack
             [resources_as_json, linked]
           end
 
-          def filter_params(klass, fps = {})
+          def filter_params(klass, filter)
             string_attrs = klass.respond_to?(:jsonapi_search_string_attributes) ?
               klass.jsonapi_search_string_attributes : []
 
             boolean_attrs = klass.respond_to?(:jsonapi_search_boolean_attributes) ?
               klass.jsonapi_search_boolean_attributes : []
 
-            return if string_attrs.empty? && boolean_attrs.empty?
+            filter.each_with_object({}) do |filter_str, memo|
+              k, v = filter_str.split(':', 2)
+              halt(err(403, "Single filter parameters must be 'key:value'")) if k.nil? || v.nil?
 
-            opts = string_attrs.each_with_object({}) do |sp, memo|
-              next unless fps.has_key?(sp.to_s)
-              memo[sp] = Regexp.new(fps[sp.to_s])
-            end
-
-            bool_opts = boolean_attrs.each_with_object({}) do |sp, memo|
-              next unless fps.has_key?(sp.to_s)
-              memo[sp] = case fps[sp.to_s].downcase
-              when '0', 'f', 'false', 'n', 'no'
-                false
-              when '1', 't', 'true', 'y', 'yes'
-                true
-              else
-                nil
+              value = if string_attrs.include?(k.to_sym)
+                (v =~ %r{^/(.+)/$}) ? Regexp.new($1) : v
+              elsif boolean_attrs.include?(k.to_sym)
+                case v.downcase
+                when '0', 'f', 'false', 'n', 'no'
+                  false
+                when '1', 't', 'true', 'y', 'yes'
+                  true
+                end
               end
-            end
 
-            opts.update(bool_opts)
-            opts
+              halt(err(403, "Invalid filter key '#{k}'")) if value.nil?
+              memo[k.to_sym] = value
+            end
           end
 
           def resource_filter_sort(klass, options = {})
-           options[:sort] ||= 'id'
-           scope = klass
+            options[:sort] ||= 'id'
+            scope = klass
 
-           unless params[:filter].nil?
-              if params[:filter].is_a?(Hash)
+            unless params[:filter].nil?
+              if params[:filter].is_a?(Array)
                 filter_ops = filter_params(klass, params[:filter])
                 scope = scope.intersect(filter_ops)
               else
-                halt(err(403, "Filter parameters must be passed as Hash key-values"))
+                # TODO middleware to enforce this for bare parameters
+                halt(err(403, "Filter parameters must be passed as an Array"))
               end
             end
 
@@ -490,7 +480,7 @@ module Flapjack
               page_params = {'page' => value }
               page_params.update('per_page' => per_page) unless per_page.nil?
               new_params = request.params.merge(page_params)
-              links[key] = "#{url_without_params}?#{new_params.to_param}"
+              links[key] = "#{url_without_params}?#{new_params.to_query}"
             end
             links
           end

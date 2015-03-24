@@ -91,9 +91,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     }
 
     links = {
-      :self  => 'http://example.org/tags?filter%5Bname%5D=database',
-      :first => 'http://example.org/tags?filter%5Bname%5D=database&page=1',
-      :last  => 'http://example.org/tags?filter%5Bname%5D=database&page=1'
+      :self  => 'http://example.org/tags?filter%5B%5D=name%3Adatabase',
+      :first => 'http://example.org/tags?filter%5B%5D=name%3Adatabase&page=1',
+      :last  => 'http://example.org/tags?filter%5B%5D=name%3Adatabase&page=1'
     }
 
     filtered = double('filtered')
@@ -111,7 +111,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
-    get '/tags?filter%5Bname%5D=database'
+    get '/tags?filter%5B%5D=name%3Adatabase'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:tags => [tag_data.merge(

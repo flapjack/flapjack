@@ -180,7 +180,12 @@ module Flapjack
                     key :in, :query
                     key :description, ''
                     key :required, false
-                    key :type, :string
+                    key :type, :array
+                    key :collectionFormat, :multi
+                    items do
+                      key :type, :string
+                      key :format, :filter
+                    end
                   end
                   parameter do
                     key :name, :include

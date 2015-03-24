@@ -131,9 +131,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     }
 
     links = {
-      :self  => 'http://example.org/checks?filter%5Benabled%5D=t',
-      :first => 'http://example.org/checks?filter%5Benabled%5D=t&page=1',
-      :last  => 'http://example.org/checks?filter%5Benabled%5D=t&page=1'
+      :self  => 'http://example.org/checks?filter%5B%5D=enabled%3At',
+      :first => 'http://example.org/checks?filter%5B%5D=enabled%3At&page=1',
+      :last  => 'http://example.org/checks?filter%5B%5D=enabled%3At&page=1'
     }
 
     filtered = double('filtered')
@@ -151,7 +151,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
-    get '/checks?filter%5Benabled%5D=t'
+    get '/checks?filter=enabled%3At'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       {:checks => [check_data.merge(

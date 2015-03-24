@@ -25,6 +25,7 @@ require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
+require 'flapjack/gateways/jsonapi/rack/array_param_fixer'
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
 %w[headers miscellaneous resources resource_links
@@ -68,7 +69,9 @@ module Flapjack
 
       set :protection, :except => :path_traversal
 
+      # use ::Rack::Lint
       use ::Rack::MethodOverride
+      use Flapjack::Gateways::JSONAPI::Rack::ArrayParamFixer
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
 
       class << self
@@ -187,9 +190,9 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- links paths
       # must be before regular ones to avoid greedy path captures
-      %w[resource_links resources].each do |method|
+      %w[reports resource_links resources].each do |method|
 
-          # TODO fix test_notifications, reports
+          # TODO fix test_notifications
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
