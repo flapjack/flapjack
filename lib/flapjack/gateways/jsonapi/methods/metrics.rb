@@ -28,35 +28,37 @@ module Flapjack
               Flapjack.redis.llen('events')
             end
 
+            def event_queue
+              {:length => event_queue_length}
+            end
+
             def processed_events
-              # TODO(@auxesis): potentially provide 5m,10m,30m metrics?
-              counters = Hash[Flapjack.redis.hgetall('event_counters').map {|k,v| [k,v.to_i] }]
-              { 'all_time' => counters }
+              Hash[Flapjack.redis.hgetall('event_counters').map {|k,v| [k,v.to_i] }]
+            end
+
+            def processed_events_all_time
+              {:all_time => processed_events}
             end
 
             def check_freshness
-              Flapjack::Data::Check.split_by_freshness( [0, 60, 300, 900, 3600], :counts => true)
+              Flapjack::Data::Check.split_by_freshness([0, 60, 300, 900, 3600], :counts => true)
             end
 
             def failing_checks
-              Flapjack::Data::Check.intersect(:state => Flapjack::Data::CheckState.failing_states)
+              Flapjack::Data::Check.failing
             end
 
             def checks
               {
-                'all'     => Flapjack::Data::Check.count,
-                'failing' => failing_checks.count,
+                :all     => Flapjack::Data::Check.count,
+                :failing => failing_checks.size
               }
             end
 
             def filter_query(query)
-              case
-              when query == 'all', query.empty?
-                'all'
-              else
-                filter = query.split(',')
-                filter.find {|q| q == 'all'} ? 'all' : filter
-              end
+              return 'all' if ['all', ''].include?(query)
+              filter = query.split(',')
+              filter.find {|q| q == 'all'} ? 'all' : filter
             end
           end
 
@@ -66,19 +68,35 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             app.helpers Flapjack::Gateways::JSONAPI::Methods::Metrics::Helpers
 
-            app.get %r{^/metrics} do
+            app.get %r{^/metrics$} do
               filter = params[:filter] ? filter_query(params[:filter]) : 'all'
 
-              keys = %w(fqdn pid total_keys processed_events event_queue_length check_freshness checks)
+              keys = %w(fqdn pid total_keys processed_events_all_time event_queue_length check_freshness checks)
               keys = keys.find_all {|m| filter.include?(m) } unless filter == 'all'
 
-              metrics = {}
-              keys.each do |key|
-                metrics[key] = self.send(key.to_sym)
+              metrics = keys.each_with_object({}) do |key, memo|
+                memo[key.to_sym] = self.send(key.to_sym)
               end
 
               Flapjack.dump_json(metrics)
             end
+
+            app.get %r{^/metrics/check_freshness$} do
+              Flapjack.dump_json(:check_freshness => check_freshness)
+            end
+
+            app.get %r{^/metrics/checks$} do
+              Flapjack.dump_json(:checks => checks)
+            end
+
+            app.get %r{^/metrics/event_queue$} do
+              Flapjack.dump_json(:event_queue => event_queue)
+            end
+
+            app.get %r{^/metrics/processed_events$} do
+              Flapjack.dump_json(:processed_events => processed_events)
+            end
+
           end
 
         end

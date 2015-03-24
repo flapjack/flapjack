@@ -449,11 +449,7 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.all.each_with_object([]) do |check, memo|
-          s = check.states.last
-          next if s.nil? || Flapjack::Data::Condition.healthy?(s.condition)
-          memo << check
-        end
+        @failing_checks ||= Flapjack::Data::Check.failing
       end
 
       def check_stats

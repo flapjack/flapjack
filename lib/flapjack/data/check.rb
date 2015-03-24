@@ -261,6 +261,15 @@ module Flapjack
         [:tags]
       end
 
+      def self.failing(scope = nil)
+        scope ||= self
+        scope.all.each_with_object([]) do |check, memo|
+          e = check.last_change
+          next if e.nil? || Flapjack::Data::Condition.healthy?(e.condition)
+          memo << check
+        end
+      end
+
       # takes an array of ages (in seconds) to split all checks up by
       # - age means how long since the last update
       # - 0 age is implied if not explicitly passed
@@ -284,6 +293,8 @@ module Flapjack
       #   {   0 => [ ['foo-app-01:SSH', 1382329923.0] ],
       #      60 => [ ['foo-app-01:Ping', 1382329922.0], ['foo-app-01:Disk / Utilisation', 1382329921.0] ],
       #     300 => [] }
+      #
+      # TODO move this method to API metrics once web is referencing API internally
       #
       def self.split_by_freshness(ages, options = {})
         raise "ages does not respond_to? :each and :each_with_index" unless ages.respond_to?(:each) && ages.respond_to?(:each_with_index)
