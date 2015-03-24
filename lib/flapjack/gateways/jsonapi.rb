@@ -190,9 +190,7 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- links paths
       # must be before regular ones to avoid greedy path captures
-      %w[reports resource_links resources].each do |method|
-
-          # TODO fix test_notifications
+      %w[reports test_notifications resource_links resources].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
