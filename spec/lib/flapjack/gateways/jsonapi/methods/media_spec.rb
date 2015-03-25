@@ -183,9 +183,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes multiple media" do
     media = double('media')
+    expect(media).to receive(:count).and_return(2)
     expect(media).to receive(:destroy_all)
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
-      with(medium.id, medium_2.id).and_return(media)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id, medium_2.id]).and_return(media)
 
     delete "/media",
       Flapjack.dump_json(:data => [

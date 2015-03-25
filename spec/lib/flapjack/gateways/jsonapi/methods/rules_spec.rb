@@ -354,9 +354,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       and_yield
 
     rules = double('rules')
+    expect(rules).to receive(:count).and_return(2)
     expect(rules).to receive(:destroy_all)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
-      with(rule.id, rule_2.id).and_return(rules)
+    expect(Flapjack::Data::Rule).to receive(:intersect).
+      with(:id => [rule.id, rule_2.id]).and_return(rules)
 
     delete "/rules",
       Flapjack.dump_json(:data => [

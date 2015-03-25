@@ -202,9 +202,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes multiple tags" do
     tags = double('tags')
+    expect(tags).to receive(:count).and_return(2)
     expect(tags).to receive(:destroy_all)
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
-      with(tag.id, tag_2.id).and_return(tags)
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => [tag.id, tag_2.id]).and_return(tags)
 
     delete "/tags",
       Flapjack.dump_json(:data => [

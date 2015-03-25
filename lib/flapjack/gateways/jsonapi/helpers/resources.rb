@@ -210,7 +210,9 @@ module Flapjack
             end
 
             if id.nil?
-              klass.find_by_ids!(*ids).destroy_all
+              resources = klass.intersect(:id => ids)
+              halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
+              resources.destroy_all
             else
               halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([id])
               klass.find_by_id!(id).destroy

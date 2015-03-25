@@ -159,9 +159,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "deletes multiple scheduled maintenance periods" do
     scheduled_maintenances = double('scheduled_maintenances')
+    expect(scheduled_maintenances).to receive(:count).and_return(2)
     expect(scheduled_maintenances).to receive(:destroy_all)
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_ids!).
-      with(scheduled_maintenance.id, scheduled_maintenance_2.id).
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
+      with(:id => [scheduled_maintenance.id, scheduled_maintenance_2.id]).
       and_return(scheduled_maintenances)
 
     delete "/scheduled_maintenances",
