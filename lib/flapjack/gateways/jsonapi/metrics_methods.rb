@@ -30,8 +30,10 @@ module Flapjack
             redis.llen('events')
           end
 
-          def event_queue
-            { 'length' => redis.llen('events') }
+          def events
+            { 'processed' => processed_events,
+              'queue'     => {'length' => event_queue_length}
+            }
           end
 
           def processed_events
@@ -108,7 +110,7 @@ module Flapjack
             Flapjack.dump_json({"checks" => checks})
           end
 
-          app.get %r{^/metrics/event_queue$} do
+          app.get %r{^/metrics/events$} do
             Flapjack.dump_json({"event_queue" => event_queue})
           end
 

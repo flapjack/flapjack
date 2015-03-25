@@ -353,4 +353,34 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "flapjack has processed 0 ok, 1 failure, 2 ack, and 3 invalid events with 4 on the queue" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      failure_event = {
+        'type'    => 'service',
+        'state'   => 'critical',
+        'summary' => '50% packet loss',
+        'entity'  => 'foo-app-01.example',
+        'check'   => 'ping'
+      }
+
+      # fake out the metrics
+      redis.hset('event_counters', {
+        'all'     => 6,
+        'ok'      => 0,
+        'failure' => 1,
+        'action'  => 2,
+        'invalid' => 3
+        })
+
+      4.times{ redis.lpush(failure_event) }
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
 end
