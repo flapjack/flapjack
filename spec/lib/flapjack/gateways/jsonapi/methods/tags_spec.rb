@@ -32,15 +32,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
-    post "/tags", Flapjack.dump_json(:data => {:tags => tag_data.merge(:type => 'tag')}), jsonapi_env
+    post "/tags", Flapjack.dump_json(:data => tag_data.merge(:type => 'tag')), jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :tags => tag_data_with_id.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      tag_data_with_id.merge(
         :type => 'tag',
         :links => {:self  => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
                    :rules => "http://example.org/tags/#{tag.id}/rules"})
-    }))
+    ))
   end
 
   it "retrieves paginated tags" do
@@ -71,13 +71,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     get '/tags'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :tags => [tag_data_with_id.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
+      tag_data_with_id.merge(
         :type => 'tag',
         :links => {:self  => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules => "http://example.org/tags/#{tag.id}/rules"})]
-    }, :links => links, :meta => meta))
+                   :rules => "http://example.org/tags/#{tag.id}/rules"})],
+    :links => links, :meta => meta))
   end
 
   it "retrieves paginated tags matching a filter" do
@@ -113,13 +113,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     get '/tags?filter%5B%5D=name%3Adatabase'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      {:tags => [tag_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
+      tag_data.merge(
         :type => 'tag',
         :links => {:self   => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules  => "http://example.org/tags/#{tag.id}/rules"})]
-      }, :links => links, :meta => meta))
+                   :rules  => "http://example.org/tags/#{tag.id}/rules"})],
+      :links => links, :meta => meta))
   end
 
   it "retrieves one tag" do
@@ -131,13 +131,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     get "/tags/#{tag.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :tags => tag_data_with_id.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      tag_data_with_id.merge(
         :type => 'tag',
         :links => {:self  => "http://example.org/tags/#{tag.id}",
                    :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules => "http://example.org/tags/#{tag.id}/rules"})
-    }, :links => {:self  => "http://example.org/tags/#{tag.id}"}))
+                   :rules => "http://example.org/tags/#{tag.id}/rules"}),
+    :links => {:self  => "http://example.org/tags/#{tag.id}"}))
   end
 
   it "retrieves several tags" # do
@@ -155,8 +155,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   #   get "/tags/#{tag.id},#{tag_2.id}"
   #   expect(last_response).to be_ok
 
-  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-  #     :tags => [tag_data_with_id.merge(
+  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
+  #     tag_data_with_id.merge(
   #       :type => 'tag',
   #       :links => {:self  => "http://example.org/tags/#{tag.id}",
   #                  :checks => "http://example.org/tags/#{tag.id}/checks",
@@ -165,8 +165,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   #       :type => 'tag',
   #       :links => {:self  => "http://example.org/tags/#{tag_2.id}",
   #                  :checks => "http://example.org/tags/#{tag_2.id}/checks",
-  #                  :rules => "http://example.org/tags/#{tag_2.id}/rules"})]
-  #   }, :links => {:self  => "http://example.org/tags/#{tag.id},#{tag_2.id}"}))
+  #                  :rules => "http://example.org/tags/#{tag_2.id}/rules"})],
+  #   :links => {:self  => "http://example.org/tags/#{tag.id},#{tag_2.id}"}))
   # end
 
   it 'sets a linked check for a tag' do
@@ -185,8 +185,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
     patch "/tags/#{tag.id}",
-      Flapjack.dump_json(:data => {:tags => {:id => tag.id, :type => 'tag', :links =>
-        {:checks => {:type => 'check', :id => [check.id]}}}}),
+      Flapjack.dump_json(:data => {:id => tag.id, :type => 'tag', :links =>
+        {:checks => {:type => 'check', :id => [check.id]}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end

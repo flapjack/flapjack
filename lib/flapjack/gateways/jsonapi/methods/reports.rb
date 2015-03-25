@@ -74,7 +74,7 @@ module Flapjack
               rd = rd.first unless 'tags'.eql?(resource) || resource_id.nil?
 
               status 200
-              json_data = {:links => links, :data => {"#{report_type}_reports".to_sym => rd}}
+              json_data = {:links => links, :data => rd}
               json_data.update(:meta => meta) unless meta.nil? || meta.empty?
               Flapjack.dump_json(json_data)
             end

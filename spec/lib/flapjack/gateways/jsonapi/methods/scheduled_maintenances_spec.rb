@@ -30,14 +30,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:jsonapi_type).and_return('scheduled_maintenance')
 
-    post "/scheduled_maintenances", Flapjack.dump_json(:data => {:scheduled_maintenances => scheduled_maintenance_data.merge(:type => 'scheduled_maintenance')}), jsonapi_env
+    post "/scheduled_maintenances", Flapjack.dump_json(:data => scheduled_maintenance_data.merge(:type => 'scheduled_maintenance')), jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :scheduled_maintenances => scheduled_maintenance_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      scheduled_maintenance_data.merge(
         :type => 'scheduled_maintenance',
         :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
                    :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})
-    }))
+    ))
   end
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
@@ -59,7 +59,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_return(scheduled_maintenance)
 
     post "/scheduled_maintenances",
-      Flapjack.dump_json(:data => {:scheduled_maintenances => bad_data.merge(:type => 'scheduled_maintenance')}),
+      Flapjack.dump_json(:data => bad_data.merge(:type => 'scheduled_maintenance')),
       jsonapi_env
     expect(last_response.status).to eq(403)
   end
@@ -73,12 +73,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :scheduled_maintenances => scheduled_maintenance_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      scheduled_maintenance_data.merge(
         :type => 'scheduled_maintenance',
         :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
-                   :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})
-    }, :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}"}))
+                   :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"}),
+    :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}"}))
   end
 
   it 'returns multiple scheduled_maintenance periods' # do
@@ -97,8 +97,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   #   get "/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"
   #   expect(last_response).to be_ok
-  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-  #     :scheduled_maintenances => [
+  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
   #       scheduled_maintenance_data.merge(
   #         :type => 'scheduled_maintenance',
   #         :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
@@ -106,8 +105,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   #       scheduled_maintenance_2_data.merge(
   #         :type => 'scheduled_maintenance',
   #         :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance_2.id}",
-  #                    :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance_2.id}/check"})]
-  #   }, :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"}))
+  #                    :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance_2.id}/check"})],
+  #   :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id},#{scheduled_maintenance_2.id}"}))
   # end
 
   it 'returns paginated scheduled maintenance periods' do
@@ -139,13 +138,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     get '/scheduled_maintenances'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :scheduled_maintenances => [
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
         scheduled_maintenance_data.merge(
           :type => 'scheduled_maintenance',
           :links => {:self  => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}",
-                     :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})]
-    }, :links => links, :meta => meta))
+                     :check => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check"})],
+    :links => links, :meta => meta))
   end
 
   it "deletes a scheduled maintenance period" do

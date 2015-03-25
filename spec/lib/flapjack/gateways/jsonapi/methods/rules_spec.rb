@@ -27,16 +27,16 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(Flapjack::Data::Rule).to receive(:jsonapi_type).and_return('rule')
 
-    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_env
+    post "/rules", Flapjack.dump_json(:data => rule_data.merge(:type => 'rule')), jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      rule_data.merge(
         :type => 'rule',
         :links => {:self  => "http://example.org/rules/#{rule.id}",
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media => "http://example.org/rules/#{rule.id}/media",
                    :tags => "http://example.org/rules/#{rule.id}/tags"})
-    }))
+    ))
   end
 
   it "does not create a rule if the data is improperly formatted" do
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    post "/rules", Flapjack.dump_json(:data => {:rules => rule_data.merge(:type => 'rule')}), jsonapi_env
+    post "/rules", Flapjack.dump_json(:data => rule_data.merge(:type => 'rule')), jsonapi_env
     expect(last_response.status).to eq(403)
   end
 
@@ -88,14 +88,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     get '/rules'
     expect(last_response).to be_ok
 
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => [rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
+      rule_data.merge(
         :type => 'rule',
         :links => {:self  => "http://example.org/rules/#{rule.id}",
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media => "http://example.org/rules/#{rule.id}/media",
-                   :tags => "http://example.org/rules/#{rule.id}/tags"})]
-    }, :links => links, :meta => meta))
+                   :tags => "http://example.org/rules/#{rule.id}/tags"})],
+      :links => links, :meta => meta))
   end
 
   it "gets a single rule" do
@@ -107,14 +107,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      rule_data.merge(
         :type => 'rule',
         :links => {:self  => "http://example.org/rules/#{rule.id}",
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media => "http://example.org/rules/#{rule.id}/media",
-                   :tags => "http://example.org/rules/#{rule.id}/tags"})
-    }, :links => {:self  => "http://example.org/rules/#{rule.id}"}))
+                   :tags => "http://example.org/rules/#{rule.id}/tags"}),
+    :links => {:self  => "http://example.org/rules/#{rule.id}"}))
   end
 
   it "does not get a rule that does not exist" do
@@ -150,8 +150,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     get "/rules/#{rule.id}?include=contact"
     expect(last_response).to be_ok
 
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      rule_data.merge(
         :type => 'rule',
         :links => {:self  => "http://example.org/rules/#{rule.id}",
                    :contact =>  {
@@ -161,8 +161,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                     :id => contact.id
                    },
                    :media => "http://example.org/rules/#{rule.id}/media",
-                   :tags => "http://example.org/rules/#{rule.id}/tags"})
-    }, :included => [
+                   :tags => "http://example.org/rules/#{rule.id}/tags"}),
+    :included => [
       contact_data.merge(:type => 'contact', :links => {
         :self => "http://example.org/contacts/#{contact.id}",
         :media => "http://example.org/contacts/#{contact.id}/media",
@@ -199,14 +199,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     get "/rules/#{rule.id}?include=contact.media"
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      rule_data.merge(
         :type => 'rule',
         :links => {:self    => "http://example.org/rules/#{rule.id}",
                    :contact => "http://example.org/rules/#{rule.id}/contact",
                    :media   => "http://example.org/rules/#{rule.id}/media",
-                   :tags    => "http://example.org/rules/#{rule.id}/tags"})
-    }, :included => [
+                   :tags    => "http://example.org/rules/#{rule.id}/tags"}),
+    :included => [
       email_data.merge(:type => 'medium', :links => {
         :self => "http://example.org/media/#{medium.id}",
         :contact => "http://example.org/media/#{medium.id}/contact",
@@ -248,8 +248,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     get "/rules/#{rule.id}?include=contact%2Ccontact.media"
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :rules => rule_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      rule_data.merge(
         :type => 'rule',
         :links => {:self    => "http://example.org/rules/#{rule.id}",
                    :contact => {
@@ -258,8 +258,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                      :type    => 'contact'
                    },
                    :media   => "http://example.org/rules/#{rule.id}/media",
-                   :tags    => "http://example.org/rules/#{rule.id}/tags"})
-    }, :included => [
+                   :tags    => "http://example.org/rules/#{rule.id}/tags"}),
+    :included => [
       contact_data.merge(:type => 'contact', :links => {
         :self => "http://example.org/contacts/#{contact.id}",
         :media => "http://example.org/contacts/#{contact.id}/media",
@@ -286,8 +286,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:contact=).with(contact)
 
     patch "/rules/#{rule.id}",
-      Flapjack.dump_json(:data => {:rules => {:id => rule.id, :type => 'rule', :links =>
-        {:contact => {:type => 'contact', :id => contact.id}}}}),
+      Flapjack.dump_json(:data => {:id => rule.id, :type => 'rule', :links =>
+        {:contact => {:type => 'contact', :id => contact.id}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -309,12 +309,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule_2).to receive(:contact=).with(contact)
 
     patch "/rules",
-      Flapjack.dump_json(:data => {:rules => [
+      Flapjack.dump_json(:data => [
         {:id => rule.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}},
         {:id => rule_2.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}}
-        ]}),
+        ]),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -326,8 +326,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data =>
-        {:rules => {:id => rule.id, :type => 'rule', :links =>
-          {:contact => {:type => 'contact', :id => contact.id}}}}),
+        {:id => rule.id, :type => 'rule', :links =>
+          {:contact => {:type => 'contact', :id => contact.id}}}),
       jsonapi_env
     expect(last_response.status).to eq(404)
   end
@@ -341,7 +341,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:destroy)
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
-
 
     delete "/rules/#{rule.id}"
     expect(last_response.status).to eq(204)

@@ -23,10 +23,8 @@ module Flapjack
               model_type_update    = "#{model_type}Update".to_sym
               model_type_reference = "#{model_type}Reference".to_sym
 
-              swagger_type             = "jsonapi_#{model_type}".to_sym
-              swagger_type_plural      = "jsonapi_#{model_type_plural}".to_sym
-              swagger_type_data        = "jsonapi_data_#{model_type}".to_sym
-              swagger_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
+              model_type_data        = "jsonapi_data_#{model_type}".to_sym
+              model_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
 
               swagger_schema model_type_reference do
                 key :required, [:id, :type]
@@ -40,27 +38,10 @@ module Flapjack
                 end
               end
 
-              swagger_schema swagger_type do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
-                  key :"$ref", model_type
-                end
-              end
-
-              swagger_schema swagger_type_plural do
-                key :required, [resource.to_sym]
-                property resource.to_sym do
-                  key :type, :array
-                  items do
-                    key :"$ref", model_type
-                  end
-                end
-              end
-
-              swagger_schema swagger_type_data do
+              swagger_schema model_type_data do
                 key :required, [:data]
                 property :data do
-                  key :"$ref", swagger_type
+                  key :"$ref", model_type
                 end
                 property :included do
                   key :type, :array
@@ -73,10 +54,10 @@ module Flapjack
                 end
               end
 
-              swagger_schema swagger_type_data_plural do
+              swagger_schema model_type_data_plural do
                 key :required, [:data]
                 property :data do
-                  key :"$ref", swagger_type_plural
+                  key :"$ref", model_type_plural
                 end
                 property :included do
                   key :type, :array
@@ -153,8 +134,8 @@ module Flapjack
               model_type = klass.name.demodulize
               model_type_plural = model_type.pluralize
 
-              swagger_type_data = "jsonapi_data_#{model_type}".to_sym
-              swagger_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
+              model_type_data = "jsonapi_data_#{model_type}".to_sym
+              model_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
 
               swagger_path "/#{resource}" do
                 operation :get do
@@ -211,7 +192,7 @@ module Flapjack
                   response 200 do
                     key :description, "GET #{resource} response"
                     schema do
-                      key :'$ref', swagger_type_data_plural
+                      key :'$ref', model_type_data_plural
                     end
                   end
                   # response :default do
@@ -246,7 +227,7 @@ module Flapjack
                   response 200 do
                     key :description, "GET #{single} response"
                     schema do
-                      key :'$ref', swagger_type_data
+                      key :'$ref', model_type_data
                     end
                   end
                   # response :default do

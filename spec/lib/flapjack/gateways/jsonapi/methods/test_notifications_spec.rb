@@ -20,12 +20,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
       with('events', [check], an_instance_of(Hash))
 
     post "/test_notifications/checks/#{check.id}",
-      Flapjack.dump_json(:data => {:test_notifications => notification_data}),
+      Flapjack.dump_json(:data => notification_data),
       jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :test_notifications => notification_data
-    }))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      notification_data
+    ))
   end
 
   it 'creates test notifications for checks linked to a tag' do
@@ -40,12 +40,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
       with('events', checks, an_instance_of(Hash))
 
     post "/test_notifications/tags/#{tag.id}",
-      Flapjack.dump_json(:data => {:test_notifications => notification_data}),
+      Flapjack.dump_json(:data => notification_data),
       jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :test_notifications => [notification_data]
-    }))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [notification_data]
+    ))
   end
 
   it 'creates multiple test notifications for a check' do
@@ -57,12 +57,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
       with('events', [check], an_instance_of(Hash)).twice
 
     post "/test_notifications/checks/#{check.id}",
-      Flapjack.dump_json(:data => {:test_notifications => [notification_data, notification_2_data]}),
+      Flapjack.dump_json(:data => [notification_data, notification_2_data]),
       jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :test_notifications => [notification_data, notification_2_data]
-    }))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [notification_data, notification_2_data]
+    ))
   end
 
   it 'creates multiple test notifications for checks linked to a tag' do
@@ -77,12 +77,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
       with('events', checks, an_instance_of(Hash)).twice
 
     post "/test_notifications/tags/#{tag.id}",
-      Flapjack.dump_json(:data => {:test_notifications => [notification_data, notification_2_data]}),
+      Flapjack.dump_json(:data => [notification_data, notification_2_data]),
       jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :test_notifications => [notification_data, notification_2_data]
-    }))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [notification_data, notification_2_data]
+    ))
   end
 
 end

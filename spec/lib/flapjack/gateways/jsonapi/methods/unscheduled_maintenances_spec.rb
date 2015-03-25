@@ -31,14 +31,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:jsonapi_type).and_return('unscheduled_maintenance')
 
-    post "/unscheduled_maintenances", Flapjack.dump_json(:data => {:unscheduled_maintenances => unscheduled_maintenance_data.merge(:type => 'unscheduled_maintenance')}), jsonapi_env
+    post "/unscheduled_maintenances", Flapjack.dump_json(:data =>unscheduled_maintenance_data.merge(:type => 'unscheduled_maintenance')), jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :unscheduled_maintenances => unscheduled_maintenance_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      unscheduled_maintenance_data.merge(
         :type => 'unscheduled_maintenance',
         :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
                    :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})
-    }))
+    ))
   end
 
   it 'returns a single unscheduled maintenance period' do
@@ -51,12 +51,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}"
     expect(last_response).to be_ok
 
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :unscheduled_maintenances => unscheduled_maintenance_data.merge(
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      unscheduled_maintenance_data.merge(
         :type => 'unscheduled_maintenance',
         :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})
-    }, :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}"}))
+                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"}),
+    :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}"}))
   end
 
   it 'returns multiple unscheduled_maintenance periods' # do
@@ -76,7 +76,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   #   get "/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"
   #   expect(last_response).to be_ok
   #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-  #     :unscheduled_maintenances => [
+  #     [
   #       unscheduled_maintenance_data.merge(
   #         :type => 'unscheduled_maintenance',
   #         :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
@@ -84,8 +84,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   #       unscheduled_maintenance_2_data.merge(
   #         :type => 'unscheduled_maintenance',
   #         :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance_2.id}",
-  #                    :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance_2.id}/check"})]
-  #   }, :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"}))
+  #                    :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance_2.id}/check"})],
+  #   :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id},#{unscheduled_maintenance_2.id}"}))
   # end
 
   it 'returns paginated unscheduled maintenance periods' do
@@ -117,13 +117,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     get '/unscheduled_maintenances'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => {
-      :unscheduled_maintenances => [
-        unscheduled_maintenance_data.merge(
-          :type => 'unscheduled_maintenance',
-          :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-                     :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})]
-    }, :links => links, :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
+      unscheduled_maintenance_data.merge(
+        :type => 'unscheduled_maintenance',
+        :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
+                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})],
+    :links => links, :meta => meta))
   end
 
   it "ends an unscheduled maintenance period for a check" do
@@ -137,7 +136,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(unscheduled_maintenance).to receive(:save).and_return(true)
 
     patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-      Flapjack.dump_json(:data => {:unscheduled_maintenances => {:id => unscheduled_maintenance.id, :type => 'unscheduled_maintenance', :end_time => end_time.to_i}}),
+      Flapjack.dump_json(:data => {:id => unscheduled_maintenance.id,
+                          :type => 'unscheduled_maintenance', :end_time => end_time.to_i}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end

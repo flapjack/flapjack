@@ -12,16 +12,15 @@ module Flapjack
             rurl
           end
 
-          def wrapped_params(name, options = {})
-            data_wrap = params['data']
-            result = data_wrap.nil? ? nil : data_wrap[name.to_s]
+          def wrapped_params(options = {})
+            result = params['data']
             if result.nil?
               if options[:error_on_nil].is_a?(FalseClass)
                 result = []
               else
-                logger.debug("No '#{name}' object found in 'data' in the supplied JSON:")
+                logger.debug("No 'data' object found in the supplied JSON:")
                 logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
-                halt err(403, "No '#{name}' object received")
+                halt(err(403, "Data object must be provided"))
               end
             end
             data, unwrap = case result
@@ -32,11 +31,11 @@ module Flapjack
             else
               [nil, false]
             end
-            halt(err(403, "The received '#{name}' object is not an Array or a Hash")) if data.nil?
+            halt(err(403, "The received data object is not an Array or a Hash")) if data.nil?
             [data, unwrap]
           end
 
-          def wrapped_link_params(name, options = {})
+          def wrapped_link_params(options = {})
             result = params['data']
             if result.nil?
               if options[:error_on_nil].is_a?(FalseClass)

@@ -10,8 +10,7 @@ module Flapjack
             _, multiple_links = klass.association_klasses
             multiple_klass = multiple_links[assoc_name.to_sym]
 
-            assoc_ids, _ = wrapped_link_params(assoc_name,
-              :multiple => multiple_klass)
+            assoc_ids, _ = wrapped_link_params(:multiple => multiple_klass)
 
             halt(err(403, 'No link ids')) if assoc_ids.empty?
 
@@ -65,8 +64,8 @@ module Flapjack
             singular_klass = singular_links[assoc_name.to_sym]
             multiple_klass = multiple_links[assoc_name.to_sym]
 
-            assoc_ids, _ = wrapped_link_params(assoc_name,
-              :singular => singular_klass, :multiple => multiple_klass)
+            assoc_ids, _ = wrapped_link_params(:singular => singular_klass,
+              :multiple => multiple_klass)
 
             resource = klass.find_by_id!(id)
 
@@ -98,8 +97,7 @@ module Flapjack
             _, multiple_links = klass.association_klasses
             multiple_klass = multiple_links[assoc_name.to_sym]
 
-            assoc_ids, _ = wrapped_link_params(assoc_name,
-              :multiple => multiple_klass)
+            assoc_ids, _ = wrapped_link_params(:multiple => multiple_klass)
 
             halt(err(403, 'No link ids')) if assoc_ids.empty?
 

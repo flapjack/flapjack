@@ -16,8 +16,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             app.post %r{/test_notifications/(?:(checks)/(.+)|(tags)/(.+))$} do
-              test_notifications, unwrap = wrapped_params('test_notifications',
-                                                          :error_on_nil => true)
+              test_notifications, unwrap = wrapped_params(:error_on_nil => true)
 
               resource = params[:captures][0] || params[:captures][2]
               resource_id = params[:captures][0].nil? ? params[:captures][3] :
@@ -46,7 +45,7 @@ module Flapjack
               # No Location headers, as the returned 'resources' don't have
               # relevant URLs
               ret = unwrap && (test_notifications.size == 1) ? test_notifications.first : test_notifications
-              Flapjack.dump_json(:data => {:test_notifications => ret})
+              Flapjack.dump_json(:data => ret)
             end
 
           end

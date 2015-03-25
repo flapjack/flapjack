@@ -43,9 +43,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     }
 
     result = {
-      :data => {
-        "#{report_type}_reports".to_sym => (opts[:one] ? report_data : [report_data])
-      }
+      :data => (opts[:one] ? report_data : [report_data])
     }
 
     links_data = {:self  => "http://example.org/#{report_type}_reports/checks#{one_lnk}"}
@@ -127,11 +125,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
     result = {
       :links => links_data,
-      :data => {
-        "#{report_type}_reports".to_sym => [
-          {:type => "#{report_type}_report"}
-        ]
-      },
+      :data => [
+        {:type => "#{report_type}_report"}
+      ],
       :meta => meta
     }
 

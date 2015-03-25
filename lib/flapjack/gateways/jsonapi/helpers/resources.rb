@@ -19,7 +19,7 @@ module Flapjack
           end
 
           def resource_post(klass, resources_name, options = {})
-            resources_data, unwrap = wrapped_params(resources_name)
+            resources_data, unwrap = wrapped_params
 
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
@@ -67,7 +67,7 @@ module Flapjack
                                  resources, resource_ids,
                                  :unwrap => unwrap)
 
-            Flapjack.dump_json(:data => {resources_name.to_sym => data})
+            Flapjack.dump_json(:data => data)
           end
 
           def resource_get(klass, resources_name, id, options = {})
@@ -91,14 +91,24 @@ module Flapjack
                                         :fields => fields, :include => incl,
                                         :unwrap => !id.nil?)
 
-            json_data = {:links => links, :data => {resources_name.to_sym => data}}
+            json_data = {:links => links, :data => data}
             json_data.update(:included => included) unless included.nil? || included.empty?
             json_data.update(:meta => meta) unless meta.nil? || meta.empty?
             Flapjack.dump_json(json_data)
           end
 
           def resource_patch(klass, resources_name, id, options = {})
-            resources_data, _ = wrapped_params(resources_name)
+            resources_data, unwrap = wrapped_params
+
+            ids = resources_data.map {|d| d['id']}
+
+            resources = if id.nil?
+              resources = klass.find_by_ids!(*ids)
+            else
+              halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([id])
+              [klass.find_by_id!(id)]
+            end
+
             singular_links, multiple_links = klass.association_klasses
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
@@ -106,15 +116,6 @@ module Flapjack
               :singular_links => singular_links.keys,
               :multiple_links => multiple_links.keys,
               :klass => klass)
-
-            ids = resources_data.map {|d| d['id'] }
-
-            resources = if id.nil?
-              klass.find_by_ids!(*ids)
-            else
-              halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
-              [klass.find_by_id!(id)]
-            end
 
             resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
@@ -126,9 +127,9 @@ module Flapjack
               ml_memo += mlv[:related] unless mlv[:related].nil? || mlv[:related].empty?
             }
 
-            attribute_types = klass.attribute_types
-
             jsonapi_type = klass.jsonapi_type
+
+            attribute_types = klass.attribute_types
 
             resource_links = resources_data.each_with_object({}) do |d, memo|
               r = resources_by_id[d['id']]
@@ -191,30 +192,16 @@ module Flapjack
           end
 
           def resource_delete(klass, id)
-            ids = nil
-            wrapped_references = params['data']
+            resources_data, unwrap = wrapped_params(:error_on_nil => id.nil?)
 
-            unless wrapped_references.nil?
-              type = klass.jsonapi_type
-
-              unless wrapped_references.is_a?(Array) &&
-                wrapped_references.all? {|r| type.eql?(r['type']) && !r['id'].nil? }
-
-                halt(err(403, "Malformed data, expecting '#{type}' references"))
-              end
-              ids = wrapped_references.map {|d| d['id'] }
-            end
-
-            if id.nil? && ids.nil?
-              halt(err(403, "No id parameter or data references passed"))
-            end
+            ids = resources_data.map {|d| d['id']}
 
             if id.nil?
               resources = klass.intersect(:id => ids)
               halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
               resources.destroy_all
             else
-              halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([id])
+              halt(err(403, "Id path/data mismatch")) unless ids.empty? || ids.eql?([id])
               klass.find_by_id!(id).destroy
             end
 
