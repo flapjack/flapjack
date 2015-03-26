@@ -55,8 +55,7 @@ module Flapjack
               checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
                 scoped = resource_filter_sort(initial_scope,
                  :filter => params[:filter], :sort => params[:sort])
-                paginate_get(scoped,
-                  :total => scoped.count, :page => params[:page],
+                paginate_get(scoped, :page => params[:page],
                   :per_page => params[:per_page])
               else
                 [[Flapjack::Data::Check.find_by_id!(resource_id)], {}, {}]

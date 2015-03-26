@@ -74,8 +74,7 @@ module Flapjack
             resources, links, meta = if id.nil?
               scoped = resource_filter_sort(klass,
                :filter => options[:filter], :sort => options[:sort])
-              paginate_get(scoped,
-                :total => scoped.count, :page => params[:page],
+              paginate_get(scoped, :page => params[:page],
                 :per_page => params[:per_page])
             else
               [[klass.find_by_id!(id)], {}, {}]
@@ -83,17 +82,23 @@ module Flapjack
 
             links[:self] = request_url
 
-            fields = params[:fields].nil?  ? nil : params[:fields].split(',')
-            incl   = params[:include].nil? ? nil : params[:include].split(',')
-            data, included = as_jsonapi(klass, klass.jsonapi_type,
-                                        resources_name, resources,
-                                        (id.nil? ? resources.map(&:id) : [id]),
-                                        :fields => fields, :include => incl,
-                                        :unwrap => !id.nil?)
+            json_data = {:links => links}
+            if resources.empty?
+              json_data[:data] = []
+            else
 
-            json_data = {:links => links, :data => data}
-            json_data.update(:included => included) unless included.nil? || included.empty?
-            json_data.update(:meta => meta) unless meta.nil? || meta.empty?
+              fields = params[:fields].nil?  ? nil : params[:fields].split(',')
+              incl   = params[:include].nil? ? nil : params[:include].split(',')
+              data, included = as_jsonapi(klass, klass.jsonapi_type,
+                                          resources_name, resources,
+                                          (id.nil? ? resources.map(&:id) : [id]),
+                                          :fields => fields, :include => incl,
+                                          :unwrap => !id.nil?)
+
+              json_data[:data] = data
+              json_data[:included] = included unless included.nil? || included.empty?
+              json_data[:meta] = meta unless meta.nil? || meta.empty?
+            end
             Flapjack.dump_json(json_data)
           end
 
@@ -358,18 +363,24 @@ module Flapjack
           end
 
           def filter_params(klass, filter)
-            string_attrs = klass.respond_to?(:jsonapi_search_string_attributes) ?
-              klass.jsonapi_search_string_attributes : []
+            string_attrs = [:id] + (klass.respond_to?(:jsonapi_search_string_attributes) ?
+              klass.jsonapi_search_string_attributes : [])
 
             boolean_attrs = klass.respond_to?(:jsonapi_search_boolean_attributes) ?
               klass.jsonapi_search_boolean_attributes : []
 
-            filter.each_with_object({}) do |filter_str, memo|
+            r = filter.each_with_object({}) do |filter_str, memo|
               k, v = filter_str.split(':', 2)
               halt(err(403, "Single filter parameters must be 'key:value'")) if k.nil? || v.nil?
 
               value = if string_attrs.include?(k.to_sym)
-                (v =~ %r{^/(.+)/$}) ? Regexp.new($1) : v
+                if v =~ %r{^/(.+)/$}
+                  Regexp.new($1)
+                elsif v =~ /\|/
+                  v.split('|')
+                else
+                  v
+                end
               elsif boolean_attrs.include?(k.to_sym)
                 case v.downcase
                 when '0', 'f', 'false', 'n', 'no'
@@ -389,13 +400,11 @@ module Flapjack
             scope = klass
 
             unless params[:filter].nil?
-              if params[:filter].is_a?(Array)
-                filter_ops = filter_params(klass, params[:filter])
-                scope = scope.intersect(filter_ops)
-              else
-                # TODO middleware to enforce this for bare parameters
+              unless params[:filter].is_a?(Array)
                 halt(err(403, "Filter parameters must be passed as an Array"))
               end
+              filter_ops = filter_params(klass, params[:filter])
+              scope = scope.intersect(filter_ops)
             end
 
             sort_opts = if params[:sort].nil?
@@ -420,16 +429,16 @@ module Flapjack
           end
 
           def paginate_get(dataset, options = {})
-            return([[], {}]) if dataset.nil?
+            return([[], {}, {}]) if dataset.nil?
+
+            total = dataset.count
+            return([[], {}, {}]) if total == 0
 
             page = options[:page].to_i
             page = (page > 0) ? page : 1
 
             per_page = options[:per_page].to_i
             per_page = (per_page > 0) ? per_page : 20
-
-            total = options[:total].to_i
-            total = (total < 0) ? 0 : total
 
             total_pages = (total.to_f / per_page).ceil
 

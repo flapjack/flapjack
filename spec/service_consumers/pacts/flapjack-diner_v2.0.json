@@ -7,12 +7,365 @@
   },
   "interactions": [
     {
-      "description": "a DELETE request for a single tag",
-      "provider_state": "no tag exists",
+      "description": "a POST request with two contacts",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "name": "Jim Smith",
+              "timezone": "UTC",
+              "type": "contact"
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "name": "Joan Smith",
+              "type": "contact"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "name": "Jim Smith",
+              "timezone": "UTC",
+              "type": "contact"
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "name": "Joan Smith",
+              "type": "contact"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one contact",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with one contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
+          }
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "409",
+              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single contact",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all contacts",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all contacts",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "name": "Jim Smith",
+              "timezone": "UTC",
+              "type": "contact"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two contacts",
+      "provider_state": "two contacts exist",
       "request": {
         "method": "delete",
-        "path": "/tags/database",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "contact",
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+            },
+            {
+              "type": "contact",
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
         "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single contact",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for two contacts",
+      "provider_state": "two contacts exist",
+      "request": {
+        "method": "patch",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "type": "contact",
+              "name": "Hello There"
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "type": "contact",
+              "name": "Goodbye Now"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "patch",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "name": "Hello There"
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single contact",
+      "provider_state": "no contact exists",
+      "request": {
+        "method": "patch",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "name": "Hello There"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for tag 'www.example.com:SSH'",
+      "provider_state": "no tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags/database"
       },
       "response": {
         "status": 404,
@@ -30,67 +383,14 @@
       }
     },
     {
-      "description": "a DELETE request for a single tag",
+      "description": "a GET request for tag 'www.example.com:SSH'",
       "provider_state": "a tag exists",
       "request": {
-        "method": "delete",
-        "path": "/tags/database",
-        "body": null
+        "method": "get",
+        "path": "/tags/database"
       },
       "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two tags",
-      "provider_state": "two tags exist",
-      "request": {
-        "method": "delete",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "tag",
-              "id": "database"
-            },
-            {
-              "type": "tag",
-              "id": "physical"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one tag",
-      "provider_state": "no tag exists",
-      "request": {
-        "method": "post",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "name": "database",
-            "type": "tag"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -99,6 +399,47 @@
             "name": "database",
             "type": "tag"
           }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "name": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "no tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
         }
       }
     },
@@ -144,55 +485,23 @@
       }
     },
     {
-      "description": "a GET request for all tags",
+      "description": "a POST request with one tag",
       "provider_state": "no tag exists",
       "request": {
-        "method": "get",
-        "path": "/tags"
-      },
-      "response": {
-        "status": 200,
+        "method": "post",
+        "path": "/tags",
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+          "Content-Type": "application/vnd.api+json"
         },
         "body": {
-          "data": [
-
-          ]
+          "data": {
+            "name": "database",
+            "type": "tag"
+          }
         }
-      }
-    },
-    {
-      "description": "a GET request for all tags",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/tags"
       },
       "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "name": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for tag 'www.example.com:SSH'",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/tags/database"
-      },
-      "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -205,11 +514,56 @@
       }
     },
     {
-      "description": "a GET request for tag 'www.example.com:SSH'",
+      "description": "a DELETE request for two tags",
+      "provider_state": "two tags exist",
+      "request": {
+        "method": "delete",
+        "path": "/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "tag",
+              "id": "database"
+            },
+            {
+              "type": "tag",
+              "id": "physical"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single tag",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "delete",
+        "path": "/tags/database",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single tag",
       "provider_state": "no tag exists",
       "request": {
-        "method": "get",
-        "path": "/tags/database"
+        "method": "delete",
+        "path": "/tags/database",
+        "body": null
       },
       "response": {
         "status": 404,
@@ -227,21 +581,105 @@
       }
     },
     {
-      "description": "a PATCH request for a single check",
+      "description": "a GET request for two checks",
       "provider_state": "no check exists",
       "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "method": "get",
+        "path": "/checks",
+        "query": "filter[]=id:1ed80833-6d28-4aba-8603-d81c249b8c23|29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
         "headers": {
-          "Content-Type": "application/vnd.api+json"
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "enabled": false
-          }
+          "data": [
+
+          ]
         }
+      }
+    },
+    {
+      "description": "a GET request for two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "get",
+        "path": "/checks",
+        "query": "filter[]=id:1ed80833-6d28-4aba-8603-d81c249b8c23|29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "name": "www2.example.com:PING",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "no check exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a check",
+      "provider_state": "no check exists",
+      "request": {
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
       },
       "response": {
         "status": 404,
@@ -259,80 +697,14 @@
       }
     },
     {
-      "description": "a PATCH request for a single check",
+      "description": "a GET request for a check",
       "provider_state": "a check exists",
       "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "enabled": false
-          }
-        }
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
       },
       "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "type": "check",
-              "enabled": false
-            },
-            {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "type": "check",
-              "enabled": true
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one check",
-      "provider_state": "no check exists",
-      "request": {
-        "method": "post",
-        "path": "/checks",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -396,14 +768,25 @@
       }
     },
     {
-      "description": "a GET request for a check",
-      "provider_state": "a check exists",
+      "description": "a POST request with one check",
+      "provider_state": "no check exists",
       "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check"
+          }
+        }
       },
       "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -418,11 +801,76 @@
       }
     },
     {
-      "description": "a GET request for a check",
+      "description": "a PATCH request for two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "type": "check",
+              "enabled": false
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "type": "check",
+              "enabled": true
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "enabled": false
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
       "provider_state": "no check exists",
       "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "enabled": false
+          }
+        }
       },
       "response": {
         "status": 404,
@@ -440,30 +888,11 @@
       }
     },
     {
-      "description": "a GET request for all checks",
-      "provider_state": "no check exists",
+      "description": "a GET request for all rules",
+      "provider_state": "a rule exists",
       "request": {
         "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
+        "path": "/rules"
       },
       "response": {
         "status": 200,
@@ -473,21 +902,175 @@
         "body": {
           "data": [
             {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule"
             }
           ]
         }
       }
     },
     {
-      "description": "a DELETE request for one medium",
-      "provider_state": "no medium exists",
+      "description": "a GET request for a single rule",
+      "provider_state": "a rule exists",
+      "request": {
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single rule",
+      "provider_state": "no rule exists",
+      "request": {
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with two rules",
+      "provider_state": "no rule exists",
+      "request": {
+        "method": "post",
+        "path": "/rules",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule"
+            },
+            {
+              "id": "20f182fc-6e32-4794-9007-97366d162c51",
+              "type": "rule"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule"
+            },
+            {
+              "id": "20f182fc-6e32-4794-9007-97366d162c51",
+              "type": "rule"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one rule",
+      "provider_state": "no rule exists",
+      "request": {
+        "method": "post",
+        "path": "/rules",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule"
+          }
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two rules",
+      "provider_state": "two rules exist",
       "request": {
         "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "path": "/rules",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "rule",
+              "id": "05983623-fcef-42da-af44-ed6990b500fa"
+            },
+            {
+              "type": "rule",
+              "id": "20f182fc-6e32-4794-9007-97366d162c51"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single rule",
+      "provider_state": "a rule exists",
+      "request": {
+        "method": "delete",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single rule",
+      "provider_state": "no rule exists",
+      "request": {
+        "method": "delete",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
         "body": null
       },
       "response": {
@@ -499,45 +1082,32 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
+              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
             }
           ]
         }
       }
     },
     {
-      "description": "a DELETE request for one medium",
-      "provider_state": "a medium exists",
+      "description": "a PATCH request for two unscheduled maintenance periods",
+      "provider_state": "two unscheduled maintenance periods exist",
       "request": {
-        "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "body": null
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "delete",
-        "path": "/media",
+        "method": "patch",
+        "path": "/unscheduled_maintenances",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": [
             {
-              "type": "medium",
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "type": "unscheduled_maintenance",
+              "end_time": "2015-03-26T11:20:24+10:30"
             },
             {
-              "type": "medium",
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "type": "unscheduled_maintenance",
+              "end_time": "2015-03-26T12:20:24+10:30"
             }
           ]
         }
@@ -550,39 +1120,290 @@
       }
     },
     {
-      "description": "a POST request with one medium",
-      "provider_state": "no medium exists",
+      "description": "a PATCH request for a single unscheduled maintenance period",
+      "provider_state": "an unscheduled maintenance period exists",
       "request": {
-        "method": "post",
-        "path": "/media",
+        "method": "patch",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "transport": "sms",
-            "address": "0123456789",
-            "interval": 300,
-            "rollup_threshold": 5,
-            "type": "medium"
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "end_time": "2015-03-26T11:20:24+10:30"
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single unscheduled maintenance period",
+      "provider_state": "no unscheduled maintenance period exists",
+      "request": {
+        "method": "patch",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "end_time": "2015-03-26T11:20:24+10:30"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with two unscheduled maintenance periods",
+      "provider_state": "no unscheduled maintenance period exists",
+      "request": {
+        "method": "post",
+        "path": "/unscheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "end_time": "2015-03-26T12:20:24+10:30",
+              "summary": "working",
+              "type": "unscheduled_maintenance"
+            },
+            {
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "end_time": "2015-03-26T12:50:24+10:30",
+              "summary": "partly working",
+              "type": "unscheduled_maintenance"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "end_time": "2015-03-26T12:20:24+10:30",
+              "summary": "working",
+              "type": "unscheduled_maintenance"
+            },
+            {
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "end_time": "2015-03-26T12:50:24+10:30",
+              "summary": "partly working",
+              "type": "unscheduled_maintenance"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one unscheduled maintenance period",
+      "provider_state": "no unscheduled maintenance period exists",
+      "request": {
+        "method": "post",
+        "path": "/unscheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "end_time": "2015-03-26T12:20:24+10:30",
+            "summary": "working",
+            "type": "unscheduled_maintenance"
           }
         }
       },
       "response": {
         "status": 201,
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "transport": "sms",
-            "address": "0123456789",
-            "interval": 300,
-            "rollup_threshold": 5,
-            "type": "medium"
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "end_time": "2015-03-26T12:20:24+10:30",
+            "summary": "working",
+            "type": "unscheduled_maintenance"
           }
+        }
+      }
+    },
+    {
+      "description": "a POST request with two scheduled maintenance periods",
+      "provider_state": "no scheduled maintenance period exists",
+      "request": {
+        "method": "post",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "start_time": "2015-03-26T11:20:24+10:30",
+              "end_time": "2015-03-26T12:20:24+10:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
+            },
+            {
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "start_time": "2015-03-26T13:20:24+10:30",
+              "end_time": "2015-03-26T14:20:24+10:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "start_time": "2015-03-26T11:20:24+10:30",
+              "end_time": "2015-03-26T12:20:24+10:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
+            },
+            {
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "start_time": "2015-03-26T13:20:24+10:30",
+              "end_time": "2015-03-26T14:20:24+10:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one scheduled maintenance period",
+      "provider_state": "no scheduled maintenance period exists",
+      "request": {
+        "method": "post",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "start_time": "2015-03-26T11:20:24+10:30",
+            "end_time": "2015-03-26T12:20:24+10:30",
+            "summary": "working",
+            "type": "scheduled_maintenance"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "start_time": "2015-03-26T11:20:24+10:30",
+            "end_time": "2015-03-26T12:20:24+10:30",
+            "summary": "working",
+            "type": "scheduled_maintenance"
+          }
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two scheduled maintenance periods",
+      "provider_state": "two scheduled maintenance periods exist",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance",
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
+            },
+            {
+              "type": "scheduled_maintenance",
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a scheduled maintenance period",
+      "provider_state": "a scheduled maintenance period exists",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a scheduled maintenance period",
+      "provider_state": "no scheduled maintenance period exists",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
+            }
+          ]
         }
       }
     },
@@ -644,90 +1465,64 @@
       }
     },
     {
-      "description": "a PATCH request for a single medium",
+      "description": "a POST request with one medium",
       "provider_state": "no medium exists",
       "request": {
-        "method": "patch",
-        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-            "type": "medium",
-            "interval": 50
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single medium",
-      "provider_state": "a medium exists",
-      "request": {
-        "method": "patch",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "method": "post",
+        "path": "/media",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
             "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "type": "medium",
-            "interval": 50
+            "transport": "sms",
+            "address": "0123456789",
+            "interval": 300,
+            "rollup_threshold": 5,
+            "type": "medium"
           }
         }
       },
       "response": {
-        "status": 204,
+        "status": 201,
         "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
-        "body": ""
+        "body": {
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "transport": "sms",
+            "address": "0123456789",
+            "interval": 300,
+            "rollup_threshold": 5,
+            "type": "medium"
+          }
+        }
       }
     },
     {
-      "description": "a PATCH request for two media",
-      "provider_state": "two media exist",
+      "description": "a GET request for one medium",
+      "provider_state": "a medium exists",
       "request": {
-        "method": "patch",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "interval": 50
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "rollup_threshold": 5
-            }
-          ]
-        }
+        "method": "get",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
       },
       "response": {
-        "status": 204,
+        "status": 200,
         "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
-        "body": ""
+        "body": {
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "transport": "sms",
+            "address": "0123456789",
+            "interval": 300,
+            "rollup_threshold": 5,
+            "type": "medium"
+          }
+        }
       }
     },
     {
@@ -765,87 +1560,118 @@
       }
     },
     {
-      "description": "a GET request for one medium",
-      "provider_state": "a medium exists",
+      "description": "a DELETE request for two media",
+      "provider_state": "two media exist",
       "request": {
-        "method": "get",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
+        "method": "delete",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "medium",
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
+            },
+            {
+              "type": "medium",
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
+            }
+          ]
+        }
       },
       "response": {
-        "status": 200,
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for one medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "delete",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for one medium",
+      "provider_state": "no medium exists",
+      "request": {
+        "method": "delete",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "body": null
+      },
+      "response": {
+        "status": 404,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for two media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "patch",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "interval": 50
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "rollup_threshold": 5
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "patch",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
             "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "transport": "sms",
-            "address": "0123456789",
-            "interval": 300,
-            "rollup_threshold": 5,
-            "type": "medium"
+            "type": "medium",
+            "interval": 50
           }
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a single contact",
-      "provider_state": "no contact exists",
-      "request": {
-        "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a single contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "body": null
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two contacts",
-      "provider_state": "two contacts exist",
-      "request": {
-        "method": "delete",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "contact",
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-            },
-            {
-              "type": "contact",
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8"
-            }
-          ]
         }
       },
       "response": {
@@ -856,132 +1682,19 @@
       }
     },
     {
-      "description": "a POST request with one contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
-          }
-        }
-      },
-      "response": {
-        "status": 409,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "409",
-              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one contact",
-      "provider_state": "no contact exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two contacts",
-      "provider_state": "no contact exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "name": "Jim Smith",
-              "timezone": "UTC",
-              "type": "contact"
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "name": "Joan Smith",
-              "type": "contact"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "name": "Jim Smith",
-              "timezone": "UTC",
-              "type": "contact"
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "name": "Joan Smith",
-              "type": "contact"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single contact",
-      "provider_state": "no contact exists",
+      "description": "a PATCH request for a single medium",
+      "provider_state": "no medium exists",
       "request": {
         "method": "patch",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "name": "Hello There"
+            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+            "type": "medium",
+            "interval": 50
           }
         }
       },
@@ -994,671 +1707,9 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
             }
           ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "patch",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "name": "Hello There"
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for two contacts",
-      "provider_state": "two contacts exist",
-      "request": {
-        "method": "patch",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "type": "contact",
-              "name": "Hello There"
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "type": "contact",
-              "name": "Goodbye Now"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for all contacts",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "get",
-        "path": "/contacts"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "name": "Jim Smith",
-              "timezone": "UTC",
-              "type": "contact"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all contacts",
-      "provider_state": "no contact exists",
-      "request": {
-        "method": "get",
-        "path": "/contacts"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "get",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single contact",
-      "provider_state": "no contact exists",
-      "request": {
-        "method": "get",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "no scheduled maintenance period exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "a scheduled maintenance period exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two scheduled maintenance periods",
-      "provider_state": "two scheduled maintenance periods exist",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance",
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
-            },
-            {
-              "type": "scheduled_maintenance",
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one scheduled maintenance period",
-      "provider_state": "no scheduled maintenance period exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "start_time": "2015-03-25T23:03:05+10:30",
-            "end_time": "2015-03-26T00:03:05+10:30",
-            "summary": "working",
-            "type": "scheduled_maintenance"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "start_time": "2015-03-25T23:03:05+10:30",
-            "end_time": "2015-03-26T00:03:05+10:30",
-            "summary": "working",
-            "type": "scheduled_maintenance"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two scheduled maintenance periods",
-      "provider_state": "no scheduled maintenance period exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "start_time": "2015-03-25T23:03:05+10:30",
-              "end_time": "2015-03-26T00:03:05+10:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "start_time": "2015-03-26T01:03:05+10:30",
-              "end_time": "2015-03-26T02:03:05+10:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "start_time": "2015-03-25T23:03:05+10:30",
-              "end_time": "2015-03-26T00:03:05+10:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "start_time": "2015-03-26T01:03:05+10:30",
-              "end_time": "2015-03-26T02:03:05+10:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one unscheduled maintenance period",
-      "provider_state": "no unscheduled maintenance period exists",
-      "request": {
-        "method": "post",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "end_time": "2015-03-26T00:03:05+10:30",
-            "summary": "working",
-            "type": "unscheduled_maintenance"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "end_time": "2015-03-26T00:03:05+10:30",
-            "summary": "working",
-            "type": "unscheduled_maintenance"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two unscheduled maintenance periods",
-      "provider_state": "no unscheduled maintenance period exists",
-      "request": {
-        "method": "post",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "end_time": "2015-03-26T00:03:05+10:30",
-              "summary": "working",
-              "type": "unscheduled_maintenance"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "end_time": "2015-03-26T00:33:05+10:30",
-              "summary": "partly working",
-              "type": "unscheduled_maintenance"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "end_time": "2015-03-26T00:03:05+10:30",
-              "summary": "working",
-              "type": "unscheduled_maintenance"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "end_time": "2015-03-26T00:33:05+10:30",
-              "summary": "partly working",
-              "type": "unscheduled_maintenance"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "no unscheduled maintenance period exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "end_time": "2015-03-25T23:03:05+10:30"
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "an unscheduled maintenance period exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "end_time": "2015-03-25T23:03:05+10:30"
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for two unscheduled maintenance periods",
-      "provider_state": "two unscheduled maintenance periods exist",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "type": "unscheduled_maintenance",
-              "end_time": "2015-03-25T23:03:05+10:30"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "type": "unscheduled_maintenance",
-              "end_time": "2015-03-26T00:03:05+10:30"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for a single rule",
-      "provider_state": "no rule exists",
-      "request": {
-        "method": "delete",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a single rule",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "delete",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
-        "body": null
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two rules",
-      "provider_state": "two rules exist",
-      "request": {
-        "method": "delete",
-        "path": "/rules",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "rule",
-              "id": "05983623-fcef-42da-af44-ed6990b500fa"
-            },
-            {
-              "type": "rule",
-              "id": "20f182fc-6e32-4794-9007-97366d162c51"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one rule",
-      "provider_state": "no rule exists",
-      "request": {
-        "method": "post",
-        "path": "/rules",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two rules",
-      "provider_state": "no rule exists",
-      "request": {
-        "method": "post",
-        "path": "/rules",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule"
-            },
-            {
-              "id": "20f182fc-6e32-4794-9007-97366d162c51",
-              "type": "rule"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule"
-            },
-            {
-              "id": "20f182fc-6e32-4794-9007-97366d162c51",
-              "type": "rule"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single rule",
-      "provider_state": "no rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all rules",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single rule",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule"
-          }
         }
       }
     }
