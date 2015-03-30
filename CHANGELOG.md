@@ -1,8 +1,8 @@
 ## Flapjack Changelog
 
-# 1.5.0rc1 - 2015-03-23
+# 1.5.0rc1 - 2015-03-30
 - Feature: Expose failure delay (#748) in JSONAPI check report status #827 (@Hobbsee)
-- Feature: Split up internal metrics api endpoings #828 (@jessereynolds)
+- Feature: Split up internal metrics api endpoints #828 (@jessereynolds)
 - Bug: fail on rule with invalid regex (fixes #819) #820 (@ali-graham)
 - Bug: Checks array missing from entities endpoint on API in Flapjack 1.4.0 #823 (@Hobbsee)
 
