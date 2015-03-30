@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.5.0 - 2015-03-31
+- No changes
+
 # 1.5.0rc1 - 2015-03-30
 - Feature: Expose failure delay (#748) in JSONAPI check report status #827 (@Hobbsee)
 - Feature: Split up internal metrics api endpoints #828 (@jessereynolds)
