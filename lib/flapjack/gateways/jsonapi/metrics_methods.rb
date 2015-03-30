@@ -99,7 +99,14 @@ module Flapjack
           end
 
           app.get %r{^/metrics/check_freshness$} do
-            Flapjack.dump_json({"check_freshness" => check_freshness})
+            cf = self.check_freshness
+            Flapjack.dump_json({"check_freshness" => {
+              "from_0_to_60"     => cf[0],
+              "from_60_to_300"   => cf[60],
+              "from_300_to_900"  => cf[300],
+              "from_900_to_3600" => cf[900],
+              "from_3600_to_∞"   => cf[3600]
+              }})
           end
 
           app.get %r{^/metrics/entities$} do
@@ -111,11 +118,7 @@ module Flapjack
           end
 
           app.get %r{^/metrics/events$} do
-            Flapjack.dump_json({"event_queue" => event_queue})
-          end
-
-          app.get %r{^/metrics/processed_events$} do
-            Flapjack.dump_json({"processed_events" => processed_events})
+            Flapjack.dump_json({"events" => events})
           end
 
         end

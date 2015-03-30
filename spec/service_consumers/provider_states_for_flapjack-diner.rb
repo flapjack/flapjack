@@ -353,6 +353,43 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "flapjack has a simplistic check freshness distribution" do
+    set_up do
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      check_freshness_data = {
+        :from_0_to_60     => 0,
+        :from_60_to_300   => 1,
+        :from_300_to_900  => 2,
+        :from_900_to_3600 => 3,
+        :from_3600_to_∞   => 4
+      }
+      entity = Flapjack::Data::Entity.find_by_name('sally', :create => true, :redis => redis)
+
+      checks = {
+        "check 1" => 61,
+        "check 2" => 301,
+        "check 3" => 301,
+        "check 4" => 901,
+        "check 5" => 901,
+        "check 6" => 901,
+        "check 7" => 3601,
+        "check 8" => 3601,
+        "check 9" => 3601,
+        "check 10" => 3601,
+      }
+      checks.each_pair {|check_name, age|
+        check = Flapjack::Data::EntityCheck.new(entity, check_name, :redis => redis)
+        check.update_state(Flapjack::Data::EntityCheck::STATE_OK, :timestamp => Time.new.to_i - age)
+      } 
+    end
+
+    tear_down do
+      Flapjack::Gateways::JSONAPI.instance_variable_get('@logger').messages.clear
+      redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
+      redis.flushdb
+    end
+  end
+
   provider_state "flapjack has processed 0 ok, 1 failure, 2 ack, and 3 invalid events with 4 on the queue" do
     set_up do
       redis = Flapjack::Gateways::JSONAPI.instance_variable_get('@redis')
@@ -365,15 +402,15 @@ Pact.provider_states_for "flapjack-diner" do
       }
 
       # fake out the metrics
-      redis.hset('event_counters', {
-        'all'     => 6,
-        'ok'      => 0,
-        'failure' => 1,
-        'action'  => 2,
-        'invalid' => 3
-        })
+      redis.hmset('event_counters',
+        'all'     , 6,
+        'ok'      , 0,
+        'failure' , 1,
+        'action'  , 2,
+        'invalid' , 3
+        )
 
-      4.times{ redis.lpush(failure_event) }
+      4.times{ redis.lpush('events', Flapjack.dump_json(failure_event)) }
     end
 
     tear_down do
