@@ -308,7 +308,9 @@ module Flapjack
               ids_cache = {}
               included  = incl.collect {|i| i.split('.')}.sort_by(&:length)
 
-              # TODO can this be replaced by the resources method param?
+              # TODO can this be replaced by the resources method param? --
+              # resources is sometimes an array, replace those times so it's
+              # always a scope
               retr_resources = klass.intersect(:id => resource_ids)
 
               included.each do |incl_clause|
@@ -328,21 +330,21 @@ module Flapjack
 
                 link_data = links[v]
 
+
                 if link_data.nil?
                   memo[v] = "#{request.base_url}/#{resources_name}/#{r.id}/#{v}"
                 else
                   memo[v] = {
                     :self    => "#{request.base_url}/#{resources_name}/#{r.id}/links/#{v}",
-                    :related => "#{request.base_url}/#{resources_name}/#{r.id}/#{v}",
-                    :type    => link_data.type,
+                    :related => "#{request.base_url}/#{resources_name}/#{r.id}/#{v}"
                   }
 
                   ids = link_data.data[r.id]
                   case ids
-                  when Array
-                    memo[v].update(:ids => ids)
+                  when Array, Set
+                    memo[v].update(:linkage => ids.to_a.collect {|id| {:type => link_data.type, :id => id} })
                   when String
-                    memo[v].update(:id => ids)
+                    memo[v].update(:linkage => {:type => link_data.type, :id => ids})
                   end
                 end
               end
@@ -519,6 +521,7 @@ module Flapjack
               end
               memo
             end
+            return [] if fragment_ids.empty?
 
             fragment_resources = fragment_klass.intersect(:id => fragment_ids)
 

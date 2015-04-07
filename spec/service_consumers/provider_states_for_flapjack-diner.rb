@@ -96,6 +96,23 @@ Pact.provider_states_for "flapjack-diner" do
     end
   end
 
+  provider_state "a contact with one medium exists" do
+    set_up do
+      contact = Flapjack::Data::Contact.new(contact_data)
+      contact.save
+
+      email = Flapjack::Data::Medium.new(email_data)
+      email.save
+
+      contact.media << email
+    end
+
+    tear_down do
+      Flapjack.logger.messages.clear
+      Flapjack.redis.flushdb
+    end
+  end
+
   provider_state "two contacts exist" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)

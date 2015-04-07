@@ -157,8 +157,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                    :contact =>  {
                     :self => "http://example.org/rules/#{rule.id}/links/contact",
                     :related => "http://example.org/rules/#{rule.id}/contact",
-                    :type => "contact",
-                    :id => contact.id
+                    :linkage => {:type => "contact", :id => contact.id}
                    },
                    :media => "http://example.org/rules/#{rule.id}/media",
                    :tags => "http://example.org/rules/#{rule.id}/tags"}),
@@ -255,7 +254,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
                    :contact => {
                      :self    => "http://example.org/rules/#{rule.id}/links/contact",
                      :related => "http://example.org/rules/#{rule.id}/contact",
-                     :type    => 'contact'
+                     :linkage => {:type => 'contact', :id => contact.id}
                    },
                    :media   => "http://example.org/rules/#{rule.id}/media",
                    :tags    => "http://example.org/rules/#{rule.id}/tags"}),
