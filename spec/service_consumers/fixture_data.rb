@@ -2,6 +2,11 @@ module FixtureData
 
   # Not RSpec shared context, so it can be used in the pact provider too
 
+  def default_tear_down
+    Flapjack.logger.messages.clear
+    Flapjack.redis.flushdb
+  end
+
   def time
     @time ||= Time.now
   end

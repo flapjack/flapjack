@@ -1,59 +1,35 @@
 Pact.provider_states_for "flapjack-diner" do
 
   provider_state "no check exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no contact exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no medium exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no pagerduty credentials exist" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no rule exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no scheduled maintenance period exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no tag exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "no unscheduled maintenance period exists" do
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
 
@@ -63,10 +39,7 @@ Pact.provider_states_for "flapjack-diner" do
       check.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two checks exist" do
@@ -78,10 +51,7 @@ Pact.provider_states_for "flapjack-diner" do
       check_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a contact exists" do
@@ -90,10 +60,7 @@ Pact.provider_states_for "flapjack-diner" do
       contact.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a contact with one medium exists" do
@@ -107,10 +74,7 @@ Pact.provider_states_for "flapjack-diner" do
       contact.media << email
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two contacts exist" do
@@ -122,10 +86,7 @@ Pact.provider_states_for "flapjack-diner" do
       contact_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a medium exists" do
@@ -134,10 +95,7 @@ Pact.provider_states_for "flapjack-diner" do
       sms.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two media exist" do
@@ -149,10 +107,7 @@ Pact.provider_states_for "flapjack-diner" do
       email.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a rule exists" do
@@ -162,10 +117,7 @@ Pact.provider_states_for "flapjack-diner" do
       rule.recalculate_routes
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two rules exist" do
@@ -179,10 +131,7 @@ Pact.provider_states_for "flapjack-diner" do
       rule_2.recalculate_routes
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a tag exists" do
@@ -191,10 +140,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two tags exist" do
@@ -206,10 +152,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a scheduled maintenance period exists" do
@@ -220,10 +163,7 @@ Pact.provider_states_for "flapjack-diner" do
       scheduled_maintenance.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two scheduled maintenance periods exist" do
@@ -239,10 +179,7 @@ Pact.provider_states_for "flapjack-diner" do
       scheduled_maintenance_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "an unscheduled maintenance period exists" do
@@ -253,10 +190,7 @@ Pact.provider_states_for "flapjack-diner" do
       unscheduled_maintenance.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "two unscheduled maintenance periods exist" do
@@ -272,10 +206,7 @@ Pact.provider_states_for "flapjack-diner" do
       unscheduled_maintenance_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a check and a tag exist" do
@@ -287,10 +218,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a contact and a medium exist" do
@@ -302,10 +230,7 @@ Pact.provider_states_for "flapjack-diner" do
       email.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a contact with a rule exists" do
@@ -320,10 +245,7 @@ Pact.provider_states_for "flapjack-diner" do
       contact.rules << rule
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a check with a tag exists" do
@@ -341,10 +263,7 @@ Pact.provider_states_for "flapjack-diner" do
       end
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a check and two tags exist" do
@@ -359,10 +278,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag_2.save
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
-    end
+    tear_down { default_tear_down }
   end
 
   provider_state "a check with two tags exists" do
@@ -383,10 +299,29 @@ Pact.provider_states_for "flapjack-diner" do
       end
     end
 
-    tear_down do
-      Flapjack.logger.messages.clear
-      Flapjack.redis.flushdb
+    tear_down { default_tear_down }
+  end
+
+  provider_state "a tag with two checks exists" do
+    set_up do
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save
+
+      check = Flapjack::Data::Check.new(check_data)
+      check.save
+
+      check_2 = Flapjack::Data::Check.new(check_2_data)
+      check_2.save
+
+      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
+        Flapjack::Data::Rule, Flapjack::Data::Route) do
+
+        tag.checks.add(check, check_2)
+
+      end
     end
+
+    tear_down { default_tear_down }
   end
 
 end
