@@ -288,7 +288,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
-    get "/checks?filter=id:#{check.id}|#{check_2.id}"
+    get "/checks?filter=id%3A#{check.id}%7C#{check_2.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       [check_data.merge(
