@@ -22,11 +22,11 @@ module Flapjack
               resource_id = params[:captures][0].nil? ? params[:captures][3] :
                                                         params[:captures][1]
 
-              checks, unwrap = case resource
+              checks = case resource
               when 'checks'
-                [[Flapjack::Data::Check.find_by_id!(resource_id)], true]
+                [Flapjack::Data::Check.find_by_id!(resource_id)]
               when 'tags'
-                [Flapjack::Data::Tag.find_by_id!(resource_id).checks, false]
+                Flapjack::Data::Tag.find_by_id!(resource_id).checks
               end
 
               check_names = checks.map(&:name)
@@ -44,7 +44,7 @@ module Flapjack
               status 201
               # No Location headers, as the returned 'resources' don't have
               # relevant URLs
-              ret = unwrap && (test_notifications.size == 1) ? test_notifications.first : test_notifications
+              ret = (test_notifications.size == 1) ? test_notifications.first : test_notifications
               Flapjack.dump_json(:data => ret)
             end
 

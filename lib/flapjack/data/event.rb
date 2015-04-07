@@ -148,7 +148,6 @@ module Flapjack
 
       def self.create_acknowledgements(queue, checks, opts = {})
         raise "Check(s) must be provided" if checks.nil?
-        checks = [checks] unless checks.is_a?(Array)
         checks.each do |check|
           self.push(queue, 'state'              => 'acknowledgement',
                            'check'              => check.name,
@@ -160,7 +159,6 @@ module Flapjack
 
       def self.test_notifications(queue, checks, opts = {})
         raise "Check(s) must be provided" if checks.nil?
-        checks = [checks] unless checks.is_a?(Array)
         checks.each do |check|
           self.push(queue, 'state'              => 'test_notifications',
                            'check'              => check.name,

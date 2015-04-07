@@ -44,7 +44,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TestNotifications', :sinatra => 
       jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      [notification_data]
+      notification_data
     ))
   end
 
