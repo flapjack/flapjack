@@ -25,8 +25,7 @@ describe Flapjack::Data::Migration, :redis => true do
           'pagerduty' => {
             'service_key' => '123456789012345678901234',
             'subdomain'   => 'flpjck',
-            'username'    => 'flapjack',
-            'password'    => 'very_secure'
+            'apikey'      => '1234567890'
           },
         },
       },

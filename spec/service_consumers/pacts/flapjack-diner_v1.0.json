@@ -147,8 +147,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "apikey": "ghi"
             }
           ]
         }
@@ -177,8 +176,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "apikey": "ghi"
             }
           ]
         }
@@ -212,14 +210,12 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "apikey": "ghi"
             },
             {
               "service_key": "mno",
               "subdomain": "pqr",
-              "username": "stu",
-              "password": "vwx"
+              "apikey": "ghi"
             }
           ]
         }
@@ -261,8 +257,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "apikey": "ghi"
             }
           ]
         }
@@ -285,8 +280,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "apikey": "ghi"
             }
           ]
         }
