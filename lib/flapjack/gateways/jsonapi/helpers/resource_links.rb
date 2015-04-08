@@ -65,7 +65,7 @@ module Flapjack
             multiple_klass = multiple_links[assoc_name.to_sym]
 
             assoc_ids, _ = wrapped_link_params(:singular => singular_klass,
-              :multiple => multiple_klass)
+              :multiple => multiple_klass, :error_on_nil => false)
 
             resource = klass.find_by_id!(id)
 
@@ -81,11 +81,18 @@ module Flapjack
                 resource.send(assoc_name.to_sym).add(*ta) unless ta.empty?
               end
             elsif !singular_klass.nil?
-              halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
-              klass.lock(*assoc_classes) do
-                value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
-                resource.send("#{assoc_name}=".to_sym, value)
+              if assoc_ids.nil?
+                assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+                klass.lock(*assoc_classes) do
+                  resource.send("#{assoc_name}=".to_sym, nil)
+                end
+              else
+                halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
+                assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+                klass.lock(*assoc_classes) do
+                  value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
+                  resource.send("#{assoc_name}=".to_sym, value)
+                end
               end
             else
               # TODO ensure wrapped_link_params will make this unreachable, remove

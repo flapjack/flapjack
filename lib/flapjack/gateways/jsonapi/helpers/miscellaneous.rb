@@ -39,7 +39,11 @@ module Flapjack
             result = params['data']
             if result.nil?
               if options[:error_on_nil].is_a?(FalseClass)
-                result = []
+                 if !options[:singular].nil?
+                  return [nil, false]
+                else
+                  result = []
+                end
               else
                 logger.debug("No 'data' object found in the following supplied JSON:")
                 logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
