@@ -258,7 +258,7 @@ module Flapjack
       end
 
       def self.jsonapi_multiple_associations
-        [:tags]
+        [:scheduled_maintenances, :tags, :unscheduled_maintenances]
       end
 
       def self.failing(scope = nil)

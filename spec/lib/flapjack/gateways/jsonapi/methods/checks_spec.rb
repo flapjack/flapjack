@@ -35,7 +35,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"}
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances",
+                 }
       )
     ))
   end
@@ -73,11 +76,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       [check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"}),
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
        check_2_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check_2.id}",
-                   :tags => "http://example.org/checks/#{check_2.id}/tags"})]
+                   :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check_2.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})]
     ))
   end
 
@@ -116,7 +123,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       [check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"})],
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
       :links => links, :meta => meta))
   end
 
@@ -157,7 +166,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       [check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"})],
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
       :links => links, :meta => meta))
   end
 
@@ -176,7 +187,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"}),
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
       :links => {:self => "http://example.org/checks/#{check.id}"}))
   end
 
@@ -195,7 +208,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"}),
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
       :links => {:self => "http://example.org/checks/#{check.id}?fields=name%2Cenabled"}))
   end
 
@@ -236,11 +251,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data => check_data.merge(:type => 'check', :links =>
         {:self => "http://example.org/checks/#{check.id}",
+         :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
          :tags => {
-          :self    => "http://example.org/checks/#{check.id}/links/tags",
-          :related => "http://example.org/checks/#{check.id}/tags",
-          :linkage => [{:type => 'tag', :id => tag.id}]
-        }}),
+           :self    => "http://example.org/checks/#{check.id}/links/tags",
+           :related => "http://example.org/checks/#{check.id}/tags",
+           :linkage => [{:type => 'tag', :id => tag.id}]
+         },
+         :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
       :included => [tag_data.merge(:id => tag.id, :type => 'tag',
         :links => {
           :self   => "http://example.org/tags/#{tag.id}",
@@ -294,11 +311,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       [check_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
-                   :tags => "http://example.org/checks/#{check.id}/tags"}),
-                   check_2_data.merge(
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+       check_2_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check_2.id}",
-                   :tags => "http://example.org/checks/#{check_2.id}/tags"})
+                   :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check_2.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})
       ], :links => links, :meta => meta))
   end
 

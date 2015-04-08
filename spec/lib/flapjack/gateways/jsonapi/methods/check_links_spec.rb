@@ -82,4 +82,20 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(last_response.status).to eq(204)
   end
 
+  it 'adds a scheduled maintenance period to a check'
+
+  it 'lists scheduled maintenance periods for a check'
+
+  it 'updates scheduled maintenance periods for a check'
+
+  it 'deletes a scheduled maintenance period from a check'
+
+  it 'adds an unscheduled maintenance period to a check'
+
+  it 'lists unscheduled maintenance periods for a check'
+
+  it 'updates unscheduled maintenance periods for a check'
+
+  it 'deletes an unscheduled maintenance period from a check'
+
 end
