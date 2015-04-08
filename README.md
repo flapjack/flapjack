@@ -140,6 +140,8 @@ We are [updating](https://github.com/flapjack/flapjack/issues/624) this section 
 
 Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Developing](http://flapjack.io/docs/1.0/development/DEVELOPING/) section of [the docs](http://flapjack.io/docs/1.0/).
 
+Note that the master branch is still undergoing breaking changes and is for Flapjack 2. Building packages from the master branch is unlikely to work. Current stable builds are built from the maint/1.x branch. 
+
 ## Documentation Submodule
 
 We have the documentation for this project on a github wiki and also referenced as a submodule at /doc in this project. Run the following commands to populate the local doc/ directory:
