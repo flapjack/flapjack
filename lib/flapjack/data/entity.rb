@@ -605,7 +605,7 @@ module Flapjack
           entity_name = redis.hget('all_entity_names_by_id', entity_id)
           next memo if entity_name.nil? || entity_name.empty?
           en = Regexp.escape(entity_name)
-          check_names = redis.keys("check:#{entity_name}:*").map {|c| c.sub(/^check:#{en}:/, '') } |
+          check_names = redis.zrange("all_checks:#{entity_name}", 0, -1) |
             Flapjack::Data::EntityCheck.find_current_names_for_entity_name(entity_name, :redis => redis)
           memo[entity_id] = check_names.map {|cn| "#{entity_name}:#{cn}"}
           memo
