@@ -12,7 +12,7 @@ require 'flapjack/logger'
 
 module Flapjack
 
-  UUID_RE = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+  UUID_RE = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 
   DEFAULT_INITIAL_FAILURE_DELAY = 30
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
