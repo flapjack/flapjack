@@ -10,8 +10,7 @@ describe 'Flapjack::Gateways::JSONAPI::PagerdutyCredentialMethods', :sinatra => 
   let(:pagerduty_credentials) {
     {'service_key' => 'abc',
      'subdomain'   => 'def',
-     'username'    => 'ghi',
-     'password'    => 'jkl',
+     'apikey'      => 'ghi',
     }
   }
 

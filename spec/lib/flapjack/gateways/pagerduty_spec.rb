@@ -77,8 +77,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
 
     EM.synchrony do
-      result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck', 'username' => 'flapjack',
-        'password' => 'password123', 'check' => check)
+      result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',
+        'apikey' => '01234567890', 'check' => check)
 
       expect(result).to be_a(Hash)
       expect(result).to have_key(:pg_acknowledged_by)
@@ -98,8 +98,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     expect(contact).to receive(:pagerduty_credentials).and_return({
       'service_key' => '12345678',
       'subdomain"'  => 'flpjck',
-      'username'    => 'flapjack',
-      'password'    => 'password123'
+      'apikey'      => '01234567890'
     })
 
     entity_check = double('entity_check')
@@ -192,7 +191,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
   it "does not look for acknowledgements if all required credentials are not present" do
     creds = {'subdomain' => 'example',
-             'username'  => 'sausage',
+             'apikey'    => '0123456789',
              'check'     => 'PING'}
 
     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)

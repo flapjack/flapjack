@@ -30,7 +30,7 @@ module Flapjack
               halt err(422, "No valid pagerduty credentials were submitted")
             end
 
-            fields = ['service_key', 'subdomain', 'username', 'password']
+            fields = ['service_key', 'subdomain', 'apikey']
 
             pagerduty_credential = pagerduty_credentials_data.last
 
@@ -102,11 +102,8 @@ module Flapjack
                   when 'subdomain'
                     pd_data['subdomain'] = value
                     contact.set_pagerduty_credentials(pd_data)
-                  when 'username'
-                    pd_data['username'] = value
-                    contact.set_pagerduty_credentials(pd_data)
-                  when 'password'
-                    pd_data['password'] = value
+                  when 'apikey'
+                    pd_data['apikey'] = value
                     contact.set_pagerduty_credentials(pd_data)
                   end
                 end
