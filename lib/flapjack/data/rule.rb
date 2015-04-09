@@ -205,12 +205,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
-        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
         property :links do
           key :"$ref", :RuleLinks
         end
@@ -246,12 +246,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
-        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
       end
 
       swagger_schema :RuleUpdate do
@@ -264,12 +264,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
-        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
         property :links do
           key :"$ref", :RuleUpdateLinks
         end
@@ -294,7 +294,7 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:time_restrictions]
+        [] # [:time_restrictions]
       end
 
       def self.jsonapi_singular_associations

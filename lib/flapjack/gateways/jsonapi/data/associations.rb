@@ -32,7 +32,7 @@ module Flapjack
                 assoc_data.each_pair do |name, data|
                   assoc_attrs = {
                       :data => data.data_klass, :related => data.related_klasses,
-                      :type => data.data_klass.name.demodulize.underscore,
+                      :type => data.data_klass.name.demodulize,
                       :name => name
                     }
                   if sa = singular_aliases.detect {|a| a.has_key?(name) }

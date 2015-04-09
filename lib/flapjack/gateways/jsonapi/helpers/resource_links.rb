@@ -33,9 +33,9 @@ module Flapjack
             singular_links, multiple_links = klass.association_klasses
 
             accessor, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
-              [:ids, multiple_links[assoc_name.to_sym][:type]]
+              [:ids, multiple_links[assoc_name.to_sym][:data].jsonapi_type]
             elsif singular_links.has_key?(assoc_name.to_sym)
-              [:id, singular_links[assoc_name.to_sym][:type]]
+              [:id, singular_links[assoc_name.to_sym][:data].jsonapi_type]
             else
               halt(err(404, 'Unknown association'))
             end

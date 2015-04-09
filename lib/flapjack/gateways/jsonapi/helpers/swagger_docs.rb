@@ -57,7 +57,10 @@ module Flapjack
               swagger_schema model_type_data_plural do
                 key :required, [:data]
                 property :data do
-                  key :"$ref", model_type_plural
+                  key :type, :array
+                  items do
+                    key :"$ref", model_type
+                  end
                 end
                 property :included do
                   key :type, :array

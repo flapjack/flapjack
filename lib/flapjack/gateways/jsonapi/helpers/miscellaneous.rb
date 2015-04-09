@@ -52,13 +52,13 @@ module Flapjack
             end
 
             if !options[:multiple].nil?
-              unless result.is_a?(Array) && result.all? {|r| options[:multiple][:type].eql?(r['type']) && !r['id'].nil? }
+              unless result.is_a?(Array) && result.all? {|r| options[:multiple][:data].jsonapi_type.eql?(r['type']) && !r['id'].nil? }
 
                 halt(err(403, "Malformed data for multiple link endpoint"))
               end
               [result.map {|r| r[:id]}, false]
             elsif !options[:singular].nil?
-              unless result.is_a?(Hash) && options[:singular][:type].eql?(result['type'])
+              unless result.is_a?(Hash) && options[:singular][:data].jsonapi_type.eql?(result['type'])
                 halt(err(403, "Malformed data for singular link endpoint"))
               end
               [[result[:id]], true]

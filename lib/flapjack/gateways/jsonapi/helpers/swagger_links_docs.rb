@@ -77,6 +77,13 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, "#{single}_id".to_sym
+                      key :in, :path
+                      key :description, "Id of a #{single}"
+                      key :required, true
+                      key :type, :string
+                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -97,6 +104,13 @@ module Flapjack
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, "#{single}_id".to_sym
+                      key :in, :path
+                      key :description, "Id of a #{single}"
+                      key :required, true
+                      key :type, :string
+                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -118,8 +132,15 @@ module Flapjack
                 swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                   operation :get do
                     key :description, "Get the #{link_name} of a #{single}"
-                    key :operationId, "add_#{single}_#{link_name}"
+                    key :operationId, "get_#{single}_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, "#{single}_id".to_sym
+                      key :in, :path
+                      key :description, "Id of a #{single}"
+                      key :required, true
+                      key :type, :string
+                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
@@ -140,8 +161,15 @@ module Flapjack
                 swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
                   operation :get do
                     key :description, "Get the #{link_name} of a #{single}"
-                    key :operationId, "add_#{single}_#{link_name}"
+                    key :operationId, "get_#{single}_links_#{link_name}"
                     key :produces, [JSONAPI_MEDIA_TYPE]
+                    parameter do
+                      key :name, "#{single}_id".to_sym
+                      key :in, :path
+                      key :description, "Id of a #{single}"
+                      key :required, true
+                      key :type, :string
+                    end
                     response 200 do
                       key :description, "GET #{resource} response"
                       schema do
