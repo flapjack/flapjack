@@ -18,8 +18,8 @@
         "body": [
           {
             "op": "replace",
-            "path": "/pagerduty_credentials/0/password",
-            "value": "pswrd"
+            "path": "/pagerduty_credentials/0/token",
+            "value": "token123"
           }
         ]
       },
@@ -47,8 +47,8 @@
         "body": [
           {
             "op": "replace",
-            "path": "/pagerduty_credentials/0/password",
-            "value": "pswrd"
+            "path": "/pagerduty_credentials/0/token",
+            "value": "token123"
           }
         ]
       },
@@ -71,8 +71,8 @@
         "body": [
           {
             "op": "replace",
-            "path": "/pagerduty_credentials/0/password",
-            "value": "pswrd"
+            "path": "/pagerduty_credentials/0/token",
+            "value": "token123"
           }
         ]
       },
@@ -147,8 +147,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "token": "ghi"
             }
           ]
         }
@@ -177,8 +176,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "token": "ghi"
             }
           ]
         }
@@ -212,14 +210,12 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "token": "ghi"
             },
             {
               "service_key": "mno",
               "subdomain": "pqr",
-              "username": "stu",
-              "password": "vwx"
+              "token": "stu"
             }
           ]
         }
@@ -261,8 +257,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "token": "ghi"
             }
           ]
         }
@@ -285,8 +280,7 @@
             {
               "service_key": "abc",
               "subdomain": "def",
-              "username": "ghi",
-              "password": "jkl"
+              "token": "ghi"
             }
           ]
         }

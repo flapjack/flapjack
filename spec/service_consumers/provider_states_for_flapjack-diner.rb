@@ -301,8 +301,7 @@ Pact.provider_states_for "flapjack-diner" do
       pdc_data = {
         'service_key' => 'abc',
         'subdomain'   => 'def',
-        'username'    => 'ghi',
-        'password'    => 'jkl',
+        'token'       => 'ghi',
       }
       contact.set_pagerduty_credentials(pdc_data)
     end
@@ -333,15 +332,13 @@ Pact.provider_states_for "flapjack-diner" do
       pdc_data = {
         'service_key' => 'abc',
         'subdomain'   => 'def',
-        'username'    => 'ghi',
-        'password'    => 'jkl',
+        'token'       => 'ghi',
       }
       contact.set_pagerduty_credentials(pdc_data)
       pdc_data_2 = {
         'service_key' => 'mno',
         'subdomain'   => 'pqr',
-        'username'    => 'stu',
-        'password'    => 'vwx',
+        'token'       => 'stu',
     }
     contact_2.set_pagerduty_credentials(pdc_data_2)
     end
