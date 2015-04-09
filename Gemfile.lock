@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/flapjack/zermelo.git
-  revision: f5ab7a2c8043b089d16e6a78c1ec506296825eb1
-  branch: master
-  specs:
-    zermelo (1.0.1)
-      activemodel
-
 PATH
   remote: .
   specs:
@@ -19,7 +11,6 @@ PATH
       ice_cube
       mail
       oj (>= 2.9.0)
-      rack
       rbtrace
       redis (>= 3.0.7)
       sinatra
@@ -29,6 +20,7 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
+      zermelo (= 1.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -173,6 +165,8 @@ GEM
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
+    zermelo (1.1.0)
+      activemodel
 
 PLATFORMS
   ruby
@@ -189,4 +183,3 @@ DEPENDENCIES
   ruby-prof
   simplecov
   webmock
-  zermelo!
