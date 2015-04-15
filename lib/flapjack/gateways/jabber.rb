@@ -26,6 +26,8 @@ module Flapjack
 
       class Notifier
 
+        include Flapjack::Utility
+
         attr_accessor :siblings
 
         def initialize(options = {})

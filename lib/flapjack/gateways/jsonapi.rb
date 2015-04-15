@@ -49,12 +49,6 @@ module Flapjack
       JSONAPI_MEDIA_TYPE          = 'application/vnd.api+json'
       JSONAPI_MEDIA_TYPE_BULK     = 'application/vnd.api+json; ext=bulk'
 
-      def media_type_produced
-        encoding = Encoding.default_external
-        return 'application/vnd.api+json; supported-ext=bulk' if encoding.nil?
-        "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
-      end
-
       # # http://tools.ietf.org/html/rfc6902
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
@@ -81,11 +75,26 @@ module Flapjack
       class << self
         def start
           Flapjack.logger.info "starting jsonapi - class"
+
+          encoding = Encoding.default_external
+          @media_type_produced = if encoding.nil?
+            'application/vnd.api+json; supported-ext=bulk'
+          else
+            "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
+          end
+        end
+
+        def media_type_produced
+          @media_type_produced
         end
       end
 
       def config
         self.class.instance_variable_get("@config")
+      end
+
+      def media_type_produced
+        self.class.instance_variable_get("@media_type_produced")
       end
 
       before do

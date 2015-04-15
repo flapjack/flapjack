@@ -20,6 +20,8 @@ module Flapjack
 
       class Notifier
 
+        include Flapjack::Utility
+
         def initialize(opts = {})
           @lock = opts[:lock]
           @config = opts[:config]
