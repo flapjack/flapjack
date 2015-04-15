@@ -73,19 +73,28 @@ module Flapjack
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
 
       class << self
+
+        @@lock = Monitor.new
+
         def start
           Flapjack.logger.info "starting jsonapi - class"
-
-          encoding = Encoding.default_external
-          @media_type_produced = if encoding.nil?
-            'application/vnd.api+json; supported-ext=bulk'
-          else
-            "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
-          end
         end
 
-        def media_type_produced
-          @media_type_produced
+        def media_type_produced(options = {})
+          unless options[:with_charset].is_a?(TrueClass)
+            return 'application/vnd.api+json; supported-ext=bulk'
+          end
+
+          media_type = nil
+          @@lock.synchronize do
+            encoding = Encoding.default_external
+            media_type = if encoding.nil?
+              'application/vnd.api+json; supported-ext=bulk'
+            else
+              "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
+            end
+          end
+          media_type
         end
       end
 
@@ -93,8 +102,8 @@ module Flapjack
         self.class.instance_variable_get("@config")
       end
 
-      def media_type_produced
-        self.class.instance_variable_get("@media_type_produced")
+      def media_type_produced(options = {})
+        self.class.media_type_produced(options)
       end
 
       before do
@@ -144,7 +153,7 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type media_type_produced
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end
@@ -153,7 +162,7 @@ module Flapjack
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type media_type_produced
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end
@@ -167,7 +176,7 @@ module Flapjack
 
       patch '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type media_type_produced
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end

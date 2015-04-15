@@ -76,7 +76,7 @@ module Flapjack
                   operation :get do
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
-                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                     parameter do
                       key :name, "#{single}_id".to_sym
                       key :in, :path
@@ -133,7 +133,7 @@ module Flapjack
                   operation :get do
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_#{link_name}"
-                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                     parameter do
                       key :name, "#{single}_id".to_sym
                       key :in, :path
@@ -162,7 +162,7 @@ module Flapjack
                   operation :get do
                     key :description, "Get the #{link_name} of a #{single}"
                     key :operationId, "get_#{single}_links_#{link_name}"
-                    key :produces, [JSONAPI_MEDIA_TYPE]
+                    key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                     parameter do
                       key :name, "#{single}_id".to_sym
                       key :in, :path

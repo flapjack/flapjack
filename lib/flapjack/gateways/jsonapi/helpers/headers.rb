@@ -25,7 +25,7 @@ module Flapjack
 
             headers = if 'DELETE'.eql?(request.request_method)
               # not set by default for delete, but the error structure is JSON
-              {'Content-Type' => media_type_produced}
+              {'Content-Type' => media_type_produced(:with_charset => true)}
             else
               {}
             end
