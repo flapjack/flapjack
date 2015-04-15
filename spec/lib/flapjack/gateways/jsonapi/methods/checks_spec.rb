@@ -70,7 +70,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     post "/checks", Flapjack.dump_json(:data => [check_data.merge(:type => 'check'),
-                                                 check_2_data.merge(:type => 'check')]), jsonapi_env
+                                                 check_2_data.merge(:type => 'check')]), jsonapi_bulk_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       [check_data.merge(
@@ -356,7 +356,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     patch "/checks",
       Flapjack.dump_json(:data => [{:id => check.id, :type => 'check', :enabled => false},
                                    {:id => check_2.id, :type => 'check', :enabled => false}]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 

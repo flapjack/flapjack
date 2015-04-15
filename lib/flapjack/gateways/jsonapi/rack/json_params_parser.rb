@@ -22,7 +22,7 @@ module Flapjack
           end
 
           def input_parsed? env
-            env['rack.request.form_input'].eql? env['rack.input']
+            env['rack.request.form_input'].eql?(env['rack.input'])
           end
 
           def type(env)
@@ -31,7 +31,7 @@ module Flapjack
           end
 
           def type_match?(t)
-            Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(t)
+            Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE.eql?(t)
           end
         end
       end

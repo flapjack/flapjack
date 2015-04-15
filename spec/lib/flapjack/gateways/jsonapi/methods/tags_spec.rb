@@ -212,7 +212,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
         {:id => tag.id, :type => 'tag'},
         {:id => tag_2.id, :type => 'tag'}
       ]),
-      jsonapi_env
+      jsonapi_bulk_env
 
     expect(last_response.status).to eq(204)
   end

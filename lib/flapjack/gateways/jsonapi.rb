@@ -41,15 +41,14 @@ module Flapjack
 
       include Flapjack::Utility
 
-      # TODO check that all of these are still allowed
-      # JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
-      JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json']
-
       # TODO clean up media type handling for variable character sets
+      # append charset in use
 
       # http://jsonapi.org/extensions/bulk/
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
-      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; supported-ext=bulk; charset=utf-8'
+      JSONAPI_MEDIA_TYPE          = 'application/vnd.api+json'
+      JSONAPI_MEDIA_TYPE_BULK     = 'application/vnd.api+json; ext=bulk'
+      JSONAPI_MEDIA_TYPE_PRODUCED = 'application/vnd.api+json; supported-ext=bulk; charset=utf-8'
 
       # # http://tools.ietf.org/html/rfc6902
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
@@ -131,7 +130,7 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type JSONAPI_MEDIA_TYPE
+        content_type JSONAPI_MEDIA_TYPE_PRODUCED
         cors_headers
         pass
       end
@@ -140,21 +139,21 @@ module Flapjack
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
+        content_type JSONAPI_MEDIA_TYPE_PRODUCED
         cors_headers
         pass
       end
 
       # put '*' do
       #   halt(405) unless request.params.empty? || is_jsonapi_request?
-      #   content_type JSONAPI_MEDIA_TYPE
+      #   content_type JSONAPI_MEDIA_TYPE_PRODUCED
       #   cors_headers
       #   pass
       # end
 
       patch '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
+        content_type JSONAPI_MEDIA_TYPE_PRODUCED
         cors_headers
         pass
       end

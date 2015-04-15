@@ -157,7 +157,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         {:id => medium.id, :type => 'medium', :address => '12345'},
         {:id => medium_2.id, :type => 'medium', :interval => 120}
       ]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 
@@ -193,7 +193,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         {:id => medium.id, :type => 'medium'},
         {:id => medium_2.id, :type => 'medium'}
       ]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 

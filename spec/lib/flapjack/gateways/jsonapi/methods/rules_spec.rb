@@ -314,7 +314,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
         {:id => rule_2.id, :type => 'rule', :links =>
           {:contact => {:type => 'contact', :id => contact.id}}}
         ]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 
@@ -362,7 +362,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
         {:id => rule.id, :type => 'rule'},
         {:id => rule_2.id, :type => 'rule'}
       ]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 

@@ -9,7 +9,12 @@ module JsonapiHelper
     let(:redis)           { double(::Redis) }
 
     let(:jsonapi_env) {
-      {'CONTENT_TYPE' => 'application/vnd.api+json; ext=bulk; charset=UTF-8',
+      {'CONTENT_TYPE' => 'application/vnd.api+json; charset=utf-8',
+       'HTTP_ACCEPT'  => 'application/vnd.api+json'}
+    }
+
+    let(:jsonapi_bulk_env) {
+      {'CONTENT_TYPE' => 'application/vnd.api+json; ext=bulk; charset=utf-8',
        'HTTP_ACCEPT'  => 'application/vnd.api+json'}
     }
 
@@ -37,7 +42,7 @@ module JsonapiHelper
         expect(last_response.headers['Access-Control-Allow-Origin']).to eq("*")
         unless last_response.status == 204
           expect(Flapjack.load_json(last_response.body)).to be_a(Enumerable)
-          expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE)
+          expect(last_response.headers['Content-Type']).to eq(Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE_PRODUCED)
         end
       end
     end
