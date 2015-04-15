@@ -32,12 +32,10 @@ module ::GLI
           arguments = option_block_parser.parse!(arguments)
 
           parsed_command_options[command] = option_parser_factory.options_hash_with_defaults_set!
-          command_finder                  = CommandFinder.new(command.commands,command.get_default_command)
+          command_finder                  = CommandFinder.new(command.commands, :default_command => command.get_default_command)
           next_command_name               = arguments.shift
 
-          gli_major_version, gli_minor_version = GLI::VERSION.split('.')
-          required_options = [command.flags, parsing_result.command, parsed_command_options[command]]
-          verify_required_options!(*required_options)
+          verify_required_options!(command.flags, command, parsed_command_options[command])
 
           begin
             command = command_finder.find_command(next_command_name)
