@@ -65,7 +65,7 @@ module Flapjack
             multiple_klass = multiple_links[assoc_name.to_sym]
 
             assoc_ids, _ = wrapped_link_params(:singular => singular_klass,
-              :multiple => multiple_klass, :error_on_nil => false)
+              :multiple => multiple_klass, :allow_nil => true)
 
             resource = klass.find_by_id!(id)
 

@@ -197,16 +197,16 @@ module Flapjack
           end
 
           def resource_delete(klass, id)
-            resources_data, unwrap = wrapped_params(:error_on_nil => id.nil?)
+            resources_data, unwrap = wrapped_params(:allow_nil => !id.nil?)
 
-            ids = resources_data.map {|d| d['id']}
+            ids = resources_data.nil? ? [id] : resources_data.map {|d| d['id']}
 
             if id.nil?
               resources = klass.intersect(:id => ids)
               halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
               resources.destroy_all
             else
-              halt(err(403, "Id path/data mismatch")) unless ids.empty? || ids.eql?([id])
+              halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
               klass.find_by_id!(id).destroy
             end
 

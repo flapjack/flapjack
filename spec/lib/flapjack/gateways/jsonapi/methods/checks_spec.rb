@@ -88,6 +88,23 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     ))
   end
 
+  it 'rejects a request to create a check with an invalid bulk MIME type' do
+    post "/checks", Flapjack.dump_json(:data => check_data.merge(:type => 'check')), jsonapi_bulk_env
+    expect(last_response.status).to eq(406)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :errors => [{:detail => 'JSONAPI Bulk Extension was set in headers', :status => "406"}]
+    ))
+  end
+
+  it 'rejects a request to create two checks with an invalid bulk MIME type' do
+    post "/checks", Flapjack.dump_json(:data => [check_data.merge(:type => 'check'),
+                                                 check_2_data.merge(:type => 'check')]), jsonapi_env
+    expect(last_response.status).to eq(406)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :errors => [{:detail => 'JSONAPI Bulk Extension not set in headers', :status => "406"}]
+    ))
+  end
+
   it "retrieves paginated checks" do
     meta = {
       :pagination => {

@@ -168,7 +168,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
         {:id => scheduled_maintenance.id, :type => 'scheduled_maintenance'},
         {:id => scheduled_maintenance_2.id, :type => 'scheduled_maintenance'}
       ]),
-      jsonapi_env
+      jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
 

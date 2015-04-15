@@ -15,40 +15,32 @@ module Flapjack
           def wrapped_params(options = {})
             result = params['data']
             if result.nil?
-              if options[:error_on_nil].is_a?(FalseClass)
-                result = []
-              else
-                logger.debug("No 'data' object found in the supplied JSON:")
-                logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
-                halt(err(403, "Data object must be provided"))
-              end
+              return([nil, false]) if options[:allow_nil].is_a?(TrueClass)
+              logger.debug("No 'data' object found in the supplied JSON:")
+              logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
+              halt(err(403, "Data object must be provided"))
             end
-            data, unwrap = case result
+
+            ext_bulk = !(request.content_type =~ /^(?:.+;)?\s*ext=bulk(?:\s*;\s*.+)?$/).nil?
+            case result
             when Array
+              halt(err(406, "JSONAPI Bulk Extension not set in headers")) unless ext_bulk
               [result, false]
             when Hash
+              halt(err(406, "JSONAPI Bulk Extension was set in headers")) if ext_bulk
               [[result], true]
             else
-              [nil, false]
+              halt(err(403, "The received data object is not an Array or a Hash"))
             end
-            halt(err(403, "The received data object is not an Array or a Hash")) if data.nil?
-            [data, unwrap]
           end
 
           def wrapped_link_params(options = {})
             result = params['data']
             if result.nil?
-              if options[:error_on_nil].is_a?(FalseClass)
-                 if !options[:singular].nil?
-                  return [nil, false]
-                else
-                  result = []
-                end
-              else
-                logger.debug("No 'data' object found in the following supplied JSON:")
-                logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
-                halt err(403, "No 'data' object received")
-              end
+              return([nil, false]) if !options[:singular].nil? && options[:allow_nil].is_a?(TrueClass)
+              logger.debug("No 'data' object found in the following supplied JSON:")
+              logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
+              halt err(403, "No 'data' object received")
             end
 
             if !options[:multiple].nil?

@@ -16,7 +16,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             app.post %r{/test_notifications/(?:(checks)/(.+)|(tags)/(.+))$} do
-              test_notifications, unwrap = wrapped_params(:error_on_nil => true)
+              test_notifications, unwrap = wrapped_params
 
               resource = params[:captures][0] || params[:captures][2]
               resource_id = params[:captures][0].nil? ? params[:captures][3] :
