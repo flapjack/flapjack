@@ -7,6 +7,8 @@ require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/check'
 require 'flapjack/data/rule'
 
+require 'flapjack/gateways/jsonapi/data/associations'
+
 module Flapjack
   module Data
     class Tag
@@ -14,6 +16,8 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
+      include Swagger::Blocks
 
       define_attributes :name => :string
 
@@ -54,11 +58,93 @@ module Flapjack
         !self.changed.include?('name')
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
+      swagger_schema :Tag do
+        key :required, [:id, :type, :name]
+        property :id do
+          key :type, :string
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Tag.jsonapi_type.downcase]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :links do
+          key :"$ref", :TagLinks
+        end
+      end
+
+      swagger_schema :TagLinks do
+        key :required, [:self, :checks, :rules]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :checks do
+          key :type, :string
+          key :format, :url
+        end
+        property :rules do
+          key :type, :string
+          key :format, :url
+        end
+      end
+
+      swagger_schema :TagCreate do
+        key :required, [:type, :name]
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Tag.jsonapi_type.downcase]
+        end
+        property :name do
+          key :type, :string
+        end
+      end
+
+      swagger_schema :TagUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Tag.jsonapi_type.downcase]
+        end
+        property :links do
+          key :"$ref", :TagUpdateLinks
+        end
+      end
+
+      swagger_schema :TagUpdateLinks do
+        property :checks do
+          key :type, :array
+          items do
+            key :"$ref", :CheckReference
+          end
+        end
+        property :rules do
+          key :type, :array
+          items do
+            key :"$ref", :RuleReference
+          end
+        end
+      end
+
       def self.jsonapi_id
         :name
       end
 
       def self.jsonapi_attributes
+        [:name]
+      end
+
+      def self.jsonapi_search_string_attributes
         [:name]
       end
 

@@ -8,6 +8,9 @@ require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
+require 'flapjack/data/time_restrictions'
+
+require 'flapjack/gateways/jsonapi/data/associations'
 
 module Flapjack
   module Data
@@ -18,6 +21,8 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
+      include Swagger::Blocks
 
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change. Do client-side grouping and create a tag!
@@ -186,8 +191,110 @@ module Flapjack
         end
       end
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
+      swagger_schema :Rule do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
+        property :links do
+          key :"$ref", :RuleLinks
+        end
+      end
+
+      swagger_schema :RuleLinks do
+        key :required, [:self, :contact, :media, :tags]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :contact do
+          key :type, :string
+          key :format, :url
+        end
+        property :media do
+          key :type, :string
+          key :format, :url
+        end
+        property :tags do
+          key :type, :string
+          key :format, :url
+        end
+      end
+
+      swagger_schema :RuleCreate do
+        key :required, [:type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
+      end
+
+      swagger_schema :RuleUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+        end
+        # property :time_restrictions do
+        #   key :type, :array
+        #   items do
+        #     key :"$ref", :TimeRestrictions
+        #   end
+        # end
+        property :links do
+          key :"$ref", :RuleUpdateLinks
+        end
+      end
+
+      swagger_schema :RuleUpdateLinks do
+        property :contact do
+          key :"$ref", :ContactReference
+        end
+        property :media do
+          key :type, :array
+          items do
+            key :"$ref", :MediumReference
+          end
+        end
+        property :tags do
+          key :type, :array
+          items do
+            key :"$ref", :TagReference
+          end
+        end
+      end
+
       def self.jsonapi_attributes
-        [:time_restrictions]
+        [] # [:time_restrictions]
       end
 
       def self.jsonapi_singular_associations

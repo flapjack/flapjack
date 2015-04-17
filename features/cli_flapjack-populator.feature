@@ -38,7 +38,7 @@ Feature: flapjack-populator command line
     Then the exit status should be 0
     And  the output should contain "Bulk import data from an external source"
     And  the output should contain "import contacts"
-    And  the output should contain "[-f arg|--from arg]"
+    And  the output should contain "-f arg|--from arg"
 
   Scenario: Running flapjack-populator with no arguments exits uncleanly and shows usage
     When I run `bundle exec bin/flapjack import`
@@ -53,7 +53,7 @@ Feature: flapjack-populator command line
     When I run `bundle exec bin/flapjack --config tmp/cucumber_cli/flapjack-populator.toml import <Type> example.json`
     Then the exit status should not be 0
     And  the output should contain "error: f is required"
-    And  the output should contain "Bulk import data from an external source"
+    And  the output should contain "flapjack [global options] import <Type> [command options]"
     Examples:
       | Type     |
       | contacts |

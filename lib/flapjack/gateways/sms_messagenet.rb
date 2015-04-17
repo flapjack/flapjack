@@ -73,22 +73,18 @@ module Flapjack
 
         sms_dir = File.join(File.dirname(__FILE__), 'sms_messagenet')
 
-        sms_template_path = case
-        when @config.has_key?('templates') && @config['templates']["#{message_type}.text"]
-          @config['templates']["#{message_type}.text"]
-        else
-          File.join(sms_dir, "#{message_type}.text.erb")
-        end
-        sms_template = ERB.new(File.read(sms_template_path), nil, '-')
+        sms_template_erb, sms_template =
+          load_template(@config['templates'], message_type, 'text',
+                        File.join(File.dirname(__FILE__), 'sms_messagenet'))
 
         @alert = alert
         bnd = binding
 
         begin
-          message = sms_template.result(bnd).chomp
+          message = sms_template_erb.result(bnd).chomp
         rescue => e
           Flapjack.logger.error "Error while executing the ERB for an sms: " +
-            "ERB being executed: #{sms_template_path}"
+            "ERB being executed: #{sms_template}"
           raise
         end
 

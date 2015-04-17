@@ -35,11 +35,9 @@ module Flapjack
         raise "No queues for media transports"
       end
 
-      tz = nil
       tz_string = @config['default_contact_timezone'] || ENV['TZ'] || 'UTC'
-      begin
-        tz = ActiveSupport::TimeZone.new(tz_string.untaint)
-      rescue ArgumentError
+      tz = ActiveSupport::TimeZone[tz_string.untaint]
+      if tz.nil?
         raise "Invalid timezone string specified in default_contact_timezone or TZ (#{tz_string})"
       end
       @default_contact_timezone = tz
@@ -77,8 +75,7 @@ module Flapjack
       check_name  = check.name
 
       alerts = alerts_for(notification, check,
-        :transports => @queues.keys,
-        :default_timezone => @default_contact_timezone)
+        :transports => @queues.keys)
 
       if alerts.nil? || alerts.empty?
         Flapjack.logger.info { "No alerts" }
@@ -126,8 +123,6 @@ module Flapjack
 
       transports = opts[:transports]
 
-      default_timezone = opts[:default_timezone]
-
       Flapjack.logger.debug { "contact_ids: #{rule_ids_by_contact_id.keys.size}" }
 
       contacts = rule_ids_by_contact_id.empty? ? [] :
@@ -143,7 +138,7 @@ module Flapjack
         rules = Flapjack::Data::Rule.find_by_ids(*rule_ids_by_contact_id[contact.id])
         next memo if rules.empty?
 
-        timezone = contact.time_zone(:default => default_timezone)
+        timezone = contact.time_zone || @default_contact_timezone
         rules.select! {|rule| rule.is_occurring_now?(timezone) }
 
         contact_ids_to_drop << contact.id if rules.any? {|r| !r.has_media }

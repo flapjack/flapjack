@@ -12,4 +12,28 @@ func TestDialFails(t *testing.T) {
 	}
 }
 
-// TODO(auxesis): add test for sending and receiving Events
+func TestSendSucceeds(t *testing.T) {
+	transport, _ := Dial("localhost:6379", 9)
+	event := Event{
+		Entity:  "hello",
+		Check:   "world",
+		State:   "ok",
+		Summary: "hello world",
+	}
+
+	_, err := transport.Send(event)
+	if err != nil {
+		t.Error("Error upon sending event: %v", err)
+	}
+
+}
+
+func TestSendFails(t *testing.T) {
+	transport, _ := Dial("localhost:6379", 9)
+	event := Event{}
+
+	_, err := transport.Send(event)
+	if err == nil {
+		t.Error("Expected error upon sending event: %v", err)
+	}
+}

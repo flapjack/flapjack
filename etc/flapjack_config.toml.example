@@ -166,6 +166,7 @@ daemonize = true
   # Browsable web interface
   [gateways.web]
     enabled = true
+    #bind_address = "127.0.0.1"
     port = 3080
     timeout = 300
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
@@ -181,6 +182,7 @@ daemonize = true
   # HTTP API server
   [gateways.jsonapi]
     enabled = true
+    #bind_address = "127.0.0.1"
     port = 3081
     timeout = 300
     access_log = "/var/log/flapjack/jsonapi_access.log"

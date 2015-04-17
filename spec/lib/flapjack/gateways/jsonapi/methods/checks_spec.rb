@@ -6,21 +6,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
+  let(:check_2) { double(Flapjack::Data::Check, :id => check_2_data[:id]) }
   let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter) }
 
   it "creates a check" do
-    expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::Tag, Flapjack::Data::Rule,
-           Flapjack::Data::Route).and_yield
+    expect(Flapjack::Data::Check).to receive(:lock).with(no_args).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).exactly(2).times.and_return(empty_ids, full_ids)
+      with(:id => [check_data[:id]]).and_return(empty_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
@@ -30,48 +27,82 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
 
-    post "/checks", Flapjack.dump_json(:checks => check_data), jsonapi_post_env
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    post "/checks", Flapjack.dump_json(:data => check_data.merge(:type => 'check')), jsonapi_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-      {:tags => []}
-    )))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances",
+                 }
+      )
+    ))
   end
 
-  it "creates a check with a linked tag" do
-    expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::Tag, Flapjack::Data::Rule,
-           Flapjack::Data::Route).and_yield
+  it 'creates two checks' do
+    expect(Flapjack::Data::Check).to receive(:lock).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [tag.id]})
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).exactly(2).times.and_return(empty_ids, full_ids)
+      with(:id => [check_data[:id], check_2_data[:id]]).and_return(empty_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
-      and_return([tag])
-    check_tags = double('check_tags')
-    expect(check_tags).to receive(:add).with(tag)
-    expect(check).to receive(:tags).and_return(check_tags)
+    expect(check_2).to receive(:invalid?).and_return(false)
+    expect(check_2).to receive(:save).and_return(true)
+    expect(Flapjack::Data::Check).to receive(:new).with(check_2_data).
+      and_return(check_2)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
 
-    post "/checks", Flapjack.dump_json(:checks => check_data.merge(:links =>
-      {:tags => [tag.id]})), jsonapi_post_env
+    expect(check_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(check_2_data)
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    post "/checks", Flapjack.dump_json(:data => [check_data.merge(:type => 'check'),
+                                                 check_2_data.merge(:type => 'check')]), jsonapi_bulk_env
     expect(last_response.status).to eq(201)
-    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
-        'checks.tags' => 'http://example.org/tags/{checks.tags}',
-      },
-      :checks => check_data.merge(:links =>
-      {:tags => [tag.id]}
-    )))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+       check_2_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check_2.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check_2.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})]
+    ))
+  end
+
+  it 'rejects a request to create a check with an invalid bulk MIME type' do
+    post "/checks", Flapjack.dump_json(:data => check_data.merge(:type => 'check')), jsonapi_bulk_env
+    expect(last_response.status).to eq(406)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :errors => [{:detail => 'JSONAPI Bulk Extension was set in headers', :status => "406"}]
+    ))
+  end
+
+  it 'rejects a request to create two checks with an invalid bulk MIME type' do
+    post "/checks", Flapjack.dump_json(:data => [check_data.merge(:type => 'check'),
+                                                 check_2_data.merge(:type => 'check')]), jsonapi_env
+    expect(last_response.status).to eq(406)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :errors => [{:detail => 'JSONAPI Bulk Extension not set in headers', :status => "406"}]
+    ))
   end
 
   it "retrieves paginated checks" do
@@ -84,63 +115,120 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       }
     }
 
-    expect(Flapjack::Data::Check).to receive(:count).and_return(1)
+    links = {
+      :self  => 'http://example.org/checks',
+      :first => 'http://example.org/checks?page=1',
+      :last  => 'http://example.org/checks?page=1'
+    }
 
+    page = double('page', :all => [check])
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
-      and_return([check])
+      and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
     expect(Flapjack::Data::Check).to receive(:sort).
-      with(:name).and_return(sorted)
-
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).and_return(full_ids)
+      with(:id).and_return(sorted)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
 
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
     get '/checks'
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [check_data.merge(:links => {
-      :tags => []})], :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
+      :links => links, :meta => meta))
+  end
+
+  it "retrieves paginated checks matching a filter" do
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    links = {
+      :self  => 'http://example.org/checks?filter%5B%5D=enabled%3At',
+      :first => 'http://example.org/checks?filter%5B%5D=enabled%3At&page=1',
+      :last  => 'http://example.org/checks?filter%5B%5D=enabled%3At&page=1'
+    }
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:enabled => true).
+      and_return(filtered)
+
+    page = double('page', :all => [check])
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+
+    expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(check_data)
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    get '/checks?filter=enabled%3At'
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
+      :links => links, :meta => meta))
   end
 
   it "retrieves one check" do
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
       with(check.id).and_return(check)
 
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).and_return(full_ids)
-
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
 
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
     get "/checks/#{check.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-      {:tags => []}
-    )))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+      :links => {:self => "http://example.org/checks/#{check.id}"}))
   end
 
   it "retrieves one check with a subset of fields" do
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
       with(check.id).and_return(check)
 
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => []})
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check_data[:id]]).and_return(full_ids)
-
     expect(check).to receive(:as_json).with(:only => [:name, :enabled, :id]).
       and_return(check_data)
 
-    get "/checks/#{check.id}?fields=name,enabled"
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    get "/checks/#{check.id}?fields=name%2Cenabled"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check_data.merge(:links =>
-        {:tags => []})))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+      :links => {:self => "http://example.org/checks/#{check.id}?fields=name%2Cenabled"}))
   end
 
   it "retrieves one check and all its linked tag records" do
@@ -153,51 +241,78 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:intersect).
       with(:id => [check.id]).and_return(checks)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
-      with(tag.id).and_return([tag])
+    full_tags = double('full_tags')
+    expect(full_tags).to receive(:collect) {|&arg| [arg.call(tag)] }
 
-    full_tag_ids = double('full_tag_ids')
-    expect(full_tag_ids).to receive(:associated_ids_for).with(:checks).and_return({tag.id => [check.id]})
-    expect(full_tag_ids).to receive(:associated_ids_for).with(:rules).and_return({tag.id => []})
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => [tag.id]).twice.and_return(full_tag_ids)
+      with(:id => [tag.id]).and_return(full_tags)
 
-    full_check_ids = double('full_check_ids')
-    expect(full_check_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [tag.id]})
+    full_checks = double('full_check_ids')
+    expect(full_checks).to receive(:associated_ids_for).
+      with(:tags).and_return({check.id => [tag.id]})
+
     expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id]).and_return(full_check_ids)
+      with(:id => [check.id]).and_return(full_checks)
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(tag_data)
+      and_return(tag_data.merge(:id => tag.id))
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
 
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
+
     get "/checks/#{check.id}?include=tags"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:links => {
-      'checks.tags' => 'http://example.org/tags/{checks.tags}',
-      'tags.checks' => 'http://example.org/checks/{tags.checks}',
-      },
-      :checks => check_data.merge(:links => {:tags => [tag.id]}),
-      :linked => {:tags => [tag_data.merge(:links => {
-        :checks => [check.id],
-        :rules => []
-      })]}))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => check_data.merge(:type => 'check', :links =>
+        {:self => "http://example.org/checks/#{check.id}",
+         :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+         :tags => {
+           :self    => "http://example.org/checks/#{check.id}/links/tags",
+           :related => "http://example.org/checks/#{check.id}/tags",
+           :linkage => [{:type => 'tag', :id => tag.id}]
+         },
+         :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+      :included => [tag_data.merge(:id => tag.id, :type => 'tag',
+        :links => {
+          :self   => "http://example.org/tags/#{tag.id}",
+          :checks => "http://example.org/tags/#{tag.id}/checks",
+          :rules  => "http://example.org/tags/#{tag.id}/rules",
+          })],
+       :links => {:self => "http://example.org/checks/#{check.id}?include=tags"}
+      ))
   end
 
-  it "retrieves several checks" do
+  it 'retrieves two checks' do
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 2
+      }
+    }
+
+    links = {
+      :self  => "http://example.org/checks?filter%5B%5D=id%3A#{check.id}%7C#{check_2.id}",
+      :first => "http://example.org/checks?filter%5B%5D=id%3A#{check.id}%7C#{check_2.id}&page=1",
+      :last  => "http://example.org/checks?filter%5B%5D=id%3A#{check.id}%7C#{check_2.id}&page=1"
+    }
+
     check_2 = double(Flapjack::Data::Check, :id => check_2_data[:id])
 
-    sorted = double('sorted')
-    expect(sorted).to receive(:find_by_ids!).
-      with(check.id, check_2.id).and_return([check, check_2])
-    expect(Flapjack::Data::Check).to receive(:sort).with(:name).and_return(sorted)
+    page = double('page', :all => [check, check_2])
 
-    full_ids = double('full_ids')
-    expect(full_ids).to receive(:associated_ids_for).with(:tags).and_return({check.id => [], check_2.id => []})
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id, check_2.id]).and_return(full_ids)
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(2)
+
+    filtered = double('filtered')
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+    expect(Flapjack::Data::Check).to receive(:intersect).with(:id => [check.id, check_2.id]).
+      and_return(filtered)
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data)
@@ -205,25 +320,82 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_2_data)
 
-    get "/checks/#{check.id},#{check_2.id}"
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    get "/checks?filter=id%3A#{check.id}%7C#{check_2.id}"
     expect(last_response).to be_ok
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => [
-      check_data.merge(:links => {:tags => []}),
-      check_2_data.merge(:links => {:tags => []})
-    ]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      [check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
+       check_2_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check_2.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check_2.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})
+      ], :links => links, :meta => meta))
   end
 
   it 'disables a check' do
-    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
-      with(check.id).and_return([check])
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).
+      with(check.id).and_return(check)
 
     expect(check).to receive(:enabled=).with(false)
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save).and_return(true)
 
-    put "/checks/#{check.id}",
-      Flapjack.dump_json(:checks => {:id => check.id, :enabled => false}),
-      jsonapi_put_env
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    patch "/checks/#{check.id}",
+      Flapjack.dump_json(:data => {:id => check.id, :type => 'check', :enabled => false}),
+      jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it 'disables two checks' do
+    expect(Flapjack::Data::Check).to receive(:find_by_ids!).
+      with(check.id, check_2.id).and_return([check, check_2])
+
+    expect(check).to receive(:enabled=).with(false)
+    expect(check).to receive(:invalid?).and_return(false)
+    expect(check).to receive(:save).and_return(true)
+
+    expect(check_2).to receive(:enabled=).with(false)
+    expect(check_2).to receive(:invalid?).and_return(false)
+    expect(check_2).to receive(:save).and_return(true)
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    patch "/checks",
+      Flapjack.dump_json(:data => [{:id => check.id, :type => 'check', :enabled => false},
+                                   {:id => check_2.id, :type => 'check', :enabled => false}]),
+      jsonapi_bulk_env
+    expect(last_response.status).to eq(204)
+  end
+
+  it "replaces the tags for a check" do
+    expect(Flapjack::Data::Check).to receive(:find_by_id!).
+      with(check.id).and_return(check)
+
+    expect(check).to receive(:invalid?).and_return(false)
+    expect(check).to receive(:save).and_return(true)
+
+    tags = double('tags', :ids => [])
+    expect(tags).to receive(:add).with(tag)
+    expect(check).to receive(:tags).twice.and_return(tags)
+
+    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).and_return([tag])
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    patch "/checks/#{check.id}",
+      Flapjack.dump_json(:data => {:id => check.id, :type => 'check', :links =>
+        {:tags => {:type => 'tag', :id => ['database']}}}),
+      jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

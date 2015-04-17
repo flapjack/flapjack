@@ -12,46 +12,39 @@ module Flapjack
       module Methods
         module Reports
 
-          module Helpers
-
-            def report_data(check_ids, options = {}, &block)
-              checks, meta = if check_ids.nil?
-                paginate_get(Flapjack::Data::Check.sort(:name),
-                  :total => Flapjack::Data::Check.count, :page => options[:page],
-                  :per_page => options[:per_page])
-              elsif !check_ids.empty?
-                [Flapjack::Data::Check.find_by_ids!(*check_ids), {}]
-              else
-                [[], {}]
-              end
-
-              rd = checks.each_with_object([]) do |check, memo|
-                memo << yield(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)).
-                  merge('links'  => {'check'  => check.id})
-              end
-
-              [rd, meta]
-            end
-
-          end
+          # module Helpers
+          # end
 
           def self.registered(app)
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
-            app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
+            # app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
 
-            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports(?:/([^/]+))?$} do
-              action = params[:captures][0]
-              action_pres = case action
+            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
+              report_type = params[:captures][0]
+
+              resource = params[:captures][1] || params[:captures][3]
+
+              resource_id = params[:captures][1].nil? ? params[:captures][4] :
+                                                        params[:captures][2]
+
+              report_type_pres = case report_type
               when 'status', 'downtime'
-                action
+                report_type
               else
-                "#{action}s"
+                "#{report_type}s"
+              end
+
+              initial_scope = case resource
+              when 'checks'
+                resource_id.nil? ? Flapjack::Data::Check : nil
+              when 'tags'
+                Flapjack::Data::Tag.find_by_id!(resource_id).checks
               end
 
               args = []
-              unless 'status'.eql?(action)
+              unless 'status'.eql?(report_type)
                 start_time = validate_and_parsetime(params[:start_time])
                 start_time = start_time.to_i unless start_time.nil?
                 end_time = validate_and_parsetime(params[:end_time])
@@ -59,18 +52,28 @@ module Flapjack
                 args += [start_time, end_time]
               end
 
-              check_ids = params[:captures][1].nil? ? nil : params[:captures][1].split(',')
-              rd, meta = report_data(check_ids, :page => params[:page],
-                                     :per_page => params[:per_page]) {|presenter|
-                presenter.send(action_pres.to_sym, *args)
-              }
+              checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
+                scoped = resource_filter_sort(initial_scope,
+                 :filter => params[:filter], :sort => params[:sort])
+                paginate_get(scoped, :page => params[:page],
+                  :per_page => params[:per_page])
+              else
+                [[Flapjack::Data::Check.find_by_id!(resource_id)], {}, {}]
+              end
 
-              # unwrap, if 1 requested
-              rd = rd.first if !check_ids.nil? && check_ids.size == 1
+              links[:self] = request_url
+
+              rd = checks.each_with_object([]) do |check, memo|
+                r = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.
+                      new(check).send(report_type_pres.to_sym, *args)
+                memo << r.merge(:type => "#{report_type}_report")
+              end
+
+              # unwrap, if single check requested
+              rd = rd.first unless 'tags'.eql?(resource) || resource_id.nil?
 
               status 200
-              json_data = {}
-              json_data.update("#{action}_reports".to_sym => rd)
+              json_data = {:links => links, :data => rd}
               json_data.update(:meta => meta) unless meta.nil? || meta.empty?
               Flapjack.dump_json(json_data)
             end

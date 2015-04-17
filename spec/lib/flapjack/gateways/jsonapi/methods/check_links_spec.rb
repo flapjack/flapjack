@@ -23,7 +23,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(check_tags).to receive(:add).with(tag)
     expect(check).to receive(:tags).and_return(check_tags)
 
-    post "/checks/#{check.id}/links/tags", Flapjack.dump_json(:tags => tag.id), jsonapi_post_env
+    post "/checks/#{check.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -34,9 +36,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
       and_return(check)
 
-    get "/checks/#{check.id}/links/tags"
+    get "/checks/#{check.id}/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'tag', :id => tag.id}],
+      :links => {
+        :self    => "http://example.org/checks/#{check.id}/links/tags",
+        :related => "http://example.org/checks/#{check.id}/tags",
+      }
+    ))
   end
 
   it 'updates tags for a check' do
@@ -53,7 +61,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(check_tags).to receive(:add).with(tag)
     expect(check).to receive(:tags).twice.and_return(check_tags)
 
-    put "/checks/#{check.id}/links/tags", Flapjack.dump_json(:tags => [tag.id]), jsonapi_put_env
+    patch "/checks/#{check.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -66,8 +76,26 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(check_tags).to receive(:delete).with(tag)
     expect(check).to receive(:tags).and_return(check_tags)
 
-    delete "/checks/#{check.id}/links/tags/#{tag.id}"
+    delete "/checks/#{check.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
+
+  it 'adds a scheduled maintenance period to a check'
+
+  it 'lists scheduled maintenance periods for a check'
+
+  it 'updates scheduled maintenance periods for a check'
+
+  it 'deletes a scheduled maintenance period from a check'
+
+  it 'adds an unscheduled maintenance period to a check'
+
+  it 'lists unscheduled maintenance periods for a check'
+
+  it 'updates unscheduled maintenance periods for a check'
+
+  it 'deletes an unscheduled maintenance period from a check'
 
 end

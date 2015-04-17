@@ -42,6 +42,8 @@ module Flapjack
              'details'                           => (last_update   ? last_update.details     : nil),
              'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
              'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
+             'initial_failure_delay'             => @check.initial_failure_delay,
+             'repeat_failure_delay'              => @check.repeat_failure_delay,
              'last_update'                       => (last_update   ? last_update.timestamp   : nil),
              'last_change'                       => (last_change   ? last_change.timestamp   : nil),
              'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),

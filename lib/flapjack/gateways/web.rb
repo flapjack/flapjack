@@ -89,6 +89,11 @@ module Flapjack
           return '' unless request.path == "/#{path}"
           " class='active'"
         end
+
+        def charset_for_content_type(ct)
+          charset = Encoding.default_external
+          charset.nil? ? ct : "#{ct}; charset=#{charset.name}"
+        end
       end
 
       ['config'].each do |class_inst_var|
@@ -99,6 +104,8 @@ module Flapjack
 
       before do
         Zermelo.redis ||= Flapjack.redis
+        content_type charset_for_content_type('text/html')
+
         @api_url          = self.class.instance_variable_get('@api_url')
         @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
@@ -301,13 +308,13 @@ module Flapjack
         redirect back
       end
 
-      patch '/unscheduled_maintenance/checks/:id' do
+      patch '/unscheduled_maintenances/checks/:id' do
         check_id  = params[:id]
 
         check = Flapjack::Data::Check.find_by_id(check_id)
         halt(404, "Could not find check '#{check_id}'") if check.nil?
 
-        check.end_unscheduled_maintenance(Time.now.to_i)
+        check.clear_unscheduled_maintenance(Time.now.to_i)
 
         redirect back
       end
@@ -359,10 +366,6 @@ module Flapjack
         @contacts = Flapjack::Data::Contact.all
 
         erb 'contacts.html'.to_sym
-      end
-
-      get '/edit_contacts' do
-        erb 'edit_contacts.html'.to_sym
       end
 
       get "/contacts/:id" do
@@ -453,11 +456,7 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.all.each_with_object([]) do |check, memo|
-          s = check.states.last
-          next if s.nil? || Flapjack::Data::Condition.healthy?(s.condition)
-          memo << check
-        end
+        @failing_checks ||= Flapjack::Data::Check.failing
       end
 
       def check_stats

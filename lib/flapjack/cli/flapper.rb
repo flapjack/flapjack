@@ -10,6 +10,11 @@ module Flapjack
         @global_options = global_options
         @options = options
 
+        if @global_options[:'force-utf8']
+          Encoding.default_external = 'UTF-8'
+          Encoding.default_internal = 'UTF-8'
+        end
+
         @config = Flapjack::Configuration.new
         @config.load(global_options[:config])
         @config_env = @config.all
@@ -66,10 +71,8 @@ module Flapjack
                 fds = [acceptor]
 
                 while true
-                  # puts 'loop'
                   if ios = select(fds, [], [], 10)
                     reads = ios.first
-                    # p reads
                     reads.each do |client|
                       if client == acceptor
                         puts 'Someone connected to server. Adding socket to fds.'
@@ -83,9 +86,7 @@ module Flapjack
                         # Perform a blocking-read until new-line is encountered.
                         # We know the client is writing, so as long as it adheres to the
                         # new-line protocol, we shouldn't block for very long.
-                        # puts "Reading..."
                         data = client.gets("\n")
-                        # client.puts(">>you sent: #{data}")
                         if data =~ /quit/i
                           fds.delete(client)
                           client.close

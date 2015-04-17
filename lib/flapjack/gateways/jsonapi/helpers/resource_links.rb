@@ -6,62 +6,68 @@ module Flapjack
       module Helpers
         module ResourceLinks
 
-          def resource_post_links(klass, id, assoc_name)
-            assoc_ids, _ = wrapped_link_params(assoc_name)
-            halt(err(403, "No link ids")) if assoc_ids.empty?
-
-            singular_links, multiple_links = association_klasses(klass)
-            singular_klass = singular_links[assoc_name.to_sym]
+          def resource_post_links(klass, resources_name, id, assoc_name)
+            _, multiple_links = klass.association_klasses
             multiple_klass = multiple_links[assoc_name.to_sym]
+
+            assoc_ids, _ = wrapped_link_params(:multiple => multiple_klass)
+
+            halt(err(403, 'No link ids')) if assoc_ids.empty?
 
             resource = klass.find_by_id!(id)
 
             # Not checking for duplication on adding existing to a multiple
             # association, the JSONAPI spec doesn't ask for it
-            if !multiple_klass.nil?
+            if multiple_klass.nil?
+              # TODO ensure wrapped_link_params will make this unreachable, remove
+            else
               assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
               klass.lock(*assoc_classes) do
                 associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
                 resource.send(assoc_name.to_sym).add(*associated)
               end
-            elsif !singular_klass.nil?
-              halt(err(409, "Association '#{assoc_name}' is already populated")) unless resource.send(assoc_name.to_sym).nil?
-              halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
-              klass.lock(*assoc_classes) do
-                associated = singular_klass[:data].find_by_id!(*assoc_ids)
-                resource.send("#{assoc_name}=".to_sym, associated)
-              end
-            else
-              # TODO halt
             end
           end
 
-          def resource_get_links(klass, id, assoc_name)
-            singular_links, multiple_links = association_klasses(klass)
+          def resource_get_links(klass, resources_name, id, assoc_name)
+            singular_links, multiple_links = klass.association_klasses
 
-            assoc_accessor, name = if multiple_links.has_key?(assoc_name.to_sym)
-              [:ids, assoc_name]
+            accessor, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
+              [:ids, multiple_links[assoc_name.to_sym][:data].jsonapi_type]
             elsif singular_links.has_key?(assoc_name.to_sym)
-              [:id, assoc_name.pluralize]
+              [:id, singular_links[assoc_name.to_sym][:data].jsonapi_type]
             else
-              halt(400, 'Unknown association')
+              halt(err(404, 'Unknown association'))
             end
 
-            assoc_ids = klass.find_by_id!(id).send(assoc_name).
-                          send(assoc_accessor)
+            associated = klass.find_by_id!(id).send(assoc_name).send(accessor)
 
-            Flapjack.dump_json(name => assoc_ids)
+            links = {
+              :self    => "#{request.base_url}/#{resources_name}/#{id}/links/#{assoc_name}",
+              :related => "#{request.base_url}/#{resources_name}/#{id}/#{assoc_name}"
+            }
+
+            data = case associated
+            when Array
+              associated.map {|assoc_id| {:type => assoc_type, :id => assoc_id} }
+            when String
+              {:type => assoc_type, :id => associated}
+            else
+              nil
+            end
+
+            Flapjack.dump_json(:links => links, :data => data)
           end
 
-          def resource_put_links(klass, id, assoc_name)
-            assoc_ids, _ = wrapped_link_params(assoc_name)
-
-            resource = klass.find_by_id!(id)
-
-            singular_links, multiple_links = association_klasses(klass)
+          def resource_patch_links(klass, resources_name, id, assoc_name)
+            singular_links, multiple_links = klass.association_klasses
             singular_klass = singular_links[assoc_name.to_sym]
             multiple_klass = multiple_links[assoc_name.to_sym]
+
+            assoc_ids, _ = wrapped_link_params(:singular => singular_klass,
+              :multiple => multiple_klass, :allow_nil => true)
+
+            resource = klass.find_by_id!(id)
 
             if !multiple_klass.nil?
               assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
@@ -75,32 +81,35 @@ module Flapjack
                 resource.send(assoc_name.to_sym).add(*ta) unless ta.empty?
               end
             elsif !singular_klass.nil?
-              halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-              assoc_classes = [singular_klass[:data]] + singular_klass[:related]
-              klass.lock(*assoc_classes) do
-                value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
-                resource.send("#{assoc_name}=".to_sym, value)
+              if assoc_ids.nil?
+                assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+                klass.lock(*assoc_classes) do
+                  resource.send("#{assoc_name}=".to_sym, nil)
+                end
+              else
+                halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
+                assoc_classes = [singular_klass[:data]] + singular_klass[:related]
+                klass.lock(*assoc_classes) do
+                  value = assoc_ids.first.nil? ? nil : singular_klass[:data].find_by_id!(assoc_ids.first)
+                  resource.send("#{assoc_name}=".to_sym, value)
+                end
               end
             else
-              # TODO halt
+              # TODO ensure wrapped_link_params will make this unreachable, remove
             end
           end
 
-          # singular association
-          def resource_delete_link(klass, id, assoc_name)
-            resource = klass.find_by_id!(id)
-
-            # validate that the associated record exists
-            halt(err(403, "No association '#{assoc_name}' to delete for id '#{resource.id}'")) if resource.send(assoc_name.to_sym).nil?
-            resource.send("#{assoc_name}=".to_sym, nil)
-          end
-
           # multiple association
-          def resource_delete_links(klass, id, assoc_name, assoc_ids)
-            halt(err(403, "No link ids")) if assoc_ids.empty?
+          def resource_delete_links(klass, resources_name, id, assoc_name)
+            _, multiple_links = klass.association_klasses
+            multiple_klass = multiple_links[assoc_name.to_sym]
 
-            # validate that the association ids actually exist in the associations
+            assoc_ids, _ = wrapped_link_params(:multiple => multiple_klass)
+
+            halt(err(403, 'No link ids')) if assoc_ids.empty?
+
             resource = klass.find_by_id!(id)
+
             assoc = resource.send(assoc_name.to_sym)
             associated = assoc.find_by_ids!(*assoc_ids)
             assoc.delete(*associated)

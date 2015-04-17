@@ -25,7 +25,7 @@ module Flapjack
 
             headers = if 'DELETE'.eql?(request.request_method)
               # not set by default for delete, but the error structure is JSON
-              {'Content-Type' => JSONAPI_MEDIA_TYPE}
+              {'Content-Type' => media_type_produced(:with_charset => true)}
             else
               {}
             end
@@ -43,19 +43,15 @@ module Flapjack
             [status_code, headers, Flapjack.dump_json(error_data)]
           end
 
-          def is_json_request?
-            Flapjack::Gateways::JSONAPI::JSON_REQUEST_MIME_TYPES.include?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-          end
-
           def is_jsonapi_request?
             return false if request.content_type.nil?
-            'application/vnd.api+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+            Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
           end
 
-          def is_jsonpatch_request?
-            return false if request.content_type.nil?
-            'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-          end
+          # def is_jsonpatch_request?
+          #   return false if request.content_type.nil?
+          #   'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
+          # end
 
         end
       end

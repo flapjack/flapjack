@@ -307,7 +307,7 @@ def migrate_contact_entity_linkages
 
     entity_ids.each do |entity_id|
 
-      entity = Flapjack::Data.find_by_id(entity_id)
+      entity = Flapjack::Data::Entity.find_by_id(entity_id)
       raise "No entity with id #{entity_id}" if entity.nil?
       entity.tags << tag
       entities_with_changed_tags[entity_id] = entity

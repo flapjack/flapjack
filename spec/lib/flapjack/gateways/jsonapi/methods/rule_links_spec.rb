@@ -13,31 +13,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   let(:rule_tags)  { double('rule_tags') }
   let(:rule_media) { double('rule_media') }
 
-  it 'sets a contact for a rule' do
-    expect(Flapjack::Data::Rule).to receive(:lock).
-      with(Flapjack::Data::Contact).and_yield
-
-    expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
-      and_return(rule)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
-      and_return(contact)
-
-    expect(rule).to receive(:contact).and_return(nil)
-    expect(rule).to receive(:contact=).with(contact)
-
-    post "/rules/#{rule.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_post_env
-    expect(last_response.status).to eq(204)
-  end
-
   it 'shows the contact for a rule' do
     expect(rule).to receive(:contact).and_return(contact)
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/contact"
+    get "/rules/#{rule.id}/contact"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:contacts => contact.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => {:type => 'contact', :id => contact.id},
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/contact",
+        :related => "http://example.org/rules/#{rule.id}/contact",
+      }
+    ))
   end
 
   it 'changes the contact for a rule' do
@@ -51,18 +41,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     expect(rule).to receive(:contact=).with(contact)
 
-    put "/rules/#{rule.id}/links/contact", Flapjack.dump_json(:contact => contact.id), jsonapi_put_env
-    expect(last_response.status).to eq(204)
-  end
-
-  it 'clears the contact for a rule' do
-    expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
-      and_return(rule)
-
-    expect(rule).to receive(:contact).and_return(contact)
-    expect(rule).to receive(:contact=).with(nil)
-
-    delete "/rules/#{rule.id}/links/contact"
+    patch "/rules/#{rule.id}/links/contact", Flapjack.dump_json(:data => {
+      :type => 'contact', :id => contact.id
+    }), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -78,7 +59,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_media).to receive(:add).with(medium)
     expect(rule).to receive(:media).and_return(rule_media)
 
-    post "/rules/#{rule.id}/links/media", Flapjack.dump_json(:media => medium.id), jsonapi_post_env
+    post "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
+      :type => 'medium', :id => medium.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -89,9 +72,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/media"
+    get "/rules/#{rule.id}/media"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:media => [medium.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'medium', :id => medium.id}],
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/media",
+        :related => "http://example.org/rules/#{rule.id}/media",
+      }
+    ))
   end
 
   it 'updates media for a rule' do
@@ -107,7 +96,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_media).to receive(:add).with(medium)
     expect(rule).to receive(:media).twice.and_return(rule_media)
 
-    put "/rules/#{rule.id}/links/media", Flapjack.dump_json(:media => [medium.id]), jsonapi_put_env
+    patch "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
+      :type => 'medium', :id => medium.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -120,7 +111,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_media).to receive(:delete).with(medium)
     expect(rule).to receive(:media).and_return(rule_media)
 
-    delete "/rules/#{rule.id}/links/media/#{medium.id}"
+    delete "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
+      :type => 'medium', :id => medium.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -137,7 +130,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_tags).to receive(:add).with(tag)
     expect(rule).to receive(:tags).and_return(rule_tags)
 
-    post "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:tags => tag.id), jsonapi_post_env
+    post "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -148,9 +143,15 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    get "/rules/#{rule.id}/links/tags"
+    get "/rules/#{rule.id}/tags"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:tags => [tag.id]))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => [{:type => 'tag', :id => tag.id}],
+      :links => {
+        :self    => "http://example.org/rules/#{rule.id}/links/tags",
+        :related => "http://example.org/rules/#{rule.id}/tags",
+      }
+    ))
   end
 
   it 'updates tags for a rule' do
@@ -167,7 +168,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_tags).to receive(:add).with(tag)
     expect(rule).to receive(:tags).twice.and_return(rule_tags)
 
-    put "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:tags => [tag.id]), jsonapi_put_env
+    patch "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
@@ -180,7 +183,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(rule_tags).to receive(:delete).with(tag)
     expect(rule).to receive(:tags).and_return(rule_tags)
 
-    delete "/rules/#{rule.id}/links/tags/#{tag.id}"
+    delete "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{
+      :type => 'tag', :id => tag.id
+    }]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

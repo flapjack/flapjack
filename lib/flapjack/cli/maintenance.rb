@@ -15,6 +15,11 @@ module Flapjack
         @global_options = global_options
         @options = options
 
+        if @global_options[:'force-utf8']
+          Encoding.default_external = 'UTF-8'
+          Encoding.default_internal = 'UTF-8'
+        end
+
         config = Flapjack::Configuration.new
         config.load(global_options[:config])
         @config_env = config.all
@@ -106,6 +111,7 @@ module Flapjack
         end
         puts Terminal::Table.new :headings => ['Check',
           'Start', 'Duration (s)', 'Reason', 'End'], :rows => rows
+        puts "Found #{rows.count} maintenances"
         maintenances
       end
 

@@ -6,10 +6,9 @@ require 'flapjack/gateways/jsonapi'
 require './spec/support/mock_logger.rb'
 
 require './spec/service_consumers/fixture_data.rb'
+require './spec/service_consumers/provider_support.rb'
 
 require './spec/service_consumers/provider_states_for_flapjack-diner.rb'
-
-$testing = true
 
 FLAPJACK_ENV    = ENV["FLAPJACK_ENV"] || 'test'
 FLAPJACK_ROOT   = File.join(File.dirname(__FILE__), '..')
@@ -23,7 +22,7 @@ ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
 ActiveSupport::JSON::Encoding.time_precision = 0
 
 MockLogger.configure_log('flapjack-jsonapi')
-Flapjack.logger = MockLogger.new
+Zermelo.logger = Flapjack.logger = MockLogger.new
 
 # ::RSpec.configuration.full_backtrace = true
 
@@ -46,6 +45,7 @@ Flapjack::Gateways::JSONAPI.start
 
 Pact.configure do |config|
   config.include ::FixtureData
+  config.include ::ProviderSupport
 end
 
 Pact.service_provider "flapjack" do

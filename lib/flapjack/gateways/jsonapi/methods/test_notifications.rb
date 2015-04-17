@@ -15,27 +15,26 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
-            app.post '/test_notifications' do
-              test_notifications, unwrap = wrapped_params('test_notifications',
-                                                          :error_on_nil => true)
+            app.post %r{/test_notifications/(?:(checks)/(.+)|(tags)/(.+))$} do
+              test_notifications, unwrap = wrapped_params
 
-              checks_by_index = {}
+              resource = params[:captures][0] || params[:captures][2]
+              resource_id = params[:captures][0].nil? ? params[:captures][3] :
+                                                        params[:captures][1]
 
-              test_notifications.each_with_index do |tn, i|
-                halt(400, "Invalid check link data") unless tn.has_key?('links') &&
-                  tn['links'].has_key?('checks') &&
-                  tn['links']['checks'].is_a?(Array) &&
-                  tn['links']['checks'].all? {|c| c.is_a?(String)}
-
-                checks_by_index[i] = Flapjack::Data::Check.find_by_ids!(*tn['links']['checks'])
+              checks = case resource
+              when 'checks'
+                [Flapjack::Data::Check.find_by_id!(resource_id)]
+              when 'tags'
+                Flapjack::Data::Tag.find_by_id!(resource_id).checks
               end
 
-              test_notifications.each_with_index do |tn, i|
-                checks = checks_by_index[i]
+              check_names = checks.map(&:name)
 
+              test_notifications.each do |tn|
                 tn['summary'] ||=
                   'Testing notifications to everyone interested in ' +
-                  checks.map(&:name).join(', ')
+                  check_names.join(', ')
 
                 Flapjack::Data::Event.test_notifications(
                   config['processor_queue'] || 'events',
@@ -45,8 +44,8 @@ module Flapjack
               status 201
               # No Location headers, as the returned 'resources' don't have
               # relevant URLs
-              ret = unwrap ? test_notifications.first : test_notifications
-              Flapjack.dump_json(:test_notifications => ret)
+              ret = (test_notifications.size == 1) ? test_notifications.first : test_notifications
+              Flapjack.dump_json(:data => ret)
             end
 
           end

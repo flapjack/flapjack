@@ -10,14 +10,26 @@ require 'time'
 
 require 'sinatra/base'
 
-require 'active_support/core_ext/string/inflections'
+require 'active_support/inflector'
+
+require 'swagger/blocks'
 
 require 'flapjack'
 require 'flapjack/utility'
 
+require 'flapjack/data/check'
+require 'flapjack/data/contact'
+require 'flapjack/data/medium'
+require 'flapjack/data/rule'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/tag'
+require 'flapjack/data/unscheduled_maintenance'
+
+require 'flapjack/gateways/jsonapi/rack/array_param_fixer'
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
-%w[headers miscellaneous resources resource_links].each do |helper|
+%w[headers miscellaneous resources resource_links
+   swagger_docs swagger_links_docs].each do |helper|
   require "flapjack/gateways/jsonapi/helpers/#{helper}"
 end
 
@@ -29,30 +41,69 @@ module Flapjack
 
       include Flapjack::Utility
 
-      JSON_REQUEST_MIME_TYPES = ['application/vnd.api+json', 'application/json', 'application/json-patch+json']
+      # TODO clean up media type handling for variable character sets
+      # append charset in use
+
+      # http://jsonapi.org/extensions/bulk/
       # http://www.iana.org/assignments/media-types/application/vnd.api+json
-      JSONAPI_MEDIA_TYPE = 'application/vnd.api+json; charset=utf-8'
-      # http://tools.ietf.org/html/rfc6902
-      JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
+      JSONAPI_MEDIA_TYPE          = 'application/vnd.api+json'
+      JSONAPI_MEDIA_TYPE_BULK     = 'application/vnd.api+json; ext=bulk'
+
+      # # http://tools.ietf.org/html/rfc6902
+      # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
+
+      RESOURCE_CLASSES = [
+        Flapjack::Data::Check,
+        Flapjack::Data::Contact,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::Tag,
+        Flapjack::Data::UnscheduledMaintenance
+      ]
 
       set :raise_errors, true
       set :show_exceptions, false
 
       set :protection, :except => :path_traversal
 
+      # use ::Rack::Lint
       use ::Rack::MethodOverride
+      use Flapjack::Gateways::JSONAPI::Rack::ArrayParamFixer
       use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
 
       class << self
+
+        @@lock = Monitor.new
+
         def start
           Flapjack.logger.info "starting jsonapi - class"
         end
+
+        def media_type_produced(options = {})
+          unless options[:with_charset].is_a?(TrueClass)
+            return 'application/vnd.api+json; supported-ext=bulk'
+          end
+
+          media_type = nil
+          @@lock.synchronize do
+            encoding = Encoding.default_external
+            media_type = if encoding.nil?
+              'application/vnd.api+json; supported-ext=bulk'
+            else
+              "application/vnd.api+json; supported-ext=bulk; charset=#{encoding.name.downcase}"
+            end
+          end
+          media_type
+        end
       end
 
-      ['config'].each do |class_inst_var|
-        define_method(class_inst_var.to_sym) do
-          self.class.instance_variable_get("@#{class_inst_var}")
-        end
+      def config
+        self.class.instance_variable_get("@config")
+      end
+
+      def media_type_produced(options = {})
+        self.class.media_type_produced(options)
       end
 
       before do
@@ -98,9 +149,11 @@ module Flapjack
         204
       end
 
+      # FIXME enforce that Accept header must allow defined return type for the method
+
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type JSONAPI_MEDIA_TYPE
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end
@@ -108,22 +161,22 @@ module Flapjack
       # bare 'params' may have splat/captures for regex route, see
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
-        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
+        halt(405) unless request.params.empty? || is_jsonapi_request?
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end
 
-      put '*' do
-        halt(405) unless request.params.empty? || is_json_request? || is_jsonapi_request?
-        content_type JSONAPI_MEDIA_TYPE
-        cors_headers
-        pass
-      end
+      # put '*' do
+      #   halt(405) unless request.params.empty? || is_jsonapi_request?
+      #   content_type media_type_produced
+      #   cors_headers
+      #   pass
+      # end
 
       patch '*' do
-        halt(405) unless is_jsonpatch_request?
-        content_type JSONAPI_MEDIA_TYPE
+        halt(405) unless request.params.empty? || is_jsonapi_request?
+        content_type media_type_produced(:with_charset => true)
         cors_headers
         pass
       end
@@ -133,21 +186,114 @@ module Flapjack
         pass
       end
 
+      include Swagger::Blocks
+      include Flapjack::Gateways::JSONAPI::Helpers::SwaggerDocs
+      include Flapjack::Gateways::JSONAPI::Helpers::SwaggerLinksDocs
+
+      swagger_root do
+        key :swagger, '2.0'
+        info do
+          key :version, '2.0.0'
+          key :title, 'Flapjack API'
+          key :description, ''
+          contact do
+            key :name, ''
+          end
+          license do
+            key :name, 'MIT'
+          end
+        end
+        key :host, 'localhost'
+        key :basePath, '/doc'
+        key :schemes, ['http']
+        key :consumes, [JSONAPI_MEDIA_TYPE]
+        key :produces, [JSONAPI_MEDIA_TYPE]
+      end
+
       # hacky, but trying to avoid too much boilerplate -- links paths
       # must be before regular ones to avoid greedy path captures
-      %w[check_links checks contact_links contacts medium_links media
-         rule_links rules tag_links tags
-         scheduled_maintenance_links scheduled_maintenances
-         unscheduled_maintenance_links unscheduled_maintenances
-         reports searches test_notifications].each do |method|
+      %w[metrics reports test_notifications resource_links resources].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
       end
 
-      error Zermelo::LockNotAcquired do
-        # TODO
+      swagger_schema :jsonapi_Reference do
+        key :required, [:type, :id]
+        property :type do
+          key :type, :string
+          key :enum, Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.map(&:jsonapi_type)
+        end
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
       end
+
+      swagger_schema :jsonapi_Links do
+        key :required, [:self]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :first do
+          key :type, :string
+          key :format, :url
+        end
+        property :last do
+          key :type, :string
+          key :format, :url
+        end
+        property :next do
+          key :type, :string
+          key :format, :url
+        end
+        property :prev do
+          key :type, :string
+          key :format, :url
+        end
+      end
+
+      swagger_schema :jsonapi_Pagination do
+        key :required, [:page, :per_page, :total_pages, :total_count]
+        property :page do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :per_page do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :total_pages do
+          key :type, :integer
+          key :format, :int64
+        end
+        property :total_count do
+          key :type, :integer
+          key :format, :int64
+        end
+      end
+
+      swagger_schema :jsonapi_Meta do
+        property :pagination do
+          key :"$ref", :jsonapi_Pagination
+        end
+      end
+
+      Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
+        endpoint = resource_class.jsonapi_type.pluralize.downcase
+        swagger_wrappers(endpoint, resource_class)
+      end
+
+      SWAGGERED_CLASSES = [self] + Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES
+
+      get '/doc' do
+        Flapjack.dump_json(Swagger::Blocks.build_root_json(SWAGGERED_CLASSES))
+      end
+
+      # error Zermelo::LockNotAcquired do
+      #   # TODO
+      # end
 
       error Zermelo::Records::Errors::RecordNotFound do
         e = env['sinatra.error']

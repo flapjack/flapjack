@@ -2,6 +2,8 @@
 
 require 'digest'
 
+require 'swagger/blocks'
+
 require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
@@ -13,6 +15,8 @@ require 'flapjack/data/state'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
+require 'flapjack/gateways/jsonapi/data/associations'
+
 module Flapjack
 
   module Data
@@ -22,6 +26,8 @@ module Flapjack
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
+      include Flapjack::Gateways::JSONAPI::Data::Associations
+      include Swagger::Blocks
 
       # NB: state could be retrieved from states.last instead -- summary, details
       # and last_update can change without a new check_state being added though
@@ -147,8 +153,104 @@ module Flapjack
 
       attr_accessor :count
 
+      def self.jsonapi_type
+        self.name.demodulize.underscore
+      end
+
+      swagger_schema :Check do
+        key :required, [:id, :type, :name, :enabled]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+        property :links do
+          key :"$ref", :CheckLinks
+        end
+      end
+
+      swagger_schema :CheckLinks do
+        key :required, [:self, :tags]
+        property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :tags do
+          key :type, :string
+          key :format, :url
+        end
+      end
+
+      swagger_schema :CheckCreate do
+        key :required, [:type, :name, :enabled]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+      end
+
+      swagger_schema :CheckUpdate do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+        property :links do
+          key :"$ref", :CheckUpdateLinks
+        end
+      end
+
+      swagger_schema :CheckUpdateLinks do
+        property :tags do
+          key :type, :array
+          items do
+            key :"$ref", :TagReference
+          end
+        end
+      end
+
       def self.jsonapi_attributes
         [:name, :enabled]
+      end
+
+      def self.jsonapi_search_string_attributes
+        [:name, :ack_hash]
+      end
+
+      def self.jsonapi_search_boolean_attributes
+        [:enabled]
       end
 
       def self.jsonapi_singular_associations
@@ -156,7 +258,16 @@ module Flapjack
       end
 
       def self.jsonapi_multiple_associations
-        [:tags]
+        [:scheduled_maintenances, :tags, :unscheduled_maintenances]
+      end
+
+      def self.failing(scope = nil)
+        scope ||= self
+        scope.all.each_with_object([]) do |check, memo|
+          e = check.last_change
+          next if e.nil? || Flapjack::Data::Condition.healthy?(e.condition)
+          memo << check
+        end
       end
 
       # takes an array of ages (in seconds) to split all checks up by
@@ -183,6 +294,8 @@ module Flapjack
       #      60 => [ ['foo-app-01:Ping', 1382329922.0], ['foo-app-01:Disk / Utilisation', 1382329921.0] ],
       #     300 => [] }
       #
+      # TODO move this method to API metrics once web is referencing API internally
+      #
       def self.split_by_freshness(ages, options = {})
         raise "ages does not respond_to? :each and :each_with_index" unless ages.respond_to?(:each) && ages.respond_to?(:each_with_index)
         raise "age values must respond_to? :to_i" unless ages.all? {|age| age.respond_to?(:to_i) }
@@ -201,7 +314,7 @@ module Flapjack
         results_with_times = current_checks.inject(skeleton) do |memo, check|
           check_state = check.states.last
           next memo if check_state.nil?
-          check_age = start_time.to_i - check_state.timestamp
+          check_age = start_time.to_i - check_state.timestamp.to_i
           check_age = 0 unless check_age > 0
           if check_age >= ages.last
             memo[ages.last] << "#{check.name}"

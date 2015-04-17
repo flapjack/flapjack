@@ -61,12 +61,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_stats
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-      expect(check).to receive(:states).and_return(states)
 
-      critical_state = double(Flapjack::Data::State)
-      expect(critical_state).to receive(:condition).and_return('critical')
-
-      expect(states).to receive(:last).and_return(critical_state)
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/branding.png">'
 
@@ -82,12 +80,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_stats
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-      expect(check).to receive(:states).and_return(states)
 
-      critical_state = double(Flapjack::Data::State)
-      expect(critical_state).to receive(:condition).and_return('critical')
-
-      expect(states).to receive(:last).and_return(critical_state)
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/flapjack-2013-notext-transparent-300-300.png">'
 
@@ -110,13 +106,17 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(check).to receive(:name).and_return(check_name)
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-      expect(check).to receive(:states).twice.and_return(states)
+      expect(check).to receive(:states).and_return(states)
+
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
 
       latest_notifications = double('latest_notifications')
       expect(check).to receive(:latest_notifications).and_return(latest_notifications)
       expect(latest_notifications).to receive(:last).and_return(nil)
 
-      expect(states).to receive(:last).twice.and_return(nil)
+      expect(states).to receive(:last).and_return(nil)
 
       expect(check).to receive(:in_scheduled_maintenance?).and_return(false)
       expect(check).to receive(:in_unscheduled_maintenance?).and_return(false)
@@ -129,8 +129,21 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
 
+      expect(check).to receive(:name).and_return(check_name)
+
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
+
+      latest_notifications = double('latest_notifications')
+      expect(check).to receive(:latest_notifications).and_return(latest_notifications)
+      expect(latest_notifications).to receive(:last).and_return(nil)
+
       expect(check).to receive(:states).and_return(states)
       expect(states).to receive(:last).and_return(nil)
+
+      expect(check).to receive(:in_scheduled_maintenance?).and_return(false)
+      expect(check).to receive(:in_unscheduled_maintenance?).and_return(false)
 
       get '/checks?type=failing'
       expect(last_response).to be_ok
@@ -140,12 +153,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect_stats
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-      expect(check).to receive(:states).and_return(states)
 
-      critical_state = double(Flapjack::Data::State)
-      expect(critical_state).to receive(:condition).and_return('critical')
-
-      expect(states).to receive(:last).and_return(critical_state)
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
 
       get '/self_stats'
       expect(last_response).to be_ok
@@ -177,7 +188,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       ok_entries = double(:ok_entries, :last => ok_entry)
       ok_time = time - (3 * 60 * 60)
       expect(ok_state).to receive(:timestamp).twice.and_return(ok_time)
-      expect(ok_state).to receive(:condition).twice.and_return('ok')
+      expect(ok_state).to receive(:condition).and_return('ok')
       expect(ok_state).to receive(:entries).and_return(ok_entries)
       expect(ok_entry).to receive(:action).and_return(nil)
       expect(ok_entry).to receive(:condition).twice.and_return('ok')
@@ -188,13 +199,17 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       states = double('states')
 
-      expect(states).to receive(:last).twice.and_return(ok_state)
+      expect(states).to receive(:last).and_return(ok_state)
+
+      critical_entry = double(Flapjack::Data::Entry)
+      expect(critical_entry).to receive(:condition).and_return('critical')
+      expect(check).to receive(:last_change).and_return(critical_entry)
 
       latest_notifications = double('latest_notifications',
         :all => [failing_entry, ok_entry], :last => ok_entry)
       expect(check).to receive(:latest_notifications).twice.and_return(latest_notifications)
 
-      expect(check).to receive(:states).exactly(3).times.and_return(states)
+      expect(check).to receive(:states).twice.and_return(states)
 
       no_sched_maint = double('no_sched_maint', :all => [])
       expect(check).to receive(:scheduled_maintenances_by_start).and_return(no_sched_maint)

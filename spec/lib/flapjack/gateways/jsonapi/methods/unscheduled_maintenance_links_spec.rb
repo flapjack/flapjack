@@ -12,30 +12,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
   let(:sm_check_by_start) { double('sm_check_by_start') }
   let(:sm_check_by_end)   { double('sm_check_by_end') }
 
-  it 'sets a check for a unscheduled maintenance period' do
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
-
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).with(unscheduled_maintenance.id).
-      and_return(unscheduled_maintenance)
-    expect(Flapjack::Data::Check).to receive(:find_by_id!).with(check.id).
-      and_return(check)
-
-    expect(unscheduled_maintenance).to receive(:check).and_return(nil)
-    expect(unscheduled_maintenance).to receive(:check=).with(check)
-
-    post "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_post_env
-    expect(last_response.status).to eq(204)
-  end
-
   it 'shows the check for a unscheduled maintenance period' do
     expect(unscheduled_maintenance).to receive(:check).and_return(check)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).with(unscheduled_maintenance.id).
       and_return(unscheduled_maintenance)
 
-    get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check"
+    get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"
     expect(last_response.status).to eq(200)
-    expect(last_response.body).to eq(Flapjack.dump_json(:checks => check.id))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data  => {:type => 'check', :id => check.id},
+      :links => {
+        :self    => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+        :related => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check",
+      }
+    ))
   end
 
   it 'changes the check for a unscheduled maintenance period' do
@@ -48,18 +39,25 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     expect(unscheduled_maintenance).to receive(:check=).with(check)
 
-    put "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check", Flapjack.dump_json(:check => check.id), jsonapi_put_env
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+      Flapjack.dump_json(:data => {
+        :type => 'check', :id => check.id
+      }), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
   it 'clears the check for a unscheduled maintenance period' do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
+
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).with(unscheduled_maintenance.id).
       and_return(unscheduled_maintenance)
 
-    expect(unscheduled_maintenance).to receive(:check).and_return(check)
     expect(unscheduled_maintenance).to receive(:check=).with(nil)
 
-    delete "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check"
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+      Flapjack.dump_json(:data => {
+        :type => 'check', :id => nil
+      }), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 

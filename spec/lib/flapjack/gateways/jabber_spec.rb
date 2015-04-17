@@ -84,10 +84,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
     let(:tag) { double(Flapjack::Data::Tag, :id => SecureRandom.uuid) }
 
-    let(:checks) { double('checks', :ids => [check.id]) }
-    let(:tags)   { double('tags', :all => [tag]) }
-    let(:states) { double('states', :last => state) }
-    let(:state)  { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
+    let(:checks)        { double('checks', :ids => [check.id]) }
+    let(:tags)          { double('tags', :all => [tag]) }
+    let(:states)        { double('states', :last => state) }
+    let(:state)         { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
+    let(:sorted_checks) { double('sorted_checks', :ids => [check.id])}
 
 
     # TODO use separate threads in the test instead?
@@ -159,13 +160,37 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:states).and_return(states)
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("example")).and_return(checks)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'find checks matching /example/')
+    end
+
+    it "interprets a received find command (with limited results)" do
+      expect(bot).to receive(:announce).with('room1', "Checks matching /example/:\nShowing first 2 results of 5:\nexample.com:ping is OK")
+
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State).
+        and_yield
+
+      expect(state).to receive(:condition).and_return('ok')
+      expect(check).to receive(:states).and_return(states)
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 2).and_return(sorted_checks)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("example")).and_return(checks)
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'find 2 checks matching /example/')
     end
 
     it "interprets a received find command (with an invalid regex)" do
@@ -193,10 +218,11 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
@@ -221,6 +247,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:states).and_return(states)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -243,7 +270,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -268,7 +295,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(state).to receive(:condition).and_return('ok')
       expect(check).to receive(:states).and_return(states)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
@@ -293,6 +320,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -316,6 +345,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -339,7 +370,8 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -364,13 +396,38 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
       expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'tell me about checks matching /^example.com:p/')
+    end
+
+    it "interprets a received information command (with limited results)" do
+      expect(bot).to receive(:announce).with('room1', /Showing first 2 results of 5:\nNot in scheduled or unscheduled maintenance./)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => [check.id]).and_return([check])
+
+      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
+      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+
+      expect(checks).to receive(:count).and_return(5)
+      expect(checks).to receive(:sort).with(:name, :limit => 2).and_return(sorted_checks)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("^example.com:p")).and_return(checks)
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'tell me about 2 checks matching /^example.com:p/')
     end
 
     it "interprets a received ACKID command" do
@@ -391,6 +448,45 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
       fji.instance_variable_set('@bot', bot)
       fji.interpret('room1', 'jim', now.to_i, 'ACKID abcd1234 JJ looking duration: 1 hour')
+    end
+
+    it "interprets a received acknowledgement command (with check name)" do
+      expect(bot).to receive(:announce).with('room1', "Ack list:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State,
+             Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
+      states = double('states')
+      expect(states).to receive(:associated_ids_for).with(:check).
+        and_return(state.id => check.id)
+      expect(Flapjack::Data::State).to receive(:intersect).
+        with(:id => [state.id],
+             :condition => ['critical', 'warning', 'unknown']).
+      and_return(states)
+
+      expect(checks).to receive(:associated_ids_for).with(:state).
+        and_return(check.id => state.id)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => [check.id]).and_return(checks)
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => 'example.com:ping').and_return(checks)
+
+      expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
+        with('events', [check],
+             :summary => 'jim: Set via chatbot', :duration => (60 * 60))
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'ack example.com:ping')
     end
 
     it "interprets a received acknowledgement command (with tag)" do
@@ -419,7 +515,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -459,7 +555,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(check).to receive(:name).and_return('example.com:ping')
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
 
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
@@ -473,6 +569,111 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'ack checks matching /^example.com:p/')
     end
 
+    it "interprets a received maintenance command (with name)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => 'example.com:ping').and_return(checks)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint example.com:ping start-in: 1 minute duration: 3 hour comment: test')
+    end
+
+    it "interprets a received maintenance command (with tag)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::Tag, Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:count).and_return(5)
+      expect(tag).to receive(:checks).and_return(checks)
+
+      expect(Flapjack::Data::Tag).to receive(:intersect).
+        with(:name => 'example.com').and_return(tags)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint checks with tag example.com start-in: 1 minute duration: 3 hour comment: test')
+    end
+
+    it "interprets a received maintenance command (with regex)" do
+      now = Time.now
+      t = now.to_i + 60
+      expect(Time).to receive(:now).and_return(now)
+
+      expect(bot).to receive(:announce).with('room1',
+        "Scheduled maintenance for 180 minutes starting at #{Time.at(t)} on:\nexample.com:ping")
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
+
+      expect(checks).to receive(:count).and_return(5)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:name => Regexp.new("^example.com:p")).and_return(checks)
+
+      sched_maint = double(Flapjack::Data::ScheduledMaintenance)
+      expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(
+        :start_time => t,
+        :end_time   => t + (3 * 60 * 60),
+        :summary    => 'test'
+      ).and_return(sched_maint)
+      expect(sched_maint).to receive(:save).and_return(true)
+
+      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      expect(check).to receive(:name).and_return('example.com:ping')
+
+      fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
+      fji.instance_variable_set('@bot', bot)
+      fji.interpret('room1', 'jim', now.to_i, 'maint checks matching /^example.com:p/ start-in: 1 minute duration: 3 hour comment: test')
+    end
+
     it "interprets a received test notifications command (with name)" do
       expect(bot).to receive(:announce).with('room1', /Testing notifications for check with name 'example.com:ping'/)
 
@@ -483,6 +684,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
       expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => 'example.com:ping').and_return(checks)
 
@@ -503,7 +705,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(tag).to receive(:checks).and_return(checks)
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -526,7 +728,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(Flapjack::Data::Check).to receive(:find_by_ids).with(check.id).and_return([check])
 
-      expect(checks).to receive(:empty?).and_return(false)
+      expect(checks).to receive(:count).and_return(5)
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:name => Regexp.new("^example.com:p")).and_return(checks)
 

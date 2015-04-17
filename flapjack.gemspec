@@ -21,9 +21,9 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
   gem.add_dependency 'json-stream'
-  # gem.add_dependency 'zermelo'
-  gem.add_dependency 'rack', '~> 1.5.2' # until sinatra is fixed for rack 1.6.0+
+  gem.add_dependency 'zermelo', '= 1.1.0'
   gem.add_dependency 'sinatra'
+  gem.add_dependency 'swagger-blocks'
   gem.add_dependency 'mail'
   gem.add_dependency 'xmpp4r', '>= 0.5.5'
   gem.add_dependency 'chronic'
@@ -32,9 +32,9 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
-  gem.add_dependency 'gli', '= 2.12.0'
+  gem.add_dependency 'gli', '= 2.13.0'
   gem.add_dependency 'terminal-table'
-  gem.add_dependency 'toml'
+  gem.add_dependency 'toml-rb'
 
   gem.add_development_dependency 'rake'
 end
