@@ -3,21 +3,14 @@ language: ruby
 matrix:
   include:
     - rvm: '2.0'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
     - rvm: '2.1'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
     - rvm: '2.2'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
     - rvm: 'jruby-9.0.0.0.pre1'
-      gemfile: Gemfile
-      script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
       jdk: oraclejdk8
+script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
+env: GOPATH=$TRAVIS_BUILD_DIR
+gemfile: Gemfile
 cache: bundler
-env:
-- GOPATH=$TRAVIS_BUILD_DIR
 services:
 - redis-server
 before_script:
@@ -26,11 +19,11 @@ before_install:
 - git submodule update --init --recursive
 - gem install bundler
 install:
-  - go get github.com/garyburd/redigo/redis
-  - go get github.com/go-martini/martini
-  - go get gopkg.in/alecthomas/kingpin.v1
-  - go get github.com/oguzbilgic/pandik
-  - bundle install
+- go get github.com/garyburd/redigo/redis
+- go get github.com/go-martini/martini
+- go get gopkg.in/alecthomas/kingpin.v1
+- go get github.com/oguzbilgic/pandik
+- bundle install
 notifications:
   irc:
     channels:
