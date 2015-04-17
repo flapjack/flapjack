@@ -6,14 +6,6 @@ rvm:
 - '2.2'
 - 'jruby-9.0.0.0.pre1'
 jdk: oraclejdk8
-matrix:
-  exclude:
-    - rvm: '2.0'
-      jdk: oraclejdk8
-    - rvm: '2.1'
-      jdk: oraclejdk8
-    - rvm: '2.2'
-      jdk: oraclejdk8
 script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
 env: GOPATH=$TRAVIS_BUILD_DIR
 gemfile: Gemfile
