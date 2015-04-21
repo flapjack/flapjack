@@ -12,7 +12,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
   it "creates a scheduled maintenance period" do
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -41,7 +42,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])

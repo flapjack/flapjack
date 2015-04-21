@@ -13,7 +13,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
   it "creates an unscheduled maintenance period" do
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])

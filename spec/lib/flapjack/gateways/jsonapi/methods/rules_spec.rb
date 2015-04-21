@@ -13,7 +13,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
 
   it "creates a rule" do
-    expect(Flapjack::Data::Rule).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -40,7 +42,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not create a rule if the data is improperly formatted" do
-    expect(Flapjack::Data::Rule).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     expect(Flapjack::Data::Rule).to receive(:intersect).
@@ -286,7 +290,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data => {:id => rule.id, :type => 'rule', :links =>
-        {:contact => {:type => 'contact', :id => contact.id}}}),
+        {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -310,10 +314,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     patch "/rules",
       Flapjack.dump_json(:data => [
         {:id => rule.id, :type => 'rule', :links =>
-          {:contact => {:type => 'contact', :id => contact.id}}},
+          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        },
         {:id => rule_2.id, :type => 'rule', :links =>
-          {:contact => {:type => 'contact', :id => contact.id}}}
-        ]),
+          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        }]),
       jsonapi_bulk_env
     expect(last_response.status).to eq(204)
   end
@@ -326,7 +331,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data =>
         {:id => rule.id, :type => 'rule', :links =>
-          {:contact => {:type => 'contact', :id => contact.id}}}),
+          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        }),
       jsonapi_env
     expect(last_response.status).to eq(404)
   end
