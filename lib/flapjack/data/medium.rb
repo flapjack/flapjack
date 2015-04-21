@@ -83,7 +83,7 @@ module Flapjack
       swagger_schema :Medium do
         # would require interval & rollup_threshold, but pagerduty :(
         # TODO fix when userdata added
-        key :required, [:id, :type, :transport]
+        key :required, [:id, :type, :address, :transport]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -95,6 +95,9 @@ module Flapjack
         property :transport do
           key :type, :string
           key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :address do
+          key :type, :string
         end
         property :interval do
           key :type, :integer
@@ -128,7 +131,7 @@ module Flapjack
       swagger_schema :MediumCreate do
         # would require interval & rollup_threshold, but pagerduty :(
         # TODO fix when userdata added
-        key :required, [:type, :transport]
+        key :required, [:type, :address, :transport]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -143,6 +146,9 @@ module Flapjack
         property :transport do
           key :type, :string
           key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :address do
+          key :type, :string
         end
         property :interval do
           key :type, :integer
@@ -167,6 +173,9 @@ module Flapjack
         property :transport do
           key :type, :string
           key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
+        end
+        property :address do
+          key :type, :string
         end
         property :interval do
           key :type, :integer
