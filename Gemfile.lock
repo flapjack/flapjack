@@ -1,3 +1,12 @@
+GIT
+  remote: git://github.com/flapjack/flapjack-diner.git
+  revision: 1dea08251ac9c101b166c3a27dd967e1d5c74d5f
+  branch: v2_pre
+  specs:
+    flapjack-diner (2.0.0a1)
+      httparty (>= 0.10)
+      json (>= 1.7.7)
+
 PATH
   remote: .
   specs:
@@ -63,6 +72,9 @@ GEM
       multi_json (~> 1.3)
     gli (2.13.0)
     hiredis (0.6.0)
+    httparty (0.13.3)
+      json (~> 1.8)
+      multi_xml (>= 0.5.2)
     i18n (0.7.0)
     ice_cube (0.12.1)
     json (1.8.2)
@@ -76,6 +88,7 @@ GEM
     msgpack (0.5.11)
     multi_json (1.11.0)
     multi_test (0.1.2)
+    multi_xml (0.5.5)
     numerizer (0.1.1)
     oj (2.12.2)
     pact (1.7.0)
@@ -175,6 +188,7 @@ DEPENDENCIES
   cucumber (>= 2.0.0.rc.4)
   delorean
   flapjack!
+  flapjack-diner!
   json_spec
   pact
   rack-test

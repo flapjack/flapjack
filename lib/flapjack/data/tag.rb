@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require 'swagger/blocks'
+
 require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
@@ -141,20 +143,20 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:name]
+        {
+          :post  => [:name],
+          :get   => [:name],
+          :patch => []
+        }
       end
 
-      def self.jsonapi_search_string_attributes
-        [:name]
+      def self.jsonapi_associations
+        {
+          :singular => [],
+          :multiple => [:checks, :rules]
+        }
       end
 
-      def self.jsonapi_singular_associations
-        []
-      end
-
-      def self.jsonapi_multiple_associations
-        [:checks, :rules]
-      end
     end
   end
 end

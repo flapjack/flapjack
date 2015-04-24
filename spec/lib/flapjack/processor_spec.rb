@@ -11,6 +11,8 @@ describe Flapjack::Processor, :logger => true do
   let(:redis) { double(Redis) }
   let(:multi) { double('multi') }
 
+  let(:boot_time) { double(Time) }
+
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
   end
@@ -23,29 +25,29 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Filters::Acknowledgement).to receive(:new)
   end
 
+  let(:global_stats)   { double(Flapjack::Data::Statistics) }
+  let(:instance_stats) { double(Flapjack::Data::Statistics) }
+
   def expect_counters
-    expect(redis).to receive(:hmget).with('event_counters', 'all', 'ok', 'failure', 'action', 'invalid').and_return([nil, nil, nil, nil])
+    all_global = double('all_global', :all => [global_stats])
+    expect(Flapjack::Data::Statistics).to receive(:intersect).
+      with(:instance_name => 'global').and_return(all_global)
 
-    expect(redis).to receive(:multi).and_yield(multi)
-    expect(multi).to receive(:hset).with(/^executive_instance:/, "boot_time", anything)
-    expect(multi).to receive(:hset).with('event_counters', 'all', 0)
-    expect(multi).to receive(:hset).with('event_counters', 'ok', 0)
-    expect(multi).to receive(:hset).with('event_counters', 'failure', 0)
-    expect(multi).to receive(:hset).with('event_counters', 'action', 0)
-    expect(multi).to receive(:hset).with('event_counters', 'invalid', 0)
-
-    expect(multi).to receive(:hmset).with(/^event_counters:/, 'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
-    expect(multi).to receive(:zadd).with('executive_instances', 0, an_instance_of(String))
-    expect(multi).to receive(:expire).with(/^executive_instance:/, anything)
-    expect(multi).to receive(:expire).with(/^event_counters:/, anything)
+    expect(Flapjack::Data::Statistics).to receive(:new).
+      with(:created_at => boot_time,
+           :all_events => 0, :ok_events => 0,
+           :failure_events => 0, :action_events => 0,
+           :invalid_events => 0, :instance_name => an_instance_of(String)).
+      and_return(instance_stats)
   end
 
   def expect_counters_invalid
-    expect(multi).to receive(:hincrby).with('event_counters', 'all', 1)
-    expect(multi).to receive(:hincrby).with(/^event_counters:/, 'all', 1)
-
-    expect(multi).to receive(:hincrby).with('event_counters', 'invalid', 1)
-    expect(multi).to receive(:hincrby).with(/^event_counters:/, 'invalid', 1)
+    [global_stats, instance_stats].each do |stats|
+      ['all', 'invalid'].each do |event_type|
+        expect(stats).to receive("#{event_type}_events".to_sym).and_return(0)
+        expect(stats).to receive("#{event_type}_events=".to_sym).with(1)
+      end
+    end
   end
 
   it "starts up, runs and shuts down (archiving, accepted)" do
@@ -56,7 +58,7 @@ describe Flapjack::Processor, :logger => true do
 
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'queue' => 'events', 'archive_events' => true,
-        'events_archive_maxage' => 3000})
+        'events_archive_maxage' => 3000}, :boot_time => boot_time)
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -70,6 +72,10 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
+
+    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:persisted?).and_return(true)
+    expect(instance_stats).to receive(:destroy)
 
     # TODO spec actual functionality
     expect(processor).to receive(:process_event).with(event)
@@ -86,7 +92,7 @@ describe Flapjack::Processor, :logger => true do
 
     processor = Flapjack::Processor.new(:lock => lock,
       :config => {'queue' => 'events', 'archive_events' => true,
-        'events_archive_maxage' => 3000})
+        'events_archive_maxage' => 3000}, :boot_time => boot_time)
 
     event_json = double('event_json')
 
@@ -102,6 +108,12 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
+    expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
+    expect(global_stats).to receive(:save)
+    expect(instance_stats).to receive(:save).twice
+    expect(instance_stats).to receive(:persisted?).and_return(true)
+    expect(instance_stats).to receive(:destroy)
+
     expect(processor).not_to receive(:process_event)
 
     expect { processor.start }.to raise_error(Flapjack::PikeletStop)
@@ -113,7 +125,8 @@ describe Flapjack::Processor, :logger => true do
 
     expect(lock).to receive(:synchronize).and_yield
 
-    processor = Flapjack::Processor.new(:lock => lock, :config => {'queue' => 'events'})
+    processor = Flapjack::Processor.new(:lock => lock, :config => {'queue' => 'events'},
+      :boot_time => boot_time)
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -125,6 +138,10 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
+
+    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:persisted?).and_return(true)
+    expect(instance_stats).to receive(:destroy)
 
     # TODO spec actual functionality
     expect(processor).to receive(:process_event).with(event)
@@ -140,7 +157,7 @@ describe Flapjack::Processor, :logger => true do
     expect(lock).to receive(:synchronize).and_yield
 
     processor = Flapjack::Processor.new(:lock => lock,
-      :config => {'queue' => 'events'})
+      :config => {'queue' => 'events'}, :boot_time => boot_time)
 
     event_json = double('event_json')
 
@@ -152,6 +169,12 @@ describe Flapjack::Processor, :logger => true do
     expect(multi).to receive(:lpush).with(/^events_rejected:/, event_json)
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
+
+    expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
+    expect(global_stats).to receive(:save)
+    expect(instance_stats).to receive(:save).twice
+    expect(instance_stats).to receive(:persisted?).and_return(true)
+    expect(instance_stats).to receive(:destroy)
 
     expect(processor).not_to receive(:process_event)
 
@@ -165,7 +188,8 @@ describe Flapjack::Processor, :logger => true do
     expect(lock).to receive(:synchronize).and_yield
 
     processor = Flapjack::Processor.new(:lock => lock,
-      :config => {'queue' => 'events', 'exit_on_queue_empty' => true})
+      :config => {'queue' => 'events', 'exit_on_queue_empty' => true},
+      :boot_time => boot_time)
 
     event_json = double('event_json')
     event_data = double(event_data)
@@ -177,13 +201,17 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:quit)
 
+    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:persisted?).and_return(true)
+    expect(instance_stats).to receive(:destroy)
+
     # TODO spec actual functionality
     expect(processor).to receive(:process_event).with(event)
 
     expect { processor.start }.to raise_error(Flapjack::GlobalStop)
   end
 
-#   it "rejects invalid event JSON (archiving)" do
+  it "rejects invalid event JSON (archiving)" # do
 #     bad_event_json = '{{{'
 #     expect(redis).to receive(:rpoplpush).
 #       with('events', /^events_archive:/).and_return(bad_event_json, nil)

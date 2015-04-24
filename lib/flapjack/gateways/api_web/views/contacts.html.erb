@@ -1,0 +1,22 @@
+<% page_title 'Contacts' %>
+
+<div class="page-header">
+  <h2>Contacts</h2>
+</div>
+
+<% if !@contacts || @contacts.empty? %>
+  <p>No contacts</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Name</th>
+    </tr>
+    <% @contacts.each do |contact| %>
+    <tr>
+      <td><a href="<%= @base_url %>contacts/<%= contact[:id] %>" title="contact details"><%= h contact[:name] %></a></td>
+    </tr>
+    <% end %>
+  </table>
+<% end %>
+<br>
+

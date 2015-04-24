@@ -1,0 +1,51 @@
+<% if @auto_refresh %>
+<meta http-equiv="refresh" content="<%= @auto_refresh %>" >
+<% end %>
+<% page_title "#{@adjective.capitalize} Checks" %>
+
+<div class="page-header">
+  <h2><%= @adjective.capitalize %> Checks</h2>
+</div>
+
+<p><%= h @count_failing_checks %> failing out of <%= h @count_enabled_checks %></p>
+
+<table class="table table-bordered table-hover table-condensed tablesorter">
+  <thead>
+    <tr>
+      <th data-placeholder="e.g. app[1-3]*:disk">Check</th>
+      <th data-placeholder="e.g. critical">State</th>
+      <th data-placeholder="e.g. !simulated">Summary</th>
+      <th data-placeholder="e.g. <2h 0m">Last State Change</th>
+      <th data-placeholder="">Last Update</th>
+      <th data-placeholder="">Last Notification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @states.each_pair do |check, (status, summary, changed, updated, in_unscheduled_outage, in_scheduled_outage, notified)| %>
+      <%
+        row_colour = case status
+        when 'critical', 'unknown'
+          'danger'
+        when 'ok', 'up'
+          'success'
+        else
+          status
+        end
+
+        check_link = @base_url + "checks/" + u(check.id)
+      %>
+      <tr class="<%= row_colour %>">
+        <td><a href="<%= check_link %>" title="check detail"><%= h check.name %></a></td>
+        <td>
+          <%= h status.upcase %>
+          <% if in_unscheduled_outage %> (Ack'd)<% end %>
+          <% if in_scheduled_outage %> (Sched)<% end %>
+        </td>
+        <td><%= h summary %></td>
+        <td><%= h changed %></td>
+        <td><%= h updated %></td>
+        <td><%= h notified %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

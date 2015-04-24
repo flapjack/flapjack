@@ -1,0 +1,122 @@
+<%
+  page_title  'Internal Statistics'
+  require_css 'nv.d3'
+  require_js  'jquery-1.10.2'
+  require_js  'd3.v3'
+  require_js  'nv.d3'
+  require_js  'self_stats'
+%>
+<div id="data-api-url" data-api-url="<%= @api_url %>">
+  <div class="page-header">
+    <h2>Internal Statistics</h2>
+  </div>
+</div>
+
+<style>
+  div#chart {
+    height: 150px;
+  }
+
+  .nv-interactive { display: none; }
+
+  .nvd3 .nv-wrap line { stroke: none; }
+  .nvd3.nv-wrap rect { stroke-width:1; stroke: #ccc; opacity: 1; fill; white; }
+</style>
+
+<div class="row">
+  <div class="col-md-12">
+    <h4>Event queue length:</h4>
+    <div id="chart">
+      <svg></svg>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h4>Global Statistics:</h4>
+    <table class="table table-bordered table-hover table-condensed">
+      <tr>
+        <td>Events queued:</td>
+        <td><%= h @events_queued %></td>
+      </tr>
+      <tr>
+        <td>Number of enabled checks:</td>
+        <td><%= h @count_enabled_checks %></td>
+      </tr>
+      <tr>
+        <td>Number of failing checks:</td>
+        <td><%= h @count_failing_checks %></td>
+      </tr>
+      <tr>
+        <td>Events processed (all time)</td>
+        <td>
+          <ul>
+            <li>all: <%= h @global_stats.all_events %> events</li>
+            <li>ok: <%= h @global_stats.ok_events %> events</li>
+            <li>failure: <%= h @global_stats.failure_events %> events</li>
+            <li>action: <%= h @global_stats.action_events %> events</li>
+            <li>invalid: <%= h @global_stats.invalid_events %> events</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td>Check Freshness</td>
+        <td>
+          <ul>
+            <% @current_checks_ages.each_pair do |age, check_count| %>
+              <li>&gt;= <%= h age %>: <%= h check_count %></li>
+            <% end %>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td>Total keys in redis</td>
+        <td><%= h @dbsize %></td>
+      </tr>
+      <tr>
+        <td>Current time</td>
+        <td><%= h Time.now.to_s %></td>
+      </tr>
+    </table>
+  </div>
+  <div class="col-md-6">
+    <h4>Processor Instances:</h4>
+    <table class="table table-bordered table-hover">
+      <tr>
+        <th>Hostname</th>
+        <th>PID</th>
+        <th>Uptime</th>
+        <th>Events Processed</th>
+      </tr>
+      <% @executive_instances.sort_by {|i, d| d['uptime']}.each do |ei| %>
+        <%
+          instance_id, details = ei
+          hostname, pid  = instance_id.split(':')
+          started        = details['uptime_string']
+          event_rates    = details['event_rates']
+         %>
+        <tr>
+          <td><%= h hostname %></td>
+          <td><%= h pid %></td>
+          <td><%= h started %></td>
+          <td>
+            <ul>
+              <li>all: <%= h instance_stats.all_events %> (<%= h event_rates['all'] %> events/s)</li>
+              <li>ok: <%= h instance_stats.ok_events %> (<%= h event_rates['ok'] %> events/s)</li>
+              <li>failure: <%= h instance_stats.failure_events %> (<%= h event_rates['failure'] %> events/s)</li>
+              <li>action: <%= h instance_stats.action_events %> (<%= h event_rates['action'] %> events/s)</li>
+              <li>invalid: <%= h instance_stats.invalid_events %> (<%= h event_rates['invalid'] %> events/s)</li>
+            </ul>
+          </td>
+        </tr>
+      <% end %>
+    </table>
+  </div>
+</div>
+
+<p>
+  <a class="btn btn-success" href="<% @base_url %>self_stats.json">View as JSON</a>
+  Learn how to
+  <a href="http://flapjack.io/docs/1.0/development/Gathering-internal-statistics-with-collectd"> use these metrics</a>.
+</p>

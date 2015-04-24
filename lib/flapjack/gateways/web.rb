@@ -456,12 +456,16 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.failing
+        @failing_checks ||= Flapjack::Data::Check.lock do
+          Flapjack::Data::Check.intersect(:failing => true).all
+        end
       end
 
       def check_stats
-        @count_enabled_checks = Flapjack::Data::Check.intersect(:enabled => true).count
-        @count_failing_checks = failing_checks.size
+        Flapjack::Data::Check.lock do
+          @count_enabled_checks = Flapjack::Data::Check.intersect(:enabled => true).count
+          @count_failing_checks = failing_checks.size
+        end
       end
 
       def require_js(*js)

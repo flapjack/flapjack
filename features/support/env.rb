@@ -157,6 +157,7 @@ Before('@processor') do
   Flapjack.redis.flushdb
   MockLogger.configure_log('flapjack-processor')
   @processor = Flapjack::Processor.new(:config => {'new_check_scheduled_maintenance_duration' => '0 seconds'})
+  @processor.start_stats
 end
 
 After('@processor') do

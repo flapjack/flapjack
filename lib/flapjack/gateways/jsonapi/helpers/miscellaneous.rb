@@ -119,10 +119,12 @@ module Flapjack
           def jsonapi_type_for_link(klass, assoc_name)
             assoc_type = nil
 
-            singular = klass.respond_to?(:jsonapi_singular_associations) ?
-              klass.jsonapi_singular_associations : []
-            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
-              klass.jsonapi_multiple_associations : []
+            assocs = klass.respond_to?(:jsonapi_associations) ?
+              klass.jsonapi_associations : {}
+
+            singular = assocs[:singular] || []
+            multiple = assocs[:multiple] || []
+
             als = (singular.select {|s| s.is_a?(Hash)} +
                    multiple.select {|m| m.is_a?(Hash)}).detect {|h| h.values.include?(assoc_name.to_sym) }
 

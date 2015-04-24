@@ -3,6 +3,7 @@
 require 'set'
 
 require 'ice_cube'
+require 'swagger/blocks'
 
 require 'zermelo/records/redis_record'
 
@@ -294,15 +295,18 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [] # [:time_restrictions]
+        {
+          :post  => [], # [:time_restrictions]
+          :get   => [:conditions_list], # [:time_restrictions]
+          :patch => []  # [:time_restrictions]
+        }
       end
 
-      def self.jsonapi_singular_associations
-        [:contact]
-      end
-
-      def self.jsonapi_multiple_associations
-        [:media, :tags]
+      def self.jsonapi_associations
+        {
+          :singular => [:contact],
+          :multiple => [:media, :tags]
+        }
       end
 
       private

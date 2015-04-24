@@ -22,8 +22,10 @@ module Flapjack
             resources_data, unwrap = wrapped_params
 
             singular_links, multiple_links = klass.association_klasses
-            attributes = klass.respond_to?(:jsonapi_attributes) ?
-              klass.jsonapi_attributes : []
+
+            attributes = (klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes[:post] : nil) || []
+
             validate_data(resources_data, :attributes => attributes,
               :singular_links => singular_links.keys,
               :multiple_links => multiple_links.keys,
@@ -157,8 +159,10 @@ module Flapjack
             end
 
             singular_links, multiple_links = klass.association_klasses
-            attributes = klass.respond_to?(:jsonapi_attributes) ?
-              klass.jsonapi_attributes : []
+
+            attributes = (klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes[:patch] : nil) || []
+
             validate_data(resources_data, :attributes => attributes,
               :singular_links => singular_links.keys,
               :multiple_links => multiple_links.keys,
@@ -274,10 +278,11 @@ module Flapjack
           end
 
           def jsonapi_linkages(klass, resource_ids, opts = {})
-            singular = klass.respond_to?(:jsonapi_singular_associations) ?
-              klass.jsonapi_singular_associations : []
-            multiple = klass.respond_to?(:jsonapi_multiple_associations) ?
-              klass.jsonapi_multiple_associations : []
+            assocs = klass.respond_to?(:jsonapi_associations) ?
+              klass.jsonapi_associations : {}
+
+            singular = assocs[:singular] || []
+            multiple = assocs[:multiple] || []
 
             singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
             multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
@@ -335,7 +340,7 @@ module Flapjack
             fields = options[:fields].nil? ? nil : options[:fields].map(&:to_sym)
 
             whitelist = (klass.respond_to?(:jsonapi_attributes) ?
-              klass.jsonapi_attributes : []) | [:id]
+              (klass.jsonapi_attributes[:get] || []) : []) | [:id]
 
             jsonapi_fields = if fields.nil?
               whitelist
@@ -407,11 +412,17 @@ module Flapjack
           end
 
           def filter_params(klass, filter)
-            string_attrs = [:id] + (klass.respond_to?(:jsonapi_search_string_attributes) ?
-              klass.jsonapi_search_string_attributes : [])
+            attributes = (klass.respond_to?(:jsonapi_attributes) ?
+              klass.jsonapi_attributes[:get] : nil) || []
+            attribute_types = klass.attribute_types
 
-            boolean_attrs = klass.respond_to?(:jsonapi_search_boolean_attributes) ?
-              klass.jsonapi_search_boolean_attributes : []
+            string_attrs = [:id] + (attributes.select {|a|
+              :string.eql?(attribute_types[a])
+            })
+
+            boolean_attrs = attributes.select {|a|
+              :boolean.eql?(attribute_types[a])
+            }
 
             r = filter.each_with_object({}) do |filter_str, memo|
               k, v = filter_str.split(':', 2)

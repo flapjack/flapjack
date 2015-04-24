@@ -16,10 +16,11 @@ module Flapjack
           module ClassMethods
 
             def association_klasses
-              singular = self.respond_to?(:jsonapi_singular_associations) ?
-                self.jsonapi_singular_associations : []
-              multiple = self.respond_to?(:jsonapi_multiple_associations) ?
-                self.jsonapi_multiple_associations : []
+              assocs = self.respond_to?(:jsonapi_associations) ?
+                self.jsonapi_associations : {}
+
+              singular = assocs[:singular] || []
+              multiple = assocs[:multiple] || []
 
               singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
               multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}

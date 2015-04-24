@@ -2,6 +2,8 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
+gem 'flapjack-diner', :github => 'flapjack/flapjack-diner', :branch => 'v2_pre'
+
 group :development do
   gem 'ruby-prof'
 end

@@ -11,8 +11,10 @@ require 'flapjack/filters/unscheduled_maintenance'
 require 'flapjack/filters/delays'
 
 require 'flapjack/data/check'
-require 'flapjack/data/notification'
 require 'flapjack/data/event'
+require 'flapjack/data/notification'
+require 'flapjack/data/statistics'
+
 require 'flapjack/exceptions'
 require 'flapjack/utility'
 
@@ -65,13 +67,23 @@ module Flapjack
       @instance_id  = "#{fqdn}:#{pid}"
     end
 
-    # expire instance keys after one week
-    # TODO: set up a separate timer to reset key expiry every minute
-    # and reduce the expiry to, say, five minutes
-    # TODO: remove these keys on process exit
-    def touch_keys(multi)
-      multi.expire("executive_instance:#{@instance_id}", 1036800)
-      multi.expire("event_counters:#{@instance_id}", 1036800)
+    def start_stats
+      empty_stats = {:created_at => @boot_time, :all_events => 0,
+        :ok_events => 0, :failure_events => 0, :action_events => 0,
+        :invalid_events => 0}
+
+      @global_stats = Flapjack::Data::Statistics.
+        intersect(:instance_name => 'global').all.first
+
+      if @global_stats.nil?
+        @global_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
+          :instance_name => 'global'))
+        @global_stats.save
+      end
+
+      @instance_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
+        :instance_name => @instance_id))
+      @instance_stats.save
     end
 
     def start
@@ -80,32 +92,13 @@ module Flapjack
       begin
         Zermelo.redis = Flapjack.redis
 
-        # FIXME: add an administrative function to reset all event counters
-
-        counter_types = ['all', 'ok', 'failure', 'action', 'invalid']
-        counters = Hash[counter_types.zip(Flapjack.redis.hmget('event_counters', *counter_types))]
-
-        Flapjack.redis.multi do |multi|
-          counter_types.select {|ct| counters[ct].nil? }.each do |counter_type|
-            multi.hset('event_counters', counter_type, 0)
-          end
-
-          multi.zadd('executive_instances', @boot_time.to_i, @instance_id)
-          multi.hset("executive_instance:#{@instance_id}", 'boot_time', @boot_time.to_i)
-          multi.hmset("event_counters:#{@instance_id}",
-                               'all', 0, 'ok', 0, 'failure', 0, 'action', 0, 'invalid', 0)
-          touch_keys(multi)
-        end
+        start_stats
 
         queue = (@config['queue'] || 'events')
 
         loop do
           @lock.synchronize do
-            foreach_on_queue(queue,
-                             :archive_events => @archive_events,
-                             :events_archive_maxage => @events_archive_maxage) do |event|
-              process_event(event)
-            end
+            foreach_on_queue(queue) {|event| process_event(event)}
           end
 
           raise Flapjack::GlobalStop if @exit_on_queue_empty
@@ -114,6 +107,7 @@ module Flapjack
         end
 
       ensure
+        @instance_stats.destroy unless @instance_stats.nil? || !@instance_stats.persisted?
         Flapjack.redis.quit
       end
     end
@@ -127,8 +121,8 @@ module Flapjack
     def foreach_on_queue(queue, opts = {})
       base_time_str = Time.now.utc.strftime "%Y%m%d%H"
       rejects = "events_rejected:#{base_time_str}"
-      archive = opts[:archive_events] ? "events_archive:#{base_time_str}" : nil
-      max_age = archive ? opts[:events_archive_maxage] : nil
+      archive = @archive_events ? "events_archive:#{base_time_str}" : nil
+      max_age = archive ? @events_archive_maxage : nil
 
       while event_json = (archive ? Flapjack.redis.rpoplpush(queue, archive) :
                                     Flapjack.redis.rpop(queue))
@@ -139,13 +133,17 @@ module Flapjack
               multi.lrem(archive, 1, event_json)
             end
             multi.lpush(rejects, event_json)
-            multi.hincrby('event_counters', 'all', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'all', 1)
-            multi.hincrby('event_counters', 'invalid', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+            @global_stats.all_events       += 1
+            @global_stats.invalid_events   += 1
+            @instance_stats.all_events     += 1
+            @instance_stats.invalid_events += 1
             if archive
               multi.expire(archive, max_age)
             end
+          end
+          Flapjack::Data::Statistics.lock do
+            @global_stats.save
+            @instance_stats.save
           end
           Flapjack.logger.error {
             error_str = errors.nil? ? '' : errors.join(', ')
@@ -179,9 +177,13 @@ module Flapjack
         cond = Flapjack::Data::Condition.for_name(event.state)
         if cond.nil?
           Flapjack.logger.error { "Invalid event received: #{event.inspect}" }
-          Flapjack.redis.multi do |multi|
-            multi.hincrby('event_counters', 'invalid', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'invalid', 1)
+          Flapjack::Data::Statistics.lock do
+            @global_stats.all_events       += 1
+            @global_stats.invalid_events   += 1
+            @instance_stats.all_events     += 1
+            @instance_stats.invalid_events += 1
+            @global_stats.save
+            @instance_stats.save
           end
           return
         end
@@ -191,7 +193,7 @@ module Flapjack
       Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Entry,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
         Flapjack::Data::Tag, Flapjack::Data::Route, Flapjack::Data::Medium,
-        Flapjack::Data::Notification) do
+        Flapjack::Data::Notification, Flapjack::Data::Statistics) do
 
         check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
           Flapjack::Data::Check.new(:name => event.id)
@@ -203,6 +205,9 @@ module Flapjack
 
         check.enabled = true unless event_condition.nil?
         check.save # no-op if not new and not changed
+
+        @global_stats.save
+        @instance_stats.save
 
         if old_state.nil? && !event_condition.nil? &&
           Flapjack::Data::Condition.healthy?(event_condition.name)
@@ -260,12 +265,10 @@ module Flapjack
     end
 
     def update_check(check, old_state, event, event_condition, timestamp)
-      Flapjack.redis.multi do |multi|
-        touch_keys(multi)
-      end
+      @global_stats.all_events   += 1
+      @instance_stats.all_events += 1
 
-      event.counter = Flapjack.redis.hincrby('event_counters', 'all', 1)
-      Flapjack.redis.hincrby("event_counters:#{@instance_id}", 'all', 1)
+      event.counter = @global_stats.all_events
 
       new_state         = nil
       new_entry         = Flapjack::Data::Entry.new(:timestamp => timestamp)
@@ -277,10 +280,8 @@ module Flapjack
         new_entry.action = event.state
 
         unless 'test_notifications'.eql?(new_entry.action)
-          Flapjack.redis.multi do |multi|
-            multi.hincrby('event_counters', 'action', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'action', 1)
-          end
+          @global_stats.action_events   += 1
+          @instance_stats.action_events += 1
 
           if old_state.nil?
             # Flapjack.logger.info { "No previous state for event #{event.id}" }
@@ -291,16 +292,16 @@ module Flapjack
           end
         end
       else
-
         # Service events represent current state of checks on monitored systems
-        Flapjack.redis.multi do |multi|
-          if Flapjack::Data::Condition.healthy?(event_condition.name)
-            multi.hincrby('event_counters', 'ok', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'ok', 1)
-          else
-            multi.hincrby('event_counters', 'failure', 1)
-            multi.hincrby("event_counters:#{@instance_id}", 'failure', 1)
-          end
+
+        check.failing = !Flapjack::Data::Condition.healthy?(event_condition.name)
+
+        if check.failing
+          @global_stats.failure_events   += 1
+          @instance_stats.failure_events += 1
+        else
+          @global_stats.ok_events   += 1
+          @instance_stats.ok_events += 1
         end
 
         # only change notification delays on service (non-action) events;

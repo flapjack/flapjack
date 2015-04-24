@@ -1,0 +1,140 @@
+<div class="page-header">
+  <h2><%= h @contact.name %></h2>
+</div>
+
+<% alerting = {} %>
+
+<h3>Contact Media</h3>
+<% if !@contact_media || @contact_media.empty? %>
+  <p>No media</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Media</th>
+      <th>Address</th>
+      <th>Interval</th>
+      <th>Summary Mode</th>
+      <th>Summary Threshold</th>
+    </tr>
+    <% @contact_media.each do |med| %>
+      <%# alerting_checks = med.alerting_checks %>
+      <% media_transport = med[:transport] %>
+      <%# alerting[media_transport] = alerting_checks unless alerting_checks.empty? %>
+      <tr>
+        <% if 'pagerduty'.eql?(media_transport) %>
+          <td>PagerDuty</td>
+          <td>
+            <% @pagerduty_credentials.each_pair do |pk, pv| %>
+              <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
+            <% end %>
+          </td>
+          <td></td>
+          <td></td>
+          <td></td>
+        <% else %>
+          <% if 'sms'.eql?(media_transport) %>
+            <td><%= h media_transport.upcase %></td>
+          <% else %>
+              <td><%= h media_transport.capitalize %></td>
+          <% end %>
+          <td><%= h med[:address] %></td>
+          <td>
+            <% if med[:interval] %>
+              <%= h med[:interval] %> seconds
+            <% else %>
+              no custom interval
+            <% end %>
+          </td>
+          <td>
+            <% rollup_threshold = med[:rollup_threshold] %>
+            <% num_alerting = alerting[media_transport].nil? ? 0 : alerting[media_transport].length %>
+            <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
+              No -
+            <% else %>
+              Yes -
+            <% end %>
+            <%= num_alerting %> alerting
+          </td>
+          <td>
+            <% if rollup_threshold.nil? %>
+              -
+            <% else %>
+              <%= h rollup_threshold %>
+            <% end %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Alerting Checks</h3>
+<p>Alerting checks are any that are failing, not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+
+<% if alerting.empty? %>
+  <p><em>There are no currently alerting checks.</em></p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Media</th>
+      <th>Alerting Checks</th>
+    </tr>
+    <% alerting.each_pair do |media, checks| %>
+      <% if checks.length > 0 %>
+        <tr>
+          <td><%= h media.capitalize %></td>
+          <td>
+            <% checks.each do |check| %>
+              <a href="<%= @base_url %>checks/<%= u(check.id) %>" title="check status"><%= h(check.name) %></a><br />
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Notification Rules</h3>
+<% rules = @contact.rules.all %>
+<% if !rules || rules.empty? %>
+  <p>No notification rules</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>ID</th>
+      <th>Tags</th>
+      <th>Conditions</th>
+      <th>Media</th>
+      <th>Time Restrictions</th>
+    </tr>
+    <% rules.each do |rule| %>
+      <% tags = rule.tags.map(&:name) %>
+      <% transports = rule.media.map(&:transport) %>
+      <tr>
+        <td><%= h rule.id %></td>
+        <td><%= h( !tags.empty? ? tags.join(', ') : '-') %></td>
+        <td><%= h( (!rule.conditions_list.nil? && !rule.conditions_list.empty?) ? rule.conditions_list : '-')%></td>
+        <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
+        <td><%= h(rule.time_restrictions) %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>All Checks</h3>
+<% if @checks.empty? %>
+  <p>No checks</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Checks</th>
+    </tr>
+    <tr>
+      <td>
+        <% @checks.each do |check| %>
+          <a href="<%= @base_url %>checks/<%= u(check[:id]) %>" title="check status"><%= h check[:name] %></a>
+        <% end %>
+      </td>
+    </tr>
+  </table>
+<% end %>

@@ -1,0 +1,80 @@
+/* sticky footer per http://mystrd.at/modern-clean-css-sticky-footer/ */
+html {
+  position: relative;
+  min-height: 100%;
+}
+body {
+  margin: 0 0 90px;
+}
+/* end sticky footer */
+
+
+/* navigation */
+nav.navbar-inverse {
+  border-radius: 0px;
+}
+
+nav.navbar .navbar-brand {
+  padding: 7px;
+}
+
+nav.navbar .navbar-header img.logo {
+  height: 28px;
+  display: block;
+  float: left;
+  margin-left: 8px;
+}
+
+nav.navbar .navbar-header span.name {
+  padding-top: 8px;
+  display: block;
+  float: left;
+  margin-left: 8px;
+}
+
+.container.content {
+  padding-bottom: 20px;
+}
+
+/* end navigation */
+
+/* check page */
+
+button.decommission-check {
+  margin-left: 12px;
+}
+
+div#zone-of-surprise {
+  margin-top: 16px;
+}
+
+/* end check page */
+
+/* footer */
+
+footer {
+  margin-top: 20px;
+  padding: 20px 10px;
+  position: absolute;
+  height: 60px;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  color: #222;
+  background-color: #efefef;
+}
+
+footer .row {
+  margin: 0;
+}
+
+footer p.credits {
+  color: gray;
+}
+
+footer p.credits span.separator {
+  color: #ccc;
+  padding: 0 4px;
+}
+
+/* end footer */

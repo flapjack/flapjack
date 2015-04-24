@@ -37,9 +37,10 @@ module Flapjack
                         :ack_hash              => :string,
                         :initial_failure_delay => :integer,
                         :repeat_failure_delay  => :integer,
-                        :notification_count    => :integer
+                        :notification_count    => :integer,
+                        :failing               => :boolean
 
-      index_by :enabled
+      index_by :enabled, :failing
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
@@ -158,7 +159,7 @@ module Flapjack
       end
 
       swagger_schema :Check do
-        key :required, [:id, :type, :name, :enabled]
+        key :required, [:id, :type, :name, :enabled, :failing]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -171,6 +172,10 @@ module Flapjack
           key :type, :string
         end
         property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
+        property :failing do
           key :type, :boolean
           key :enum, [true, false]
         end
@@ -242,32 +247,19 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:name, :enabled]
+        {
+          :post  => [:name, :enabled],
+          :get   => [:name, :enabled, :ack_hash, :failing],
+          :patch => [:name, :enabled]
+        }
       end
 
-      def self.jsonapi_search_string_attributes
-        [:name, :ack_hash]
-      end
-
-      def self.jsonapi_search_boolean_attributes
-        [:enabled]
-      end
-
-      def self.jsonapi_singular_associations
-        []
-      end
-
-      def self.jsonapi_multiple_associations
-        [:scheduled_maintenances, :tags, :unscheduled_maintenances]
-      end
-
-      def self.failing(scope = nil)
-        scope ||= self
-        scope.all.each_with_object([]) do |check, memo|
-          e = check.last_change
-          next if e.nil? || Flapjack::Data::Condition.healthy?(e.condition)
-          memo << check
-        end
+      def self.jsonapi_associations
+        {
+          :singular => [],
+          :multiple => [:scheduled_maintenances, :tags,
+                        :unscheduled_maintenances]
+        }
       end
 
       # takes an array of ages (in seconds) to split all checks up by

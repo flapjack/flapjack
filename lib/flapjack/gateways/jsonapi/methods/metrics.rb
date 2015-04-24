@@ -44,21 +44,17 @@ module Flapjack
               Flapjack::Data::Check.split_by_freshness([0, 60, 300, 900, 3600], :counts => true)
             end
 
-            def failing_checks
-              Flapjack::Data::Check.failing
-            end
-
             def checks
               {
                 :all     => Flapjack::Data::Check.count,
-                :failing => failing_checks.size
+                :failing => Flapjack::Data::Check.intersect(:failing => true).count
               }
             end
 
             def filter_query(query)
               return 'all' if ['all', ''].include?(query)
               filter = query.split(',')
-              filter.find {|q| q == 'all'} ? 'all' : filter
+              filter.include?('all') ? 'all' : filter
             end
           end
 
@@ -71,32 +67,19 @@ module Flapjack
             app.get %r{^/metrics$} do
               filter = params[:filter] ? filter_query(params[:filter]) : 'all'
 
-              keys = %w(fqdn pid total_keys processed_events_all_time event_queue_length check_freshness checks)
-              keys = keys.find_all {|m| filter.include?(m) } unless filter == 'all'
+              keys = [:fqdn, :pid, :total_keys, :processed_events_all_time,
+                      :event_queue_length, :check_freshness, :checks]
+              keys = keys.select {|m| filter.include?(m.to_s)} unless 'all'.eql?(filter)
 
-              metrics = keys.each_with_object({}) do |key, memo|
-                memo[key.to_sym] = self.send(key.to_sym)
-              end
-
+              metrics = Hash[ *(keys.collect{|key| [key, self.send(key)]}) ]
               Flapjack.dump_json(metrics)
             end
 
-            app.get %r{^/metrics/check_freshness$} do
-              Flapjack.dump_json(:check_freshness => check_freshness)
+            [:check_freshness, :checks, :event_queue, :processed_events].each do |metric|
+              app.get %r{^/metrics/#{metric.to_s}$} do
+                Flapjack.dump_json(metric => self.send(:metric))
+              end
             end
-
-            app.get %r{^/metrics/checks$} do
-              Flapjack.dump_json(:checks => checks)
-            end
-
-            app.get %r{^/metrics/event_queue$} do
-              Flapjack.dump_json(:event_queue => event_queue)
-            end
-
-            app.get %r{^/metrics/processed_events$} do
-              Flapjack.dump_json(:processed_events => processed_events)
-            end
-
           end
 
         end

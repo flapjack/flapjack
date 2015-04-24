@@ -3,11 +3,11 @@
 # NB: use of redis.keys probably indicates we should maintain a data
 # structure to avoid the need for this type of query
 
-
-require 'set'
 require 'securerandom'
+require 'set'
 
 require 'ice_cube'
+require 'swagger/blocks'
 
 require 'zermelo/records/redis_record'
 
@@ -168,21 +168,19 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:name, :timezone]
+        {
+          :post  => [:name, :timezone],
+          :get   => [:name, :timezone],
+          :patch => [:name, :timezone]
+        }
       end
 
-      def self.jsonapi_search_string_attributes
-        [:name, :timezone]
+      def self.jsonapi_associations
+        {
+          :singular => [],
+          :multiple => [:media, :rules]
+        }
       end
-
-      def self.jsonapi_singular_associations
-        []
-      end
-
-      def self.jsonapi_multiple_associations
-        [:media, :rules]
-      end
-
     end
   end
 end
