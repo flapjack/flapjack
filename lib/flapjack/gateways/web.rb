@@ -4,6 +4,7 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
+require 'tilt/erb'
 require 'uri'
 
 require 'flapjack/redis_proxy'
@@ -11,6 +12,7 @@ require 'flapjack/redis_proxy'
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
+require 'flapjack/data/statistics'
 require 'flapjack/utility'
 
 module Flapjack
@@ -152,16 +154,18 @@ module Flapjack
 
         self_stats(time)
         check_stats
+
         Flapjack.dump_json({
           'events_queued'       => @events_queued,
           'enabled_checks'      => @count_enabled_checks,
           'failing_checks'      => @count_failing_checks,
           'processed_events' => {
             'all_time' => {
-              'total'   => @event_counters['all'].to_i,
-              'ok'      => @event_counters['ok'].to_i,
-              'failure' => @event_counters['failure'].to_i,
-              'action'  => @event_counters['action'].to_i,
+              'total'   => @global_stats.nil? ? 0 : @global_stats.all_events,
+              'ok'      => @global_stats.nil? ? 0 : @global_stats.ok_events,
+              'failure' => @global_stats.nil? ? 0 : @global_stats.failure_events,
+              'action'  => @global_stats.nil? ? 0 : @global_stats.action_events,
+              'invalid' => @global_stats.nil? ? 0 : @global_stats.invalid_events
             }
           },
           'check_freshness'     => @current_checks_ages,
@@ -431,26 +435,29 @@ module Flapjack
         @fqdn    = `/bin/hostname -f`.chomp
         @pid     = Process.pid
         @dbsize              = Flapjack.redis.dbsize
-        @executive_instances = Flapjack.redis.keys("executive_instance:*").inject({}) do |memo, i|
-          instance_id    = i.match(/executive_instance:(.*)/)[1]
-          boot_time      = Flapjack.redis.hget(i, 'boot_time').to_i
-          uptime         = Time.now.to_i - boot_time
+
+        @global_stats = Flapjack::Data::Statistics.intersect(:instance_name => 'global').all.first
+
+        @executive_instances = Flapjack::Data::Statistics.
+          intersect(:instance_name => /^(?!(global)$)/).all.each_with_object({}) do |i, memo|
+
+          instance_id    = i.instance_name # match(/executive_instance:(.*)/)[1]
+          uptime         = Time.now - i.boot_time
           uptime_string  = (ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2) || '0s')
-          event_counters = Flapjack.redis.hgetall("event_counters:#{instance_id}")
-          event_rates    = event_counters.inject({}) do |er, ec|
-            er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
-            er
-          end
+          # event_counters = Flapjack.redis.hgetall("event_counters:#{instance_id}")
+          # event_rates    = event_counters.inject({}) do |er, ec|
+          #   er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
+          #   er
+          # end
           memo[instance_id] = {
-            'boot_time'      => boot_time,
             'uptime'         => uptime,
             'uptime_string'  => uptime_string,
-            'event_counters' => event_counters,
-            'event_rates'    => event_rates
+            'instance_stats' => i,
+            'event_rates'    => {}
           }
-          memo
+
         end
-        @event_counters = Flapjack.redis.hgetall('event_counters')
+
         @events_queued  = Flapjack.redis.llen('events')
         @current_checks_ages = Flapjack::Data::Check.split_by_freshness([0, 60, 300, 900, 3600], :counts => true)
       end

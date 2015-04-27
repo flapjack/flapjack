@@ -16,7 +16,7 @@ def find_or_create_check(check_data)
   check = Flapjack::Data::Check.intersect(:name => check_data[:name]).all.first
 
   if check.nil?
-    check = Flapjack::Data::Check.new(:name => check_data[:name])
+    check = Flapjack::Data::Check.new(:name => check_data[:name], :enabled => true)
     expect(check.save).to be true
 
     entity_name, check_name = check_data[:name].split(':', 2)
@@ -62,7 +62,8 @@ Given /^the following checks exist:$/ do |checks|
 
     check = Flapjack::Data::Check.new(
       :id   => check_data['id'],
-      :name => check_data['name']
+      :name => check_data['name'],
+      :enabled => true
     )
     expect(check.save).to be true
 

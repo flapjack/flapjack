@@ -38,6 +38,7 @@ module Flapjack
                         :initial_failure_delay => :integer,
                         :repeat_failure_delay  => :integer,
                         :notification_count    => :integer,
+                        :condition             => :string,
                         :failing               => :boolean
 
       index_by :enabled, :failing
@@ -140,6 +141,10 @@ module Flapjack
         :inverse_of => :checks
 
       validates :name, :presence => true
+      validates :enabled, :inclusion => {:in => [true, false]}
+
+      validates :condition, :presence => true, :unless => proc {|c| c.failing.nil? }
+      validates :failing, :inclusion => {:in => [true, false]}, :unless => proc {|c| c.condition.nil? }
 
       validates :initial_failure_delay, :allow_nil => true,
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
@@ -178,6 +183,11 @@ module Flapjack
         property :failing do
           key :type, :boolean
           key :enum, [true, false]
+        end
+        property :condition do
+          key :type, :string
+          key :enum, Flapjack::Data::Condition.healthy.keys +
+                       Flapjack::Data::Condition.unhealthy.keys
         end
         property :links do
           key :"$ref", :CheckLinks
@@ -249,7 +259,7 @@ module Flapjack
       def self.jsonapi_attributes
         {
           :post  => [:name, :enabled],
-          :get   => [:name, :enabled, :ack_hash, :failing],
+          :get   => [:name, :enabled, :ack_hash, :failing, :condition],
           :patch => [:name, :enabled]
         }
       end

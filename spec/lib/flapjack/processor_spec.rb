@@ -73,7 +73,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
-    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:save!)
     expect(instance_stats).to receive(:persisted?).and_return(true)
     expect(instance_stats).to receive(:destroy)
 
@@ -109,8 +109,8 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:quit)
 
     expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
-    expect(global_stats).to receive(:save)
-    expect(instance_stats).to receive(:save).twice
+    expect(global_stats).to receive(:save!)
+    expect(instance_stats).to receive(:save!).twice
     expect(instance_stats).to receive(:persisted?).and_return(true)
     expect(instance_stats).to receive(:destroy)
 
@@ -139,7 +139,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
-    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:save!)
     expect(instance_stats).to receive(:persisted?).and_return(true)
     expect(instance_stats).to receive(:destroy)
 
@@ -171,8 +171,8 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:quit)
 
     expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
-    expect(global_stats).to receive(:save)
-    expect(instance_stats).to receive(:save).twice
+    expect(global_stats).to receive(:save!)
+    expect(instance_stats).to receive(:save!).twice
     expect(instance_stats).to receive(:persisted?).and_return(true)
     expect(instance_stats).to receive(:destroy)
 
@@ -201,7 +201,7 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Data::Event).to receive(:new).with(event_data).and_return(event)
     expect(redis).to receive(:quit)
 
-    expect(instance_stats).to receive(:save)
+    expect(instance_stats).to receive(:save!)
     expect(instance_stats).to receive(:persisted?).and_return(true)
     expect(instance_stats).to receive(:destroy)
 

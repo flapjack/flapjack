@@ -49,7 +49,8 @@ module Flapjack
         @stop_condition = @lock.new_cond
 
         @pikelet = @pikelet_class.new(:lock => @lock,
-          :stop_condition => @stop_condition, :config => @config)
+          :stop_condition => @stop_condition, :config => @config,
+          :boot_time => @boot_time)
 
         @finished_condition = @lock.new_cond
       end
@@ -242,7 +243,7 @@ module Flapjack
           "flapjack-#{type}-#{pikelet_class.name.demodulize.underscore}"
         end
         wrapper.new(pikelet_class, shutdown, :logger_name => logger_name,
-          :config => config)
+          :config => config, :boot_time => opts[:boot_time])
       }
       created.each {|c| c.siblings = created - [c] }
       created

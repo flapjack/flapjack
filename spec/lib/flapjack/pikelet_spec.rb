@@ -4,6 +4,7 @@ require 'flapjack/pikelet'
 describe Flapjack::Pikelet, :logger => true do
 
   let(:config)        { double('config') }
+  let(:boot_time)     { double(Time) }
 
   let(:lock)          { double(Monitor) }
   let(:stop_cond)     { double(MonitorMixin::ConditionVariable) }
@@ -22,12 +23,15 @@ describe Flapjack::Pikelet, :logger => true do
 
     processor = double('processor')
     expect(processor).to receive(:start)
-    expect(Flapjack::Processor).to receive(:new).with(:lock => lock,
-      :stop_condition => stop_cond, :config => config).and_return(processor)
+    expect(Flapjack::Processor).to receive(:new).
+      with(:lock => lock, :stop_condition => stop_cond, :config => config,
+           :boot_time => boot_time).
+      and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
-    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config)
+    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config,
+      :boot_time => boot_time)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first
@@ -48,14 +52,17 @@ describe Flapjack::Pikelet, :logger => true do
 
     processor = double('processor')
     expect(processor).to receive(:start).twice.and_raise(exc)
-    expect(Flapjack::Processor).to receive(:new).with(:lock => lock,
-      :stop_condition => stop_cond, :config => config).and_return(processor)
+    expect(Flapjack::Processor).to receive(:new).
+      with(:lock => lock, :stop_condition => stop_cond, :config => config,
+           :boot_time => boot_time).
+      and_return(processor)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
    expect(shutdown).to receive(:call)
 
-    pikelets = Flapjack::Pikelet.create('processor', shutdown, :config => config)
+    pikelets = Flapjack::Pikelet.create('processor', shutdown,
+      :config => config, :boot_time => boot_time)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first

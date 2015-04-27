@@ -15,6 +15,9 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   let(:redis)  { double(Redis) }
 
+  let(:global_stats)   { double(Flapjack::Data::Statistics) }
+  let(:instance_stats) { double(Flapjack::Data::Statistics) }
+
   before(:all) do
     Flapjack::Gateways::Web.class_eval {
       set :show_exceptions, false
@@ -26,11 +29,32 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   def expect_stats
+    all_global = double('all_global', :all => [global_stats])
+    expect(Flapjack::Data::Statistics).to receive(:intersect).
+      with(:instance_name => 'global').and_return(all_global)
+
+    one_instance = double('one_instance', :all => [instance_stats])
+    expect(Flapjack::Data::Statistics).to receive(:intersect).
+      with(:instance_name => /^(?!(global)$)/).and_return(one_instance)
+
+    expect(instance_stats).to receive(:instance_name).and_return('foo-app-01')
+
+    expect(global_stats).to receive(:all_events).and_return(0)
+    expect(global_stats).to receive(:ok_events).and_return(0)
+    expect(global_stats).to receive(:failure_events).and_return(0)
+    expect(global_stats).to receive(:action_events).and_return(0)
+    expect(global_stats).to receive(:invalid_events).and_return(0)
+
+    expect(instance_stats).to receive(:all_events).and_return(0)
+    expect(instance_stats).to receive(:ok_events).and_return(0)
+    expect(instance_stats).to receive(:failure_events).and_return(0)
+    expect(instance_stats).to receive(:action_events).and_return(0)
+    expect(instance_stats).to receive(:invalid_events).and_return(0)
+
+    expect(instance_stats).to receive(:boot_time).and_return(Time.at(Time.now.to_i - 60))
+
     expect(redis).to receive(:dbsize).and_return(3)
-    expect(redis).to receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
-    expect(redis).to receive(:hget).once.and_return(Time.now.to_i - 60)
-    expect(redis).to receive(:hgetall).twice.and_return({'all' => '8001', 'ok' => '8002'},
-      {'all' => '9001', 'ok' => '9002'})
+    # expect(redis).to receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])
     expect(redis).to receive(:llen).with('events')
     expect(Flapjack::Data::Check).to receive(:split_by_freshness).and_return({})
   end

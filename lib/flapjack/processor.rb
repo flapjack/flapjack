@@ -78,12 +78,12 @@ module Flapjack
       if @global_stats.nil?
         @global_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
           :instance_name => 'global'))
-        @global_stats.save
+        @global_stats.save!
       end
 
       @instance_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
         :instance_name => @instance_id))
-      @instance_stats.save
+      @instance_stats.save!
     end
 
     def start
@@ -142,8 +142,8 @@ module Flapjack
             end
           end
           Flapjack::Data::Statistics.lock do
-            @global_stats.save
-            @instance_stats.save
+            @global_stats.save!
+            @instance_stats.save!
           end
           Flapjack.logger.error {
             error_str = errors.nil? ? '' : errors.join(', ')
@@ -182,8 +182,8 @@ module Flapjack
             @global_stats.invalid_events   += 1
             @instance_stats.all_events     += 1
             @instance_stats.invalid_events += 1
-            @global_stats.save
-            @instance_stats.save
+            @global_stats.save!
+            @instance_stats.save!
           end
           return
         end
@@ -204,16 +204,16 @@ module Flapjack
                                             event_condition, timestamp)
 
         check.enabled = true unless event_condition.nil?
-        check.save # no-op if not new and not changed
+        check.save! # no-op if not new and not changed
 
-        @global_stats.save
-        @instance_stats.save
+        @global_stats.save!
+        @instance_stats.save!
 
         if old_state.nil? && !event_condition.nil? &&
           Flapjack::Data::Condition.healthy?(event_condition.name)
 
-          new_entry.save
-          new_state.save
+          new_entry.save!
+          new_state.save!
           new_state.entries << new_entry
           check.states << new_state
 
@@ -239,7 +239,7 @@ module Flapjack
             generate_notification(check, old_state, new_state, new_entry,
                                   event, event_condition)
           else
-            new_entry.save
+            new_entry.save!
 
             if new_state.nil?
               entries = old_state.entries
@@ -252,7 +252,7 @@ module Flapjack
               end
               entries << new_entry
             else
-              new_state.save
+              new_state.save!
               new_state.entries << new_entry
               check.states << new_state
             end
@@ -295,6 +295,7 @@ module Flapjack
         # Service events represent current state of checks on monitored systems
 
         check.failing = !Flapjack::Data::Condition.healthy?(event_condition.name)
+        check.condition = event_condition.name
 
         if check.failing
           @global_stats.failure_events   += 1
@@ -328,7 +329,7 @@ module Flapjack
             ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
               :end_time => timestamp + @ncsm_duration,
               :summary => 'Automatically created for new check')
-            ncsm_sched_maint.save
+            ncsm_sched_maint.save!
 
             check.add_scheduled_maintenance(ncsm_sched_maint)
           end
@@ -350,7 +351,7 @@ module Flapjack
     def generate_notification(check, old_state, new_state, new_entry, event, event_condition)
       severity = nil
 
-      new_entry.save
+      new_entry.save!
 
       if new_state.nil?
         entries = old_state.entries
@@ -359,7 +360,7 @@ module Flapjack
         end
         entries << new_entry
       else
-        new_state.save
+        new_state.save!
         new_state.entries << new_entry
         check.states << new_state
       end
@@ -408,19 +409,24 @@ module Flapjack
         :severity => severity, :condition_duration => condition_duration,
         :event_hash => event_hash)
 
-      notification.save
+      notification.save!
       notification.entry = new_entry
 
       @notifier_queue.push(notification)
 
       return if 'test_notifications'.eql?(new_entry.action)
 
+      Flapjack.logger.info "notification count: #{check.notification_count}"
+
       if check.notification_count.nil?
         check.notification_count = 1
       else
         check.notification_count += 1
       end
-      check.save
+      check.save!
+
+      Flapjack.logger.info "#{check.name} #{check.errors.full_messages} notification count: #{check.notification_count}"
+
     end
   end
 end

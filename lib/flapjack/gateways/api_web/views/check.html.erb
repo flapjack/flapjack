@@ -1,13 +1,13 @@
-<% page_title "#{h(@check.name)}" %>
+<% page_title "#{h(@check[:name])}" %>
 <div class="page-header">
-  <h2><%= h @check.name %></h2>
+  <h2><%= h @check[:name] %></h2>
 </div>
 
 <div class="row">
   <div id="state" class="col-md-6">
     <%
-      state_qualifier = @check_enabled ? '' : "DISABLED. Last "
-      state_class     = case @check_state
+      state_qualifier = @check[:enabled] ? '' : "DISABLED. Last "
+      state_class     = case @check[:condition]
                         when 'ok'
                           'success'
                         when 'warning'
@@ -15,21 +15,21 @@
                         when 'critical'
                           'danger'
                         else
-                          "info #{@check_state}"
+                          "info #{@check[:condition]}"
                         end
     %>
 
     <div class="alert alert-<%= state_class %>">
       <%= state_qualifier %>State:
-      <span class="alert-link"><%= @check_state ? h(@check_state.upcase) : '' %></span>
+      <span class="alert-link"><%= @check[:condition] ? h(@check[:condition].upcase) : '' %></span>
     </div>
   </div><!-- col-md-6 -->
 
   <div class="col-md-6">
    <%
-    if !@current_scheduled_maintenance and
-       !@current_unscheduled_maintenance and
-       !(['warning', 'critical', 'unknown'].include?(@check_state))
+    if @current_scheduled_maintenance.nil? &&
+       @current_unscheduled_maintenance.nil? &&
+       !@check[:failing]
     %>
     <div id="no-maintenance-summary" class="alert alert-info">
       <form class="form-horizontal" role="form">
@@ -56,7 +56,7 @@
   <% if @current_unscheduled_maintenance %>
     <div id="unscheduled-maintenance-summary" class="alert alert-warning">
 
-      <form action="<%= @base_url %>unscheduled_maintenances/checks/<%= u(@check.id) %>" method="post" class="form-horizontal" role="form">
+      <form action="<%= @base_url %>unscheduled_maintenances/checks/<%= u(@check[:id]) %>" method="post" class="form-horizontal" role="form">
         <input type="hidden" name="_method" value="patch">
 
         <div class="form-group">
@@ -73,7 +73,7 @@
           <div class="col-md-9">
             <p class="form-control-static">
               <%
-                ack_msg = @current_unscheduled_maintenance.summary
+                ack_msg = @current_unscheduled_maintenance[:summary]
                 ack_msg ||= 'No summary given'
               %>
               <%= h(ack_msg) %>
@@ -85,7 +85,7 @@
           <label class="col-md-3 control-label">Started</label>
           <div class="col-md-9">
             <p class="form-control-static">
-              <% start = @current_unscheduled_maintenance.start_time %>
+              <% start = @current_unscheduled_maintenance[:start_time] %>
               <%= h(start) %>
             </p>
           </div>
@@ -95,7 +95,7 @@
           <label class="col-md-3 control-label">Finishing</label>
           <div class="col-md-9">
             <p class="form-control-static">
-              <% finish = @current_unscheduled_maintenance.end_time %>
+              <% finish = @current_unscheduled_maintenance[:end_time] %>
               <%= h(finish) %>
             </p>
           </div>
@@ -123,16 +123,16 @@
     </div>
   <% end %>
 
-  <% if (['warning', 'critical', 'unknown'].include?(@check_state) and !@current_scheduled_maintenance) %>
+  <% if (@check[:failing] and @current_scheduled_maintenance.nil?) %>
     <div id="add-unscheduled-maintenance" class="alert alert-warning">
       <% action = @current_unscheduled_maintenance ? "Re-acknowledge" : "Acknowledge" %>
       <h4><%= action %> alert</h4>
-      <form action="<%= @base_url %>unscheduled_maintenances/checks/<%= u(@check.id) %>" method="post" class="form-horizontal">
+      <form action="<%= @base_url %>unscheduled_maintenances/checks/<%= u(@check[:id]) %>" method="post" class="form-horizontal">
         <div class="form-group">
           <div class="col-sm-12 text-left">
             <label class="col-sm-3 control-label" for="summary">Summary</label>
             <div class="col-sm-9">
-              <input type="hidden" name="acknowledgement_id" value="<%= @acknowledgement_id %>">
+              <input type="hidden" name="acknowledgement_id" value="<%= @check[:ack_hash] %>">
               <input type="text" class="form-control" name="summary" value=""/>
             </div>
           </div>
@@ -154,7 +154,7 @@
           <div class="col-sm-12">
             <div class="col-sm-offset-3 col-sm-9">
               <button type="submit" class="btn btn-warning">
-                <%= @current_unscheduled_maintenance ? 'Replace acknowledgment' : 'Acknowledge' %>
+                <%= @current_unscheduled_maintenance.nil? ? 'Acknowledge' : 'Replace acknowledgment' %>
               </button>
             </div>
           </div>
@@ -163,7 +163,7 @@
     </div>
   <% end %>
 
-  <% if @current_scheduled_maintenance %>
+  <% unless @current_scheduled_maintenance.nil? %>
     <div id="scheduled-maintenance-summary" class="alert alert-warning">
       <div class="row">
         <div class="col-md-3 text-right">State</div>
@@ -176,7 +176,7 @@
         <div class="col-md-3 text-right">Reason</div>
         <div class="col-md-9">
           <%
-            maint_msg = "#{@current_scheduled_maintenance.summary}"
+            maint_msg = "#{@current_scheduled_maintenance[:summary]}"
             maint_msg = maint_msg.length > 0 ? maint_msg : 'No summary given'
           %>
           <%= h maint_msg %>
@@ -186,7 +186,7 @@
       <div class="row">
         <div class="col-md-3 text-right">Started</div>
         <div class="col-md-9">
-          <% start = @current_scheduled_maintenance.start_time %>
+          <% start = @current_scheduled_maintenance[:start_time] %>
           <%= h(start) %>
         </div>
       </div>
@@ -194,7 +194,7 @@
       <div class="row">
         <div class="col-md-3 text-right">Finishing</div>
         <div class="col-md-9">
-          <% finish = @current_scheduled_maintenance.end_time %>
+          <% finish = @current_scheduled_maintenance[:end_time] %>
           <%= h(finish) %>
         </div>
       </div>
@@ -277,7 +277,7 @@
   <div id="scheduled-maintenance-periods" class="col-md-12">
     <a name="scheduled_maintenance_periods"></a>
     <h3>Scheduled Maintenance Periods</h3>
-    <% if @scheduled_maintenances && !@scheduled_maintenances.empty? %>
+    <% unless @scheduled_maintenances.empty? %>
     <table class="table table-bordered table-hover table-condensed">
       <tr>
         <th>Start</th>
@@ -287,12 +287,12 @@
         <th>Actions</th>
       </tr>
 
-    <% @scheduled_maintenances.sort_by(&:start_time).each do |scheduled_maintenance| %>
+    <% @scheduled_maintenances.sort_by {|sm| sm[:start_time] }.each do |scheduled_maintenance| %>
       <%
-        start_time = scheduled_maintenance.start_time
-        end_time   = scheduled_maintenance.end_time
-        duration   = scheduled_maintenance.end_time - scheduled_maintenance.start_time
-        summary    = scheduled_maintenance.summary
+        start_time = scheduled_maintenance[:start_time]
+        end_time   = scheduled_maintenance[:end_time]
+        duration   = scheduled_maintenance[:end_time] - scheduled_maintenance[:start_time]
+        summary    = scheduled_maintenance[:summary]
       %>
       <tr>
         <td><%= h start_time %></td>
@@ -302,7 +302,7 @@
         <td>
         <% if end_time > @current_time %>
           <% label = (start_time > @current_time) ? 'Delete' : 'End Now' %>
-            <form action="<%= @base_url %>scheduled_maintenances/checks/<%= u(@check.id) %>" method="post">
+            <form action="<%= @base_url %>scheduled_maintenances/checks/<%= u(@check[:id]) %>" method="post">
               <input type="hidden" name="_method" value="delete">
               <input type="hidden" name="start_time" value="<%= start_time %>">
               <button type="submit" class="btn btn-danger"><%= label %></button>
@@ -328,7 +328,7 @@
         <h3 class="panel-title">Add Scheduled Maintenance</h4>
       </div>
       <div class="panel-body">
-        <form action="<%= @base_url %>scheduled_maintenances/checks/<%= u(@check.id) %>" method="post" role="form" class="form-horizontal">
+        <form action="<%= @base_url %>scheduled_maintenances/checks/<%= u(@check[:id]) %>" method="post" role="form" class="form-horizontal">
 
           <div class="form-group">
             <label class="col-sm-2 control-label" for="start_time">Start time:</label>
@@ -417,9 +417,9 @@
         </h3>
       </div>
       <div class="panel-body">
-      <% if @check_enabled %>
+      <% if @check[:enabled] %>
         <h4>Decommission check</h4>
-        <form action="<%= @base_url %>checks/<%= u(@check.id) %>" method="post" style="display:inline-block" class="pull-right">
+        <form action="<%= @base_url %>checks/<%= u(@check[:id]) %>" method="post" style="display:inline-block" class="pull-right">
           <input type='hidden' name='_method' value='delete'>
           <button type='submit' class="btn btn-danger decommission-check">Decommission Check</button>
         </form>

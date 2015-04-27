@@ -4,6 +4,7 @@ require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
 require 'erb'
+require 'tilt/erb'
 require 'uri'
 
 require 'flapjack-diner'
@@ -168,20 +169,19 @@ module Flapjack
     #     erb 'checks.html'.to_sym
     #   end
 
-    #   get '/checks/:id' do
-    #     check_id  = params[:id]
+      get '/checks/:id' do
+        check_id  = params[:id]
 
-    #     @current_time = Time.now
+        @current_time = Time.now
 
-    #     @check = Flapjack::Data::Check.find_by_id(check_id)
-    #     halt(404, "Could not find check '#{check_id}'") if @check.nil?
+        @check = Flapjack::Data::Check.find_by_id(check_id)
+        halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
-    #     check_stats
+        check_stats
 
     #     last_change = @check.states.last
     #     last_update = @check.latest_notifications.last
 
-    #     @check_enabled          = !!@check.enabled
     #     @check_last_change      = last_change ? last_change.timestamp : nil
 
     #     @check_state            = last_update ? last_update.condition : nil
@@ -255,13 +255,13 @@ module Flapjack
     #           end
     #         end
     #       end
-    #     end
+        # end
 
     #     @state_changes = @check.states.intersect_range(nil, @current_time.to_i,
     #                        :desc => true, :limit => 20, :by_score => true).all
 
-    #     erb 'check.html'.to_sym
-    #   end
+        erb 'check.html'.to_sym
+      end
 
     #   post "/unscheduled_maintenances/checks/:id" do
     #     check_id           = params[:id]
