@@ -158,6 +158,9 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
+        property :links do
+          key :"$ref", :MediumChangeLinks
+        end
       end
 
       swagger_schema :MediumUpdate do
@@ -186,19 +189,16 @@ module Flapjack
           key :minimum, 1
         end
         property :links do
-          key :"$ref", :MediumUpdateLinks
+          key :"$ref", :MediumChangeLinks
         end
       end
 
-      swagger_schema :MediumUpdateLinks do
+      swagger_schema :MediumChangeLinks do
         property :contact do
-          key :"$ref", :ContactReference
+          key :"$ref", :jsonapi_ContactLinkage
         end
         property :rules do
-          key :type, :array
-          items do
-            key :"$ref", :RuleReference
-          end
+          key :"$ref", :jsonapi_RulesLinkage
         end
       end
 
