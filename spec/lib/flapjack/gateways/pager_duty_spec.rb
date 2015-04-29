@@ -1,8 +1,8 @@
 require 'spec_helper'
 
-require 'flapjack/gateways/pagerduty'
+require 'flapjack/gateways/pager_duty'
 
-describe Flapjack::Gateways::Pagerduty, :logger => true do
+describe Flapjack::Gateways::PagerDuty, :logger => true do
 
   let(:config) { {
     'queue'       => 'pagerduty_notifications',
@@ -16,7 +16,8 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   let(:redis) { double(Redis) }
   let(:lock)  { double(Monitor) }
 
-  let(:check) { double(Flapjack::Data::Check, :id => SecureRandom.uuid) }
+  let(:check) { double(Flapjack::Data::Check, :id => SecureRandom.uuid,
+    :name => 'app-02:ping') }
 
   before(:each) do
     allow(Flapjack).to receive(:redis).and_return(redis)
@@ -39,16 +40,14 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       expect(redis).to receive(:quit)
 
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:lock => lock,
+      fpn = Flapjack::Gateways::PagerDuty::Notifier.new(:lock => lock,
         :config => config)
       expect(fpn).to receive(:handle_alert).with(alert)
-      expect(fpn).to receive(:test_pagerduty_connection).twice.and_return(false, true)
+      expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).twice.and_return(false, true)
       expect { fpn.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     it "tests the pagerduty connection" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config)
-
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
          with(:body => Flapjack.dump_json(
                         'service_key'  => '11111111111111111111111111111111',
@@ -58,17 +57,17 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
                        )).
          to_return(:status => 200, :body => Flapjack.dump_json('status' => 'success'))
 
-      fpn.send(:test_pagerduty_connection)
+      Flapjack::Gateways::PagerDuty.send(:test_pagerduty_connection)
       expect(req).to have_been_requested
     end
 
     it "handles notifications received via Redis" do
-      fpn = Flapjack::Gateways::Pagerduty::Notifier.new(:config => config)
+      fpn = Flapjack::Gateways::PagerDuty::Notifier.new(:config => config)
 
       req = stub_request(:post, "https://events.pagerduty.com/generic/2010-04-15/create_event.json").
         with(:body => Flapjack.dump_json(
                         'service_key'  => 'pdservicekey',
-                        'incident_key' => 'app-02:ping',
+                        'incident_key' => check.name,
                         'event_type'   => 'trigger',
                         'description'  => 'Problem: "app-02:ping" is Critical'
                        )).
@@ -100,7 +99,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
     let (:response) { {"incidents" =>
                        [{"incident_number" => 12,
-                         "incident_key"=> 'app-02:ping',
+                         "incident_key"=> check.name,
                          "status" => "acknowledged",
                          "last_status_change_by" => status_change}],
                        "limit"=>100,
@@ -111,13 +110,15 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     it "doesn't look for acknowledgements if this search is already running" do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
+      expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
+
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(0)
 
       expect(Kernel).to receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
       expect(lock).to receive(:synchronize).and_yield
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:lock => lock,
         :config => config)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -125,42 +126,51 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     it "looks for and creates acknowledgements if the search is not already running" do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
 
+      expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
+
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
       expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
 
-      expect(check).to receive(:name).exactly(3).times.and_return('app-02:ping')
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
+        and_yield
 
-      state = double(Flapjack::Data::State, :id => SecureRandom.uuid)
-      states = double('states')
-
-      expect(Flapjack::Data::Check).to receive(:associated_ids_for).
-        with(:state).and_return(check.id => state.id)
-
-      expect(Flapjack::Data::State).to receive(:intersect).
-        with(:id => [state.id],
-             :condition => ['critical', 'warning', 'unknown']).
-        and_return(states)
-      expect(states).to receive(:associated_ids_for).with(:check).
-        and_return(state.id => check.id)
-
-      checks = double('checks')
       expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:id => [check.id]).and_return(checks)
-      expect(checks).to receive(:select).and_yield(check).and_return([check])
+        with(:failing => true).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).
-        with(an_instance_of(Time)).and_return(nil)
+      expect(check).to receive(:in_scheduled_maintenance?).
+        with(an_instance_of(Time)).and_return(false)
 
-      expect(check).to receive(:unscheduled_maintenance_at).
-        with(an_instance_of(Time)).and_return(nil)
+      expect(check).to receive(:in_unscheduled_maintenance?).
+        with(an_instance_of(Time)).and_return(false)
 
-      expect(Flapjack::Data::Check).to receive(:pagerduty_credentials_for).
-        and_return(check => [{
-        'service_key' => '12345678',
-        'subdomain"'  => 'flpjck',
-        'username'    => 'flapjack',
-        'password'    => 'password123'
-      }])
+      medium = double(Flapjack::Data::Medium, :id => SecureRandom.uuid)
+      expect(medium).to receive(:pagerduty_token).and_return('abc')
+      expect(medium).to receive(:pagerduty_ack_duration).and_return(nil)
+
+      rule  = double(Flapjack::Data::Rule, :id => SecureRandom.uuid)
+      route = double(Flapjack::Data::Route, :id => SecureRandom.uuid)
+
+      media_scope = double('media_scope', :all => [medium])
+      rule_scope  = double('rule_scope')
+      route_scope = double('route_scope')
+
+      expect(media_scope).to receive(:associated_ids_for).
+        with(:rules).and_return(medium.id => [rule.id])
+      expect(Flapjack::Data::Medium).to receive(:intersect).
+        with(:transport => 'pagerduty').and_return(media_scope)
+      expect(Flapjack::Data::Medium).to receive(:intersect).
+        with(:id => [medium.id]).and_return(media_scope)
+
+      expect(rule_scope).to receive(:associated_ids_for).
+        with(:routes).and_return(rule.id => [route.id])
+      expect(Flapjack::Data::Rule).to receive(:intersect).
+        with(:id => Set.new([rule.id])).and_return(rule_scope)
+
+      expect(route_scope).to receive(:associated_ids_for).
+        with(:checks).and_return(route.id => [check.id])
+      expect(Flapjack::Data::Route).to receive(:intersect).
+        with(:id => Set.new([route.id])).and_return(route_scope)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).with('events',
         [check],
@@ -171,51 +181,64 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
       expect(lock).to receive(:synchronize).and_yield
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:lock => lock,
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:lock => lock,
                                                          :config => config)
-      expect(fpa).to receive(:pagerduty_acknowledgements).and_return(response)
+      expect(fpa).to receive(:pagerduty_acknowledgements).
+        with(an_instance_of(Time), 'abc', [check.name]).
+        and_return(response['incidents'])
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     # testing separately and stubbing above
     it "looks for acknowledgements via the PagerDuty API" do
-
-      expect(Time).to receive(:now).and_return(now)
+      token = 'abc'
 
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
-      unt   = (now.utc + (60*60*24)).iso8601   # 1 day in the future
+      unt   = (now.utc + (60*24)).iso8601   # 1 hour in the future
 
-      req = stub_request(:get, "https://flapjack:password123@pagerduty.com/api/v1/incidents").
-            with(:query => {:fields => 'incident_number,status,last_status_change_by',
-                            :since => since, :until => unt, :status => 'acknowledged'}).
-            to_return(:status => 200, :body => Flapjack.dump_json(response), :headers => {})
-      
+      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+            with(:headers => {'Content-type'  => 'application/json',
+                              'Authorization' => "Token token=#{token}"},
+                 :query => {
+                   :fields => 'incident_key,incident_number,last_status_change_by',
+                   :since => since, :until => unt, :status => 'acknowledged'
+                 }
+                ).
+            to_return(:status => 200,
+                      :body => Flapjack.dump_json(response),
+                      :headers => {})
+
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
-      fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config)
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
+      result = fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
+      expect(req).to have_been_requested
 
-      result = fpa.send(:pagerduty_acknowledgements)
-
-      pg_acknowledged_by = result['incidents'].first['last_status_change_by']
-      
-      expect(result).to be_a(Hash)
-      expect(result).to have_key('incidents')
+      expect(result).to be_a(Array)
+      expect(result.size).to eq(1)
+      incident = result.first
+      expect(incident).to be_a(Hash)
+      pg_acknowledged_by = incident['last_status_change_by']
       expect(pg_acknowledged_by).to be_a(Hash)
       expect(pg_acknowledged_by).to have_key('id')
       expect(pg_acknowledged_by['id']).to eq('ABCDEFG')
-
-      expect(req).to have_been_requested
     end
 
   end
 
-  it "does not look for acknowledgements if all required credentials are not present" # do
+  it 'gets all values in a paginated request for acknowledgements'
+
+  it 'uses a smaller time period for follow-up requests'
+
+  it 'does not look for acknowledgements if no checks are failing & unacknowledged'
+
+  it "does not look for acknowledgements if the auth token is not present" # do
   #   creds = {'subdomain' => 'example',
   #            'username'  => 'sausage',
   #            'check'     => 'PING'}
 
   #   expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-  #   fp = Flapjack::Gateways::Pagerduty.new(:config => config)
+  #   fp = Flapjack::Gateways::PagerDuty.new(:config => config)
   #   EM.synchrony do
   #     result = fp.send(:pagerduty_acknowledged?, creds)
 
