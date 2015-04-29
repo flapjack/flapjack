@@ -169,6 +169,8 @@ module Flapjack
           @lock = opts[:lock]
           @config = opts[:config]
 
+          @initial = true
+
           Flapjack.logger.debug("New PagerDuty::AckFinder pikelet with the following options: #{@config.inspect}")
 
           # TODO: only clear this if there isn't another PagerDuty gateway instance running
@@ -221,6 +223,11 @@ module Flapjack
               check.in_scheduled_maintenance?(time) ||
                 check.in_unscheduled_maintenance?(time)
             end
+          end
+
+          if unacked_failing_checks.empty?
+            Flapjack.logger.debug "found no unacknowledged failing checks"
+            return
           end
 
           Flapjack.logger.debug "found unacknowledged failing checks as follows: " +
@@ -320,10 +327,9 @@ module Flapjack
 
           offset = 0
           requesting = true
-          initial = true
 
           while requesting do
-            response = pagerduty_acknowledgements_request(initial, t, token, 100, offset)
+            response = pagerduty_acknowledgements_request(t, token, 100, offset)
 
             if response.nil?
               cumulative_incidents = []
@@ -336,15 +342,16 @@ module Flapjack
               offset = response['offset'] + response['incidents'].size
 
               requesting = (offset < response['total'])
-              initial = false
             end
           end
+
+          @initial = false
 
           cumulative_incidents
         end
 
-        def pagerduty_acknowledgements_request(initial, base_time, token, limit, offset)
-          since_offset, until_offset = if initial
+        def pagerduty_acknowledgements_request(base_time, token, limit, offset)
+          since_offset, until_offset = if @initial
             # the last week -> one hour in the future
             [(60 * 60 * 24 * 7), (60 * 24)]
           else
@@ -356,6 +363,10 @@ module Flapjack
                    'since'        => (base_time - since_offset).iso8601,
                    'until'        => (base_time + until_offset).iso8601,
                    'status'       => 'acknowledged'}
+
+          if (limit != 100) || (offset != 0)
+            query.update(:limit => limit, :offset => offset)
+          end
 
           uri = URI::HTTPS.build(:host => "pagerduty.com",
                                  :path => '/api/v1/incidents',

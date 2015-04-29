@@ -194,7 +194,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       token = 'abc'
 
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
-      unt   = (now.utc + (60*24)).iso8601   # 1 hour in the future
+      unt   = (now.utc + (60*24)).iso8601      # 1 hour in the future
 
       req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
@@ -224,27 +224,129 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(pg_acknowledged_by['id']).to eq('ABCDEFG')
     end
 
+    it 'gets all values in a paginated request for acknowledgements' do
+      token = 'abc'
+
+      since = (now.utc - (60*60*24*7)).iso8601 # the last week
+      unt   = (now.utc + (60*24)).iso8601      # 1 hour in the future
+
+      response_1 = {"incidents" => [{'incident_key' => check.name}] * 100,
+                       "limit"  => 100,
+                       "offset" => 0,
+                       "total"  => 120}
+
+      response_2 = {"incidents" => [{'incident_key' => check.name}] * 20,
+                       "limit"  => 100,
+                       "offset" => 100,
+                       "total"  => 120}
+
+      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+            with(:headers => {'Content-type'  => 'application/json',
+                              'Authorization' => "Token token=#{token}"},
+                 :query => {
+                   :fields => 'incident_key,incident_number,last_status_change_by',
+                   :since => since, :until => unt, :status => 'acknowledged'
+                 }
+                ).
+            to_return(:status => 200,
+                      :body => Flapjack.dump_json(response_1),
+                      :headers => {})
+
+      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+            with(:headers => {'Content-type'  => 'application/json',
+                              'Authorization' => "Token token=#{token}"},
+                 :query => {
+                   :fields => 'incident_key,incident_number,last_status_change_by',
+                   :since => since, :until => unt, :status => 'acknowledged',
+                   :offset => 100, :limit => 100
+                 }
+                ).
+            to_return(:status => 200,
+                      :body => Flapjack.dump_json(response_2),
+                      :headers => {})
+
+      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
+
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
+      result = fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
+      expect(req).to have_been_requested
+
+      expect(result).to be_a(Array)
+      expect(result.size).to eq(120)
+    end
+
+    it 'uses a smaller time period for follow-up requests' do
+      token = 'abc'
+
+      time_first  = now.utc
+      time_second = (now + 10).utc
+
+      since_first   = (time_first - (60*60*24*7)).iso8601 # the last week
+      since_second  = (time_second - 60).iso8601 # the last minute
+
+      unt_first     = (time_first + (60*24)).iso8601      # 1 hour in the future
+      unt_second    = (time_second + (60*24)).iso8601      # 1 hour in the future
+
+      req_first = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+            with(:headers => {'Content-type'  => 'application/json',
+                              'Authorization' => "Token token=#{token}"},
+                 :query => {
+                   :fields => 'incident_key,incident_number,last_status_change_by',
+                   :since => since_first, :until => unt_first, :status => 'acknowledged'
+                 }
+                ).
+            to_return(:status => 200,
+                      :body => Flapjack.dump_json(response),
+                      :headers => {})
+
+      req_second = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+            with(:headers => {'Content-type'  => 'application/json',
+                              'Authorization' => "Token token=#{token}"},
+                 :query => {
+                   :fields => 'incident_key,incident_number,last_status_change_by',
+                   :since => since_second, :until => unt_second, :status => 'acknowledged'
+                 }
+                ).
+            to_return(:status => 200,
+                      :body => Flapjack.dump_json(response),
+                      :headers => {})
+
+      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
+
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
+      fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
+      fpa.send(:pagerduty_acknowledgements, (now + 10), token, [check.name])
+      expect(req_first).to have_been_requested
+      expect(req_second).to have_been_requested
+    end
+
+    it 'does not look for acknowledgements if no checks are failing & unacknowledged' do
+      expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
+
+      expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
+
+      expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
+      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
+
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
+        and_yield
+
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:failing => true).and_return([])
+
+      expect(Flapjack::Data::Event).not_to receive(:create_acknowledgements)
+
+      expect(Kernel).to receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
+
+      expect(lock).to receive(:synchronize).and_yield
+
+      fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:lock => lock,
+                                                         :config => config)
+      expect(fpa).not_to receive(:pagerduty_acknowledgements)
+      expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
+    end
+
   end
-
-  it 'gets all values in a paginated request for acknowledgements'
-
-  it 'uses a smaller time period for follow-up requests'
-
-  it 'does not look for acknowledgements if no checks are failing & unacknowledged'
-
-  it "does not look for acknowledgements if the auth token is not present" # do
-  #   creds = {'subdomain' => 'example',
-  #            'username'  => 'sausage',
-  #            'check'     => 'PING'}
-
-  #   expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
-  #   fp = Flapjack::Gateways::PagerDuty.new(:config => config)
-  #   EM.synchrony do
-  #     result = fp.send(:pagerduty_acknowledged?, creds)
-
-  #     expect(result).to be(nil)
-  #     EM.stop
-  #   end
-  # end
 
 end
