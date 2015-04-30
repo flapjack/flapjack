@@ -221,8 +221,8 @@ module Flapjack
             contact.add_alerting_check_for_media(media, @event_id) unless ok? || acknowledgement? || test?
 
             # expunge checks in (un)scheduled maintenance from the alerting set
-            cleaned = contact.clean_alerting_checks_for_media(media)
-            logger.debug("cleaned alerting checks for #{media}: #{cleaned}")
+            recovered = contact.clean_alerting_checks_for_media(media)
+            logger.debug("cleaned alerting checks for #{media}: recovered? #{recovered}")
 
             # pagerduty is an example of a medium which should never be rolled up
             unless ['pagerduty'].include?(media)
@@ -236,7 +236,7 @@ module Flapjack
                 next ret if contact.drop_rollup_notifications_for_media?(media)
                 contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
                 rollup_type = 'problem'
-              when (alerting_checks + cleaned) >= rollup_threshold
+              when recovered
                 # alerting checks was just cleaned such that it is now below the rollup threshold
                 contact.update_sent_rollup_alert_keys_for_media(media, :delete => true)
                 rollup_type = 'recovery'

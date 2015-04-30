@@ -60,4 +60,45 @@ describe Flapjack::Data::Migration, :redis => true do
     expect(rule.contact_id).to eq(contact.id)
   end
 
+  it "removes a disabled check from a medium's alerting checks" do
+    contact = Flapjack::Data::Contact.add( {
+        'id'         => 'c363_a-f@42%*',
+        'first_name' => 'Jane',
+        'last_name'  => 'Janeley',
+        'email'      => 'janej@example.com',
+        'media'      => {
+          'email' => {
+            'address'          => 'janej@example.com',
+            'interval'         => 60,
+            'rollup_threshold' => 5,
+          },
+        },
+      },
+      :redis => @redis)
+
+    entity = Flapjack::Data::Entity.add({ 'id'   => '5000',
+                                          'name' => 'abc-123',
+                                          'contacts' => ['c363_a-f@42%*'] },
+                                          :redis => @redis)
+
+    entity_check_ping = Flapjack::Data::EntityCheck.for_entity_name('abc-123', 'ping', :redis => @redis)
+    entity_check_ping.update_state('critical')
+
+    entity_check_ssh  = Flapjack::Data::EntityCheck.for_entity_name('abc-123', 'ssh', :redis => @redis)
+    entity_check_ssh.update_state('critical')
+
+    contact.add_alerting_check_for_media('email', 'abc-123:ping')
+    contact.add_alerting_check_for_media('email', 'abc-123:ssh')
+
+    expect(contact.alerting_checks_for_media('email')).to eq(['abc-123:ping', 'abc-123:ssh'])
+
+    entity_check_ssh.disable!
+
+    expect(contact.alerting_checks_for_media('email')).to eq(['abc-123:ping', 'abc-123:ssh'])
+
+    Flapjack::Data::Migration.correct_rollup_including_disabled_checks(:redis => @redis)
+
+    expect(contact.alerting_checks_for_media('email')).to eq(['abc-123:ping'])
+  end
+
 end

@@ -215,6 +215,20 @@ module Flapjack
         redis.set('validated_scheduled_maintenance_periods', 'true')
       end
 
+      def self.correct_rollup_including_disabled_checks(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+        return if redis.exists('corrected_rollup_including_disabled_checks')
+
+        Flapjack::Data::Contact.all(:redis => redis).each do |contact|
+          contact.media_list.each do |medium|
+            contact.clean_alerting_checks_for_media(medium)
+          end
+        end
+
+        logger.warn "Corrected rollup to no longer include disabled checks" unless logger.nil?
+        redis.set('corrected_rollup_including_disabled_checks', 'true')
+      end
     end
   end
 end
