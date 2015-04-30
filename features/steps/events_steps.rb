@@ -279,6 +279,16 @@ When /^the unscheduled maintenance is ended(?: for check '([\w\.\-]+)' on entity
   end_unscheduled_maintenance(entity, check)
 end
 
+When /^check '([\w\.\-]+)' (?:for|on) entity '([\w\.\-]+)' is (dis|en)abled$/ do |check, entity, dis_en|
+  entity_check = Flapjack::Data::EntityCheck.for_entity_name(entity, check, :redis => @redis)
+  case dis_en
+  when 'dis'
+    entity_check.disable!
+  when 'en'
+    entity_check.enable!
+  end
+end
+
 # TODO logging is a side-effect, should test for notification generation itself
 Then /^a notification should not be generated(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check

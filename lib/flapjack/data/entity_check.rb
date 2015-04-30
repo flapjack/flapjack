@@ -681,7 +681,6 @@ module Flapjack
         @redis.zadd("all_checks:#{entity_name}", timestamp, check)
         @redis.zrem("current_checks:#{entity_name}", check)
         if @redis.zcount("current_checks:#{entity_name}", '-inf', '+inf') == 0
-          @redis.zrem("current_checks:#{entity_name}", check)
           @redis.zrem("current_entities", entity.name)
         end
       end

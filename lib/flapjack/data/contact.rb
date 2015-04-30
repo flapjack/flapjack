@@ -387,25 +387,29 @@ module Flapjack
         end
       end
 
-      def add_alerting_check_for_media(media, check)
-        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, check)
+      def add_alerting_check_for_media(media, event_id)
+        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, event_id)
       end
 
       def remove_alerting_check_for_media(media, check)
         @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
       end
 
-      # removes any checks that are in ok, scheduled or unscheduled maintenance
-      # from the alerting checks set for the given media
-      # returns the number of checks removed
+      # removes any checks that are in ok, scheduled or unscheduled maintenance,
+      # or are disabled from the alerting checks set for the given media;
+      # returns whether this cleaning moved the medium from rollup to recovery
       def clean_alerting_checks_for_media(media)
-        key = "contact_alerting_checks:#{self.id}:media:#{media}"
         cleaned = 0
-        alerting_checks_for_media(media).each do |check|
+
+        alerting_checks  = alerting_checks_for_media(media)
+        rollup_threshold = rollup_threshold_for_media(media)
+
+        alerting_checks.each do |check|
           entity_check = Flapjack::Data::EntityCheck.for_event_id(check, :redis => @redis)
           next unless Flapjack::Data::EntityCheck.state_for_event_id?(check, :redis => @redis) == 'ok' ||
             Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check, :redis => @redis) ||
             Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis) ||
+            !entity_check.enabled? ||
             !entity_check.contacts.map {|c| c.id}.include?(self.id)
 
           # FIXME: why can't i get this logging when called from notifier (notification.rb)?
@@ -413,7 +417,11 @@ module Flapjack
           remove_alerting_check_for_media(media, check)
           cleaned += 1
         end
-        cleaned
+
+        return false if rollup_threshold.nil? || (rollup_threshold <= 0) ||
+          (alerting_checks.size < rollup_threshold)
+
+        return(cleaned > (alerting_checks.size - rollup_threshold))
       end
 
       def alerting_checks_for_media(media)
