@@ -167,6 +167,10 @@ module Flapjack
         end
       end
 
+      def self.jsonapi_methods
+        [:post, :get, :patch, :delete]
+      end
+
       def self.jsonapi_attributes
         {
           :post  => [:name, :timezone],

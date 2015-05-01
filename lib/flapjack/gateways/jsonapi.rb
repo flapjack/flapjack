@@ -22,14 +22,14 @@ require 'flapjack/data/contact'
 require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/statistic'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
 require 'flapjack/gateways/jsonapi/rack/array_param_fixer'
 require 'flapjack/gateways/jsonapi/rack/json_params_parser'
 
-%w[headers miscellaneous resources resource_links
-   swagger_docs swagger_links_docs].each do |helper|
+%w[headers miscellaneous resources swagger_docs].each do |helper|
   require "flapjack/gateways/jsonapi/helpers/#{helper}"
 end
 
@@ -58,6 +58,7 @@ module Flapjack
         Flapjack::Data::Medium,
         Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::Statistic,
         Flapjack::Data::Tag,
         Flapjack::Data::UnscheduledMaintenance
       ]
@@ -167,13 +168,6 @@ module Flapjack
         pass
       end
 
-      # put '*' do
-      #   halt(405) unless request.params.empty? || is_jsonapi_request?
-      #   content_type media_type_produced
-      #   cors_headers
-      #   pass
-      # end
-
       patch '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
         content_type media_type_produced(:with_charset => true)
@@ -187,97 +181,17 @@ module Flapjack
       end
 
       include Swagger::Blocks
+
       include Flapjack::Gateways::JSONAPI::Helpers::SwaggerDocs
-      include Flapjack::Gateways::JSONAPI::Helpers::SwaggerLinksDocs
 
-      swagger_root do
-        key :swagger, '2.0'
-        info do
-          key :version, '2.0.0'
-          key :title, 'Flapjack API'
-          key :description, ''
-          contact do
-            key :name, ''
-          end
-          license do
-            key :name, 'MIT'
-          end
-        end
-        key :host, 'localhost'
-        key :basePath, '/doc'
-        key :schemes, ['http']
-        key :consumes, [JSONAPI_MEDIA_TYPE]
-        key :produces, [JSONAPI_MEDIA_TYPE]
-      end
-
-      # hacky, but trying to avoid too much boilerplate -- links paths
-      # must be before regular ones to avoid greedy path captures
-      %w[metrics reports test_notifications resource_links resources].each do |method|
+      # hacky, but trying to avoid too much boilerplate -- association paths
+      # must be before resource ones to avoid greedy path captures
+      %w[metrics reports test_notifications association_post resource_post
+         association_get resource_get association_patch resource_patch
+         association_delete resource_delete].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
-      end
-
-      swagger_schema :jsonapi_Reference do
-        key :required, [:type, :id]
-        property :type do
-          key :type, :string
-          key :enum, Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.map(&:jsonapi_type)
-        end
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-      end
-
-      swagger_schema :jsonapi_Links do
-        key :required, [:self]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
-        property :first do
-          key :type, :string
-          key :format, :url
-        end
-        property :last do
-          key :type, :string
-          key :format, :url
-        end
-        property :next do
-          key :type, :string
-          key :format, :url
-        end
-        property :prev do
-          key :type, :string
-          key :format, :url
-        end
-      end
-
-      swagger_schema :jsonapi_Pagination do
-        key :required, [:page, :per_page, :total_pages, :total_count]
-        property :page do
-          key :type, :integer
-          key :format, :int64
-        end
-        property :per_page do
-          key :type, :integer
-          key :format, :int64
-        end
-        property :total_pages do
-          key :type, :integer
-          key :format, :int64
-        end
-        property :total_count do
-          key :type, :integer
-          key :format, :int64
-        end
-      end
-
-      swagger_schema :jsonapi_Meta do
-        property :pagination do
-          key :"$ref", :jsonapi_Pagination
-        end
       end
 
       Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|

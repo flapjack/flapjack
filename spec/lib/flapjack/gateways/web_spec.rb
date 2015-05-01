@@ -15,8 +15,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   let(:redis)  { double(Redis) }
 
-  let(:global_stats)   { double(Flapjack::Data::Statistics) }
-  let(:instance_stats) { double(Flapjack::Data::Statistics) }
+  let(:global_stats)   { double(Flapjack::Data::Statistic) }
+  let(:instance_stats) { double(Flapjack::Data::Statistic) }
 
   before(:all) do
     Flapjack::Gateways::Web.class_eval {
@@ -30,11 +30,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
   def expect_stats
     all_global = double('all_global', :all => [global_stats])
-    expect(Flapjack::Data::Statistics).to receive(:intersect).
+    expect(Flapjack::Data::Statistic).to receive(:intersect).
       with(:instance_name => 'global').and_return(all_global)
 
     one_instance = double('one_instance', :all => [instance_stats])
-    expect(Flapjack::Data::Statistics).to receive(:intersect).
+    expect(Flapjack::Data::Statistic).to receive(:intersect).
       with(:instance_name => /^(?!(global)$)/).and_return(one_instance)
 
     expect(instance_stats).to receive(:instance_name).and_return('foo-app-01')
@@ -51,7 +51,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     expect(instance_stats).to receive(:action_events).and_return(0)
     expect(instance_stats).to receive(:invalid_events).and_return(0)
 
-    expect(instance_stats).to receive(:boot_time).and_return(Time.at(Time.now.to_i - 60))
+    expect(instance_stats).to receive(:created_at).and_return(Time.at(Time.now.to_i - 60))
 
     expect(redis).to receive(:dbsize).and_return(3)
     # expect(redis).to receive(:keys).with('executive_instance:*').and_return(["executive_instance:foo-app-01"])

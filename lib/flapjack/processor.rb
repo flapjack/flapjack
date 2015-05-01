@@ -13,7 +13,7 @@ require 'flapjack/filters/delays'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
 require 'flapjack/data/notification'
-require 'flapjack/data/statistics'
+require 'flapjack/data/statistic'
 
 require 'flapjack/exceptions'
 require 'flapjack/utility'
@@ -72,16 +72,16 @@ module Flapjack
         :ok_events => 0, :failure_events => 0, :action_events => 0,
         :invalid_events => 0}
 
-      @global_stats = Flapjack::Data::Statistics.
+      @global_stats = Flapjack::Data::Statistic.
         intersect(:instance_name => 'global').all.first
 
       if @global_stats.nil?
-        @global_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
+        @global_stats = Flapjack::Data::Statistic.new(empty_stats.merge(
           :instance_name => 'global'))
         @global_stats.save!
       end
 
-      @instance_stats = Flapjack::Data::Statistics.new(empty_stats.merge(
+      @instance_stats = Flapjack::Data::Statistic.new(empty_stats.merge(
         :instance_name => @instance_id))
       @instance_stats.save!
     end
@@ -141,7 +141,7 @@ module Flapjack
               multi.expire(archive, max_age)
             end
           end
-          Flapjack::Data::Statistics.lock do
+          Flapjack::Data::Statistic.lock do
             @global_stats.save!
             @instance_stats.save!
           end
@@ -177,7 +177,7 @@ module Flapjack
         cond = Flapjack::Data::Condition.for_name(event.state)
         if cond.nil?
           Flapjack.logger.error { "Invalid event received: #{event.inspect}" }
-          Flapjack::Data::Statistics.lock do
+          Flapjack::Data::Statistic.lock do
             @global_stats.all_events       += 1
             @global_stats.invalid_events   += 1
             @instance_stats.all_events     += 1
@@ -193,7 +193,7 @@ module Flapjack
       Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Entry,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
         Flapjack::Data::Tag, Flapjack::Data::Route, Flapjack::Data::Medium,
-        Flapjack::Data::Notification, Flapjack::Data::Statistics) do
+        Flapjack::Data::Notification, Flapjack::Data::Statistic) do
 
         check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
           Flapjack::Data::Check.new(:name => event.id)

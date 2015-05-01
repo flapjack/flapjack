@@ -25,15 +25,15 @@ describe Flapjack::Processor, :logger => true do
     expect(Flapjack::Filters::Acknowledgement).to receive(:new)
   end
 
-  let(:global_stats)   { double(Flapjack::Data::Statistics) }
-  let(:instance_stats) { double(Flapjack::Data::Statistics) }
+  let(:global_stats)   { double(Flapjack::Data::Statistic) }
+  let(:instance_stats) { double(Flapjack::Data::Statistic) }
 
   def expect_counters
     all_global = double('all_global', :all => [global_stats])
-    expect(Flapjack::Data::Statistics).to receive(:intersect).
+    expect(Flapjack::Data::Statistic).to receive(:intersect).
       with(:instance_name => 'global').and_return(all_global)
 
-    expect(Flapjack::Data::Statistics).to receive(:new).
+    expect(Flapjack::Data::Statistic).to receive(:new).
       with(:created_at => boot_time,
            :all_events => 0, :ok_events => 0,
            :failure_events => 0, :action_events => 0,
@@ -108,7 +108,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
-    expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
+    expect(Flapjack::Data::Statistic).to receive(:lock).and_yield
     expect(global_stats).to receive(:save!)
     expect(instance_stats).to receive(:save!).twice
     expect(instance_stats).to receive(:persisted?).and_return(true)
@@ -170,7 +170,7 @@ describe Flapjack::Processor, :logger => true do
     expect(redis).to receive(:brpop).with('events_actions').and_raise(Flapjack::PikeletStop)
     expect(redis).to receive(:quit)
 
-    expect(Flapjack::Data::Statistics).to receive(:lock).and_yield
+    expect(Flapjack::Data::Statistic).to receive(:lock).and_yield
     expect(global_stats).to receive(:save!)
     expect(instance_stats).to receive(:save!).twice
     expect(instance_stats).to receive(:persisted?).and_return(true)

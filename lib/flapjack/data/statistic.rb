@@ -10,10 +10,10 @@ require 'flapjack/gateways/jsonapi/data/associations'
 
 module Flapjack
   module Data
-    class Statistics
+    class Statistic
 
       # FIXME: add an administrative function to reset global or
-      # instance Statistics objects
+      # instance Statistic objects
 
       include Zermelo::Records::RedisRecord
       include ActiveModel::Serializers::JSON
@@ -45,20 +45,23 @@ module Flapjack
         self.name.demodulize.underscore
       end
 
-      swagger_schema :Statistics do
-        key :required, [:id, :type, :instance_name, :all_events, :ok_events,
-                        :failure_events, :action_events]
+      swagger_schema :Statistic do
+        key :required, [:id, :type, :instance_name, :created_at, :all_events,
+                        :ok_events, :failure_events, :action_events]
         property :id do
           key :type, :string
           key :format, :uuid
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Statistic.jsonapi_type.downcase]
         end
         property :instance_name do
           key :type, :string
         end
+        # property :created_at do
+        #   key :type, :timestamp
+        # end
         property :all_events do
           key :type, :integer
           key :minimum, 0
@@ -81,12 +84,14 @@ module Flapjack
         end
       end
 
+      def self.jsonapi_methods
+        [:get]
+      end
+
       def self.jsonapi_attributes
         {
-          :post  => [],
-          :get   => [:instance_name, :all_events, :ok_events,
+          :get   => [:instance_name, :created_at, :all_events, :ok_events,
                      :failure_events, :action_events, :invalid_events],
-          :patch => []
         }
       end
 

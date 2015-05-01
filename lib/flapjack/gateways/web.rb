@@ -12,7 +12,7 @@ require 'flapjack/redis_proxy'
 require 'flapjack/data/contact'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
-require 'flapjack/data/statistics'
+require 'flapjack/data/statistic'
 require 'flapjack/utility'
 
 module Flapjack
@@ -432,30 +432,37 @@ module Flapjack
       end
 
       def self_stats(time)
-        @fqdn    = `/bin/hostname -f`.chomp
-        @pid     = Process.pid
-        @dbsize              = Flapjack.redis.dbsize
+        @dbsize = Flapjack.redis.dbsize
 
-        @global_stats = Flapjack::Data::Statistics.intersect(:instance_name => 'global').all.first
+        @global_stats = Flapjack::Data::Statistic.intersect(:instance_name => 'global').all.first
 
-        @executive_instances = Flapjack::Data::Statistics.
+        @executive_instances = Flapjack::Data::Statistic.
           intersect(:instance_name => /^(?!(global)$)/).all.each_with_object({}) do |i, memo|
 
-          instance_id    = i.instance_name # match(/executive_instance:(.*)/)[1]
-          uptime         = Time.now - i.boot_time
+          boot_time = i.created_at
+
+          instance_id    = i.instance_name
+          uptime         = Time.now - boot_time
           uptime_string  = (ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2) || '0s')
-          # event_counters = Flapjack.redis.hgetall("event_counters:#{instance_id}")
-          # event_rates    = event_counters.inject({}) do |er, ec|
-          #   er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
-          #   er
-          # end
+
+          event_counters = {}
+          event_rates    = {}
+
+          ['all_events', 'ok_events', 'failure_events', 'action_events',
+           'invalid_events'].each do |evt|
+
+            count               = i.send(evt.to_sym)
+            event_counters[evt] = count
+            event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
+          end
+
           memo[instance_id] = {
+            'boot_time'      => boot_time,
             'uptime'         => uptime,
             'uptime_string'  => uptime_string,
-            'instance_stats' => i,
-            'event_rates'    => {}
+            'event_counters' => event_counters,
+            'event_rates'    => event_rates
           }
-
         end
 
         @events_queued  = Flapjack.redis.llen('events')

@@ -13,11 +13,11 @@ require 'flapjack/gateways/jsonapi/data/associations'
 
 module Flapjack
   module Data
-    class TimeRestrictions
+    class TimeRestriction
 
       include Swagger::Blocks
 
-      swagger_schema :TimeRestrictions do
+      swagger_schema :TimeRestriction do
 
       end
 

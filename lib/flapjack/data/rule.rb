@@ -9,7 +9,7 @@ require 'zermelo/records/redis_record'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
-require 'flapjack/data/time_restrictions'
+require 'flapjack/data/time_restriction'
 
 require 'flapjack/gateways/jsonapi/data/associations'
 
@@ -292,6 +292,10 @@ module Flapjack
             key :"$ref", :TagReference
           end
         end
+      end
+
+      def self.jsonapi_methods
+        [:post, :get, :patch, :delete]
       end
 
       def self.jsonapi_attributes

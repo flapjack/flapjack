@@ -10,11 +10,91 @@ module Flapjack
 
           extend ActiveSupport::Concern
 
-          # included do
-          # end
+          included do
+            swagger_root do
+              key :swagger, '2.0'
+              info do
+                key :version, '2.0.0'
+                key :title, 'Flapjack API'
+                key :description, ''
+                contact do
+                  key :name, ''
+                end
+                license do
+                  key :name, 'MIT'
+                end
+              end
+              key :host, 'localhost'
+              key :basePath, '/doc'
+              key :schemes, ['http']
+              key :consumes, [JSONAPI_MEDIA_TYPE]
+              key :produces, [JSONAPI_MEDIA_TYPE]
+            end
+
+            swagger_schema :jsonapi_Reference do
+              key :required, [:type, :id]
+              property :type do
+                key :type, :string
+                key :enum, Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.map(&:jsonapi_type)
+              end
+              property :id do
+                key :type, :string
+                key :format, :uuid
+              end
+            end
+
+            swagger_schema :jsonapi_Links do
+              key :required, [:self]
+              property :self do
+                key :type, :string
+                key :format, :url
+              end
+              property :first do
+                key :type, :string
+                key :format, :url
+              end
+              property :last do
+                key :type, :string
+                key :format, :url
+              end
+              property :next do
+                key :type, :string
+                key :format, :url
+              end
+              property :prev do
+                key :type, :string
+                key :format, :url
+              end
+            end
+
+            swagger_schema :jsonapi_Pagination do
+              key :required, [:page, :per_page, :total_pages, :total_count]
+              property :page do
+                key :type, :integer
+                key :format, :int64
+              end
+              property :per_page do
+                key :type, :integer
+                key :format, :int64
+              end
+              property :total_pages do
+                key :type, :integer
+                key :format, :int64
+              end
+              property :total_count do
+                key :type, :integer
+                key :format, :int64
+              end
+            end
+
+            swagger_schema :jsonapi_Meta do
+              property :pagination do
+                key :"$ref", :jsonapi_Pagination
+              end
+            end
+          end
 
           class_methods do
-
             def swagger_wrappers(resource, klass)
               model_type           = klass.name.demodulize
               model_type_plural    = model_type.pluralize
@@ -127,295 +207,7 @@ module Flapjack
                 end
               end
             end
-
-            def swagger_post(resource, klass)
-              single = resource.singularize
-
-              model_type = klass.name.demodulize
-              # model_type_create = "#{model_type}Create".to_sym
-
-              model_type_data = "jsonapi_data_#{model_type}".to_sym
-              model_type_create_data = "jsonapi_data_#{model_type}Create".to_sym
-
-              # TODO how to include plural for same route?
-
-              swagger_path "/#{resource}" do
-                operation :post do
-                  key :description, "Create a #{single}"
-                  key :operationId, "create_#{single}"
-                  key :consumes, [JSONAPI_MEDIA_TYPE]
-                  key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
-                  parameter do
-                    key :name, :body
-                    key :in, :body
-                    key :description, "#{single} to create"
-                    key :required, true
-                    schema do
-                      key :"$ref", model_type_create_data
-                    end
-                  end
-                  response 200 do
-                    key :description, "#{single} creation response"
-                    schema do
-                      key :'$ref', model_type_data
-                    end
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-            end
-
-            def swagger_get(resource, klass)
-              single = resource.singularize
-
-              model_type = klass.name.demodulize
-              model_type_plural = model_type.pluralize
-
-              model_type_data = "jsonapi_data_#{model_type}".to_sym
-              model_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
-
-              swagger_path "/#{resource}" do
-                operation :get do
-                  key :description, "Get all #{resource}"
-                  key :operationId, "get_all_#{resource}"
-                  key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
-                  parameter do
-                    key :name, :fields
-                    key :in, :query
-                    key :description, 'Comma-separated list of fields to return'
-                    key :required, false
-                    key :type, :string
-                  end
-                  parameter do
-                    key :name, :sort
-                    key :in, :query
-                    key :description, ''
-                    key :required, false
-                    key :type, :string
-                  end
-                  parameter do
-                    key :name, :filter
-                    key :in, :query
-                    key :description, ''
-                    key :required, false
-                    key :type, :array
-                    key :collectionFormat, :multi
-                    items do
-                      key :type, :string
-                      key :format, :filter
-                    end
-                  end
-                  parameter do
-                    key :name, :include
-                    key :in, :query
-                    key :description, ''
-                    key :required, false
-                    key :type, :string
-                  end
-                  parameter do
-                    key :name, :page
-                    key :in, :query
-                    key :description, 'Page number'
-                    key :required, false
-                    key :type, :integer
-                  end
-                  parameter do
-                    key :name, :per_page
-                    key :in, :query
-                    key :description, "Number of #{resource} per page"
-                    key :required, false
-                    key :type, :integer
-                  end
-                  response 200 do
-                    key :description, "GET #{resource} response"
-                    schema do
-                      key :'$ref', model_type_data_plural
-                    end
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-
-              swagger_path "/#{resource}/{#{single}_id}" do
-                operation :get do
-                  key :description, "Get a #{single}"
-                  key :operationId, "get_#{single}"
-                  key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
-                  parameter do
-                    key :name, "#{single}_id".to_sym
-                    key :in, :path
-                    key :description, "Id of a #{single}"
-                    key :required, true
-                    key :type, :string
-                    key :format, :uuid
-                  end
-                  parameter do
-                    key :name, :fields
-                    key :in, :query
-                    key :description, 'Comma-separated list of fields to return'
-                    key :required, false
-                    key :type, :string
-                  end
-                  response 200 do
-                    key :description, "GET #{single} response"
-                    schema do
-                      key :'$ref', model_type_data
-                    end
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-            end
-
-            def swagger_patch(resource, klass)
-              single = resource.singularize
-
-              model_type = klass.name.demodulize
-              model_type_plural = model_type.pluralize
-
-              model_type_data = "jsonapi_data_#{model_type}".to_sym
-              model_type_update_data = "jsonapi_data_#{model_type}Update".to_sym
-
-              model_type_update_data_plural = "jsonapi_data_#{model_type_plural}Update".to_sym
-
-              swagger_path "/#{resource}/{#{single}_id}" do
-                operation :patch do
-                  key :description, "Update a #{single}"
-                  key :operationId, "update_#{single}"
-                  key :consumes, [JSONAPI_MEDIA_TYPE]
-                  parameter do
-                    key :name, "#{single}_id".to_sym
-                    key :in, :path
-                    key :description, "Id of a #{single}"
-                    key :required, true
-                    key :type, :string
-                    key :format, :uuid
-                  end
-                  parameter do
-                    key :name, :body
-                    key :in, :body
-                    key :description, "#{model_type} to update"
-                    key :required, true
-                    schema do
-                      key :"$ref", model_type_update_data
-                    end
-                  end
-                  response 204 do
-                    key :description, "#{model_type} update response"
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-
-              swagger_path "/#{resource}" do
-                operation :patch do
-                  key :description, "Update multiple #{resource}"
-                  key :operationId, "update_#{resource}"
-                  key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
-                  parameter do
-                    key :name, :body
-                    key :in, :body
-                    key :description, "#{resource} to update"
-                    key :required, true
-                    schema do
-                      key :"$ref", model_type_update_data_plural
-                    end
-                  end
-                  response 204 do
-                    key :description, "#{model_type} update response"
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-
-            end
-
-            def swagger_delete(resource, klass)
-              single = resource.singularize
-
-              model_type = klass.name.demodulize
-              model_type_plural = model_type.pluralize
-              model_type_reference_data_plural = "jsonapi_data_#{model_type_plural}Reference".to_sym
-
-              swagger_path "/#{resource}/{#{single}_id}" do
-                operation :delete do
-                  key :description, "Delete a #{single}"
-                  key :operationId, "delete_#{single}"
-                  key :consumes, [JSONAPI_MEDIA_TYPE]
-                  parameter do
-                    key :name, "#{single}_id".to_sym
-                    key :in, :path
-                    key :description, "Id of a #{single}"
-                    key :required, true
-                    key :type, :string
-                    key :format, :uuid
-                  end
-                  response 204 do
-                    key :description, "#{model_type} deletion response"
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-
-              swagger_path "/#{resource}" do
-                operation :delete do
-                  key :description, "Delete #{resource}"
-                  key :operationId, "delete_#{resource}"
-                  key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
-                  parameter do
-                    key :name, :body
-                    key :in, :body
-                    key :description, "#{resource} to delete"
-                    key :required, true
-                    schema do
-                      key :'$ref', model_type_reference_data_plural
-                    end
-                  end
-                  response 204 do
-                    key :description, "#{resource} deletion response"
-                  end
-                  # response :default do
-                  #   key :description, 'unexpected error'
-                  #   schema do
-                  #     key :'$ref', :ErrorModel
-                  #   end
-                  # end
-                end
-              end
-            end
-
           end
-
         end
       end
     end

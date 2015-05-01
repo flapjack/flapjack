@@ -407,70 +407,38 @@ module Flapjack
     #     ]
     #   end
 
-      # # TODO deleting
-      # get '/self_stats.json' do
-      #   time = Time.now
-
-      #   self_stats(time)
-      #   check_stats
-      #   Flapjack.dump_json({
-      #     'events_queued'       => @events_queued,
-      #     'enabled_checks'      => @count_enabled_checks,
-      #     'failing_checks'      => @count_failing_checks,
-      #     'processed_events' => {
-      #       'all_time' => {
-      #         'total'   => @event_counters['all'].to_i,
-      #         'ok'      => @event_counters['ok'].to_i,
-      #         'failure' => @event_counters['failure'].to_i,
-      #         'action'  => @event_counters['action'].to_i,
-      #       }
-      #     },
-      #     'check_freshness'     => @current_checks_ages,
-      #     'total_keys'          => @dbsize,
-      #     'uptime'              => @uptime_string,
-      #     'boottime'            => @boot_time,
-      #     'current_time'        => Time.now,
-      #     'executive_instances' => @executive_instances,
-      #   })
-      # end
-
-
       def self_stats(time)
-        metrics = Flapjack::Diner.metrics
+        @metrics   = Flapjack::Diner.metrics
+        statistics = Flapjack::Diner.statistics
 
-        # dbsize/total_keys is
+        time = Time.now
 
-        [:fqdn, :pid, :total_keys, :processed_events_all_time,
-         :event_queue_length, :check_freshness, :checks].each do |metric|
+        global_stats = statistics.detect {|s| 'global'.eql?(s['instance_name'])}
 
-          instance_variable_set("@#{metric}", metrics[metric])
+        @executive_instances = (statistics - global_stats).each_with_object({}) do |stats, memo|
+          uptime = time - s['created_at']
+          uptime_string = ChronicDuration.output(uptime, :format => :short,
+                            :keep_zero => true, :units => 2) || '0s'
+
+          event_counters = {}
+          event_rates    = {}
+
+          ['all_events', 'ok_events', 'failure_events', 'action_events',
+           'invalid_events'].each do |evt|
+
+            count               = stats[evt]
+            event_counters[evt] = count
+            event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
+          end
+
+          memo[s['instance_name']] = {
+            'boot_time'      => s['created_at'],
+            'uptime'         => uptime,
+            'uptime_string'  => uptime_string,
+            'event_counters' => event_counters,
+            'event_rates'    => event_rates
+          }
         end
-
-        # @fqdn    = `/bin/hostname -f`.chomp
-        # @pid     = Process.pid
-        # @dbsize              = Flapjack.redis.dbsize
-        # @executive_instances = Flapjack.redis.keys("executive_instance:*").inject({}) do |memo, i|
-        #   instance_id    = i.match(/executive_instance:(.*)/)[1]
-        #   boot_time      = Flapjack.redis.hget(i, 'boot_time').to_i
-        #   uptime         = Time.now.to_i - boot_time
-        #   uptime_string  = (ChronicDuration.output(uptime, :format => :short, :keep_zero => true, :units => 2) || '0s')
-        #   event_counters = Flapjack.redis.hgetall("event_counters:#{instance_id}")
-        #   event_rates    = event_counters.inject({}) do |er, ec|
-        #     er[ec[0]] = uptime && uptime > 0 ? (ec[1].to_f / uptime).round : nil
-        #     er
-        #   end
-        #   memo[instance_id] = {
-        #     'boot_time'      => boot_time,
-        #     'uptime'         => uptime,
-        #     'uptime_string'  => uptime_string,
-        #     'event_counters' => event_counters,
-        #     'event_rates'    => event_rates
-        #   }
-        #   memo
-        # end
-        # @event_counters = Flapjack.redis.hgetall('event_counters')
-        # @events_queued  = Flapjack.redis.llen('events')
-        # @current_checks_ages = Flapjack::Data::Check.split_by_freshness([0, 60, 300, 900, 3600], :counts => true)
       end
 
     #   def failing_checks

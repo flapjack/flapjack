@@ -94,7 +94,7 @@
           instance_id, details = ei
           hostname, pid  = instance_id.split(':')
           started        = details['uptime_string']
-          # event_counters = details['event_counters']
+          event_counters = details['event_counters']
           instance_stats = details['instance_stats']
           event_rates    = details['event_rates']
          %>
@@ -104,11 +104,11 @@
           <td><%= h started %></td>
           <td>
             <ul>
-              <li>all: <%= h instance_stats.all_events %> (<%= h event_rates['all'] %> events/s)</li>
-              <li>ok: <%= h instance_stats.ok_events %> (<%= h event_rates['ok'] %> events/s)</li>
-              <li>failure: <%= h instance_stats.failure_events %> (<%= h event_rates['failure'] %> events/s)</li>
-              <li>action: <%= h instance_stats.action_events %> (<%= h event_rates['action'] %> events/s)</li>
-              <li>invalid: <%= h instance_stats.invalid_events %> (<%= h event_rates['invalid'] %> events/s)</li>
+              <li>all: <%= h event_counters['all_events'] %> (<%= h event_rates['all_events'] %> events/s)</li>
+              <li>ok: <%= h event_counters['ok_events'] %> (<%= h event_rates['ok_events'] %> events/s)</li>
+              <li>failure: <%= h event_counters['failure_events'] %> (<%= h event_rates['failure_events'] %> events/s)</li>
+              <li>action: <%= h event_counters['action_events'] %> (<%= h event_rates['action_events'] %> events/s)</li>
+              <li>invalid: <%= h event_counters['invalid_events'] %> (<%= h event_rates['invalid_events'] %> events/s)</li>
             </ul>
           </td>
         </tr>
