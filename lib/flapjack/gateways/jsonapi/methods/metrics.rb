@@ -20,21 +20,20 @@ module Flapjack
             # app.helpers Flapjack::Gateways::JSONAPI::Methods::Metrics::Helpers
 
             app.get %r{^/metrics$} do
-              fields = params[:fields].nil?  ? nil : params[:fields].split(',')
+              fields = params[:fields]
               whitelist = Flapjack::Data::Metrics.jsonapi_attributes[:get]
 
               jsonapi_fields = if fields.nil?
                 whitelist
               else
-                Set.new(fields).keep_if {|f| whitelist.include?(f) }.to_a
+                Set.new(fields).keep_if {|f| whitelist.include?(f.to_sym) }.to_a
               end
 
               metrics = Flapjack::Data::Metrics.new
-              result = Hash[ *(jsonapi_fields.collect{|f| [f, metrics.send(f.to_sym)]}) ]
-              Flapjack.dump_json(result)
+              result = Hash[ *(jsonapi_fields.collect{|f| [f, metrics.send(f.to_sym)]}.flatten) ]
+              Flapjack.dump_json(:data => result)
             end
           end
-
         end
       end
     end

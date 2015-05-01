@@ -23,7 +23,7 @@ module Flapjack
       end
 
       def processed_events
-        global_stats = Flapjack::Data::Statistics.
+        global_stats = Flapjack::Data::Statistic.
           intersect(:instance_name => 'global').all.first
 
         [:all_events, :ok_events, :failure_events, :action_events,

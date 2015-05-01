@@ -172,4 +172,16 @@ module FixtureData
     }
   end
 
+  def global_statistics_data
+    @global_statistics_data ||= {
+      :instance_name  => 'global',
+      :created_at     => time.iso8601,
+      :all_events     => 0,
+      :ok_events      => 0,
+      :failure_events => 0,
+      :action_events  => 0,
+      :invalid_events => 0
+    }
+  end
+
 end
