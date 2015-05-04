@@ -20,7 +20,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(:id => [email_data[:id]]).and_return(empty_ids)
 
     expect(medium).to receive(:invalid?).and_return(false)
-    expect(medium).to receive(:save).and_return(true)
+    expect(medium).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
@@ -53,7 +53,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium).to receive(:errors).and_return(errors)
 
     expect(medium).to receive(:invalid?).and_return(true)
-    expect(medium).not_to receive(:save)
+    expect(medium).not_to receive(:save!)
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
@@ -132,7 +132,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     expect(medium).to receive(:address=).with('12345')
     expect(medium).to receive(:invalid?).and_return(false)
-    expect(medium).to receive(:save).and_return(true)
+    expect(medium).to receive(:save!).and_return(true)
 
     patch "/media/#{medium.id}",
       Flapjack.dump_json(:data => {:id => medium.id, :type => 'medium', :address => '12345'}),
@@ -146,11 +146,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     expect(medium).to receive(:address=).with('12345')
     expect(medium).to receive(:invalid?).and_return(false)
-    expect(medium).to receive(:save).and_return(true)
+    expect(medium).to receive(:save!).and_return(true)
 
     expect(medium_2).to receive(:interval=).with(120)
     expect(medium_2).to receive(:invalid?).and_return(false)
-    expect(medium_2).to receive(:save).and_return(true)
+    expect(medium_2).to receive(:save!).and_return(true)
 
     patch "/media",
       Flapjack.dump_json(:data => [

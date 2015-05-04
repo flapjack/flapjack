@@ -18,7 +18,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       with(:id => [contact_data[:id]]).and_return(empty_ids)
 
     expect(contact).to receive(:invalid?).and_return(false)
-    expect(contact).to receive(:save).and_return(true)
+    expect(contact).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
@@ -51,7 +51,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:errors).and_return(errors)
 
     expect(contact).to receive(:invalid?).and_return(true)
-    expect(contact).not_to receive(:save)
+    expect(contact).not_to receive(:save!)
     expect(Flapjack::Data::Contact).to receive(:new).with(contact_data).
       and_return(contact)
 
@@ -328,7 +328,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(contact).to receive(:name=).with('Elias Ericsson')
     expect(contact).to receive(:invalid?).and_return(false)
-    expect(contact).to receive(:save).and_return(true)
+    expect(contact).to receive(:save!).and_return(true)
 
     patch "/contacts/#{contact.id}",
       Flapjack.dump_json(:data => {:id => contact.id,

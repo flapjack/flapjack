@@ -209,6 +209,16 @@ module Flapjack
       #   # TODO
       # end
 
+      error Zermelo::Records::Errors::RecordInvalid do
+        e = env['sinatra.error']
+        halt err(403, *e.record.errors.full_messages)
+      end
+
+      error Zermelo::Records::Errors::RecordNotSaved do
+        e = env['sinatra.error']
+        halt err(403, *e.record.errors.full_messages)
+      end
+
       error Zermelo::Records::Errors::RecordNotFound do
         e = env['sinatra.error']
         type = e.klass.name.split('::').last

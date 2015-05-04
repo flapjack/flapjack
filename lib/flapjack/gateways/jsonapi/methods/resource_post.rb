@@ -130,7 +130,7 @@ module Flapjack
                     end
 
                     links_by_resource.keys.each do |r|
-                      r.save
+                      r.save!
                       rl = resource_links[r.object_id]
                       next if rl.nil?
                       rl.each_pair do |assoc, value|

@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(:id => [check_data[:id]]).and_return(empty_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
@@ -56,12 +56,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(:id => [check_data[:id], check_2_data[:id]]).and_return(empty_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
     expect(check_2).to receive(:invalid?).and_return(false)
-    expect(check_2).to receive(:save).and_return(true)
+    expect(check_2).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).with(check_2_data).
       and_return(check_2)
 
@@ -102,7 +102,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(:id => [check_data[:id]]).and_return(empty_ids)
 
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Check).to receive(:new).with(check_data).
       and_return(check)
 
@@ -392,7 +392,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:enabled=).with(false)
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
@@ -408,11 +408,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:enabled=).with(false)
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
 
     expect(check_2).to receive(:enabled=).with(false)
     expect(check_2).to receive(:invalid?).and_return(false)
-    expect(check_2).to receive(:save).and_return(true)
+    expect(check_2).to receive(:save!).and_return(true)
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
@@ -428,7 +428,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(check.id).and_return(check)
 
     expect(check).to receive(:invalid?).and_return(false)
-    expect(check).to receive(:save).and_return(true)
+    expect(check).to receive(:save!).and_return(true)
 
     tags = double('tags', :ids => [])
     expect(tags).to receive(:add).with(tag)

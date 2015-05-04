@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       and_return(empty_ids)
 
     expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
-    expect(unscheduled_maintenance).to receive(:save).and_return(true)
+    expect(unscheduled_maintenance).to receive(:save!).and_return(true)
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:new).with(unscheduled_maintenance_data).
       and_return(unscheduled_maintenance)
 
@@ -134,7 +134,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
     expect(unscheduled_maintenance).to receive(:end_time=).with(end_time.to_i)
     expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
-    expect(unscheduled_maintenance).to receive(:save).and_return(true)
+    expect(unscheduled_maintenance).to receive(:save!).and_return(true)
 
     patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}",
       Flapjack.dump_json(:data => {:id => unscheduled_maintenance.id,

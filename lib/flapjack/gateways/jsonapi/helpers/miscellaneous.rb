@@ -138,11 +138,6 @@ module Flapjack
             assoc_type
           end
 
-          def check_errors_on_save(record)
-            return if record.save
-            halt err(403, *record.errors.full_messages)
-          end
-
           # NB: casts to UTC before converting to a timestamp
           def validate_and_parsetime(value)
             return unless value

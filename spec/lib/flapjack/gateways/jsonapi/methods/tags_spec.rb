@@ -25,7 +25,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       with(:name => [tag_data[:name]]).and_return(empty_ids)
 
     expect(tag).to receive(:invalid?).and_return(false)
-    expect(tag).to receive(:save).and_return(true)
+    expect(tag).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Tag).to receive(:new).with(tag_data_with_id).
       and_return(tag)
 
@@ -176,7 +176,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       with(check.id).and_return([check])
 
     expect(tag).to receive(:invalid?).and_return(false)
-    expect(tag).to receive(:save).and_return(true)
+    expect(tag).to receive(:save!).and_return(true)
 
     checks = double('checks', :ids => [])
     expect(checks).to receive(:add).with(check)

@@ -23,7 +23,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id => [rule_data[:id]]).and_return(empty_ids)
 
     expect(rule).to receive(:invalid?).and_return(false)
-    expect(rule).to receive(:save).and_return(true)
+    expect(rule).to receive(:save!).and_return(true)
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:errors).and_return(errors)
 
     expect(rule).to receive(:invalid?).and_return(true)
-    expect(rule).not_to receive(:save)
+    expect(rule).not_to receive(:save!)
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
@@ -284,7 +284,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       and_return(contact)
 
     expect(rule).to receive(:invalid?).and_return(false)
-    expect(rule).to receive(:save).and_return(true)
+    expect(rule).to receive(:save!).and_return(true)
 
     expect(rule).to receive(:contact=).with(contact)
 
@@ -303,10 +303,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       twice.and_return(contact)
 
     expect(rule).to receive(:invalid?).and_return(false)
-    expect(rule).to receive(:save).and_return(true)
+    expect(rule).to receive(:save!).and_return(true)
 
     expect(rule_2).to receive(:invalid?).and_return(false)
-    expect(rule_2).to receive(:save).and_return(true)
+    expect(rule_2).to receive(:save!).and_return(true)
 
     expect(rule).to receive(:contact=).with(contact)
     expect(rule_2).to receive(:contact=).with(contact)

@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_return(empty_ids)
 
     expect(scheduled_maintenance).to receive(:invalid?).and_return(false)
-    expect(scheduled_maintenance).to receive(:save).and_return(true)
+    expect(scheduled_maintenance).to receive(:save!).and_return(true)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
       and_return(scheduled_maintenance)
 
@@ -56,7 +56,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
     bad_data = scheduled_maintenance_data.reject {|k| k.eql?(:start_time) }
 
     expect(scheduled_maintenance).to receive(:invalid?).and_return(true)
-    expect(scheduled_maintenance).not_to receive(:save)
+    expect(scheduled_maintenance).not_to receive(:save!)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(bad_data).
       and_return(scheduled_maintenance)
 
