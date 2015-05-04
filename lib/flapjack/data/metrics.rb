@@ -61,6 +61,7 @@ module Flapjack
       def check_counts
         {
           :all     => Flapjack::Data::Check.count,
+          :enabled => Flapjack::Data::Check.intersect(:enabled => true).count,
           :failing => Flapjack::Data::Check.intersect(:failing => true).count
         }
       end

@@ -7,6 +7,658 @@
   },
   "interactions": [
     {
+      "description": "a time-limited GET request for a scheduled_maintenance report on two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            },
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 2
+            }
+          },
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/checks?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a scheduled_maintenance report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/tags/database"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/tags/database"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a outage report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "outage_report",
+            "outages": [
+
+            ]
+          },
+          "links": {
+            "self": "http://example.org/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time-limited GET request for a downtime report on two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            },
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 2
+            }
+          },
+          "links": {
+            "self": "http://example.org/downtime_reports/checks?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a outage report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/outage_reports/tags/database"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "outage_report",
+              "outages": [
+
+              ]
+            }
+          ],
+          "links": {
+            "self": "http://example.org/outage_reports/tags/database"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a downtime report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/tags/database",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            }
+          ],
+          "links": {
+            "self": "http://example.org/downtime_reports/tags/database?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a downtime report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
+          "links": {
+            "self": "http://example.org/downtime_reports/checks?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a unscheduled_maintenance report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/unscheduled_maintenance_reports/tags/database"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "links": {
+            "self": "http://example.org/unscheduled_maintenance_reports/tags/database"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a outage report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "outage_report",
+            "outages": [
+
+            ]
+          },
+          "links": {
+            "self": "http://example.org/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a downtime report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "total_seconds": {
+            },
+            "percentages": {
+            },
+            "downtime": [
+
+            ],
+            "type": "downtime_report"
+          },
+          "links": {
+            "self": "http://example.org/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a scheduled_maintenance report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "query": "start_time=2015-05-04T15%3A24%3A46%2B09%3A30&end_time=2015-05-05T03%3A24%3A46%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "scheduled_maintenance_report",
+            "scheduled_maintenances": [
+
+            ]
+          },
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-05T03%3A24%3A46%2B09%3A30&start_time=2015-05-04T15%3A24%3A46%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a downtime report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
+          "links": {
+            "self": "http://example.org/downtime_reports/checks"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a outage report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/outage_reports/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "outage_report",
+              "outages": [
+
+              ]
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
+          "links": {
+            "self": "http://example.org/outage_reports/checks"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a scheduled_maintenance report on two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/checks",
+        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            },
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 2
+            }
+          },
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/checks?filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a scheduled_maintenance report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/checks?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a unscheduled_maintenance report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/unscheduled_maintenance_reports/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
+          "links": {
+            "self": "http://example.org/unscheduled_maintenance_reports/checks"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a scheduled_maintenance report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/scheduled_maintenance_reports/tags/database",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance_report",
+              "scheduled_maintenances": [
+
+              ]
+            }
+          ],
+          "links": {
+            "self": "http://example.org/scheduled_maintenance_reports/tags/database?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a downtime report on a single tag",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/tags/database"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "total_seconds": {
+              },
+              "percentages": {
+              },
+              "downtime": [
+
+              ],
+              "type": "downtime_report"
+            }
+          ],
+          "links": {
+            "self": "http://example.org/downtime_reports/tags/database"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for a unscheduled_maintenance report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "unscheduled_maintenance_report",
+            "unscheduled_maintenances": [
+
+            ]
+          },
+          "links": {
+            "self": "http://example.org/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a downtime report on a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "total_seconds": {
+            },
+            "percentages": {
+            },
+            "downtime": [
+
+            ],
+            "type": "downtime_report"
+          },
+          "links": {
+            "self": "http://example.org/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
+          }
+        }
+      }
+    },
+    {
       "description": "a GET request for a outage report on two checks",
       "provider_state": "two checks exist",
       "request": {
@@ -49,11 +701,12 @@
       }
     },
     {
-      "description": "a GET request for a downtime report on a single tag",
-      "provider_state": "a check with a tag exists",
+      "description": "a GET request for a unscheduled_maintenance report on two checks",
+      "provider_state": "two checks exist",
       "request": {
         "method": "get",
-        "path": "/downtime_reports/tags/database"
+        "path": "/unscheduled_maintenance_reports/checks",
+        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
       },
       "response": {
         "status": 200,
@@ -63,29 +716,39 @@
         "body": {
           "data": [
             {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
 
-              ],
-              "type": "downtime_report"
+              ]
+            },
+            {
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
+
+              ]
             }
           ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 2
+            }
+          },
           "links": {
-            "self": "http://example.org/downtime_reports/tags/database"
+            "self": "http://example.org/unscheduled_maintenance_reports/checks?filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
           }
         }
       }
     },
     {
-      "description": "a time limited GET request for a downtime report on a single tag",
-      "provider_state": "a check with a tag exists",
+      "description": "a time limited GET request for a unscheduled_maintenance report on a single check",
+      "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/downtime_reports/tags/database",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
+        "path": "/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
       },
       "response": {
         "status": 200,
@@ -93,20 +756,14 @@
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": [
-            {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
+          "data": {
+            "type": "unscheduled_maintenance_report",
+            "unscheduled_maintenances": [
 
-              ],
-              "type": "downtime_report"
-            }
-          ],
+            ]
+          },
           "links": {
-            "self": "http://example.org/downtime_reports/tags/database?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
+            "self": "http://example.org/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
@@ -117,7 +774,7 @@
       "request": {
         "method": "get",
         "path": "/outage_reports/tags/database",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
       },
       "response": {
         "status": 200,
@@ -134,18 +791,18 @@
             }
           ],
           "links": {
-            "self": "http://example.org/outage_reports/tags/database?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
+            "self": "http://example.org/outage_reports/tags/database?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a time-limited GET request for a downtime report on two checks",
+      "description": "a time-limited GET request for a unscheduled_maintenance report on two checks",
       "provider_state": "two checks exist",
       "request": {
         "method": "get",
-        "path": "/downtime_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+        "path": "/unscheduled_maintenance_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
       },
       "response": {
         "status": 200,
@@ -155,24 +812,16 @@
         "body": {
           "data": [
             {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
 
-              ],
-              "type": "downtime_report"
+              ]
             },
             {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
 
-              ],
-              "type": "downtime_report"
+              ]
             }
           ],
           "meta": {
@@ -184,17 +833,18 @@
             }
           },
           "links": {
-            "self": "http://example.org/downtime_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
+            "self": "http://example.org/unscheduled_maintenance_reports/checks?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a GET request for a unscheduled_maintenance report on all checks",
+      "description": "a time limited GET request for a unscheduled_maintenance report on all checks",
       "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks"
+        "path": "/unscheduled_maintenance_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
       },
       "response": {
         "status": 200,
@@ -219,53 +869,17 @@
             }
           },
           "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks"
+            "self": "http://example.org/unscheduled_maintenance_reports/checks?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a time limited GET request for a scheduled_maintenance report on all checks",
-      "provider_state": "a check exists",
+      "description": "a GET request for a status report on a single tag",
+      "provider_state": "a check with a tag exists",
       "request": {
         "method": "get",
-        "path": "/scheduled_maintenance_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 1
-            }
-          },
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a status report on all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/status_reports/checks"
+        "path": "/status_reports/tags/database"
       },
       "response": {
         "status": 200,
@@ -292,26 +906,19 @@
               "last_acknowledgement_notification": null
             }
           ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 1
-            }
-          },
           "links": {
-            "self": "http://example.org/status_reports/checks"
+            "self": "http://example.org/status_reports/tags/database"
           }
         }
       }
     },
     {
-      "description": "a GET request for a unscheduled_maintenance report on a single check",
-      "provider_state": "a check exists",
+      "description": "a time limited GET request for a unscheduled_maintenance report on a single tag",
+      "provider_state": "a check with a tag exists",
       "request": {
         "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "path": "/unscheduled_maintenance_reports/tags/database",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
       },
       "response": {
         "status": 200,
@@ -319,25 +926,27 @@
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": {
-            "type": "unscheduled_maintenance_report",
-            "unscheduled_maintenances": [
+          "data": [
+            {
+              "type": "unscheduled_maintenance_report",
+              "unscheduled_maintenances": [
 
-            ]
-          },
+              ]
+            }
+          ],
           "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+            "self": "http://example.org/unscheduled_maintenance_reports/tags/database?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a time limited GET request for a outage report on all checks",
-      "provider_state": "a check exists",
+      "description": "a time-limited GET request for a outage report on two checks",
+      "provider_state": "two checks exist",
       "request": {
         "method": "get",
         "path": "/outage_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
       },
       "response": {
         "status": 200,
@@ -351,6 +960,12 @@
               "outages": [
 
               ]
+            },
+            {
+              "type": "outage_report",
+              "outages": [
+
+              ]
             }
           ],
           "meta": {
@@ -358,21 +973,21 @@
               "page": 1,
               "per_page": 20,
               "total_pages": 1,
-              "total_count": 1
+              "total_count": 2
             }
           },
           "links": {
-            "self": "http://example.org/outage_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
+            "self": "http://example.org/outage_reports/checks?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a GET request for a outage report on a single check",
+      "description": "a GET request for a scheduled_maintenance report on a single check",
       "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "path": "/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
       },
       "response": {
         "status": 200,
@@ -381,49 +996,13 @@
         },
         "body": {
           "data": {
-            "type": "outage_report",
-            "outages": [
+            "type": "scheduled_maintenance_report",
+            "scheduled_maintenances": [
 
             ]
           },
           "links": {
-            "self": "http://example.org/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a status report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/status_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "name": "www.example.com:SSH",
-            "type": "status_report",
-            "condition": null,
-            "enabled": true,
-            "summary": null,
-            "details": null,
-            "in_unscheduled_maintenance": false,
-            "in_scheduled_maintenance": false,
-            "initial_failure_delay": null,
-            "repeat_failure_delay": null,
-            "last_update": null,
-            "last_change": null,
-            "last_problem_notification": null,
-            "last_recovery_notification": null,
-            "last_acknowledgement_notification": null
-          },
-          "links": {
-            "self": "http://example.org/status_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+            "self": "http://example.org/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
           }
         }
       }
@@ -493,222 +1072,6 @@
       }
     },
     {
-      "description": "a time limited GET request for a scheduled_maintenance report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "scheduled_maintenance_report",
-            "scheduled_maintenances": [
-
-            ]
-          },
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a outage report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "outage_report",
-            "outages": [
-
-            ]
-          },
-          "links": {
-            "self": "http://example.org/outage_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time-limited GET request for a outage report on two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/outage_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "outage_report",
-              "outages": [
-
-              ]
-            },
-            {
-              "type": "outage_report",
-              "outages": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 2
-            }
-          },
-          "links": {
-            "self": "http://example.org/outage_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a scheduled_maintenance report on a single tag",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/tags/database",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/tags/database?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a scheduled_maintenance report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "scheduled_maintenance_report",
-            "scheduled_maintenances": [
-
-            ]
-          },
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a unscheduled_maintenance report on two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks",
-        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            },
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 2
-            }
-          },
-          "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks?filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a scheduled_maintenance report on a single tag",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/tags/database"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/tags/database"
-          }
-        }
-      }
-    },
-    {
       "description": "a GET request for a scheduled_maintenance report on all checks",
       "provider_state": "a check exists",
       "request": {
@@ -739,337 +1102,6 @@
           },
           "links": {
             "self": "http://example.org/scheduled_maintenance_reports/checks"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a unscheduled_maintenance report on a single tag",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/unscheduled_maintenance_reports/tags/database",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/tags/database?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a status report on a single tag",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/status_reports/tags/database"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "name": "www.example.com:SSH",
-              "type": "status_report",
-              "condition": null,
-              "enabled": true,
-              "summary": null,
-              "details": null,
-              "in_unscheduled_maintenance": false,
-              "in_scheduled_maintenance": false,
-              "initial_failure_delay": null,
-              "repeat_failure_delay": null,
-              "last_update": null,
-              "last_change": null,
-              "last_problem_notification": null,
-              "last_recovery_notification": null,
-              "last_acknowledgement_notification": null
-            }
-          ],
-          "links": {
-            "self": "http://example.org/status_reports/tags/database"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a outage report on a single tag",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/outage_reports/tags/database"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "outage_report",
-              "outages": [
-
-              ]
-            }
-          ],
-          "links": {
-            "self": "http://example.org/outage_reports/tags/database"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a outage report on all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/outage_reports/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "outage_report",
-              "outages": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 1
-            }
-          },
-          "links": {
-            "self": "http://example.org/outage_reports/checks"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a downtime report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "total_seconds": {
-            },
-            "percentages": {
-            },
-            "downtime": [
-
-            ],
-            "type": "downtime_report"
-          },
-          "links": {
-            "self": "http://example.org/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a downtime report on all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/downtime_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
-
-              ],
-              "type": "downtime_report"
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 1
-            }
-          },
-          "links": {
-            "self": "http://example.org/downtime_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time-limited GET request for a scheduled_maintenance report on two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            },
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 2
-            }
-          },
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a unscheduled_maintenance report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "unscheduled_maintenance_report",
-            "unscheduled_maintenances": [
-
-            ]
-          },
-          "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a unscheduled_maintenance report on all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 1
-            }
-          },
-          "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a time limited GET request for a downtime report on a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "total_seconds": {
-            },
-            "percentages": {
-            },
-            "downtime": [
-
-            ],
-            "type": "downtime_report"
-          },
-          "links": {
-            "self": "http://example.org/downtime_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
           }
         }
       }
@@ -1125,95 +1157,11 @@
       }
     },
     {
-      "description": "a time-limited GET request for a unscheduled_maintenance report on two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/unscheduled_maintenance_reports/checks",
-        "query": "start_time=2015-05-01T17%3A18%3A50%2B09%3A30&end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            },
-            {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 2
-            }
-          },
-          "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/checks?end_time=2015-05-02T05%3A18%3A50%2B09%3A30&filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514&start_time=2015-05-01T17%3A18%3A50%2B09%3A30"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a scheduled_maintenance report on two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/scheduled_maintenance_reports/checks",
-        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            },
-            {
-              "type": "scheduled_maintenance_report",
-              "scheduled_maintenances": [
-
-              ]
-            }
-          ],
-          "meta": {
-            "pagination": {
-              "page": 1,
-              "per_page": 20,
-              "total_pages": 1,
-              "total_count": 2
-            }
-          },
-          "links": {
-            "self": "http://example.org/scheduled_maintenance_reports/checks?filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a downtime report on all checks",
+      "description": "a GET request for a status report on all checks",
       "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/downtime_reports/checks"
+        "path": "/status_reports/checks"
       },
       "response": {
         "status": 200,
@@ -1223,14 +1171,21 @@
         "body": {
           "data": [
             {
-              "total_seconds": {
-              },
-              "percentages": {
-              },
-              "downtime": [
-
-              ],
-              "type": "downtime_report"
+              "name": "www.example.com:SSH",
+              "type": "status_report",
+              "condition": null,
+              "enabled": true,
+              "summary": null,
+              "details": null,
+              "in_unscheduled_maintenance": false,
+              "in_scheduled_maintenance": false,
+              "initial_failure_delay": null,
+              "repeat_failure_delay": null,
+              "last_update": null,
+              "last_change": null,
+              "last_problem_notification": null,
+              "last_recovery_notification": null,
+              "last_acknowledgement_notification": null
             }
           ],
           "meta": {
@@ -1242,17 +1197,54 @@
             }
           },
           "links": {
-            "self": "http://example.org/downtime_reports/checks"
+            "self": "http://example.org/status_reports/checks"
           }
         }
       }
     },
     {
-      "description": "a GET request for a unscheduled_maintenance report on a single tag",
-      "provider_state": "a check with a tag exists",
+      "description": "a GET request for a status report on a single check",
+      "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/unscheduled_maintenance_reports/tags/database"
+        "path": "/status_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "name": "www.example.com:SSH",
+            "type": "status_report",
+            "condition": null,
+            "enabled": true,
+            "summary": null,
+            "details": null,
+            "in_unscheduled_maintenance": false,
+            "in_scheduled_maintenance": false,
+            "initial_failure_delay": null,
+            "repeat_failure_delay": null,
+            "last_update": null,
+            "last_change": null,
+            "last_problem_notification": null,
+            "last_recovery_notification": null,
+            "last_acknowledgement_notification": null
+          },
+          "links": {
+            "self": "http://example.org/status_reports/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+          }
+        }
+      }
+    },
+    {
+      "description": "a time limited GET request for a outage report on all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/outage_reports/checks",
+        "query": "start_time=2015-05-04T15%3A24%3A47%2B09%3A30&end_time=2015-05-05T03%3A24%3A47%2B09%3A30"
       },
       "response": {
         "status": 200,
@@ -1262,250 +1254,33 @@
         "body": {
           "data": [
             {
-              "type": "unscheduled_maintenance_report",
-              "unscheduled_maintenances": [
+              "type": "outage_report",
+              "outages": [
 
               ]
             }
           ],
+          "meta": {
+            "pagination": {
+              "page": 1,
+              "per_page": 20,
+              "total_pages": 1,
+              "total_count": 1
+            }
+          },
           "links": {
-            "self": "http://example.org/unscheduled_maintenance_reports/tags/database"
+            "self": "http://example.org/outage_reports/checks?end_time=2015-05-05T03%3A24%3A47%2B09%3A30&start_time=2015-05-04T15%3A24%3A47%2B09%3A30"
           }
         }
       }
     },
     {
-      "description": "a GET request for all metrics",
+      "description": "a DELETE request for a scheduled maintenance period",
       "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/metrics"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "total_keys": 0,
-            "processed_events": {
-              "all_events": 0,
-              "ok_events": 0,
-              "failure_events": 0,
-              "action_events": 0,
-              "invalid_events": 0
-            },
-            "event_queue_length": 0,
-            "check_freshness": {
-              "0": 0,
-              "60": 0,
-              "300": 0,
-              "900": 0,
-              "3600": 0
-            },
-            "check_counts": {
-              "all": 0,
-              "failing": 0
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for some metrics",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/metrics",
-        "query": "fields%5B%5D=total_keys&fields%5B%5D=processed_events"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "total_keys": 0,
-            "processed_events": {
-              "all_events": 0,
-              "ok_events": 0,
-              "failure_events": 0,
-              "action_events": 0,
-              "invalid_events": 0
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "get",
-        "path": "/checks",
-        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
-            },
-            {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "name": "www2.example.com:PING",
-              "enabled": true,
-              "type": "check"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for two checks",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/checks",
-        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for checks by name",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/checks",
-        "query": "filter%5B%5D=name%3Awww.example.com%3ASSH"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for checks by name",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/checks",
-        "query": "filter%5B%5D=name%3Awww.example.com%3ASSH"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check"
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for a check",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "body": null
       },
       "response": {
         "status": 404,
@@ -1516,32 +1291,30 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
             }
           ]
         }
       }
     },
     {
-      "description": "a PATCH request for two checks",
-      "provider_state": "two checks exist",
+      "description": "a DELETE request for two scheduled maintenance periods",
+      "provider_state": "two scheduled maintenance periods exist",
       "request": {
-        "method": "patch",
-        "path": "/checks",
+        "method": "delete",
+        "path": "/scheduled_maintenances",
         "headers": {
           "Content-Type": "application/vnd.api+json; ext=bulk"
         },
         "body": {
           "data": [
             {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "type": "check",
-              "enabled": false
+              "type": "scheduled_maintenance",
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
             },
             {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "type": "check",
-              "enabled": true
+              "type": "scheduled_maintenance",
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
             }
           ]
         }
@@ -1554,19 +1327,33 @@
       }
     },
     {
-      "description": "a PATCH request for a single check",
+      "description": "a DELETE request for a scheduled maintenance period",
+      "provider_state": "a scheduled maintenance period exists",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single unscheduled maintenance period",
       "provider_state": "no data exists",
       "request": {
         "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "enabled": false
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "end_time": "2015-05-04T15:24:47+09:30"
           }
         }
       },
@@ -1579,91 +1366,171 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
             }
           ]
         }
       }
     },
     {
-      "description": "a PATCH request for a single check",
-      "provider_state": "a check exists",
+      "description": "a PATCH request for two unscheduled maintenance periods",
+      "provider_state": "two unscheduled maintenance periods exist",
       "request": {
         "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "enabled": false
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "links": {
-              "tags": {
-                "linkage": [
-                  {
-                    "type": "tag",
-                    "id": "database"
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with two checks",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/checks",
+        "path": "/unscheduled_maintenances",
         "headers": {
           "Content-Type": "application/vnd.api+json; ext=bulk"
         },
         "body": {
           "data": [
             {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "type": "unscheduled_maintenance",
+              "end_time": "2015-05-04T15:24:47+09:30"
             },
             {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "name": "www2.example.com:PING",
-              "enabled": true,
-              "type": "check"
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "type": "unscheduled_maintenance",
+              "end_time": "2015-05-04T16:24:47+09:30"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single unscheduled maintenance period",
+      "provider_state": "an unscheduled maintenance period exists",
+      "request": {
+        "method": "patch",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "end_time": "2015-05-04T15:24:47+09:30"
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a POST request with two unscheduled maintenance periods",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/unscheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "end_time": "2015-05-04T16:24:47+09:30",
+              "summary": "working",
+              "type": "unscheduled_maintenance"
+            },
+            {
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "end_time": "2015-05-04T16:54:47+09:30",
+              "summary": "partly working",
+              "type": "unscheduled_maintenance"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "end_time": "2015-05-04T16:24:47+09:30",
+              "summary": "working",
+              "type": "unscheduled_maintenance"
+            },
+            {
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "end_time": "2015-05-04T16:54:47+09:30",
+              "summary": "partly working",
+              "type": "unscheduled_maintenance"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one unscheduled maintenance period",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/unscheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "end_time": "2015-05-04T16:24:47+09:30",
+            "summary": "working",
+            "type": "unscheduled_maintenance"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "end_time": "2015-05-04T16:24:47+09:30",
+            "summary": "working",
+            "type": "unscheduled_maintenance"
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with two scheduled maintenance periods",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "start_time": "2015-05-04T15:24:47+09:30",
+              "end_time": "2015-05-04T16:24:47+09:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
+            },
+            {
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "start_time": "2015-05-04T17:24:47+09:30",
+              "end_time": "2015-05-04T18:24:47+09:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
             }
           ]
         }
@@ -1676,125 +1543,73 @@
         "body": {
           "data": [
             {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "name": "www.example.com:SSH",
-              "enabled": true,
-              "type": "check"
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "start_time": "2015-05-04T15:24:47+09:30",
+              "end_time": "2015-05-04T16:24:47+09:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
             },
             {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "name": "www2.example.com:PING",
-              "enabled": true,
-              "type": "check"
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "start_time": "2015-05-04T17:24:47+09:30",
+              "end_time": "2015-05-04T18:24:47+09:30",
+              "summary": "working",
+              "type": "scheduled_maintenance"
             }
           ]
         }
       }
     },
     {
-      "description": "a POST request with a check linking to a tag",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "post",
-        "path": "/checks",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check",
-            "links": {
-              "tags": {
-                "linkage": [
-                  {
-                    "type": "tag",
-                    "id": "database"
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with one check",
+      "description": "a POST request with one scheduled maintenance period",
       "provider_state": "no data exists",
       "request": {
         "method": "post",
-        "path": "/checks",
+        "path": "/scheduled_maintenances",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check"
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "start_time": "2015-05-04T15:24:47+09:30",
+            "end_time": "2015-05-04T16:24:47+09:30",
+            "summary": "working",
+            "type": "scheduled_maintenance"
           }
         }
       },
       "response": {
         "status": 201,
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "name": "www.example.com:SSH",
-            "enabled": true,
-            "type": "check"
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "start_time": "2015-05-04T15:24:47+09:30",
+            "end_time": "2015-05-04T16:24:47+09:30",
+            "summary": "working",
+            "type": "scheduled_maintenance"
           }
         }
       }
     },
     {
-      "description": "a GET request for a single contact",
-      "provider_state": "a contact exists",
+      "description": "a PATCH request for a single contact",
+      "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-      },
-      "response": {
-        "status": 200,
+        "method": "patch",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+          "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
             "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
+            "type": "contact",
+            "name": "Hello There"
           }
         }
-      }
-    },
-    {
-      "description": "a GET request for a single contact",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
       },
       "response": {
         "status": 404,
@@ -1809,6 +1624,128 @@
             }
           ]
         }
+      }
+    },
+    {
+      "description": "a PATCH request for two contacts",
+      "provider_state": "two contacts exist",
+      "request": {
+        "method": "patch",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "type": "contact",
+              "name": "Hello There"
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "type": "contact",
+              "name": "Goodbye Now"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "patch",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "name": "Hello There"
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single contact",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two contacts",
+      "provider_state": "two contacts exist",
+      "request": {
+        "method": "delete",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "contact",
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+            },
+            {
+              "type": "contact",
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
       }
     },
     {
@@ -1867,6 +1804,69 @@
       }
     },
     {
+      "description": "a GET request for a single contact",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all contacts",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/contacts"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
       "description": "a GET request for all contacts",
       "provider_state": "a contact exists",
       "request": {
@@ -1891,109 +1891,36 @@
       }
     },
     {
-      "description": "a GET request for all contacts",
-      "provider_state": "no data exists",
+      "description": "a POST request with one contact",
+      "provider_state": "a contact exists",
       "request": {
-        "method": "get",
-        "path": "/contacts"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for two contacts",
-      "provider_state": "two contacts exist",
-      "request": {
-        "method": "patch",
+        "method": "post",
         "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "type": "contact",
-              "name": "Hello There"
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "type": "contact",
-              "name": "Goodbye Now"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single contact",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
             "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "name": "Hello There"
+            "name": "Jim Smith",
+            "timezone": "UTC",
+            "type": "contact"
           }
         }
       },
       "response": {
-        "status": 404,
+        "status": 409,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "errors": [
             {
-              "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+              "status": "409",
+              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
             }
           ]
         }
-      }
-    },
-    {
-      "description": "a PATCH request for a single contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "patch",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "name": "Hello There"
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
       }
     },
     {
@@ -2045,39 +1972,6 @@
     },
     {
       "description": "a POST request with one contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "name": "Jim Smith",
-            "timezone": "UTC",
-            "type": "contact"
-          }
-        }
-      },
-      "response": {
-        "status": 409,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "409",
-              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one contact",
       "provider_state": "no data exists",
       "request": {
         "method": "post",
@@ -2110,23 +2004,165 @@
       }
     },
     {
-      "description": "a DELETE request for two contacts",
-      "provider_state": "two contacts exist",
+      "description": "a GET request for some statistics",
+      "provider_state": "a global statistics object exists",
       "request": {
-        "method": "delete",
-        "path": "/contacts",
+        "method": "get",
+        "path": "/statistics",
+        "query": "filter%5B%5D=instance_name%3Aglobal"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "instance_name": "global",
+              "created_at": {
+                "json_class": "Pact::Term",
+                "data": {
+                  "generate": "2015-05-04T15:24:47+09:30",
+                  "matcher": {
+                    "json_class": "Regexp",
+                    "o": 0,
+                    "s": "^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[0-1]|0[1-9]|[1-2][0-9])T(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])(\\.[0-9]+)?(Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$"
+                  }
+                }
+              },
+              "all_events": 0,
+              "ok_events": 0,
+              "failure_events": 0,
+              "action_events": 0,
+              "invalid_events": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all statistics",
+      "provider_state": "a global statistics object exists",
+      "request": {
+        "method": "get",
+        "path": "/statistics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "instance_name": "global",
+              "created_at": {
+                "json_class": "Pact::Term",
+                "data": {
+                  "generate": "2015-05-04T15:24:47+09:30",
+                  "matcher": {
+                    "json_class": "Regexp",
+                    "o": 0,
+                    "s": "^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[0-1]|0[1-9]|[1-2][0-9])T(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])(\\.[0-9]+)?(Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$"
+                  }
+                }
+              },
+              "all_events": 0,
+              "ok_events": 0,
+              "failure_events": 0,
+              "action_events": 0,
+              "invalid_events": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "enabled": false
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "links": {
+              "tags": {
+                "linkage": [
+                  {
+                    "type": "tag",
+                    "id": "database"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks",
         "headers": {
           "Content-Type": "application/vnd.api+json; ext=bulk"
         },
         "body": {
           "data": [
             {
-              "type": "contact",
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "type": "check",
+              "enabled": false
             },
             {
-              "type": "contact",
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8"
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "type": "check",
+              "enabled": true
             }
           ]
         }
@@ -2139,12 +2175,80 @@
       }
     },
     {
-      "description": "a DELETE request for a single contact",
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "enabled": false
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for checks by name",
       "provider_state": "no data exists",
       "request": {
-        "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "body": null
+        "method": "get",
+        "path": "/checks",
+        "query": "filter%5B%5D=name%3Awww.example.com%3ASSH"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for checks by name",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/checks",
+        "query": "filter%5B%5D=name%3Awww.example.com%3ASSH"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a check",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
       },
       "response": {
         "status": 404,
@@ -2155,19 +2259,312 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
             }
           ]
         }
       }
     },
     {
-      "description": "a DELETE request for a single contact",
-      "provider_state": "a contact exists",
+      "description": "a GET request for a check",
+      "provider_state": "a check exists",
       "request": {
-        "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-        "body": null
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check"
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for two checks",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/checks",
+        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "get",
+        "path": "/checks",
+        "query": "filter%5B%5D=id%3A1ed80833-6d28-4aba-8603-d81c249b8c23%7C29e913cf-29ea-4ae5-94f6-7069cf4a1514"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "name": "www2.example.com:PING",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with a check linking to a tag",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check",
+            "links": {
+              "tags": {
+                "linkage": [
+                  {
+                    "type": "tag",
+                    "id": "database"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check"
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with two checks",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "name": "www2.example.com:PING",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "name": "www.example.com:SSH",
+              "enabled": true,
+              "type": "check"
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "name": "www2.example.com:PING",
+              "enabled": true,
+              "type": "check"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one check",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "name": "www.example.com:SSH",
+            "enabled": true,
+            "type": "check"
+          }
+        }
+      }
+    },
+    {
+      "description": "a PATCH request updating the contact for a medium",
+      "provider_state": "a contact and a medium exist",
+      "request": {
+        "method": "patch",
+        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/links/contact",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact"
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for all tags on a check",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request clearing tags for a check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
       },
       "response": {
         "status": 204,
@@ -2202,75 +2599,6 @@
       }
     },
     {
-      "description": "a GET request for all tags on a check",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request adding a tag to a check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "post",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request clearing tags for a check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
       "description": "a DELETE request deleting a tag from a check",
       "provider_state": "a check with a tag exists",
       "request": {
@@ -2283,35 +2611,6 @@
           "data": [
             {
               "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request adding two tags to a check",
-      "provider_state": "a check and two tags exist",
-      "request": {
-        "method": "post",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            },
-            {
-              "id": "physical",
               "type": "tag"
             }
           ]
@@ -2365,29 +2664,6 @@
       }
     },
     {
-      "description": "a PATCH request updating the contact for a medium",
-      "provider_state": "a contact and a medium exist",
-      "request": {
-        "method": "patch",
-        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/links/contact",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact"
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
       "description": "a DELETE request deleting two tags from a check",
       "provider_state": "a check with two tags exists",
       "request": {
@@ -2417,372 +2693,66 @@
       }
     },
     {
-      "description": "a PATCH request for two unscheduled maintenance periods",
-      "provider_state": "two unscheduled maintenance periods exist",
+      "description": "a POST request adding two tags to a check",
+      "provider_state": "a check and two tags exist",
       "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "type": "unscheduled_maintenance",
-              "end_time": "2015-05-01T17:18:51+09:30"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "type": "unscheduled_maintenance",
-              "end_time": "2015-05-01T18:18:51+09:30"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "method": "post",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "end_time": "2015-05-01T17:18:51+09:30"
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "an unscheduled maintenance period exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "end_time": "2015-05-01T17:18:51+09:30"
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two scheduled maintenance periods",
-      "provider_state": "two scheduled maintenance periods exist",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
           "data": [
             {
-              "type": "scheduled_maintenance",
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
+              "id": "database",
+              "type": "tag"
             },
             {
-              "type": "scheduled_maintenance",
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "a scheduled maintenance period exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one scheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "start_time": "2015-05-01T17:18:51+09:30",
-            "end_time": "2015-05-01T18:18:51+09:30",
-            "summary": "working",
-            "type": "scheduled_maintenance"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "start_time": "2015-05-01T17:18:51+09:30",
-            "end_time": "2015-05-01T18:18:51+09:30",
-            "summary": "working",
-            "type": "scheduled_maintenance"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two scheduled maintenance periods",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "start_time": "2015-05-01T17:18:51+09:30",
-              "end_time": "2015-05-01T18:18:51+09:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "start_time": "2015-05-01T19:18:51+09:30",
-              "end_time": "2015-05-01T20:18:51+09:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "start_time": "2015-05-01T17:18:51+09:30",
-              "end_time": "2015-05-01T18:18:51+09:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "start_time": "2015-05-01T19:18:51+09:30",
-              "end_time": "2015-05-01T20:18:51+09:30",
-              "summary": "working",
-              "type": "scheduled_maintenance"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one unscheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "end_time": "2015-05-01T18:18:51+09:30",
-            "summary": "working",
-            "type": "unscheduled_maintenance"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "end_time": "2015-05-01T18:18:51+09:30",
-            "summary": "working",
-            "type": "unscheduled_maintenance"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two unscheduled maintenance periods",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "end_time": "2015-05-01T18:18:51+09:30",
-              "summary": "working",
-              "type": "unscheduled_maintenance"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "end_time": "2015-05-01T18:48:51+09:30",
-              "summary": "partly working",
-              "type": "unscheduled_maintenance"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "end_time": "2015-05-01T18:18:51+09:30",
-              "summary": "working",
-              "type": "unscheduled_maintenance"
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "end_time": "2015-05-01T18:48:51+09:30",
-              "summary": "partly working",
-              "type": "unscheduled_maintenance"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all tags",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all tags",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "name": "database",
+              "id": "physical",
               "type": "tag"
             }
           ]
         }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
       }
     },
     {
-      "description": "a GET request for tag 'www.example.com:SSH'",
-      "provider_state": "a tag exists",
+      "description": "a POST request adding a tag to a check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "post",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/links/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for some metrics",
+      "provider_state": "no data exists",
       "request": {
         "method": "get",
-        "path": "/tags/database"
+        "path": "/metrics",
+        "query": "fields%5B%5D=total_keys&fields%5B%5D=processed_events"
       },
       "response": {
         "status": 200,
@@ -2791,18 +2761,280 @@
         },
         "body": {
           "data": {
-            "name": "database",
-            "type": "tag"
+            "total_keys": 0,
+            "processed_events": {
+              "all_events": 0,
+              "ok_events": 0,
+              "failure_events": 0,
+              "action_events": 0,
+              "invalid_events": 0
+            }
           }
         }
       }
     },
     {
-      "description": "a GET request for tag 'www.example.com:SSH'",
+      "description": "a GET request for all metrics",
       "provider_state": "no data exists",
       "request": {
         "method": "get",
-        "path": "/tags/database"
+        "path": "/metrics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "total_keys": 0,
+            "processed_events": {
+              "all_events": 0,
+              "ok_events": 0,
+              "failure_events": 0,
+              "action_events": 0,
+              "invalid_events": 0
+            },
+            "event_queue_length": 0,
+            "check_freshness": {
+              "0": 0,
+              "60": 0,
+              "300": 0,
+              "900": 0,
+              "3600": 0
+            },
+            "check_counts": {
+              "all": 0,
+              "enabled": 0,
+              "failing": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification for a check",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification for a tag",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/tags/database",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Tag record, id: 'database'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with two test notifications",
+      "provider_state": "a tag with two checks exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/tags/database",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "summary": "testing",
+              "type": "test_notification"
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "summary": "more testing",
+              "type": "test_notification"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "summary": "testing",
+              "type": "test_notification"
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "summary": "more testing",
+              "type": "test_notification"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with two test notifications",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "summary": "testing",
+              "type": "test_notification"
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "summary": "more testing",
+              "type": "test_notification"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "summary": "testing",
+              "type": "test_notification"
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "summary": "more testing",
+              "type": "test_notification"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification",
+      "provider_state": "a tag with two checks exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/tags/database",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "summary": "testing",
+            "type": "test_notification"
+          }
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for a single tag",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "delete",
+        "path": "/tags/database",
+        "body": null
       },
       "response": {
         "status": 404,
@@ -2850,11 +3082,25 @@
     },
     {
       "description": "a DELETE request for a single tag",
-      "provider_state": "no data exists",
+      "provider_state": "a tag exists",
       "request": {
         "method": "delete",
         "path": "/tags/database",
         "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for tag 'www.example.com:SSH'",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/tags/database"
       },
       "response": {
         "status": 404,
@@ -2872,38 +3118,14 @@
       }
     },
     {
-      "description": "a DELETE request for a single tag",
+      "description": "a GET request for tag 'www.example.com:SSH'",
       "provider_state": "a tag exists",
       "request": {
-        "method": "delete",
-        "path": "/tags/database",
-        "body": null
+        "method": "get",
+        "path": "/tags/database"
       },
       "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one tag",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "name": "database",
-            "type": "tag"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -2912,6 +3134,47 @@
             "name": "database",
             "type": "tag"
           }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "name": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
         }
       }
     },
@@ -2957,121 +3220,19 @@
       }
     },
     {
-      "description": "a POST request with one test notification",
-      "provider_state": "a tag with two checks exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications/tags/database",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with one test notification",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with one test notification for a tag",
+      "description": "a POST request with one tag",
       "provider_state": "no data exists",
       "request": {
         "method": "post",
-        "path": "/test_notifications/tags/database",
+        "path": "/tags",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
+            "name": "database",
+            "type": "tag"
           }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Tag record, id: 'database'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with two test notifications",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "summary": "testing",
-              "type": "test_notification"
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "summary": "more testing",
-              "type": "test_notification"
-            }
-          ]
         }
       },
       "response": {
@@ -3080,173 +3241,20 @@
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "summary": "testing",
-              "type": "test_notification"
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "summary": "more testing",
-              "type": "test_notification"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one test notification for a check",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
           "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "summary": "testing",
-            "type": "test_notification"
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with two test notifications",
-      "provider_state": "a tag with two checks exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications/tags/database",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "summary": "testing",
-              "type": "test_notification"
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "summary": "more testing",
-              "type": "test_notification"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "summary": "testing",
-              "type": "test_notification"
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "summary": "more testing",
-              "type": "test_notification"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single rule",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule"
+            "name": "database",
+            "type": "tag"
           }
         }
       }
     },
     {
-      "description": "a GET request for two rules",
-      "provider_state": "two rules exist",
-      "request": {
-        "method": "get",
-        "path": "/rules",
-        "query": "filter%5B%5D=id%3A05983623-fcef-42da-af44-ed6990b500fa%7C20f182fc-6e32-4794-9007-97366d162c51"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule"
-            },
-            {
-              "id": "20f182fc-6e32-4794-9007-97366d162c51",
-              "type": "rule"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all rules",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single rule",
+      "description": "a DELETE request for a single rule",
       "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+        "method": "delete",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
+        "body": null
       },
       "response": {
         "status": 404,
@@ -3294,11 +3302,52 @@
     },
     {
       "description": "a DELETE request for a single rule",
-      "provider_state": "no data exists",
+      "provider_state": "a rule exists",
       "request": {
         "method": "delete",
         "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
         "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for two rules",
+      "provider_state": "two rules exist",
+      "request": {
+        "method": "get",
+        "path": "/rules",
+        "query": "filter%5B%5D=id%3A05983623-fcef-42da-af44-ed6990b500fa%7C20f182fc-6e32-4794-9007-97366d162c51"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule"
+            },
+            {
+              "id": "20f182fc-6e32-4794-9007-97366d162c51",
+              "type": "rule"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single rule",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
       },
       "response": {
         "status": 404,
@@ -3316,38 +3365,14 @@
       }
     },
     {
-      "description": "a DELETE request for a single rule",
+      "description": "a GET request for a single rule",
       "provider_state": "a rule exists",
       "request": {
-        "method": "delete",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa",
-        "body": null
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
       },
       "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one rule",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/rules",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule"
-          }
-        }
-      },
-      "response": {
-        "status": 201,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -3356,6 +3381,28 @@
             "id": "05983623-fcef-42da-af44-ed6990b500fa",
             "type": "rule"
           }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all rules",
+      "provider_state": "a rule exists",
+      "request": {
+        "method": "get",
+        "path": "/rules"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule"
+            }
+          ]
         }
       }
     },
@@ -3401,93 +3448,61 @@
       }
     },
     {
-      "description": "a GET request for one medium",
-      "provider_state": "a medium exists",
+      "description": "a POST request with one rule",
+      "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
+        "method": "post",
+        "path": "/rules",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule"
+          }
+        }
       },
       "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "transport": "sms",
-            "address": "0123456789",
-            "interval": 300,
-            "rollup_threshold": 5,
-            "type": "medium"
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule"
           }
         }
       }
     },
     {
-      "description": "a GET request for two media",
-      "provider_state": "two media exist",
+      "description": "a PATCH request for a single medium",
+      "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/media",
-        "query": "filter%5B%5D=id%3A9156de3c-ddc6-4637-b1cc-bd035fd61dd3%7Ce2e09943-ed6c-476a-a8a5-ec165426f298"
-      },
-      "response": {
-        "status": 200,
+        "method": "patch",
+        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+          "Content-Type": "application/vnd.api+json"
         },
         "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "transport": "email",
-              "address": "ablated@example.org",
-              "interval": 180,
-              "rollup_threshold": 3,
-              "type": "medium"
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "transport": "sms",
-              "address": "0123456789",
-              "interval": 300,
-              "rollup_threshold": 5,
-              "type": "medium"
-            }
-          ]
+          "data": {
+            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+            "type": "medium",
+            "interval": 50
+          }
         }
-      }
-    },
-    {
-      "description": "a GET request for all media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "get",
-        "path": "/media"
       },
       "response": {
-        "status": 200,
+        "status": 404,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": [
+          "errors": [
             {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "transport": "email",
-              "address": "ablated@example.org",
-              "interval": 180,
-              "rollup_threshold": 3,
-              "type": "medium"
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "transport": "sms",
-              "address": "0123456789",
-              "interval": 300,
-              "rollup_threshold": 5,
-              "type": "medium"
+              "status": "404",
+              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
             }
           ]
         }
@@ -3526,38 +3541,6 @@
     },
     {
       "description": "a PATCH request for a single medium",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-            "type": "medium",
-            "interval": 50
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single medium",
       "provider_state": "a medium exists",
       "request": {
         "method": "patch",
@@ -3581,27 +3564,116 @@
       }
     },
     {
-      "description": "a POST request with one medium",
+      "description": "a DELETE request for one medium",
       "provider_state": "no data exists",
       "request": {
-        "method": "post",
-        "path": "/media",
+        "method": "delete",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "body": null
+      },
+      "response": {
+        "status": 404,
         "headers": {
-          "Content-Type": "application/vnd.api+json"
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "transport": "sms",
-            "address": "0123456789",
-            "interval": 300,
-            "rollup_threshold": 5,
-            "type": "medium"
-          }
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "delete",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "medium",
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
+            },
+            {
+              "type": "medium",
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
+            }
+          ]
         }
       },
       "response": {
-        "status": 201,
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for one medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "delete",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for two media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "get",
+        "path": "/media",
+        "query": "filter%5B%5D=id%3A9156de3c-ddc6-4637-b1cc-bd035fd61dd3%7Ce2e09943-ed6c-476a-a8a5-ec165426f298"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "transport": "email",
+              "address": "ablated@example.org",
+              "interval": 180,
+              "rollup_threshold": 3,
+              "type": "medium"
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "transport": "sms",
+              "address": "0123456789",
+              "interval": 300,
+              "rollup_threshold": 5,
+              "type": "medium"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for one medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "get",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
+      },
+      "response": {
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -3614,6 +3686,40 @@
             "rollup_threshold": 5,
             "type": "medium"
           }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "get",
+        "path": "/media"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "transport": "email",
+              "address": "ablated@example.org",
+              "interval": 180,
+              "rollup_threshold": 3,
+              "type": "medium"
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "transport": "sms",
+              "address": "0123456789",
+              "interval": 300,
+              "rollup_threshold": 5,
+              "type": "medium"
+            }
+          ]
         }
       }
     },
@@ -3675,144 +3781,39 @@
       }
     },
     {
-      "description": "a DELETE request for two media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "delete",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "medium",
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
-            },
-            {
-              "type": "medium",
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for one medium",
+      "description": "a POST request with one medium",
       "provider_state": "no data exists",
       "request": {
-        "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "body": null
-      },
-      "response": {
-        "status": 404,
+        "method": "post",
+        "path": "/media",
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+          "Content-Type": "application/vnd.api+json"
         },
         "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
-            }
-          ]
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "transport": "sms",
+            "address": "0123456789",
+            "interval": 300,
+            "rollup_threshold": 5,
+            "type": "medium"
+          }
         }
-      }
-    },
-    {
-      "description": "a DELETE request for one medium",
-      "provider_state": "a medium exists",
-      "request": {
-        "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "body": null
       },
       "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for all statistics",
-      "provider_state": "a global statistics object exists",
-      "request": {
-        "method": "get",
-        "path": "/statistics"
-      },
-      "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": [
-            {
-              "instance_name": "global",
-              "created_at": {
-                "json_class": "Pact::Term",
-                "data": {
-                  "generate": "2015-05-01T17:18:52+09:30",
-                  "matcher": {
-                    "json_class": "Regexp",
-                    "o": 0,
-                    "s": "^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[0-1]|0[1-9]|[1-2][0-9])T(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])(\\.[0-9]+)?(Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$"
-                  }
-                }
-              },
-              "all_events": 0,
-              "ok_events": 0,
-              "failure_events": 0,
-              "action_events": 0,
-              "invalid_events": 0
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for some statistics",
-      "provider_state": "a global statistics object exists",
-      "request": {
-        "method": "get",
-        "path": "/statistics",
-        "query": "filter%5B%5D=instance_name%3Aglobal"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "instance_name": "global",
-              "created_at": {
-                "json_class": "Pact::Term",
-                "data": {
-                  "generate": "2015-05-01T17:18:52+09:30",
-                  "matcher": {
-                    "json_class": "Regexp",
-                    "o": 0,
-                    "s": "^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[0-1]|0[1-9]|[1-2][0-9])T(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])(\\.[0-9]+)?(Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$"
-                  }
-                }
-              },
-              "all_events": 0,
-              "ok_events": 0,
-              "failure_events": 0,
-              "action_events": 0,
-              "invalid_events": 0
-            }
-          ]
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "transport": "sms",
+            "address": "0123456789",
+            "interval": 300,
+            "rollup_threshold": 5,
+            "type": "medium"
+          }
         }
       }
     }

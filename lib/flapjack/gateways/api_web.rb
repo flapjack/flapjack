@@ -151,31 +151,36 @@ module Flapjack
         erb 'self_stats.html'.to_sym
       end
 
-    #   get '/checks' do
-    #     check_stats
-    #     time = Time.now
+      get '/checks' do
+        check_stats
+        time = Time.now
 
-    #     @adjective, @checks = if 'failing'.eql?(params[:type])
-    #       ['failing', failing_checks]
-    #     else
-    #       ['all', Flapjack::Data::Check.all]
-    #     end
+        @adjective, @checks, @total = if 'failing'.eql?(params[:type])
+          ['failing', Flapjack::Diner.checks(:filter => {:failing => true},
+                                             :page => (params[:page] || 1)),
+           pagination_from_context(Flapjack::Diner.context)]
+        else
+          ['all', Flapjack::Diner.checks,
+           pagination_from_context(Flapjack::Diner.context)]
+        end
+
+        @states = []
 
     #     @states = @checks.inject({}) do |memo, check|
     #       memo[check] = check_state(check, time)
     #       memo
     #     end
 
-    #     erb 'checks.html'.to_sym
-    #   end
+        erb 'checks.html'.to_sym
+      end
 
       get '/checks/:id' do
         check_id  = params[:id]
 
         @current_time = Time.now
 
-        @check = Flapjack::Data::Check.find_by_id(check_id)
-        halt(404, "Could not find check '#{check_id}'") if @check.nil?
+        # @check = Flapjack::Data::Check.find_by_id(check_id)
+        # halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
         check_stats
 
@@ -413,43 +418,49 @@ module Flapjack
 
         time = Time.now
 
-        global_stats = statistics.detect {|s| 'global'.eql?(s['instance_name'])}
+        Flapjack.logger.info statistics.inspect
+        Flapjack.logger.info Flapjack::Diner.last_error
 
-        @executive_instances = (statistics - global_stats).each_with_object({}) do |stats, memo|
-          uptime = time - s['created_at']
+        @executive_instances = statistics.each_with_object({}) do |stats, memo|
+          if 'global'.eql?(stats[:instance_name])
+            @global_stats = stats
+            next
+          end
+          boot_time =  Time.parse(stats[:created_at])
+          uptime = time - boot_time
           uptime_string = ChronicDuration.output(uptime, :format => :short,
                             :keep_zero => true, :units => 2) || '0s'
 
           event_counters = {}
           event_rates    = {}
 
-          ['all_events', 'ok_events', 'failure_events', 'action_events',
-           'invalid_events'].each do |evt|
+          [:all_events, :ok_events, :failure_events, :action_events,
+           :invalid_events].each do |evt|
 
             count               = stats[evt]
             event_counters[evt] = count
             event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
           end
 
-          memo[s['instance_name']] = {
-            'boot_time'      => s['created_at'],
-            'uptime'         => uptime,
-            'uptime_string'  => uptime_string,
-            'event_counters' => event_counters,
-            'event_rates'    => event_rates
+          memo[stats[:instance_name]] = {
+            # :boot_time      => boot_time,
+            :uptime         => uptime,
+            :uptime_string  => uptime_string,
+            :event_counters => event_counters,
+            :event_rates    => event_rates
           }
         end
       end
 
-    #   def failing_checks
-    #     @failing_checks ||= Flapjack::Data::Check.failing
-    #   end
-
       def check_stats
         enabled_checks = Flapjack::Diner.checks(:filter => {:enabled => true})
-        @count_enabled_checks = ((((Flapjack::Diner.context || {})[:meta] || {})[:pagination] || {})[:total_count]) || 0
+        @count_enabled_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
         failing_checks = Flapjack::Diner.checks(:filter => {:failing => true})
-        @count_failing_checks = ((((Flapjack::Diner.context || {})[:meta] || {})[:pagination] || {})[:total_count]) || 0
+        @count_failing_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
+      end
+
+      def pagination_from_context(context)
+        ((context || {})[:meta] || {})[:pagination]
       end
 
       def require_js(*js)
