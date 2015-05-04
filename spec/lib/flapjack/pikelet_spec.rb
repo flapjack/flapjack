@@ -76,13 +76,14 @@ describe Flapjack::Pikelet, :logger => true do
     expect(lock).to receive(:synchronize).and_yield
     expect(Monitor).to receive(:new).and_return(lock)
 
+    binder = double('binder')
+    expect(binder).to receive(:add_tcp_listener).with('127.0.0.1', 7654)
+
     server = double('server')
-    expect(server).to receive(:mount).with('/', Rack::Handler::WEBrick,
-      Flapjack::Gateways::Web)
-    expect(server).to receive(:start)
-    expect(WEBrick::HTTPServer).to receive(:new).
-      with(:Port => 7654, :BindAddress => '127.0.0.1',
-           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
+    expect(server).to receive(:binder).and_return(binder)
+    expect(server).to receive(:run).with(false)
+
+    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::Web).
       and_return(server)
 
     expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
@@ -113,13 +114,14 @@ describe Flapjack::Pikelet, :logger => true do
     expect(lock).to receive(:synchronize).and_yield
     expect(Monitor).to receive(:new).and_return(lock)
 
+    binder = double('binder')
+    expect(binder).to receive(:add_tcp_listener).with('127.0.0.1', 7654)
+
     server = double('server')
-    expect(server).to receive(:mount).with('/', Rack::Handler::WEBrick,
-      Flapjack::Gateways::Web)
-    expect(server).to receive(:start).and_raise(exc)
-    expect(WEBrick::HTTPServer).to receive(:new).
-      with(:Port => 7654, :BindAddress => '127.0.0.1',
-           :AccessLog => [], :Logger => an_instance_of(::WEBrick::Log)).
+    expect(server).to receive(:binder).and_return(binder)
+    expect(server).to receive(:run).with(false).and_raise(exc)
+
+    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::Web).
       and_return(server)
 
     expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
