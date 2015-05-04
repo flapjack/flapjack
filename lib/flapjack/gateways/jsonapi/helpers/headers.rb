@@ -7,27 +7,25 @@ module Flapjack
         module Headers
 
           def cors_headers
-            allow_headers  = %w(* Content-Type Accept AUTHORIZATION Cache-Control)
-            allow_methods  = %w(GET POST PUT PATCH DELETE OPTIONS)
+            allow_headers  = %w(* Content-Type Accept Authorization Cache-Control)
+            allow_methods  = %w(GET POST PATCH DELETE OPTIONS)
             expose_headers = %w(Cache-Control Content-Language Content-Type Expires Last-Modified Pragma)
-            cors_headers   = {
+            ch   = {
               'Access-Control-Allow-Origin'   => '*',
               'Access-Control-Allow-Methods'  => allow_methods.join(', '),
               'Access-Control-Allow-Headers'  => allow_headers.join(', '),
               'Access-Control-Expose-Headers' => expose_headers.join(', '),
               'Access-Control-Max-Age'        => '1728000'
             }
-            headers(cors_headers)
+            ch.each_pair {|k, v| response[k] = v}
           end
 
           def err(status_code, *msg)
             logger.info "Error: #{msg.inspect}"
 
-            headers = if 'DELETE'.eql?(request.request_method)
+            if 'DELETE'.eql?(request.request_method)
               # not set by default for delete, but the error structure is JSON
-              {'Content-Type' => media_type_produced(:with_charset => true)}
-            else
-              {}
+              response['Content-Type'] = media_type_produced(:with_charset => true)
             end
 
             # TODO include more relevant data
@@ -40,7 +38,7 @@ module Flapjack
               }
             }
 
-            [status_code, headers, Flapjack.dump_json(error_data)]
+            [status_code, response.headers, Flapjack.dump_json(error_data)]
           end
 
           def is_jsonapi_request?

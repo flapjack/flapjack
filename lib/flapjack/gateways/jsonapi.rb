@@ -154,8 +154,8 @@ module Flapjack
 
       # The following catch-all routes act as impromptu filters for their method types
       get '*' do
-        content_type media_type_produced(:with_charset => true)
         cors_headers
+        content_type media_type_produced(:with_charset => true)
         pass
       end
 
@@ -163,15 +163,15 @@ module Flapjack
       # https://github.com/sinatra/sinatra/issues/453
       post '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type media_type_produced(:with_charset => true)
         cors_headers
+        content_type media_type_produced(:with_charset => true)
         pass
       end
 
       patch '*' do
         halt(405) unless request.params.empty? || is_jsonapi_request?
-        content_type media_type_produced(:with_charset => true)
         cors_headers
+        content_type media_type_produced(:with_charset => true)
         pass
       end
 
