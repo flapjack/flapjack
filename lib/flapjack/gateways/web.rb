@@ -235,9 +235,6 @@ module Flapjack
         #   @check.states.intersect(:action => 'acknowledgement',
         #                           :notified => true).last
 
-        # TODO fix template to use :ok, delete this line
-        @last_notifications[:recovery] = @last_notifications.delete(:ok)
-
         @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
         @acknowledgement_id = if Flapjack::Data::Condition.healthy?(@check_state)
           nil
