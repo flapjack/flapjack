@@ -31,7 +31,7 @@ func TestSendSucceeds(t *testing.T) {
 }
 
 func TestSendFails(t *testing.T) {
-	transport, err := Dial("localhost:6379", 9)
+	transport, err := Dial("localhost:0", 9)
 	if err == nil {
 		t.Fatal("Expected error when connecting to testing Redis, got none.")
 	}
