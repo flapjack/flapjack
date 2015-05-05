@@ -106,6 +106,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :links do
+          key :"$ref", :TagChangeLinks
+        end
       end
 
       swagger_schema :TagUpdate do
@@ -119,22 +122,16 @@ module Flapjack
           key :enum, [Flapjack::Data::Tag.jsonapi_type.downcase]
         end
         property :links do
-          key :"$ref", :TagUpdateLinks
+          key :"$ref", :TagChangeLinks
         end
       end
 
-      swagger_schema :TagUpdateLinks do
+      swagger_schema :TagChangeLinks do
         property :checks do
-          key :type, :array
-          items do
-            key :"$ref", :CheckReference
-          end
+          key :"$ref", :jsonapi_ChecksLinkage
         end
         property :rules do
-          key :type, :array
-          items do
-            key :"$ref", :RuleReference
-          end
+          key :"$ref", :jsonapi_RulesLinkage
         end
       end
 

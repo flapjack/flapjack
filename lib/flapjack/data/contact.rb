@@ -128,6 +128,9 @@ module Flapjack
           key :type, :string
           key :format, :tzinfo
         end
+        property :links do
+          key :"$ref", :ContactChangeLinks
+        end
       end
 
       swagger_schema :ContactUpdate do
@@ -148,22 +151,16 @@ module Flapjack
           key :format, :tzinfo
         end
         property :links do
-          key :"$ref", :ContactUpdateLinks
+          key :"$ref", :ContactChangeLinks
         end
       end
 
-      swagger_schema :ContactUpdateLinks do
+      swagger_schema :ContactChangeLinks do
         property :media do
-          key :type, :array
-          items do
-            key :"$ref", :MediumReference
-          end
+          key :"$ref", :jsonapi_MediaLinkage
         end
         property :rules do
-          key :type, :array
-          items do
-            key :"$ref", :RuleReference
-          end
+          key :"$ref", :jsonapi_RulesLinkage
         end
       end
 

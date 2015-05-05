@@ -20,6 +20,7 @@ PATH
       ice_cube
       mail
       oj (>= 2.9.0)
+      puma
       rbtrace
       redis (>= 3.0.7)
       sinatra
@@ -122,6 +123,8 @@ GEM
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
+    puma (2.11.2)
+      rack (>= 1.1, < 2.0)
     rack (1.6.0)
     rack-protection (1.5.3)
       rack

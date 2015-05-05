@@ -26,8 +26,9 @@ require 'flapjack/data/statistic'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
-require 'flapjack/gateways/jsonapi/rack/array_param_fixer'
-require 'flapjack/gateways/jsonapi/rack/json_params_parser'
+require 'flapjack/gateways/jsonapi/middleware/array_param_fixer'
+require 'flapjack/gateways/jsonapi/middleware/json_params_parser'
+require 'flapjack/gateways/jsonapi/middleware/request_timestamp'
 
 %w[headers miscellaneous resources swagger_docs].each do |helper|
   require "flapjack/gateways/jsonapi/helpers/#{helper}"
@@ -63,15 +64,17 @@ module Flapjack
         Flapjack::Data::UnscheduledMaintenance
       ]
 
-      set :raise_errors, true
+      set :root, File.dirname(__FILE__)
+
+      set :raise_errors, false
       set :show_exceptions, false
 
       set :protection, :except => :path_traversal
 
-      # use ::Rack::Lint
+      use Flapjack::Gateways::JSONAPI::Middleware::RequestTimestamp
       use ::Rack::MethodOverride
-      use Flapjack::Gateways::JSONAPI::Rack::ArrayParamFixer
-      use Flapjack::Gateways::JSONAPI::Rack::JsonParamsParser
+      use Flapjack::Gateways::JSONAPI::Middleware::ArrayParamFixer
+      use Flapjack::Gateways::JSONAPI::Middleware::JsonParamsParser
 
       class << self
 
@@ -79,6 +82,16 @@ module Flapjack
 
         def start
           Flapjack.logger.info "starting jsonapi - class"
+
+          if access_log = (@config && @config['access_log'])
+            unless File.directory?(File.dirname(access_log))
+              raise "Parent directory for log file #{access_log} doesn't exist"
+            end
+
+            @access_log = ::Logger.new(@config['access_log'])
+            use Rack::CommonLogger, @access_log
+          end
+
         end
 
         def media_type_produced(options = {})

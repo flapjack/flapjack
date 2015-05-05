@@ -253,6 +253,9 @@ module Flapjack
         #     key :"$ref", :TimeRestrictions
         #   end
         # end
+        property :links do
+          key :"$ref", :RuleChangeLinks
+        end
       end
 
       swagger_schema :RuleUpdate do
@@ -272,25 +275,19 @@ module Flapjack
         #   end
         # end
         property :links do
-          key :"$ref", :RuleUpdateLinks
+          key :"$ref", :RuleChangeLinks
         end
       end
 
-      swagger_schema :RuleUpdateLinks do
+      swagger_schema :RuleChangeLinks do
         property :contact do
-          key :"$ref", :ContactReference
+          key :"$ref", :jsonapi_ContactLinkage
         end
         property :media do
-          key :type, :array
-          items do
-            key :"$ref", :MediumReference
-          end
+          key :"$ref", :jsonapi_MediaLinkage
         end
         property :tags do
-          key :type, :array
-          items do
-            key :"$ref", :TagReference
-          end
+          key :"$ref", :jsonapi_TagsLinkage
         end
       end
 

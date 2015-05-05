@@ -105,6 +105,9 @@ module Flapjack
           key :type, :string
           key :format, :"date-time"
         end
+        property :links do
+          key :"$ref", :UnscheduledMaintenanceChangeLinks
+        end
       end
 
       swagger_schema :UnscheduledMaintenanceUpdate do
@@ -126,13 +129,13 @@ module Flapjack
           key :format, :"date-time"
         end
         property :links do
-          key :"$ref", :UnscheduledMaintenanceUpdateLinks
+          key :"$ref", :UnscheduledMaintenanceChangeLinks
         end
       end
 
-      swagger_schema :UnscheduledMaintenanceUpdateLinks do
+      swagger_schema :UnscheduledMaintenanceChangeLinks do
         property :check do
-          key :"$ref", :CheckReference
+          key :"$ref", :jsonapi_CheckLinkage
         end
       end
 

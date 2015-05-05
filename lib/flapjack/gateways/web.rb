@@ -3,7 +3,6 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
-require 'erb'
 require 'tilt/erb'
 require 'uri'
 
@@ -15,34 +14,42 @@ require 'flapjack/data/event'
 require 'flapjack/data/statistic'
 require 'flapjack/utility'
 
+require 'flapjack/gateways/web/middleware/request_timestamp'
+
 module Flapjack
 
   module Gateways
 
     class Web < Sinatra::Base
 
-      set :raise_errors, true
+      set :root, File.dirname(__FILE__)
+
+      use Flapjack::Gateways::JSONAPI::Middleware::RequestTimestamp
+      use Rack::MethodOverride
+
+      set :raise_errors, false
       set :protection, except: :path_traversal
 
       set :views, settings.root + '/web/views'
       set :public_folder, settings.root + '/web/public'
 
-      use Rack::MethodOverride
-
       class << self
         def start
           Flapjack.logger.info "starting web - class"
 
-          set :show_exceptions, @config['show_exceptions'].is_a?(TrueClass)
+          set :show_exceptions, false
+          # set :show_exceptions, @config['show_exceptions'].is_a?(TrueClass) ? :after_handler : false
 
-          if accesslog = (@config && @config['access_log'])
-            if not File.directory?(File.dirname(accesslog))
-              puts "Parent directory for log file #{accesslog} doesn't exist"
-              puts "Exiting!"
-              exit
+          @show_exceptions = Sinatra::ShowExceptions.new(self)
+
+          if access_log = (@config && @config['access_log'])
+            if not File.directory?(File.dirname(access_log))
+              raise "Parent directory for log file #{access_log} doesn't exist"
             end
 
-            use Rack::CommonLogger, ::Logger.new(@config['access_log'])
+            @access_log = ::Logger.new(@config['access_log'])
+
+            use Rack::CommonLogger, @access_log
           end
 
           @api_url = @config['api_url']
@@ -385,6 +392,24 @@ module Flapjack
         end
 
         erb 'contact.html'.to_sym
+      end
+
+      error do
+        e = env['sinatra.error']
+        # trace = e.backtrace.join("\n")
+        # puts trace
+
+        # Rack::CommonLogger doesn't log requests which result in exceptions.
+        # If you want something done properly, do it yourself...
+        access_log = self.class.instance_variable_get('@middleware').detect {|mw|
+          mw.first.is_a?(::Rack::CommonLogger)
+        }
+        unless access_log.nil?
+          access_log.first.send(:log, status_code,
+            ::Rack::Utils::HeaderHash.new(headers), msg,
+            env['request_timestamp'])
+        end
+        self.class.instance_variable_get('@show_exceptions').pretty(env, e)
       end
 
     private

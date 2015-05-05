@@ -223,6 +223,9 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
+        property :links do
+          key :"$ref", :CheckChangeLinks
+        end
       end
 
       swagger_schema :CheckUpdate do
@@ -243,16 +246,19 @@ module Flapjack
           key :enum, [true, false]
         end
         property :links do
-          key :"$ref", :CheckUpdateLinks
+          key :"$ref", :CheckChangeLinks
         end
       end
 
-      swagger_schema :CheckUpdateLinks do
+      swagger_schema :CheckChangeLinks do
+        property :scheduled_maintenances do
+          key :"$ref", :jsonapi_UnscheduledMaintenancesLinkage
+        end
         property :tags do
-          key :type, :array
-          items do
-            key :"$ref", :TagReference
-          end
+          key :"$ref", :jsonapi_TagsLinkage
+        end
+        property :unscheduled_maintenances do
+          key :"$ref", :jsonapi_ScheduledMaintenancesLinkage
         end
       end
 

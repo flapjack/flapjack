@@ -38,19 +38,24 @@ module Flapjack
               }
             }
 
-            [status_code, response.headers, Flapjack.dump_json(error_data)]
+            # Rack::CommonLogger doesn't log requests which result in exceptions.
+            # If you want something done properly, do it yourself...
+            result = Flapjack.dump_json(error_data)
+            access_log = self.class.instance_variable_get('@middleware').detect {|mw|
+              mw.first.is_a?(::Rack::CommonLogger)
+            }
+            unless access_log.nil?
+              access_log.first.send(:log, status_code,
+                ::Rack::Utils::HeaderHash.new(headers), result,
+                env['request_timestamp'])
+            end
+            [status_code, headers, result]
           end
 
           def is_jsonapi_request?
             return false if request.content_type.nil?
             Flapjack::Gateways::JSONAPI::JSONAPI_MEDIA_TYPE.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
           end
-
-          # def is_jsonpatch_request?
-          #   return false if request.content_type.nil?
-          #   'application/json-patch+json'.eql?(request.content_type.split(/\s*[;,]\s*/, 2).first)
-          # end
-
         end
       end
     end
