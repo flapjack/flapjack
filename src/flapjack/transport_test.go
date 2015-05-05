@@ -13,7 +13,10 @@ func TestDialFails(t *testing.T) {
 }
 
 func TestSendSucceeds(t *testing.T) {
-	transport, _ := Dial("localhost:6379", 9)
+	transport, err := Dial("localhost:6379", 9)
+	if err != nil {
+		t.Fatalf("Couldn't establish connection to testing Redis: %s", err)
+	}
 	event := Event{
 		Entity:  "hello",
 		Check:   "world",
@@ -21,19 +24,21 @@ func TestSendSucceeds(t *testing.T) {
 		Summary: "hello world",
 	}
 
-	_, err := transport.Send(event)
+	_, err = transport.Send(event)
 	if err != nil {
-		t.Error("Error upon sending event: %v", err)
+		t.Fatalf("Error when sending event: %s", err)
 	}
-
 }
 
 func TestSendFails(t *testing.T) {
-	transport, _ := Dial("localhost:6379", 9)
+	transport, err := Dial("localhost:0", 9)
+	if err == nil {
+		t.Fatal("Expected error when connecting to testing Redis, got none.")
+	}
 	event := Event{}
 
-	_, err := transport.Send(event)
+	_, err = transport.Send(event)
 	if err == nil {
-		t.Error("Expected error upon sending event: %v", err)
+		t.Fatal("Expected error when sending event, got none.")
 	}
 }
