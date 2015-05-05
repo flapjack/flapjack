@@ -289,8 +289,6 @@ module Flapjack
         entity_check = get_entity_check(@entity, @check)
         halt(404, "Could not find check '#{@entity}:#{@check}'") if entity_check.nil?
 
-        check_stats
-
         last_change = entity_check.last_change
 
         @check_state                = entity_check.state
@@ -300,6 +298,14 @@ module Flapjack
         @check_summary              = entity_check.summary
         @check_details              = entity_check.details
         @check_perfdata             = entity_check.perfdata
+
+        @check_initial_failure_delay = entity_check.initial_failure_delay ||
+          Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
+        @check_repeat_failure_delay  = entity_check.repeat_failure_delay  ||
+          Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
+
+        @check_initial_failure_delay_is_default = entity_check.initial_failure_delay ? false : true
+        @check_repeat_failure_delay_is_default  = entity_check.repeat_failure_delay  ? false : true
 
         @last_notifications         = last_notification_data(entity_check)
 
