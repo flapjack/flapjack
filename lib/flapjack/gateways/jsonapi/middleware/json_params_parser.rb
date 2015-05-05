@@ -5,7 +5,7 @@ require 'rack'
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
-      module Rack
+      module Middleware
         class JsonParamsParser < Struct.new(:app)
           def call(env)
             t = type(env)

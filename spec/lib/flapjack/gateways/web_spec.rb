@@ -164,7 +164,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     it "shows the state of a check" do
       time = Time.now
-      expect(Time).to receive(:now).and_return(time)
+      expect(Time).to receive(:now).at_least(:once).and_return(time)
 
       expect_check_stats
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])

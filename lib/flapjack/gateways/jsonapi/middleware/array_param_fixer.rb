@@ -7,7 +7,7 @@ require 'rack'
 module Flapjack
   module Gateways
     class JSONAPI < Sinatra::Base
-      module Rack
+      module Middleware
         class ArrayParamFixer < Struct.new(:app)
           def call(env)
             if (env["REQUEST_METHOD"] == 'GET') && env["rack.request.query_string"].nil?
