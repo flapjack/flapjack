@@ -2,12 +2,8 @@
   require_css 'bootstrap'
   require_css 'screen'
   require_css 'font-awesome'
-  require_css 'tablesort'
 
   require_js  'jquery-1.10.2'
-  require_js  'jquery.tablesorter'
-  require_js  'jquery.tablesorter.widgets'
-  require_js  'tablesort'
   require_js  'moment'
 %>
 
@@ -34,20 +30,20 @@
         <ul class="nav navbar-nav">
           <li<%= include_active?('') %>>
             <a title="Summary" href="<%= @base_url %>">
-              <i class="fa fa-trophy fa-lg"></i>
+              <i class="fa fa-list fa-lg"></i>
               Summary
             </a>
           </li>
           <li<%= include_active?('checks_all') %>>
+            <a title="Tags" href="<%= @base_url %>tags">
+              <i class="fa fa-tags fa-lg"></i>
+              Tags
+            </a>
+          </li>
+          <li<%= include_active?('checks') %>>
             <a title="Checks" href="<%= @base_url %>checks">
               <i class="fa fa-check-circle-o fa-lg"></i>
               Checks
-            </a>
-          </li>
-          <li<%= include_active?('checks_failing') %>>
-            <a title="Failing Checks" href="<%= @base_url %>checks?type=failing">
-              <i class="fa fa-times-circle-o fa-lg"></i>
-              Failing Checks
             </a>
           </li>
           <li<%= include_active?('contacts') %>>

@@ -1,13 +1,13 @@
-<% page_title 'Contacts' %>
+<% page_title 'Tags' %>
 
 <div class="page-header">
-  <h2>Contacts</h2>
+  <h2>Tags</h2>
 </div>
 
 <div class="row">
   <div class="col-md-8">
 
-    <form action="<%= @base_url %>contacts" method="get" role="form" class="form-horizontal">
+    <form action="<%= @base_url %>tags" method="get" role="form" class="form-horizontal">
 
       <div class="form-group">
         <label class="col-sm-2 control-label" for="start_time">Name:</label>
@@ -32,16 +32,16 @@
   </div>
 </div>
 
-<% if !@contacts || @contacts.empty? %>
-  <p>No contacts</p>
+<% if !@tags || @tags.empty? %>
+  <p>No tags</p>
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
     <tr>
       <th>Name</th>
     </tr>
-    <% @contacts.each do |contact| %>
+    <% @tags.each do |tag| %>
     <tr>
-      <td><a href="<%= @base_url %>contacts/<%= contact[:id] %>" title="contact details"><%= h contact[:name] %></a></td>
+      <td><a href="<%= @base_url %>tags/<%= tag[:name] %>" title="tag details"><%= h tag[:name] %></a></td>
     </tr>
     <% end %>
   </table>

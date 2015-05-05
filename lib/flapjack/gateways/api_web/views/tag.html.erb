@@ -1,0 +1,32 @@
+<% page_title "Tag: #{h @tag[:name]}" %>
+
+<div class="page-header">
+  <h2>Tag: <%= h @tag[:name] %></h2>
+</div>
+
+<% if @checks.nil? || @checks.empty? %>
+  <p>No checks</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Name</th>
+      <th>Failing?</th>
+    </tr>
+    <% @checks.each do |check| %>
+    <tr>
+      <td><a href="<%= @base_url %>checks/<%= check[:id] %>" title="check details"><%= h check[:name] %></a></td>
+      <td><%=
+case check[:failing]
+when true
+  'Y'
+when false
+  'N'
+else
+  '?'
+end %></a></td>
+    </tr>
+    <% end %>
+  </table>
+<% end %>
+<br>
+

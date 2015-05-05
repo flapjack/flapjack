@@ -23,6 +23,8 @@ module Flapjack
       set :views, settings.root + '/api_web/views'
       set :public_folder, settings.root + '/api_web/public'
 
+      set :erb, :layout => 'layout.html'.to_sym
+
       use Rack::MethodOverride
 
       class << self
@@ -151,20 +153,53 @@ module Flapjack
         erb 'self_stats.html'.to_sym
       end
 
+      get '/tags' do
+        opts = {}
+        @name = params[:name]
+        opts.update(:name => @name) unless @name.nil?
+
+        @tags = Flapjack::Diner.tags(:filter => opts,
+          :page => (params[:page] || 1))
+
+        erb 'tags.html'.to_sym
+      end
+
+      get '/tags/:name' do
+        tag_name = params[:name]
+
+        @tag = Flapjack::Diner.tags(tag_name)
+        err(404, "Could not find tag '#{tag_name}'") if @tag.nil?
+
+        check_ids = Flapjack::Diner.tag_link_checks(tag_name)
+        err(404, "Could not find checks for tag '#{tag_name}'") if check_ids.nil?
+
+        erb 'tag.html'.to_sym
+      end
+
       get '/checks' do
         check_stats
         time = Time.now
 
-        @adjective, @checks, @total = if 'failing'.eql?(params[:type])
-          ['failing', Flapjack::Diner.checks(:filter => {:failing => true},
-                                             :page => (params[:page] || 1)),
-           pagination_from_context(Flapjack::Diner.context)]
-        else
-          ['all', Flapjack::Diner.checks,
-           pagination_from_context(Flapjack::Diner.context)]
+        opts = {}
+
+        @enabled = boolean_from_str(params[:enabled])
+        opts.update(:enabled => @enabled) unless @enabled.nil?
+
+        @failing = boolean_from_str(params[:failing])
+        opts.update(:failing => @failing) unless @failing.nil?
+
+        @checks = Flapjack::Diner.checks(:filter => opts,
+                                         :page => (params[:page] || 1))
+
+        unless @checks.nil?
+          @pagination = pagination_from_context(Flapjack::Diner.context)
+          unless @pagination.nil?
+            @links = create_pagination_links(@pagination[:page],
+              @pagination[:total_pages])
+          end
         end
 
-        @states = []
+        @states = {}
 
     #     @states = @checks.inject({}) do |memo, check|
     #       memo[check] = check_state(check, time)
@@ -345,8 +380,20 @@ module Flapjack
     #   end
 
       get '/contacts' do
+        opts = {}
+        @name = params[:name]
+        opts.update(:name => @name) unless @name.nil?
+
         @contacts = Flapjack::Diner.contacts(:page => params[:page],
-          :per_page => params[:per_page], :sort => 'name')
+          :filter => opts, :sort => '+name')
+
+        unless @contacts.nil?
+          @pagination = pagination_from_context(Flapjack::Diner.context)
+          unless @pagination.nil?
+            @links = create_pagination_links(@pagination[:page],
+              @pagination[:total_pages])
+          end
+        end
 
         erb 'contacts.html'.to_sym
       end
@@ -357,11 +404,12 @@ module Flapjack
         @contact = Flapjack::Diner.contacts(contact_id, :include => 'media')
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
-    #     @contact_media = @contact.media.all
+        context = Flapjack::Diner.context
+        unless context.nil?
+          @media = context[:included]
+        end
 
-    #     if @contact_media.any? {|m| m.transport == 'pagerduty'}
-    #       @pagerduty_credentials = @contact.pagerduty_credentials
-    #     end
+        @pagerduty_credentials = @media.detect {|m| 'pagerduty'.eql?(m[:transport])}
 
         @checks = [] # @contact.checks
 
@@ -418,45 +466,43 @@ module Flapjack
 
         time = Time.now
 
-        Flapjack.logger.info statistics.inspect
-        Flapjack.logger.info Flapjack::Diner.last_error
+        unless statistics.nil?
+          @executive_instances = statistics.each_with_object({}) do |stats, memo|
+            if 'global'.eql?(stats[:instance_name])
+              @global_stats = stats
+              next
+            end
+            boot_time =  Time.parse(stats[:created_at])
+            uptime = time - boot_time
+            uptime_string = ChronicDuration.output(uptime, :format => :short,
+                              :keep_zero => true, :units => 2) || '0s'
 
-        @executive_instances = statistics.each_with_object({}) do |stats, memo|
-          if 'global'.eql?(stats[:instance_name])
-            @global_stats = stats
-            next
+            event_counters = {}
+            event_rates    = {}
+
+            [:all_events, :ok_events, :failure_events, :action_events,
+             :invalid_events].each do |evt|
+
+              count               = stats[evt]
+              event_counters[evt] = count
+              event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
+            end
+
+            memo[stats[:instance_name]] = {
+              :uptime         => uptime,
+              :uptime_string  => uptime_string,
+              :event_counters => event_counters,
+              :event_rates    => event_rates
+            }
           end
-          boot_time =  Time.parse(stats[:created_at])
-          uptime = time - boot_time
-          uptime_string = ChronicDuration.output(uptime, :format => :short,
-                            :keep_zero => true, :units => 2) || '0s'
-
-          event_counters = {}
-          event_rates    = {}
-
-          [:all_events, :ok_events, :failure_events, :action_events,
-           :invalid_events].each do |evt|
-
-            count               = stats[evt]
-            event_counters[evt] = count
-            event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
-          end
-
-          memo[stats[:instance_name]] = {
-            # :boot_time      => boot_time,
-            :uptime         => uptime,
-            :uptime_string  => uptime_string,
-            :event_counters => event_counters,
-            :event_rates    => event_rates
-          }
         end
       end
 
       def check_stats
-        enabled_checks = Flapjack::Diner.checks(:filter => {:enabled => true})
-        @count_enabled_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
-        failing_checks = Flapjack::Diner.checks(:filter => {:failing => true})
-        @count_failing_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
+        # enabled_checks = Flapjack::Diner.checks(:filter => {:enabled => true})
+        # @count_enabled_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
+        # failing_checks = Flapjack::Diner.checks(:filter => {:failing => true, :enabled => true})
+        # @count_failing_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
       end
 
       def pagination_from_context(context)
@@ -514,6 +560,33 @@ module Flapjack
 
       def include_page_title
         @page_title ? "#{@page_title} | Flapjack" : "Flapjack"
+      end
+
+      def boolean_from_str(str)
+        case str
+        when '0', 'f', 'false', 'n', 'no'
+          false
+        when '1', 't', 'true', 'y', 'yes'
+          true
+        end
+      end
+
+      def create_pagination_links(page, total_pages)
+        pages = {}
+        pages[:first] = 1
+        pages[:prev]  = page - 1 if (page > 1)
+        pages[:next]  = page + 1 if page < total_pages
+        pages[:last]  = total_pages
+
+        url_without_params = request.url.split('?').first
+
+        links = {}
+        pages.each do |key, value|
+          page_params = {'page' => value }
+          new_params = request.params.merge(page_params)
+          links[key] = "#{url_without_params}?#{new_params.to_query}"
+        end
+        links
       end
 
     end

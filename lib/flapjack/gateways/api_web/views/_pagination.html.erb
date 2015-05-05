@@ -1,0 +1,19 @@
+<% unless @pagination.nil? %>
+  <ul class="pagination">
+    <% if @pagination[:page] == 1 %>
+      <li class="disabled"><span>&laquo;</span></li>
+      <li class="disabled"><span>&lt;</span></li>
+    <% else %>
+      <li><a href="<%= @links[:first] %>">&laquo;</a></li>
+      <li><a href="<%= @links[:prev] %>">&lt;</a></li>
+    <% end %>
+
+    <% if @pagination[:page] >= @pagination[:total_pages] %>
+      <li class="disabled"><span>&gt;</span></li>
+      <li class="disabled"><span>&raquo;</span></li>
+    <% else %>
+      <li><a href="<%= @links[:next] %>">&gt;</a></li>
+      <li><a href="<%= @links[:last] %>">&raquo;</a></li>
+    <% end %>
+  </ul>
+<% end %>
