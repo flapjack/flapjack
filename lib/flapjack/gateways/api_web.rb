@@ -139,7 +139,7 @@ module Flapjack
        end
 
       get '/' do
-        check_stats
+        @metrics = Flapjack::Diner.metrics
 
         erb 'index.html'.to_sym
       end
@@ -147,8 +147,39 @@ module Flapjack
       get '/self_stats' do
         @current_time = Time.now
 
-        self_stats(@current_time)
-        check_stats
+        @metrics   = Flapjack::Diner.metrics
+        statistics = Flapjack::Diner.statistics
+
+        unless statistics.nil?
+          @executive_instances = statistics.each_with_object({}) do |stats, memo|
+            if 'global'.eql?(stats[:instance_name])
+              @global_stats = stats
+              next
+            end
+            boot_time =  Time.parse(stats[:created_at])
+            uptime = @current_time - boot_time
+            uptime_string = ChronicDuration.output(uptime, :format => :short,
+                              :keep_zero => true, :units => 2) || '0s'
+
+            event_counters = {}
+            event_rates    = {}
+
+            [:all_events, :ok_events, :failure_events, :action_events,
+             :invalid_events].each do |evt|
+
+              count               = stats[evt]
+              event_counters[evt] = count
+              event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
+            end
+
+            memo[stats[:instance_name]] = {
+              :uptime         => uptime,
+              :uptime_string  => uptime_string,
+              :event_counters => event_counters,
+              :event_rates    => event_rates
+            }
+          end
+        end
 
         erb 'self_stats.html'.to_sym
       end
@@ -156,7 +187,7 @@ module Flapjack
       get '/tags' do
         opts = {}
         @name = params[:name]
-        opts.update(:name => @name) unless @name.nil?
+        opts.update(:name => @name) unless @name.nil? || @name.empty?
 
         @tags = Flapjack::Diner.tags(:filter => opts,
           :page => (params[:page] || 1))
@@ -177,10 +208,13 @@ module Flapjack
       end
 
       get '/checks' do
-        check_stats
+        # check_stats
         time = Time.now
 
         opts = {}
+
+        @name = params[:name]
+        opts.update(:name => @name) unless @name.nil? || @name.empty?
 
         @enabled = boolean_from_str(params[:enabled])
         opts.update(:enabled => @enabled) unless @enabled.nil?
@@ -216,8 +250,6 @@ module Flapjack
 
         # @check = Flapjack::Data::Check.find_by_id(check_id)
         # halt(404, "Could not find check '#{check_id}'") if @check.nil?
-
-        check_stats
 
     #     last_change = @check.states.last
     #     last_update = @check.latest_notifications.last
@@ -459,51 +491,6 @@ module Flapjack
     #      last_notified
     #     ]
     #   end
-
-      def self_stats(time)
-        @metrics   = Flapjack::Diner.metrics
-        statistics = Flapjack::Diner.statistics
-
-        time = Time.now
-
-        unless statistics.nil?
-          @executive_instances = statistics.each_with_object({}) do |stats, memo|
-            if 'global'.eql?(stats[:instance_name])
-              @global_stats = stats
-              next
-            end
-            boot_time =  Time.parse(stats[:created_at])
-            uptime = time - boot_time
-            uptime_string = ChronicDuration.output(uptime, :format => :short,
-                              :keep_zero => true, :units => 2) || '0s'
-
-            event_counters = {}
-            event_rates    = {}
-
-            [:all_events, :ok_events, :failure_events, :action_events,
-             :invalid_events].each do |evt|
-
-              count               = stats[evt]
-              event_counters[evt] = count
-              event_rates[evt]    = (uptime > 0) ? (count.to_f / uptime).round : nil
-            end
-
-            memo[stats[:instance_name]] = {
-              :uptime         => uptime,
-              :uptime_string  => uptime_string,
-              :event_counters => event_counters,
-              :event_rates    => event_rates
-            }
-          end
-        end
-      end
-
-      def check_stats
-        # enabled_checks = Flapjack::Diner.checks(:filter => {:enabled => true})
-        # @count_enabled_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
-        # failing_checks = Flapjack::Diner.checks(:filter => {:failing => true, :enabled => true})
-        # @count_failing_checks = (pagination_from_context(Flapjack::Diner.context) || {})[:total_count] || 0
-      end
 
       def pagination_from_context(context)
         ((context || {})[:meta] || {})[:pagination]

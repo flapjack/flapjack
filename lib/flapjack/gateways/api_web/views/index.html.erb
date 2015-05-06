@@ -4,5 +4,5 @@
   <h2>Summary</h2>
 </div> <!-- page header -->
 
-<h4><a href="<% @base_url %>checks?type=failing" title="failing checks"><%= h @count_failing_checks %></a> out of <a href="<% @base_url %>checks" title="enabled checks"><%= h @count_enabled_checks %></a> checks are failing</h4>
+<h4><a href="<% @base_url %>checks?failing=1&amp;enabled=1" title="failing checks"><%= h @metrics[:check_counts][:failing] %></a> out of <a href="<% @base_url %>checks?enabled=1" title="enabled checks"><%= h @metrics[:check_counts][:enabled] %></a> checks are failing</h4>
 
