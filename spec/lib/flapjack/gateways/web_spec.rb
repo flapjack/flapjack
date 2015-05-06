@@ -175,7 +175,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
                             :recovery        => {:timestamp => time.to_i - (3 * 60 * 60), :summary => nil},
                             :acknowledgement => {:timestamp => nil, :summary => nil} }
 
-      expect_check_stats
       expect(entity_check).to receive(:state).and_return('ok')
       expect(entity_check).to receive(:last_update).and_return(time.to_i - (3 * 60 * 60))
       expect(entity_check).to receive(:last_change).and_return(time.to_i - (3 * 60 * 60))
@@ -191,6 +190,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(entity_check).to receive(:historical_states).
         with(nil, time.to_i, :order => 'desc', :limit => 20).and_return([])
       expect(entity_check).to receive(:enabled?).and_return(true)
+      expect(entity_check).to receive(:initial_failure_delay).exactly(2).times.and_return(30)
+      expect(entity_check).to receive(:repeat_failure_delay).exactly(2).times.and_return(60)
 
       expect(Flapjack::Data::Entity).to receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)

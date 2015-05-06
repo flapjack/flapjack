@@ -279,6 +279,32 @@
 </div><!-- row -->
 
 <div class="row">
+  <div id="failure-delays" class="col-md-6">
+    <a name="failure_delays"></a>
+    <h3>Failure Delays</h3>
+    <table class="table table-hover table-condensed">
+
+      <tr>
+        <td>Initial failure delay:</td>
+        <td><%= h(ChronicDuration.output(@check_initial_failure_delay, :keep_zero => true)) %>
+          <% if @check_initial_failure_delay_is_default %>
+            (default)
+          <% end %>
+        </td>
+      </tr>
+      <tr>
+        <td>Repeat failure delay:</td>
+        <td><%= h(ChronicDuration.output(@check_repeat_failure_delay, :keep_zero => true)) %>
+          <% if @check_repeat_failure_delay_is_default %>
+            (default)
+          <% end %>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="row">
   <div id="scheduled-maintenance-periods" class="col-md-12">
     <a name="scheduled_maintenance_periods"></a>
     <h3>Scheduled Maintenance Periods</h3>
