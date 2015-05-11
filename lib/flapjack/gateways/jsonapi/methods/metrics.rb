@@ -44,14 +44,10 @@ module Flapjack
               Flapjack::Data::Check.split_by_freshness([0, 60, 300, 900, 3600], :counts => true)
             end
 
-            def failing_checks
-              Flapjack::Data::Check.failing
-            end
-
             def checks
               {
                 :all     => Flapjack::Data::Check.count,
-                :failing => failing_checks.size
+                :failing => Flapjack::Data::Check.intersect(:failing => true).count
               }
             end
 

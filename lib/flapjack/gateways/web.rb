@@ -479,7 +479,7 @@ module Flapjack
       end
 
       def failing_checks
-        @failing_checks ||= Flapjack::Data::Check.failing
+        @failing_checks ||= Flapjack::Data::Check.intersect(:failing => true).all
       end
 
       def check_stats

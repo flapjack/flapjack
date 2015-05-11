@@ -36,8 +36,11 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
   end
 
   def expect_check_stats
+    failing = double('failing', :all => [check])
     enabled = double('enabled', :count => 1)
 
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:failing => true).and_return(failing)
     expect(Flapjack::Data::Check).to receive(:intersect).
       with(:enabled => true).and_return(enabled)
   end
@@ -60,11 +63,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       # NOTE Reuse enough of the stats specs to be able to build a page quickly
       expect_stats
       expect_check_stats
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/branding.png">'
 
@@ -76,14 +74,10 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     it "displays the standard logo if no custom logo configured" do
       Flapjack::Gateways::Web.instance_variable_set('@config', {})
       Flapjack::Gateways::Web.start
+
       # NOTE Reuse enough of the stats specs to be able to build a page quickly
       expect_stats
       expect_check_stats
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       logo_image_tag = '<img alt="Flapjack" class="logo" src="http://example.org/img/flapjack-2013-notext-transparent-300-300.png">'
 
@@ -105,12 +99,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
       expect(check).to receive(:name).and_return(check_name)
       expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
       expect(check).to receive(:states).and_return(states)
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       latest_notifications = double('latest_notifications')
       expect(check).to receive(:latest_notifications).and_return(latest_notifications)
@@ -127,13 +116,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
 
     it "shows a page listing failing checks" do
       expect_check_stats
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
 
       expect(check).to receive(:name).and_return(check_name)
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       latest_notifications = double('latest_notifications')
       expect(check).to receive(:latest_notifications).and_return(latest_notifications)
@@ -152,11 +136,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
     it "shows a page listing flapjack statistics" do
       expect_stats
       expect_check_stats
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       get '/self_stats'
       expect(last_response).to be_ok
@@ -167,7 +146,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(Time).to receive(:now).at_least(:once).and_return(time)
 
       expect_check_stats
-      expect(Flapjack::Data::Check).to receive(:all).and_return([check])
 
       expect(check).to receive(:name).twice.and_return(check_name)
 
@@ -200,10 +178,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       states = double('states')
 
       expect(states).to receive(:last).and_return(ok_state)
-
-      critical_entry = double(Flapjack::Data::Entry)
-      expect(critical_entry).to receive(:condition).and_return('critical')
-      expect(check).to receive(:last_change).and_return(critical_entry)
 
       latest_notifications = double('latest_notifications',
         :all => [failing_entry, ok_entry], :last => ok_entry)
