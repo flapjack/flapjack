@@ -72,13 +72,59 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
        with(:headers => {'Authorization'=>'Token token=token123'}).
        to_return(:status => 200, :body => response.to_json, :headers => {})
 
+    stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
+      "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
+      "since=#{since}&status=acknowledged&until=#{unt}").
+      with(:headers => {'Authorization'=>['flapjack', 'password123']}).
+      to_return(:status => 200, :body => response.to_json, :headers => {})
+
     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
     fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
-
 
     EM.synchrony do
       result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck', 'token' => 'token123',
         'check' => check)
+
+      expect(result).to be_a(Hash)
+      expect(result).to have_key(:pg_acknowledged_by)
+      expect(result[:pg_acknowledged_by]).to be_a(Hash)
+      expect(result[:pg_acknowledged_by]).to have_key('id')
+      expect(result[:pg_acknowledged_by]['id']).to eq('ABCDEFG')
+      EM.stop
+    end
+
+  end
+
+  it "looks for acknowledgements via the PagerDuty API with basic auth" do
+    check = 'PING'
+    expect(Time).to receive(:now).and_return(time)
+    since = (time.utc - (60*60*24*7)).iso8601 # the last week
+    unt   = (time.utc + (60*60*24)).iso8601   # 1 day in the future
+
+    response = {"incidents" =>
+      [{"incident_number" => 12,
+        "status" => "acknowledged",
+        "last_status_change_by" => {"id"=>"ABCDEFG", "name"=>"John Smith",
+                                    "email"=>"johns@example.com",
+                                    "html_url"=>"http://flpjck.pagerduty.com/users/ABCDEFG"}
+       }
+      ],
+      "limit"=>100,
+      "offset"=>0,
+      "total"=>1}
+
+    stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
+      "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
+      "since=#{since}&status=acknowledged&until=#{unt}").
+      with(:headers => {'Authorization'=>['flapjack', 'password123']}).
+      to_return(:status => 200, :body => response.to_json, :headers => {})
+
+    expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+    fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
+
+    EM.synchrony do
+      result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',
+      'username' => 'flapjack', 'password' => 'password123', 'check' => check)
 
       expect(result).to be_a(Hash)
       expect(result).to have_key(:pg_acknowledged_by)
