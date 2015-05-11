@@ -185,6 +185,10 @@ module Flapjack
             Kernel.sleep(10)
           end
 
+        # begin
+
+          Zermelo.redis = Flapjack.redis
+
           loop do
             @lock.synchronize do
               # ensure we're the only instance of the PagerDuty acknowledgement check running (with a naive
@@ -197,10 +201,14 @@ module Flapjack
                 find_pagerduty_acknowledgements
                 Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
               end
+
+              Kernel.sleep 10
             end
 
-            Kernel.sleep 10
-          end
+          # ensure
+          #   Flapjack.redis.quit
+          # end
+
         end
 
         def stop_type
