@@ -39,7 +39,9 @@ describe Flapjack::Data::Contact, :redis => true do
           'pagerduty' => {
             'service_key' => '123456789012345678901234',
             'subdomain'   => 'flpjck',
-            'token'       => 'token123'
+            'token'       => 'token123',
+            'username'    => nil,
+            'password'    => nil
           },
         },
       },
@@ -275,20 +277,26 @@ describe Flapjack::Data::Contact, :redis => true do
     expect(credentials).not_to be_nil
     expect(credentials).to be_a(Hash)
     expect(credentials).to eq({'service_key' => '123456789012345678901234',
-                           'subdomain'   => 'flpjck',
-                           'token'       => 'token123'})
+                               'subdomain'   => 'flpjck',
+                               'token'       => 'token123',
+                               'username'    => '',
+                               'password'    => ''})
   end
 
   it "sets pagerduty credentials for a contact" do
     contact = Flapjack::Data::Contact.find_by_id('c362', :redis => @redis)
     contact.set_pagerduty_credentials('service_key' => '567890123456789012345678',
                                       'subdomain'   => 'eggs',
-                                      'token'       => 'token123')
+                                      'token'       => 'token123',
+                                      'username'    => 'mary',
+                                      'password'    => 'mary_password')
 
     expect(@redis.hget('contact_media:c362', 'pagerduty')).to eq('567890123456789012345678')
     expect(@redis.hgetall('contact_pagerduty:c362')).to eq({
       'subdomain'   => 'eggs',
-      'token'       => 'token123'
+      'token'       => 'token123',
+      'username'    => 'mary',
+      'password'    => 'mary_password'
     })
   end
 

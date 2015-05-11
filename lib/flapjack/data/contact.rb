@@ -160,7 +160,7 @@ module Flapjack
       def set_pagerduty_credentials(details)
         @redis.hset("contact_media:#{self.id}", 'pagerduty', details['service_key'])
         @redis.hmset("contact_pagerduty:#{self.id}",
-                     *['subdomain', 'token'].collect {|f| [f, details[f]]})
+                     *['subdomain', 'token', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
       def delete_pagerduty_credentials
@@ -506,7 +506,7 @@ module Flapjack
             when 'pagerduty'
               redis.hset("contact_media:#{contact_id}", medium, details['service_key'])
               redis.hmset("contact_pagerduty:#{contact_id}",
-                          *['subdomain', 'token'].collect {|f| [f, details[f]]})
+                          *['subdomain', 'token', 'username', 'password'].collect {|f| [f, details[f]]})
             else
               redis.hset("contact_media:#{contact_id}", medium, details['address'])
               redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
