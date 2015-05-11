@@ -204,6 +204,7 @@ module Flapjack
 
               Kernel.sleep 10
             end
+          end
 
           # ensure
           #   Flapjack.redis.quit
