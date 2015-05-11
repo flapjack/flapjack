@@ -138,9 +138,6 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:failing => true).and_return([check])
 
-      expect(check).to receive(:in_scheduled_maintenance?).
-        with(an_instance_of(Time)).and_return(false)
-
       expect(check).to receive(:in_unscheduled_maintenance?).
         with(an_instance_of(Time)).and_return(false)
 

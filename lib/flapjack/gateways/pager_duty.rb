@@ -219,8 +219,6 @@ module Flapjack
 
             unacked_failing_checks = Flapjack::Data::Check.
               intersect(:failing => true).reject do |check|
-
-              check.in_scheduled_maintenance?(time) ||
                 check.in_unscheduled_maintenance?(time)
             end
           end
@@ -408,4 +406,3 @@ module Flapjack
     end
   end
 end
-
