@@ -72,12 +72,6 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
        with(:headers => {'Authorization'=>'Token token=token123'}).
        to_return(:status => 200, :body => response.to_json, :headers => {})
 
-    stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
-      "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
-      "since=#{since}&status=acknowledged&until=#{unt}").
-      with(:headers => {'Authorization'=>['flapjack', 'password123']}).
-      to_return(:status => 200, :body => response.to_json, :headers => {})
-
     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
     fp = Flapjack::Gateways::Pagerduty.new(:config => config, :logger => @logger)
 
