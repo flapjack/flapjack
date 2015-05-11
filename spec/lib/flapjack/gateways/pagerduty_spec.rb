@@ -32,7 +32,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
   it "looks for acknowledgements if the search is not already running" do
     expect(redis).to receive(:get).with('sem_pagerduty_acks_running').and_return(nil)
     expect(redis).to receive(:set).with('sem_pagerduty_acks_running', 'true')
-    expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
+    expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 3600)
 
     expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 

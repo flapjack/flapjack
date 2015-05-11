@@ -16,6 +16,7 @@ module Flapjack
     class Pagerduty
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
+      SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
 
       include Flapjack::Utility
 
@@ -129,7 +130,8 @@ module Flapjack
         # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
         # timeout of five minutes to guard against stale locks caused by crashing code) either in this
         # process or in other processes
-        if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
+        if (@pagerduty_acks_started and @pagerduty_acks_started >
+          (Time.now.to_i - SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)) or
             @redis.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
           @logger.debug("skipping looking for acks in pagerduty as this is already happening")
           return
@@ -137,7 +139,7 @@ module Flapjack
 
         @pagerduty_acks_started = Time.now.to_i
         @redis.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
-        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
 
         find_pagerduty_acknowledgements
 
