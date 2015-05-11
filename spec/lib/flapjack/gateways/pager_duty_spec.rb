@@ -7,8 +7,8 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
   let(:config) { {
     'queue'       => 'pagerduty_notifications',
     'credentials' => {'subdomain' => 'flpjck',
-                      'username' => 'flapjack',
-                      'password' => 'password123'}
+                      'username'  => 'flapjack',
+                      'password'  => 'password123'}
   } }
 
   let(:now)   { Time.new }
@@ -129,10 +129,10 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
-      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
+      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 3600)
 
       expect(Flapjack::Data::Check).to receive(:lock).
-        with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
+        with(Flapjack::Data::UnscheduledMaintenance).
         and_yield
 
       expect(Flapjack::Data::Check).to receive(:intersect).
@@ -142,6 +142,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
         with(an_instance_of(Time)).and_return(false)
 
       medium = double(Flapjack::Data::Medium, :id => SecureRandom.uuid)
+      expect(medium).to receive(:pagerduty_subdomain).and_return('mydomain')
       expect(medium).to receive(:pagerduty_token).and_return('abc')
       expect(medium).to receive(:pagerduty_ack_duration).and_return(nil)
 
@@ -181,19 +182,20 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:lock => lock,
                                                          :config => config)
       expect(fpa).to receive(:pagerduty_acknowledgements).
-        with(an_instance_of(Time), 'abc', [check.name]).
+        with(an_instance_of(Time), 'mydomain', 'abc', [check.name]).
         and_return(response['incidents'])
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
 
     # testing separately and stubbing above
     it "looks for acknowledgements via the PagerDuty API" do
+      subdomain = 'mydomain'
       token = 'abc'
 
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
-      unt   = (now.utc + (60*24)).iso8601      # 1 hour in the future
+      unt   = (now.utc + (60*60)).iso8601      # 1 hour in the future
 
-      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+      req = stub_request(:get, "https://#{subdomain}.pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
                               'Authorization' => "Token token=#{token}"},
                  :query => {
@@ -208,7 +210,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      result = fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
+      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
 
       expect(result).to be_a(Array)
@@ -222,10 +224,11 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
     end
 
     it 'gets all values in a paginated request for acknowledgements' do
+      subdomain = 'mydomain'
       token = 'abc'
 
       since = (now.utc - (60*60*24*7)).iso8601 # the last week
-      unt   = (now.utc + (60*24)).iso8601      # 1 hour in the future
+      unt   = (now.utc + (60*60)).iso8601      # 1 hour in the future
 
       response_1 = {"incidents" => [{'incident_key' => check.name}] * 100,
                        "limit"  => 100,
@@ -237,7 +240,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                        "offset" => 100,
                        "total"  => 120}
 
-      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+      req = stub_request(:get, "https://#{subdomain}.pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
                               'Authorization' => "Token token=#{token}"},
                  :query => {
@@ -249,7 +252,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                       :body => Flapjack.dump_json(response_1),
                       :headers => {})
 
-      req = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+      req = stub_request(:get, "https://#{subdomain}.pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
                               'Authorization' => "Token token=#{token}"},
                  :query => {
@@ -265,7 +268,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      result = fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
+      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
 
       expect(result).to be_a(Array)
@@ -273,18 +276,19 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
     end
 
     it 'uses a smaller time period for follow-up requests' do
+      subdomain = 'mydomain'
       token = 'abc'
 
       time_first  = now.utc
       time_second = (now + 10).utc
 
-      since_first   = (time_first - (60*60*24*7)).iso8601 # the last week
-      since_second  = (time_second - 60).iso8601 # the last minute
+      since_first   = (time_first - (60 * 60 * 24 * 7)).iso8601 # the last week
+      since_second  = (time_second - (60 * 15)).iso8601         # the last 15 minutes
 
-      unt_first     = (time_first + (60*24)).iso8601      # 1 hour in the future
-      unt_second    = (time_second + (60*24)).iso8601      # 1 hour in the future
+      unt_first     = (time_first + (60 * 60)).iso8601          # 1 hour in the future
+      unt_second    = (time_second + (60 * 60)).iso8601         # 1 hour in the future
 
-      req_first = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+      req_first = stub_request(:get, "https://#{subdomain}.pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
                               'Authorization' => "Token token=#{token}"},
                  :query => {
@@ -296,7 +300,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                       :body => Flapjack.dump_json(response),
                       :headers => {})
 
-      req_second = stub_request(:get, "https://pagerduty.com/api/v1/incidents").
+      req_second = stub_request(:get, "https://#{subdomain}.pagerduty.com/api/v1/incidents").
             with(:headers => {'Content-type'  => 'application/json',
                               'Authorization' => "Token token=#{token}"},
                  :query => {
@@ -311,8 +315,8 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      fpa.send(:pagerduty_acknowledgements, now, token, [check.name])
-      fpa.send(:pagerduty_acknowledgements, (now + 10), token, [check.name])
+      fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
+      fpa.send(:pagerduty_acknowledgements, (now + 10), subdomain, token, [check.name])
       expect(req_first).to have_been_requested
       expect(req_second).to have_been_requested
     end
@@ -323,10 +327,10 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
       expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
-      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 300)
+      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 3600)
 
       expect(Flapjack::Data::Check).to receive(:lock).
-        with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
+        with(Flapjack::Data::UnscheduledMaintenance).
         and_yield
 
       expect(Flapjack::Data::Check).to receive(:intersect).

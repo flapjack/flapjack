@@ -164,6 +164,7 @@ module Flapjack
       class AckFinder
 
         SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
+        SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
 
         def initialize(opts = {})
           @lock = opts[:lock]
@@ -192,7 +193,7 @@ module Flapjack
               if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
                 Flapjack.logger.debug("skipping looking for acks in PagerDuty as this is already happening")
               else
-                Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+                Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
                 find_pagerduty_acknowledgements
                 Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
               end
@@ -213,10 +214,8 @@ module Flapjack
 
           unacked_failing_checks = []
 
-          Flapjack::Data::Check.lock(
-            Flapjack::Data::ScheduledMaintenance,
-            Flapjack::Data::UnscheduledMaintenance) do
-
+          # Was there a reason we were locking ScheduledMaintenance here as well?
+          Flapjack::Data::Check.lock(Flapjack::Data::UnscheduledMaintenance) do
             unacked_failing_checks = Flapjack::Data::Check.
               intersect(:failing => true).reject do |check|
                 check.in_unscheduled_maintenance?(time)
@@ -236,7 +235,7 @@ module Flapjack
             checks = unacked_failing_checks.select {|c| check_ids.include?(c.id)}
             next if checks.empty?
 
-            pagerduty_acknowledgements(time, medium.pagerduty_token,
+            pagerduty_acknowledgements(time, medium.pagerduty_subdomain, medium.pagerduty_token,
                                        checks.map(&:name)).each do |incident|
 
               inc_key = incident['incident_key']
@@ -311,10 +310,10 @@ module Flapjack
         end
 
         # returns any PagerDuty acknowledgements for the named checks
-        def pagerduty_acknowledgements(time, token, check_names)
-          if token.blank?
+        def pagerduty_acknowledgements(time, subdomain, token, check_names)
+          if token.blank? || subdomain.blank?
             Flapjack.logger.warn("pagerduty_acknowledgements?: Unable to look for acknowledgements on PagerDuty" +
-                         " as the following options are required: token (#{token})")
+                         " as the following options are required: subdomain (#{subdomain}), token (#{token})")
             return
           end
 
@@ -327,7 +326,7 @@ module Flapjack
           requesting = true
 
           while requesting do
-            response = pagerduty_acknowledgements_request(t, token, 100, offset)
+            response = pagerduty_acknowledgements_request(t, subdomain, token, 100, offset)
 
             if response.nil?
               cumulative_incidents = []
@@ -348,13 +347,13 @@ module Flapjack
           cumulative_incidents
         end
 
-        def pagerduty_acknowledgements_request(base_time, token, limit, offset)
+        def pagerduty_acknowledgements_request(base_time, subdomain, token, limit, offset)
           since_offset, until_offset = if @initial
             # the last week -> one hour in the future
-            [(60 * 60 * 24 * 7), (60 * 24)]
+            [(60 * 60 * 24 * 7), (60 * 60)]
           else
-            # the last minute -> one hour in the future
-            [60, (60 * 24)]
+            # the last 15 minutes -> one hour in the future
+            [(60 * 15), (60 * 60)]
           end
 
           query = {'fields'       => 'incident_key,incident_number,last_status_change_by',
@@ -366,7 +365,7 @@ module Flapjack
             query.update(:limit => limit, :offset => offset)
           end
 
-          uri = URI::HTTPS.build(:host => "pagerduty.com",
+          uri = URI::HTTPS.build(:host => "#{subdomain}.pagerduty.com",
                                  :path => '/api/v1/incidents',
                                  :port => 443,
                                  :query => URI.encode_www_form(query))
