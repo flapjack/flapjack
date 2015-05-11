@@ -184,7 +184,7 @@ module Flapjack
             Kernel.sleep(10)
           end
 
-          begin
+          # begin
 
             Zermelo.redis = Flapjack.redis
 
@@ -205,9 +205,9 @@ module Flapjack
               Kernel.sleep 10
             end
 
-          ensure
-            Flapjack.redis.quit
-          end
+          # ensure
+          #   Flapjack.redis.quit
+          # end
 
         end
 
