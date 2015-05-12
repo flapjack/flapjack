@@ -27,6 +27,7 @@ module Flapjack
                         :address                => :string,
                         :interval               => :integer,
                         :rollup_threshold       => :integer,
+                        :pagerduty_subdomain    => :string,
                         :pagerduty_token        => :string,
                         :pagerduty_ack_duration => :integer,
                         :last_rollup_type       => :string
@@ -63,6 +64,9 @@ module Flapjack
         record.errors.add(att, 'must be nil') unless value.nil?
       end
 
+      validates :pagerduty_subdomain, :presence => true,
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
+
       validates :pagerduty_token, :presence => true,
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
@@ -70,9 +74,8 @@ module Flapjack
         :numericality => {:greater_than => 0, :only_integer => true},
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
-      validates_each :pagerduty_token, :pagerduty_ack_duration,
+      validates_each :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration,
         :unless =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
-
         record.errors.add(att, 'must be nil') unless value.nil?
       end
 
@@ -120,6 +123,9 @@ module Flapjack
         property :rollup_threshold do
           key :type, :integer
           key :minimum, 1
+        end
+        property :pagerduty_subdomain do
+          key :type, :string
         end
         property :pagerduty_token do
           key :type, :string
@@ -179,6 +185,9 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
+        property :pagerduty_subdomain do
+          key :type, :string
+        end
         property :pagerduty_token do
           key :type, :string
         end
@@ -215,6 +224,9 @@ module Flapjack
         property :rollup_threshold do
           key :type, :integer
           key :minimum, 1
+        end
+        property :pagerduty_subdomain do
+          key :type, :string
         end
         property :pagerduty_token do
           key :type, :string
