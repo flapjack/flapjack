@@ -162,8 +162,15 @@ module Flapjack
         end
 
         def get_check_details(check, at_time)
-          sched   = check.scheduled_maintenance_at(at_time)
-          unsched = check.unscheduled_maintenance_at(at_time)
+          start_range = Zermelo::Filters::IndexRange.new(nil, at_time, :by_score => true)
+          end_range   = Zermelo::Filters::IndexRange.new(at_time, nil, :by_score => true)
+
+          sched = check.scheduled_maintenances.intersect(:start_time => start_range,
+                    :end_time => end_range).all.max_by(&:end_time)
+
+          unsched = check.unscheduled_maintenances.intersect(:start_time => start_range,
+                    :end_time => end_range).all.max_by(&:end_time)
+
           out = ''
 
           if sched.nil? && unsched.nil?

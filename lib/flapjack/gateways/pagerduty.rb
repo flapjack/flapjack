@@ -212,8 +212,8 @@ module Flapjack
           unacked_failing_checks = Flapjack::Data::Check.
             intersect(:id => failing_check_ids).select do |check|
 
-            check.scheduled_maintenance_at(time).nil? &&
-              check.unscheduled_maintenance_at(time).nil?
+            !(check.in_scheduled_maintenance?(time) ||
+              check.in_unscheduled_maintenance?(time))
           end
 
           Flapjack.logger.debug "found unacknowledged failing checks as follows: " +

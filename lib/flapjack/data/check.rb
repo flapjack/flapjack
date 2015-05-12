@@ -325,25 +325,6 @@ module Flapjack
         false
       end
 
-      # # def current_scheduled_maintenance
-      # def scheduled_maintenance_at(at_time)
-      #   current_sched_ms = scheduled_maintenance_ids_at(at_time).map {|id|
-      #     Flapjack::Data::ScheduledMaintenance.find_by_id(id)
-      #   }
-      #   return if current_sched_ms.empty?
-      #   # if multiple scheduled maintenances found, find the end_time furthest in the future
-      #   current_sched_ms.max_by(&:end_time)
-      # end
-
-      # def unscheduled_maintenance_at(at_time)
-      #   current_unsched_ms = unscheduled_maintenance_ids_at(at_time).map {|id|
-      #     Flapjack::Data::UnscheduledMaintenance.find_by_id(id)
-      #   }
-      #   return if current_unsched_ms.empty?
-      #   # if multiple unscheduled maintenances found, find the end_time furthest in the future
-      #   current_unsched_ms.max_by(&:end_time)
-      # end
-
       def set_unscheduled_maintenance(unsched_maint, options = {})
         current_time = Time.now
 

@@ -148,11 +148,11 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
         with(:id => [check.id]).and_return(checks)
       expect(checks).to receive(:select).and_yield(check).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).
-        with(an_instance_of(Time)).and_return(nil)
+      expect(check).to receive(:in_scheduled_maintenance?).
+        with(an_instance_of(Time)).and_return(false)
 
-      expect(check).to receive(:unscheduled_maintenance_at).
-        with(an_instance_of(Time)).and_return(nil)
+      expect(check).to receive(:in_unscheduled_maintenance?).
+        with(an_instance_of(Time)).and_return(false)
 
       expect(Flapjack::Data::Check).to receive(:pagerduty_credentials_for).
         and_return(check => [{
@@ -189,7 +189,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
             with(:query => {:fields => 'incident_number,status,last_status_change_by',
                             :since => since, :until => unt, :status => 'acknowledged'}).
             to_return(:status => 200, :body => Flapjack.dump_json(response), :headers => {})
-      
+
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::Pagerduty::AckFinder.new(:config => config)
@@ -197,7 +197,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
       result = fpa.send(:pagerduty_acknowledgements)
 
       pg_acknowledged_by = result['incidents'].first['last_status_change_by']
-      
+
       expect(result).to be_a(Hash)
       expect(result).to have_key('incidents')
       expect(pg_acknowledged_by).to be_a(Hash)

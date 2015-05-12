@@ -90,7 +90,6 @@ describe Flapjack::Gateways::Jabber, :logger => true do
     let(:state)         { double(Flapjack::Data::State, :id => SecureRandom.uuid) }
     let(:sorted_checks) { double('sorted_checks', :ids => [check.id])}
 
-
     # TODO use separate threads in the test instead?
     it "starts and is stopped by a signal" do
       expect(lock).to receive(:synchronize).and_yield
@@ -305,6 +304,15 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       fji.interpret('room1', 'jim', now.to_i, 'state of checks matching /^example.com:p/')
     end
 
+    let(:start_range) { double(Zermelo::Filters::IndexRange) }
+    let(:end_range) { double(Zermelo::Filters::IndexRange) }
+
+    let(:scheduled_maintenances) { double('scheduled_maintenances') }
+    let(:unscheduled_maintenances) { double('unscheduled_maintenances') }
+
+    let(:no_scheduled_maintenances) { double('no_scheduled_maintenances', :all => [])}
+    let(:no_unscheduled_maintenances) { double('no_unscheduled_maintenances', :all => [])}
+
     it "interprets a received information command (with name)" do
       expect(bot).to receive(:announce).with('room1', /Not in scheduled or unscheduled maintenance./)
 
@@ -316,8 +324,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
-      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, an_instance_of(Time), :by_score => true).
+        and_return(start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(an_instance_of(Time), nil, :by_score => true).
+        and_return(end_range)
+
+      expect(unscheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_unscheduled_maintenances)
+      expect(scheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_scheduled_maintenances)
+      expect(check).to receive(:scheduled_maintenances).and_return(scheduled_maintenances)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unscheduled_maintenances)
 
       expect(checks).to receive(:empty?).and_return(false)
       expect(checks).to receive(:count).and_return(5)
@@ -341,8 +363,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
-      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, an_instance_of(Time), :by_score => true).
+        and_return(start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(an_instance_of(Time), nil, :by_score => true).
+        and_return(end_range)
+
+      expect(unscheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_unscheduled_maintenances)
+      expect(scheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_scheduled_maintenances)
+      expect(check).to receive(:scheduled_maintenances).and_return(scheduled_maintenances)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unscheduled_maintenances)
 
       expect(checks).to receive(:empty?).and_return(false)
       expect(checks).to receive(:count).and_return(5)
@@ -367,8 +403,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
-      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, an_instance_of(Time), :by_score => true).
+        and_return(start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(an_instance_of(Time), nil, :by_score => true).
+        and_return(end_range)
+
+      expect(unscheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_unscheduled_maintenances)
+      expect(scheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_scheduled_maintenances)
+      expect(check).to receive(:scheduled_maintenances).and_return(scheduled_maintenances)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unscheduled_maintenances)
 
       expect(checks).to receive(:count).and_return(5)
       expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
@@ -393,8 +443,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
-      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, an_instance_of(Time), :by_score => true).
+        and_return(start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(an_instance_of(Time), nil, :by_score => true).
+        and_return(end_range)
+
+      expect(unscheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_unscheduled_maintenances)
+      expect(scheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_scheduled_maintenances)
+      expect(check).to receive(:scheduled_maintenances).and_return(scheduled_maintenances)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unscheduled_maintenances)
 
       expect(checks).to receive(:count).and_return(5)
       expect(checks).to receive(:sort).with(:name, :limit => 30).and_return(sorted_checks)
@@ -417,8 +481,22 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(Flapjack::Data::Check).to receive(:intersect).
         with(:id => [check.id]).and_return([check])
 
-      expect(check).to receive(:scheduled_maintenance_at).and_return(nil)
-      expect(check).to receive(:unscheduled_maintenance_at).and_return(nil)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, an_instance_of(Time), :by_score => true).
+        and_return(start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(an_instance_of(Time), nil, :by_score => true).
+        and_return(end_range)
+
+      expect(unscheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_unscheduled_maintenances)
+      expect(scheduled_maintenances).to receive(:intersect).
+        with(:start_time => start_range, :end_time => end_range).
+        and_return(no_scheduled_maintenances)
+      expect(check).to receive(:scheduled_maintenances).and_return(scheduled_maintenances)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unscheduled_maintenances)
 
       expect(checks).to receive(:count).and_return(5)
       expect(checks).to receive(:sort).with(:name, :limit => 2).and_return(sorted_checks)
