@@ -159,12 +159,14 @@ module Flapjack
       end
 
       def self.string_to_sign(method, host, uri, query)
-        query = query.sort_by { |key, value| key }
+
+        escaped_q = Addressable::URI.form_encode(query,sort=true)
+        escaped_q.gsub!('+','%20')
 
         [method.upcase,
          host.downcase,
          uri,
-         URI.encode_www_form(query)
+         escaped_q
         ].join("\n")
       end
 
