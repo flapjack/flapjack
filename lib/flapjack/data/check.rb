@@ -426,38 +426,6 @@ module Flapjack
         [rule_ids_by_contact_id, route_ids_by_rule_id]
       end
 
-      def self.pagerduty_credentials_for(check_ids)
-        rule_ids_by_check_id = Flapjack::Data::Check.rules_for(check_ids)
-
-        rule_ids_by_media_id = Flapjack::Data::Medium.
-          intersect(:transport => 'pagerduty').associated_ids_for(:rules)
-
-        return nil if rule_ids_by_media_id.empty? ||
-          rule_ids_by_media_id.values.all? {|r| r.empty? }
-
-        rule_ids = Set.new(rule_ids_by_media_id.values).flatten
-
-        media_ids_by_rule_id = Flapjack::Data::Rule.
-          intersect(:id => rule_ids).associated_ids_for(:media)
-
-        pagerduty_objs_by_id = Flapjack::Data::Medium.find_by_ids!(rule_ids_by_media_id.keys)
-
-        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object({}) do |check, memo|
-          memo[check] = rule_ids_by_check_id[check.id].each_with_object([]) do |rule_id, m|
-            m += media_ids_by_rule_id[rule_id].collect do |media_id|
-              medium = pagerduty_objs_by_id[media_id]
-              ud = medium.userdata || {}
-              {
-                'service_key' => medium.address,
-                'subdomain'   => ud['subdomain'],
-                'username'    => ud['username'],
-                'password'    => ud['password'],
-              }
-            end
-          end
-        end
-      end
-
       private
 
       # would need to be "#{entity.name}:#{name}" to be compatible with v1, but

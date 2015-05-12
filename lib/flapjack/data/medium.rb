@@ -25,11 +25,14 @@ module Flapjack
 
       TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
-      define_attributes :transport               => :string,
-                        :address                 => :string,
-                        :interval                => :integer,
-                        :rollup_threshold        => :integer,
-                        :last_rollup_type        => :string
+      define_attributes :transport              => :string,
+                        :address                => :string,
+                        :interval               => :integer,
+                        :rollup_threshold       => :integer,
+                        :pagerduty_subdomain    => :string,
+                        :pagerduty_token        => :string,
+                        :pagerduty_ack_duration => :integer,
+                        :last_rollup_type       => :string
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :media
@@ -64,6 +67,21 @@ module Flapjack
       validates_each :interval, :rollup_threshold,
         :if =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
 
+        record.errors.add(att, 'must be nil') unless value.nil?
+      end
+
+      validates :pagerduty_subdomain, :presence => true,
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
+
+      validates :pagerduty_token, :presence => true,
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
+
+      validates :pagerduty_ack_duration, :allow_nil => true,
+        :numericality => {:greater_than => 0, :only_integer => true},
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
+
+      validates_each :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration,
+        :unless =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
         record.errors.add(att, 'must be nil') unless value.nil?
       end
 
@@ -115,9 +133,8 @@ module Flapjack
       end
 
       swagger_schema :Medium do
-        # would require interval & rollup_threshold, but pagerduty :(
-        # TODO fix when userdata added
-        key :required, [:id, :type, :address, :transport]
+        key :required, [:id, :type, :transport]
+
         property :id do
           key :type, :string
           key :format, :uuid
@@ -138,6 +155,16 @@ module Flapjack
           key :minimum, 0
         end
         property :rollup_threshold do
+          key :type, :integer
+          key :minimum, 1
+        end
+        property :pagerduty_subdomain do
+          key :type, :string
+        end
+        property :pagerduty_token do
+          key :type, :string
+        end
+        property :pagerduty_ack_duration do
           key :type, :integer
           key :minimum, 1
         end
@@ -192,6 +219,16 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
+        property :pagerduty_subdomain do
+          key :type, :string
+        end
+        property :pagerduty_token do
+          key :type, :string
+        end
+        property :pagerduty_ack_duration do
+          key :type, :integer
+          key :minimum, 1
+        end
         property :links do
           key :"$ref", :MediumChangeLinks
         end
@@ -222,6 +259,16 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
+        property :pagerduty_subdomain do
+          key :type, :string
+        end
+        property :pagerduty_token do
+          key :type, :string
+        end
+        property :pagerduty_ack_duration do
+          key :type, :integer
+          key :minimum, 1
+        end
         property :links do
           key :"$ref", :MediumChangeLinks
         end
@@ -242,9 +289,12 @@ module Flapjack
 
       def self.jsonapi_attributes
         {
-          :post  => [:transport, :address, :interval, :rollup_threshold],
-          :get   => [:transport, :address, :interval, :rollup_threshold],
-          :patch => [:transport, :address, :interval, :rollup_threshold]
+          :post  => [:transport, :address, :interval, :rollup_threshold,
+                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration],
+          :get   => [:transport, :address, :interval, :rollup_threshold,
+                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration],
+          :patch => [:transport, :address, :interval, :rollup_threshold,
+                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration]
         }
       end
 

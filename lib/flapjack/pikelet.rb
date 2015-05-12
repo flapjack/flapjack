@@ -21,7 +21,7 @@ require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
-require 'flapjack/gateways/pagerduty'
+require 'flapjack/gateways/pager_duty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
@@ -213,8 +213,8 @@ module Flapjack
                               Flapjack::Gateways::Jabber::Interpreter],
              'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
                               Flapjack::Gateways::Oobetet::Notifier],
-             'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,
-                              Flapjack::Gateways::Pagerduty::AckFinder],
+             'pagerduty'  => [Flapjack::Gateways::PagerDuty::Notifier,
+                              Flapjack::Gateways::PagerDuty::AckFinder],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],

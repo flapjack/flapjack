@@ -307,6 +307,8 @@ module Flapjack
           @instance_stats.ok_events += 1
         end
 
+        check.failing = !Flapjack::Data::Condition.healthy?(event_condition.name)
+
         # only change notification delays on service (non-action) events;
         # resets a check's delays to the default values if the event data doesn't
         # reinforce the change

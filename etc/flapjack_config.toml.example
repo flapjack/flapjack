@@ -154,9 +154,9 @@ daemonize = true
     queue = "pagerduty_notifications"
     [gateways.pagerduty.credentials]
       service_key = "1234567890"
-      subdomain = thecompany
-      username = user
-      password = pass
+      subdomain = "thecompany"
+      username = "user"
+      password = "pass"
     [gateways.pagerduty.logger]
       level = "INFO"
       syslog_errors = true

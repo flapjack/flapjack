@@ -3,9 +3,10 @@
 require 'chronic'
 require 'chronic_duration'
 require 'sinatra/base'
-require 'erb'
 require 'tilt/erb'
 require 'uri'
+
+require 'flapjack/gateways/api_web/middleware/request_timestamp'
 
 require 'flapjack-diner'
 
@@ -17,7 +18,12 @@ module Flapjack
 
     class ApiWeb < Sinatra::Base
 
-      set :raise_errors, true
+      set :root, File.dirname(__FILE__)
+
+      use Flapjack::Gateways::ApiWeb::Middleware::RequestTimestamp
+      use Rack::MethodOverride
+
+      set :raise_errors, false
       set :protection, except: :path_traversal
 
       set :views, settings.root + '/api_web/views'
@@ -25,19 +31,16 @@ module Flapjack
 
       set :erb, :layout => 'layout.html'.to_sym
 
-      use Rack::MethodOverride
-
       class << self
         def start
           Flapjack.logger.info "starting api_web - class"
 
-          set :show_exceptions, @config['show_exceptions'].is_a?(TrueClass)
+          set :show_exceptions, false
+          @show_exceptions = Sinatra::ShowExceptions.new(self)
 
-          if accesslog = (@config && @config['access_log'])
-            if not File.directory?(File.dirname(accesslog))
-              puts "Parent directory for log file #{accesslog} doesn't exist"
-              puts "Exiting!"
-              exit
+          if access_log = (@config && @config['access_log'])
+            unless File.directory?(File.dirname(access_log))
+              raise "Parent directory for log file #{access_log} doesn't exist"
             end
 
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
@@ -276,9 +279,6 @@ module Flapjack
     #     #   @check.states.intersect(:action => 'acknowledgement',
     #     #                           :notified => true).last
 
-    #     # TODO fix template to use :ok, delete this line
-    #     @last_notifications[:recovery] = @last_notifications.delete(:ok)
-
     #     @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
     #     @acknowledgement_id = if Flapjack::Data::Condition.healthy?(@check_state)
     #       nil
@@ -448,6 +448,25 @@ module Flapjack
 
         erb 'contact.html'.to_sym
       end
+
+      error do
+        e = env['sinatra.error']
+        # trace = e.backtrace.join("\n")
+        # puts trace
+
+        # Rack::CommonLogger doesn't log requests which result in exceptions.
+        # If you want something done properly, do it yourself...
+        access_log = self.class.instance_variable_get('@middleware').detect {|mw|
+          mw.first.is_a?(::Rack::CommonLogger)
+        }
+        unless access_log.nil?
+          access_log.first.send(:log, status_code,
+            ::Rack::Utils::HeaderHash.new(headers), msg,
+            env['request_timestamp'])
+        end
+        self.class.instance_variable_get('@show_exceptions').pretty(env, e)
+      end
+
 
     private
 
