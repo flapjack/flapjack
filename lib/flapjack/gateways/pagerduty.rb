@@ -208,13 +208,19 @@ module Flapjack
             next
           end
 
-          # check again that the check is still unacknowledged in flapjack
-          unless Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis).map {|ec|
-              "#{ec.entity_name}:#{ec.check}"
-            }.include?("#{entity_name}:#{check}")
+          # check again that the check is still unacknowledged
+          if entity_check.in_unscheduled_maintenance?
             # skip this one
             @logger.warn "#{entity_name}:#{check} seems to have been acknowledged by " +
-              "some other process while I've been running, cancelling acknowledgement creation"
+              "some other process while I've been running. Cancelling acknowledgement creation"
+            next
+          end
+
+          # check again that the check is still failing
+          unless entity_check.failed?
+            # skip this one
+            @logger.warn "#{entity_name}:#{check} seems to have recovered " +
+              "while I've been running. Cancelling acknowledgement creation"
             next
           end
 
