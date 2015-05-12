@@ -257,7 +257,7 @@ module Flapjack
                   'since'        => (t - (60*60*24*7)).iso8601, # the last week
                   'until'        => (t + (60*60*24)).iso8601,   # 1 day in the future
                   'incident_key' => check,
-                  'status'       => 'acknowledged' }
+                  'status'       => 'acknowledged,resolved' }
 
         auth_header = if token && token.length > 0
           "Token token=#{token}"
