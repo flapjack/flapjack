@@ -53,14 +53,16 @@ module Flapjack
           end
 
           def outages(start_time, end_time, options = {})
-            hist_states = @check.states.
-              intersect_range(start_time, end_time, :by_score => true).all
+            state_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
+
+            hist_states = @check.states.intersect(:timestamp => state_range).all
             return {:outages => []} if hist_states.empty?
 
             unless start_time.nil?
+              first_and_prior_range = Zermelo::Filters::IndexRange.new(nil, start_time, :by_score => true)
               first_and_prior = @check.states.
-                intersect_range(nil, start_time, :by_score => true,
-                                :limit => 2, :desc => true).all
+                intersect(:timestamp => first_and_prior_range).
+                sort(:timestamp, :desc => true).offset(0, :limit => 2).all
               hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
             end
 
@@ -108,33 +110,23 @@ module Flapjack
           # TODO check that this doesn't double up if an unscheduled maintenance starts exactly
           # on the start_time param
           def unscheduled_maintenances(start_time, end_time)
-            unsched_maintenances = @check.unscheduled_maintenances_by_start.
-              intersect_range(start_time, end_time, :by_score => true).all
+            start_range  = Zermelo::Filters::IndexRange.new(nil, end_time, :by_score => true)
+            finish_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
+            unsched_maintenances = @check.unscheduled_maintenances.
+              intersect(:start_time => start_range,
+                        :end_time   => finish_range).all
 
-            # to see if we start in an unscheduled maintenance period, we must check all unscheduled
-            # maintenances before the period and their durations
-            start_in_unsched = start_time.nil? ? [] :
-              @check.unscheduled_maintenances_by_start.
-                intersect_range(nil, start_time, :by_score => true).all.select {|pu|
-                pu.end_time >= start_time
-              }
-
-            {:unscheduled_maintenances => (start_in_unsched + unsched_maintenances)}
+            {:unscheduled_maintenances => unsched_maintenances}
           end
 
           def scheduled_maintenances(start_time, end_time)
-            sched_maintenances = @check.scheduled_maintenances_by_start.
-              intersect_range(start_time, end_time, :by_score => true).all
+            start_range  = Zermelo::Filters::IndexRange.new(nil, end_time, :by_score => true)
+            finish_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
+            sched_maintenances = @check.scheduled_maintenances.
+              intersect(:start_time => start_range,
+                        :end_time   => finish_range).all
 
-            # to see if we start in an unscheduled maintenance period, we must check all unscheduled
-            # maintenances before the period and their durations
-            start_in_sched = start_time.nil? ? [] :
-              @check.scheduled_maintenances_by_start.
-                intersect_range(nil, start_time, :by_score => true).all.select {|ps|
-                ps.end_time >= start_time
-              }
-
-            {:scheduled_maintenances => (start_in_sched + sched_maintenances)}
+            {:scheduled_maintenances => sched_maintenances}
           end
 
           # TODO test whether the below overlapping logic is prone to off-by-one

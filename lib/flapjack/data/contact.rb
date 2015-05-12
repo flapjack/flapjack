@@ -9,7 +9,7 @@ require 'set'
 require 'ice_cube'
 require 'swagger/blocks'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -25,7 +25,7 @@ module Flapjack
 
     class Contact
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations
@@ -40,7 +40,15 @@ module Flapjack
         :inverse_of => :contact
 
       has_many :rules, :class_name => 'Flapjack::Data::Rule',
-        :inverse_of => :contact
+        :inverse_of => :contact, :after_remove => :clear_rule_alerting_media,
+        :related_class_names => ['Flapjack::Data::Medium', 'Flapjack::Data::Check',
+          'Flapjack::Data::ScheduledMaintenance']
+
+      def clear_rule_alerting_media(rule)
+        rule.media.each do |medium|
+          medium.alerting_checks.delete(*medium.alerting_checks.all)
+        end
+      end
 
       validates_with Flapjack::Data::Validators::IdValidator
 

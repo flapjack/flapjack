@@ -596,7 +596,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ).and_return(sched_maint)
       expect(sched_maint).to receive(:save).and_return(true)
 
-      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      sched_maints = double('sched_maints')
+      expect(sched_maints).to receive(:<<).with(sched_maint)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_maints)
+
       expect(check).to receive(:name).and_return('example.com:ping')
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
@@ -632,7 +635,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ).and_return(sched_maint)
       expect(sched_maint).to receive(:save).and_return(true)
 
-      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      sched_maints = double('sched_maints')
+      expect(sched_maints).to receive(:<<).with(sched_maint)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_maints)
+
       expect(check).to receive(:name).and_return('example.com:ping')
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)
@@ -666,7 +672,10 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       ).and_return(sched_maint)
       expect(sched_maint).to receive(:save).and_return(true)
 
-      expect(check).to receive(:add_scheduled_maintenance).with(sched_maint)
+      sched_maints = double('sched_maints')
+      expect(sched_maints).to receive(:<<).with(sched_maint)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_maints)
+
       expect(check).to receive(:name).and_return('example.com:ping')
 
       fji = Flapjack::Gateways::Jabber::Interpreter.new(:config => config)

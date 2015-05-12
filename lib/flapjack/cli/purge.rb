@@ -42,10 +42,11 @@ module Flapjack
           Flapjack::Data::Check.all
         end
 
-        purge_before = Time.now.to_i - options[:older_than]
+        purge_before = Time.now - options[:older_than]
+        purge_range = Zermelo::Filters::IndexRange.new(nil, purge_before, :by_score => true)
 
         purged = checks.inject(0) do |memo, check|
-          purgees = check.states.intersect_range(0, purge_before, :by_score => true)
+          purgees = check.states.intersect(:timestamp => purge_range)
           num = purgees.count
           if num > 0
             purgees.destroy_all

@@ -1,11 +1,11 @@
 <div class="page-header">
-  <h2><%= h @contact.name %></h2>
+  <h2><%= h @contact[:name] %></h2>
 </div>
 
 <% alerting = {} %>
 
 <h3>Contact Media</h3>
-<% if !@contact_media || @contact_media.empty? %>
+<% if @media.nil? || @media.empty? %>
   <p>No media</p>
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
@@ -16,7 +16,7 @@
       <th>Summary Mode</th>
       <th>Summary Threshold</th>
     </tr>
-    <% @contact_media.each do |med| %>
+    <% @media.each do |med| %>
       <%# alerting_checks = med.alerting_checks %>
       <% media_transport = med[:transport] %>
       <%# alerting[media_transport] = alerting_checks unless alerting_checks.empty? %>

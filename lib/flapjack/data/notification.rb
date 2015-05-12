@@ -4,7 +4,7 @@
 # from which individual 'Message' objects are created, one for each
 # contact+media recipient.
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/contact'
@@ -13,7 +13,7 @@ module Flapjack
   module Data
     class Notification
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
 
       define_attributes :severity       => :string,
                         :duration       => :integer,

@@ -172,6 +172,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "deletes a medium" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact,
+           Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
+
     media = double('media')
     expect(medium).to receive(:destroy)
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
@@ -182,6 +189,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "deletes multiple media" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact,
+           Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
+
     media = double('media')
     expect(media).to receive(:count).and_return(2)
     expect(media).to receive(:destroy_all)
@@ -198,6 +212,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "does not delete a medium that's not found" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact,
+           Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 

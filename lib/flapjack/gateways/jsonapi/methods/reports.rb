@@ -46,9 +46,7 @@ module Flapjack
               args = []
               unless 'status'.eql?(report_type)
                 start_time = validate_and_parsetime(params[:start_time])
-                start_time = start_time.to_i unless start_time.nil?
                 end_time = validate_and_parsetime(params[:end_time])
-                end_time = end_time.to_i unless end_time.nil?
                 args += [start_time, end_time]
               end
 

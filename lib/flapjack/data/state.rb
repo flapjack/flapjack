@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/condition'
 
@@ -8,12 +8,13 @@ module Flapjack
   module Data
     class State
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
 
       define_attributes :timestamp => :timestamp,
                         :condition => :string
 
       index_by :condition
+      range_index_by :timestamp
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :states

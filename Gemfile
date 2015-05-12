@@ -3,6 +3,7 @@ source 'https://rubygems.org'
 gemspec :name => 'flapjack'
 
 gem 'flapjack-diner', :github => 'flapjack/flapjack-diner', :branch => 'v2_pre'
+gem 'zermelo', :github => 'flapjack/zermelo', :branch => '16_zset_indices'
 
 group :development do
   gem 'ruby-prof'

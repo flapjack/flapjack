@@ -84,7 +84,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
   it 'adds a rule to a contact' do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
@@ -120,7 +121,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
   it 'updates rules for a contact' do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)

@@ -391,7 +391,7 @@ def migrate_states
 
       check_state = Flapjack::Data::CheckState.new(:state => state,
         :summary => summary, :details => details, :count => count.to_i,
-        :timestamp => timestamp.to_i)
+        :timestamp => timestamp)
       check_state.save
       raise check_state.errors.full_messages.join(", ") unless check_state.persisted?
 

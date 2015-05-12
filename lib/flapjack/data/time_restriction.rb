@@ -4,7 +4,7 @@ require 'set'
 
 require 'ice_cube'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'

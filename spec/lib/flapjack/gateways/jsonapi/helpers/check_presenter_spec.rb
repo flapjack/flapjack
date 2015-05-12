@@ -3,11 +3,9 @@ require 'flapjack/gateways/jsonapi/helpers/check_presenter'
 
 describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
 
-  # before { skip 'broken, fixing' }
-
   let(:check) { double(Flapjack::Data::Check) }
 
-  let(:time) { Time.now.to_i }
+  let(:time) { Time.now }
 
   let(:states) {
     [double(Flapjack::Data::State, :condition => 'critical',
@@ -71,240 +69,317 @@ describe 'Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter' do
     ]
   }
 
-  it "returns a list of outage hashes for an entity check" do
-    all_states = double('all_states', :all => states)
-    no_states = double('no_states', :all => [])
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(time - (5 * 60 * 60), time - (2 * 60 * 60), :by_score => true).
-      and_return(all_states)
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, time - (5 * 60 * 60), :by_score => true, :limit => 2,
-           :desc => true).and_return(no_states)
-    expect(check).to receive(:states).twice.and_return(states_assoc)
+  let(:state_range) { double(Zermelo::Filters::IndexRange) }
+  let(:first_and_prior_range) { double(Zermelo::Filters::IndexRange) }
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
-    expect(outages).not_to be_nil
-    expect(outages).to be_a(Hash)
-    expect(outages).to have_key(:outages)
-    expect(outages[:outages]).to be_an(Array)
-    expect(outages[:outages].size).to eq(4)
+  let(:maint_start_range) { double(Zermelo::Filters::IndexRange) }
+  let(:maint_end_range) { double(Zermelo::Filters::IndexRange) }
+
+  context 'outages' do
+
+    it "returns a list of outage hashes for an entity check" do
+      all_states = double('all_states', :all => states)
+      no_states = double('no_states')
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(time - (5 * 60 * 60), time - (2 * 60 * 60), :by_score => true).
+        and_return(state_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, time - (5 * 60 * 60), :by_score => true).
+        and_return(first_and_prior_range)
+
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).with(:timestamp => state_range).
+        and_return(all_states)
+      expect(no_states).to receive_message_chain(:sort, :offset, :all).and_return([])
+      expect(states_assoc).to receive(:intersect).with(:timestamp => first_and_prior_range).
+        and_return(no_states)
+      expect(check).to receive(:states).twice.and_return(states_assoc)
+
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
+      expect(outages).not_to be_nil
+      expect(outages).to be_a(Hash)
+      expect(outages).to have_key(:outages)
+      expect(outages[:outages]).to be_an(Array)
+      expect(outages[:outages].size).to eq(4)
+    end
+
+    it "returns a list of outage hashes with no start and end time set" do
+      all_states = double('all_states', :all => states)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).
+        and_return(state_range)
+
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).
+        with(:timestamp => state_range).
+        and_return(all_states)
+      expect(check).to receive(:states).and_return(states_assoc)
+
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      outages = check_presenter.outages(nil, nil)
+      expect(outages).not_to be_nil
+      expect(outages).to be_a(Hash)
+      expect(outages).to have_key(:outages)
+      expect(outages[:outages]).to be_an(Array)
+      expect(outages[:outages].size).to eq(4)
+    end
+
+    it "returns a consolidated list of outage hashes with repeated state events" do
+      states[1] = double(Flapjack::Data::State, :condition => 'critical',
+                         :timestamp => time - (4 * 60 * 60) + (5 * 60),
+                         :summary => '', :details => '')
+      states[2] = double(Flapjack::Data::State, :condition => 'ok',
+                         :timestamp => time - (3 * 60 * 60),
+                         :summary => '', :details => '')
+
+      all_states = double('all_states', :all => states)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).
+        and_return(state_range)
+
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).
+        with(:timestamp => state_range).
+        and_return(all_states)
+      expect(check).to receive(:states).and_return(states_assoc)
+
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      outages = check_presenter.outages(nil, nil)
+      expect(outages).not_to be_nil
+      expect(outages).to be_a(Hash)
+      expect(outages).to have_key(:outages)
+      expect(outages[:outages]).to be_an(Array)
+      expect(outages[:outages].size).to eq(3)
+    end
+
+    it "returns a (small) outage hash for a single state change" do
+      all_states = double('all_states',
+        :all => [double(Flapjack::Data::State, :condition => 'critical',
+                        :timestamp => time - (4 * 60 * 60) ,
+                        :summary => '', :details => '')])
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).
+        and_return(state_range)
+
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).
+        with(:timestamp => state_range).
+        and_return(all_states)
+      expect(check).to receive(:states).and_return(states_assoc)
+
+      ecp = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      outages = ecp.outages(nil, nil)
+      expect(outages).not_to be_nil
+      expect(outages).to be_a(Hash)
+      expect(outages).to have_key(:outages)
+      expect(outages[:outages]).to be_an(Array)
+      expect(outages[:outages].size).to eq(1)
+    end
+
   end
 
-  it "returns a list of outage hashes with no start and end time set" do
-    all_states = double('all_states', :all => states)
+  context 'maintenance periods' do
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_states)
-    expect(check).to receive(:states).and_return(states_assoc)
+    it "unscheduled for a check" do
+      all_unsched = double('all_unsched', :all => unscheduled_maintenances)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    outages = check_presenter.outages(nil, nil)
-    expect(outages).not_to be_nil
-    expect(outages).to be_a(Hash)
-    expect(outages).to have_key(:outages)
-    expect(outages[:outages]).to be_an(Array)
-    expect(outages[:outages].size).to eq(4)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, time, :by_score => true).
+        and_return(maint_start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(time - (12 * 60 * 60), time, :by_score => true).
+        and_return(maint_end_range)
+
+      unsched_assoc = double('unsched_assoc')
+      expect(unsched_assoc).to receive(:intersect).
+        with(:start_time => maint_start_range, :end_time => maint_end_range).
+        and_return(all_unsched)
+      expect(check).to receive(:unscheduled_maintenances).and_return(unsched_assoc)
+
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
+      expect(unsched_maint).not_to be_nil
+      expect(unsched_maint).to be_a(Hash)
+      expect(unsched_maint).to have_key(:unscheduled_maintenances)
+      expect(unsched_maint[:unscheduled_maintenances]).to be_an(Array)
+      expect(unsched_maint[:unscheduled_maintenances].size).to eq(4)
+    end
+
+    it "scheduled for a check" do
+      all_sched = double('all_sched', :all => scheduled_maintenances)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, time, :by_score => true).
+        and_return(maint_start_range)
+
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(time - (12 * 60 * 60), time, :by_score => true).
+        and_return(maint_end_range)
+
+      sched_assoc = double('unsched_assoc')
+      expect(sched_assoc).to receive(:intersect).
+        with(:start_time => maint_start_range, :end_time => maint_end_range).
+        and_return(all_sched)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_assoc)
+
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      sched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
+      expect(sched_maint).not_to be_nil
+      expect(sched_maint).to be_a(Hash)
+      expect(sched_maint).to have_key(:scheduled_maintenances)
+      expect(sched_maint[:scheduled_maintenances]).to be_an(Array)
+      expect(sched_maint[:scheduled_maintenances].size).to eq(4)
+    end
   end
 
-  it "returns a consolidated list of outage hashes with repeated state events" do
-    states[1] = double(Flapjack::Data::State, :condition => 'critical',
-                       :timestamp => time - (4 * 60 * 60) + (5 * 60),
-                       :summary => '', :details => '')
-    states[2] = double(Flapjack::Data::State, :condition => 'ok',
-                       :timestamp => time - (3 * 60 * 60),
-                       :summary => '', :details => '')
+  context 'downtime' do
 
-    all_states = double('all_states', :all => states)
+    it "returns downtime and percentage for a downtime check" do
+      all_states = double('all_states', :all => states)
+      no_states = double('no_states')
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_states)
-    expect(check).to receive(:states).and_return(states_assoc)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(time - (12 * 60 * 60), time, :by_score => true).twice.
+        and_return(state_range)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    outages = check_presenter.outages(nil, nil)
-    expect(outages).not_to be_nil
-    expect(outages).to be_a(Hash)
-    expect(outages).to have_key(:outages)
-    expect(outages[:outages]).to be_an(Array)
-    expect(outages[:outages].size).to eq(3)
-  end
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, time - (12 * 60 * 60), :by_score => true).
+        and_return(first_and_prior_range)
 
-  it "returns a (small) outage hash for a single state change" do
-    all_states = double('all_states',
-      :all => [double(Flapjack::Data::State, :condition => 'critical',
-                      :timestamp => time - (4 * 60 * 60) ,
-                      :summary => '', :details => '')])
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).with(:timestamp => state_range).
+        and_return(all_states)
+      expect(no_states).to receive_message_chain(:sort, :offset, :all).and_return([])
+      expect(states_assoc).to receive(:intersect).with(:timestamp => first_and_prior_range).
+        and_return(no_states)
+      expect(check).to receive(:states).twice.and_return(states_assoc)
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_states)
-    expect(check).to receive(:states).and_return(states_assoc)
+      all_sched = double('all_sched', :all => scheduled_maintenances)
 
-    ecp = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    outages = ecp.outages(nil, nil)
-    expect(outages).not_to be_nil
-    expect(outages).to be_a(Hash)
-    expect(outages).to have_key(:outages)
-    expect(outages[:outages]).to be_an(Array)
-    expect(outages[:outages].size).to eq(1)
-  end
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, time, :by_score => true).
+        and_return(maint_start_range)
 
-  it "a list of unscheduled maintenances for an entity check" do
-    all_unsched = double('all_unsched', :all => unscheduled_maintenances)
-    no_unsched = double('no_unsched', :all => [])
+      # NB: state_range and maint_end_range have the same values
 
-    unsched_assoc = double('unsched_assoc')
-    expect(unsched_assoc).to receive(:intersect_range).
-      with(time - (12 * 60 * 60), time, :by_score => true).
-      and_return(all_unsched)
-    expect(unsched_assoc).to receive(:intersect_range).
-      with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_unsched)
-    expect(check).to receive(:unscheduled_maintenances_by_start).twice.and_return(unsched_assoc)
+      sched_assoc = double('unsched_assoc')
+      expect(sched_assoc).to receive(:intersect).
+        with(:start_time => maint_start_range, :end_time => state_range).
+        and_return(all_sched)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_assoc)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
-    expect(unsched_maint).not_to be_nil
-    expect(unsched_maint).to be_a(Hash)
-    expect(unsched_maint).to have_key(:unscheduled_maintenances)
-    expect(unsched_maint[:unscheduled_maintenances]).to be_an(Array)
-    expect(unsched_maint[:unscheduled_maintenances].size).to eq(4)
-  end
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      downtimes = check_presenter.downtime(time - (12 * 60 * 60), time)
 
-  it "a list of scheduled maintenances for an entity check" do
-    all_sched = double('all_sched', :all => scheduled_maintenances)
-    no_sched = double('no_sched', :all => [])
+      # 22 minutes, 3 + 8 + 11
+      expect(downtimes).to be_a(Hash)
+      expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60),
+        'ok' => ((12 * 60 * 60) - (22 * 60))})
+      expect(downtimes[:percentages]).to eq({'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
+        'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))})
+      expect(downtimes[:downtime]).to be_an(Array)
+      # the last outage gets split by the intervening maintenance period,
+      # but the fully covered one gets removed.
+      expect(downtimes[:downtime].size).to eq(4)
+    end
 
-    sched_assoc = double('sched_assoc')
-    expect(sched_assoc).to receive(:intersect_range).
-      with(time - (12 * 60 * 60), time, :by_score => true).
-      and_return(all_sched)
-    expect(sched_assoc).to receive(:intersect_range).
-      with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
-    expect(check).to receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
+    it "returns downtime (but no percentage) for an unbounded downtime check" do
+      all_states = double('all_states', :all => states)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    sched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
-    expect(sched_maint).not_to be_nil
-    expect(sched_maint).to be_a(Hash)
-    expect(sched_maint).to have_key(:scheduled_maintenances)
-    expect(sched_maint[:scheduled_maintenances]).to be_an(Array)
-    expect(sched_maint[:scheduled_maintenances].size).to eq(4)
-  end
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).
+        and_return(state_range)
 
-  it "returns downtime and percentage for a downtime check" do
-    all_states = double('all_states', :all => states)
-    no_states = double('no_states', :all => [])
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).
+        with(:timestamp => state_range).
+        and_return(all_states)
+      expect(check).to receive(:states).and_return(states_assoc)
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(time - (12 * 60 * 60), time, :by_score => true).
-      and_return(all_states)
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, time - (12 * 60 * 60), :by_score => true, :limit => 2,
-           :desc => true).and_return(no_states)
-    expect(check).to receive(:states).twice.and_return(states_assoc)
+      all_sched = double('all_sched', :all => scheduled_maintenances)
 
-    all_sched = double('all_sched', :all => scheduled_maintenances)
-    no_sched = double('no_sched', :all => [])
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).twice.
+        and_return(maint_start_range)
 
-    sched_assoc = double('sched_assoc')
-    expect(sched_assoc).to receive(:intersect_range).
-      with(time - (12 * 60 * 60), time, :by_score => true).
-      and_return(all_sched)
-    expect(sched_assoc).to receive(:intersect_range).
-      with(nil, time - (12 * 60 * 60), :by_score => true).and_return(no_sched)
-    expect(check).to receive(:scheduled_maintenances_by_start).twice.and_return(sched_assoc)
+      # NB: maint_start_range and maint_end_range have the same settings
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    downtimes = check_presenter.downtime(time - (12 * 60 * 60), time)
+      sched_assoc = double('unsched_assoc')
+      expect(sched_assoc).to receive(:intersect).
+        with(:start_time => maint_start_range, :end_time => maint_start_range).
+        and_return(all_sched)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_assoc)
 
-    # 22 minutes, 3 + 8 + 11
-    expect(downtimes).to be_a(Hash)
-    expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60),
-      'ok' => ((12 * 60 * 60) - (22 * 60))})
-    expect(downtimes[:percentages]).to eq({'critical' => (((22 * 60) * 100.0) / (12 * 60 * 60)),
-      'ok' => ((((12 * 60 * 60) - (22 * 60)) * 100.0) / (12 * 60 *60))})
-    expect(downtimes[:downtime]).to be_an(Array)
-    # the last outage gets split by the intervening maintenance period,
-    # but the fully covered one gets removed.
-    expect(downtimes[:downtime].size).to eq(4)
-  end
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      downtimes = check_presenter.downtime(nil, nil)
 
-  it "returns downtime (but no percentage) for an unbounded downtime check" do
-    all_states = double('all_states', :all => states)
+      # 22 minutes, 3 + 8 + 11
+      expect(downtimes).to be_a(Hash)
+      expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60)})
+      expect(downtimes[:percentages]).to eq({'critical' => nil})
+      expect(downtimes[:downtime]).to be_an(Array)
+      # the last outage gets split by the intervening maintenance period,
+      # but the fully covered one gets removed.
+      expect(downtimes[:downtime].size).to eq(4)
+    end
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_states)
-    expect(check).to receive(:states).and_return(states_assoc)
+    it "returns downtime and handles an unfinished problem state" do
+      current = [double(Flapjack::Data::State, :condition => 'critical',
+                        :timestamp => time - (4 * 60 * 60),
+                        :summary => '', :details => ''),
+                 double(Flapjack::Data::State, :condition => 'ok',
+                        :timestamp => time - (4 * 60 * 60) + (5 * 60),
+                        :summary => '', :details => ''),
+                 double(Flapjack::Data::State, :condition => 'critical',
+                        :timestamp => time - (3 * 60 * 60),
+                        :summary => '', :details => '')]
 
-    all_sched = double('all_sched', :all => scheduled_maintenances)
+      all_states = double('all_states', :all => current)
 
-    sched_assoc = double('sched_assoc')
-    expect(sched_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_sched)
-    expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).
+        and_return(state_range)
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    downtimes = check_presenter.downtime(nil, nil)
+      states_assoc = double('states_assoc')
+      expect(states_assoc).to receive(:intersect).
+        with(:timestamp => state_range).
+        and_return(all_states)
+      expect(check).to receive(:states).and_return(states_assoc)
 
-    # 22 minutes, 3 + 8 + 11
-    expect(downtimes).to be_a(Hash)
-    expect(downtimes[:total_seconds]).to eq({'critical' => (22 * 60)})
-    expect(downtimes[:percentages]).to eq({'critical' => nil})
-    expect(downtimes[:downtime]).to be_an(Array)
-    # the last outage gets split by the intervening maintenance period,
-    # but the fully covered one gets removed.
-    expect(downtimes[:downtime].size).to eq(4)
-  end
+      all_sched = double('all_sched', :all => scheduled_maintenances)
 
-  it "returns downtime and handles an unfinished problem state" do
-    current = [double(Flapjack::Data::State, :condition => 'critical',
-                      :timestamp => time - (4 * 60 * 60),
-                      :summary => '', :details => ''),
-               double(Flapjack::Data::State, :condition => 'ok',
-                      :timestamp => time - (4 * 60 * 60) + (5 * 60),
-                      :summary => '', :details => ''),
-               double(Flapjack::Data::State, :condition => 'critical',
-                      :timestamp => time - (3 * 60 * 60),
-                      :summary => '', :details => '')]
+      expect(Zermelo::Filters::IndexRange).to receive(:new).
+        with(nil, nil, :by_score => true).twice.
+        and_return(maint_start_range)
 
-    all_states = double('all_states', :all => current)
+      # NB: maint_start_range and maint_end_range have the same settings
 
-    states_assoc = double('states_assoc')
-    expect(states_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_states)
-    expect(check).to receive(:states).and_return(states_assoc)
+      sched_assoc = double('unsched_assoc')
+      expect(sched_assoc).to receive(:intersect).
+        with(:start_time => maint_start_range, :end_time => maint_start_range).
+        and_return(all_sched)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_assoc)
 
-    all_sched = double('all_sched', :all => scheduled_maintenances)
+      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
+      downtimes = check_presenter.downtime(nil, nil)
 
-    sched_assoc = double('sched_assoc')
-    expect(sched_assoc).to receive(:intersect_range).
-      with(nil, nil, :by_score => true).
-      and_return(all_sched)
-    expect(check).to receive(:scheduled_maintenances_by_start).and_return(sched_assoc)
+      expect(downtimes).to be_a(Hash)
+      expect(downtimes[:total_seconds]).to eq({'critical' => 180})
+      expect(downtimes[:percentages]).to eq({'critical' => nil})
+      expect(downtimes[:downtime]).to be_an(Array)
+      # the last outage gets split by the intervening maintenance period,
+      # but the fully covered one gets removed.
+      expect(downtimes[:downtime].size).to eq(2)
+    end
 
-    check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-    downtimes = check_presenter.downtime(nil, nil)
-
-    expect(downtimes).to be_a(Hash)
-    expect(downtimes[:total_seconds]).to eq({'critical' => 180})
-    expect(downtimes[:percentages]).to eq({'critical' => nil})
-    expect(downtimes[:downtime]).to be_an(Array)
-    # the last outage gets split by the intervening maintenance period,
-    # but the fully covered one gets removed.
-    expect(downtimes[:downtime].size).to eq(2)
   end
 
 end

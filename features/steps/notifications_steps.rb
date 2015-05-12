@@ -262,7 +262,7 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
 end
 
 When /^an event notification is generated for check '(.+)'$/ do |check_name|
-  timestamp = Time.now.to_i
+  timestamp = Time.now
 
   event = Flapjack::Data::Event.new('state'   => 'critical',
                                     'summary' => '100% packet loss',

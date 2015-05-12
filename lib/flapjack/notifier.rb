@@ -74,8 +74,9 @@ module Flapjack
       check       = notification.entry.state.check
       check_name  = check.name
 
+      # TODO check whether time should come from something stored in the notification
       alerts = alerts_for(notification, check,
-        :transports => @queues.keys)
+        :transports => @queues.keys, :time => Time.now)
 
       if alerts.nil? || alerts.empty?
         Flapjack.logger.info { "No alerts" }
@@ -103,12 +104,14 @@ module Flapjack
       notification.destroy
     end
 
-    def alerts_for(notification, alert_check, opts = {})
-      in_sched   = alert_check.in_scheduled_maintenance?
-      in_unsched = alert_check.in_unscheduled_maintenance?
+    def alerts_for(notification, check, opts = {})
+      time = opts[:time]
+
+      in_sched   = check.in_scheduled_maintenance?(time)
+      in_unsched = check.in_unscheduled_maintenance?(time)
 
       rule_ids_by_contact_id, route_ids_by_rule_id =
-        alert_check.rule_ids_and_route_ids(:severity => notification.severity)
+        check.rule_ids_and_route_ids(:severity => notification.severity)
 
       notification_entry = notification.entry
       notification_state = notification_entry.state
@@ -117,7 +120,7 @@ module Flapjack
         alert_type = Flapjack::Data::Alert.notification_type(notification_entry.action,
           notification_entry.condition)
 
-        Flapjack.logger.info { "#{alert_check.name} | #{alert_type} | NO RULES" }
+        Flapjack.logger.info { "#{check.name} | #{alert_type} | NO RULES" }
         return
       end
 
@@ -129,9 +132,6 @@ module Flapjack
         Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
       return if contacts.empty?
 
-      # TODO pass in base time from outside (cast to zone per contact), so
-      # all alerts from this notification use a consistent time
-
       contact_ids_to_drop = []
 
       rule_ids = contacts.inject([]) do |memo, contact|
@@ -139,7 +139,7 @@ module Flapjack
         next memo if rules.empty?
 
         timezone = contact.time_zone || @default_contact_timezone
-        rules.select! {|rule| rule.is_occurring_now?(timezone) }
+        rules.select! {|rule| rule.is_occurring_at?(time, timezone) }
 
         contact_ids_to_drop << contact.id if rules.any? {|r| !r.has_media }
 
@@ -207,27 +207,25 @@ module Flapjack
 
           Flapjack.logger.debug "media test: #{medium.transport}, #{medium.id}"
 
+          if this_notification_failure
+            medium.alerting_checks << check
+          elsif this_notification_ok
+            medium.alerting_checks.delete(check)
+          end
+
+          Flapjack.logger.debug {
+            " alerting_checks: #{medium.alerting_checks.ids.inspect}"
+          }
+
           last_entry = medium.last_entry
 
           last_entry_ok = last_entry.nil? ? nil :
             (Flapjack::Data::Condition.healthy?(last_entry.condition) ||
             'acknowledgement'.eql?(last_entry.action))
 
-          alerting_check_ids = if medium.rollup_threshold.nil? || (medium.rollup_threshold == 0)
-            nil
-          else
-            medium.alerting_checks.map(&:id)
-          end
+          alert_rollup = if !medium.rollup_threshold.nil? &&
+            (medium.alerting_checks.count >= medium.rollup_threshold)
 
-          Flapjack.logger.debug " alerting_checks: #{alerting_check_ids.inspect}"
-
-          alert_rollup = if alerting_check_ids.nil?
-            if 'problem'.eql?(medium.last_rollup_type)
-              'recovery'
-            else
-              nil
-            end
-          elsif alerting_check_ids.size >= medium.rollup_threshold
             'problem'
           elsif 'problem'.eql?(medium.last_rollup_type)
             'recovery'
@@ -263,9 +261,8 @@ module Flapjack
             :rollup => alert_rollup)
 
           unless alert_rollup.nil?
-            alerting_checks = Flapjack::Data::Check.find_by_ids(*alerting_check_ids)
-            alert.rollup_states = alerting_checks.each_with_object({}) do |check, memo|
-              cond = check.states.last.condition
+            alert.rollup_states = medium.alerting_checks.all.each_with_object({}) do |check, memo|
+              cond = check.condition
               memo[cond] ||= []
               memo[cond] << check.name
             end
@@ -275,8 +272,8 @@ module Flapjack
             raise "Couldn't save alert: #{alert.errors.full_messages.inspect}"
           end
 
-          medium.alerts      << alert
-          alert_check.alerts << alert
+          medium.alerts << alert
+          check.alerts  << alert
 
           Flapjack.logger.info "alerting for #{medium.transport}, #{medium.address}"
 

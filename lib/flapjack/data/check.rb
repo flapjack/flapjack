@@ -4,7 +4,7 @@ require 'digest'
 
 require 'swagger/blocks'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -23,7 +23,7 @@ module Flapjack
 
     class Check
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations
@@ -116,20 +116,13 @@ module Flapjack
         s.entries.first
       end
 
-      # keep two indices for each, so that we can query on their intersection
-      has_sorted_set :scheduled_maintenances_by_start,
+      has_sorted_set :scheduled_maintenances,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :start_time, :inverse_of => :check_by_start
-      has_sorted_set :scheduled_maintenances_by_end,
-        :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :end_time, :inverse_of => :check_by_end
+        :key => :start_time, :inverse_of => :check
 
-      has_sorted_set :unscheduled_maintenances_by_start,
+      has_sorted_set :unscheduled_maintenances,
         :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :start_time, :inverse_of => :check_by_start
-      has_sorted_set :unscheduled_maintenances_by_end,
-        :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :end_time, :inverse_of => :check_by_end
+        :key => :start_time, :inverse_of => :check
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
@@ -139,6 +132,9 @@ module Flapjack
 
       has_and_belongs_to_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :checks
+
+      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
+        :inverse_of => :alerting_checks
 
       validates :name, :presence => true
       validates :enabled, :inclusion => {:in => [true, false]}
@@ -274,6 +270,8 @@ module Flapjack
         }
       end
 
+      # read-only associations: alerting_media
+
       def self.jsonapi_associations
         {
           :singular => [],
@@ -282,8 +280,14 @@ module Flapjack
         }
       end
 
-      def in_scheduled_maintenance?
-        return false if scheduled_maintenance_ids_at(Time.now).empty?
+      def in_scheduled_maintenance?(t = Time.now)
+        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
+        return false if self.scheduled_maintenances.intersect(:start_time => start_range,
+          :end_time => end_range).empty?
+
+        # TODO clear from alerting_media here?
+
         self.routes.intersect(:is_alerting => true).each do |route|
           route.is_alerting = false
           route.save
@@ -291,13 +295,11 @@ module Flapjack
         true
       end
 
-      def in_unscheduled_maintenance?
-        !unscheduled_maintenance_ids_at(Time.now).empty?
-      end
-
-      def add_scheduled_maintenance(sched_maint)
-        self.scheduled_maintenances_by_start << sched_maint
-        self.scheduled_maintenances_by_end << sched_maint
+      def in_unscheduled_maintenance?(t = Time.now)
+        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
+        !self.unscheduled_maintenances.intersect(:start_time => start_range,
+          :end_time => end_range).empty?
       end
 
       # TODO allow summary to be changed as part of the termination
@@ -306,45 +308,41 @@ module Flapjack
 
         if sched_maint.start_time >= at_time
           # the scheduled maintenance period is in the future
-          self.scheduled_maintenances_by_start.delete(sched_maint)
-          self.scheduled_maintenances_by_end.delete(sched_maint)
+          self.scheduled_maintenances.delete(sched_maint)
           sched_maint.destroy
           return true
-        end
-
-        if sched_maint.end_time >= at_time
+        elsif sched_maint.end_time >= at_time
           # it spans the current time, so we'll stop it at that point
-          # need to remove it from the sorted_set that uses the end_time as a key,
-          # change and re-add -- see https://github.com/ali-graham/zermelo/issues/1
-          # TODO should this be in a multi/exec block?
-          self.scheduled_maintenances_by_end.delete(sched_maint)
           sched_maint.end_time = at_time
           sched_maint.save
-          self.scheduled_maintenances_by_end.add(sched_maint)
+          self.routes.intersect(:is_alerting => true).each do |route|
+            route.is_alerting = false
+            route.save
+          end
           return true
         end
 
         false
       end
 
-      # def current_scheduled_maintenance
-      def scheduled_maintenance_at(at_time)
-        current_sched_ms = scheduled_maintenance_ids_at(at_time).map {|id|
-          Flapjack::Data::ScheduledMaintenance.find_by_id(id)
-        }
-        return if current_sched_ms.empty?
-        # if multiple scheduled maintenances found, find the end_time furthest in the future
-        current_sched_ms.max_by(&:end_time)
-      end
+      # # def current_scheduled_maintenance
+      # def scheduled_maintenance_at(at_time)
+      #   current_sched_ms = scheduled_maintenance_ids_at(at_time).map {|id|
+      #     Flapjack::Data::ScheduledMaintenance.find_by_id(id)
+      #   }
+      #   return if current_sched_ms.empty?
+      #   # if multiple scheduled maintenances found, find the end_time furthest in the future
+      #   current_sched_ms.max_by(&:end_time)
+      # end
 
-      def unscheduled_maintenance_at(at_time)
-        current_unsched_ms = unscheduled_maintenance_ids_at(at_time).map {|id|
-          Flapjack::Data::UnscheduledMaintenance.find_by_id(id)
-        }
-        return if current_unsched_ms.empty?
-        # if multiple unscheduled maintenances found, find the end_time furthest in the future
-        current_unsched_ms.max_by(&:end_time)
-      end
+      # def unscheduled_maintenance_at(at_time)
+      #   current_unsched_ms = unscheduled_maintenance_ids_at(at_time).map {|id|
+      #     Flapjack::Data::UnscheduledMaintenance.find_by_id(id)
+      #   }
+      #   return if current_unsched_ms.empty?
+      #   # if multiple unscheduled maintenances found, find the end_time furthest in the future
+      #   current_unsched_ms.max_by(&:end_time)
+      # end
 
       def set_unscheduled_maintenance(unsched_maint, options = {})
         current_time = Time.now
@@ -357,8 +355,7 @@ module Flapjack
             self.clear_unscheduled_maintenance(unsched_maint.start_time)
           end
 
-          self.unscheduled_maintenances_by_start << unsched_maint
-          self.unscheduled_maintenances_by_end << unsched_maint
+          self.unscheduled_maintenances << unsched_maint
 
           # TODO add an ack action to the event state directly, uless this is the
           # result of one
@@ -378,14 +375,20 @@ module Flapjack
       end
 
       def clear_unscheduled_maintenance(end_time)
-        return unless unsched_maint = unscheduled_maintenance_at(Time.now)
-        # need to remove it from the sorted_set that uses the end_time as a key,
-        # change and re-add -- see https://github.com/ali-graham/zermelo/issues/1
-        self.class.lock(Flapjack::Data::UnscheduledMaintenance) do
-          self.unscheduled_maintenances_by_end.delete(unsched_maint)
-          unsched_maint.end_time = end_time
-          unsched_maint.save
-          self.unscheduled_maintenances_by_end.add(unsched_maint)
+        Flapjack::Data::UnscheduledMaintenance.lock do
+          t = Time.now
+          start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
+          end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
+          unsched_maints = self.unscheduled_maintenances.intersect(:start_time => start_range,
+            :end_time => end_range)
+          unsched_maints_count = unsched_maints.empty?
+          unless unsched_maints_count == 0
+            # FIXME log warning if count > 1
+            unsched_maints.each do |usm|
+              usm.end_time = end_time
+              usm.save
+            end
+          end
         end
       end
 
@@ -483,29 +486,6 @@ module Flapjack
         self.id = self.class.generate_id if self.id.nil?
         self.ack_hash = Digest.hexencode(Digest::SHA1.new.digest(self.id))[0..7].downcase
       end
-
-      def scheduled_maintenance_ids_at(at_time)
-        at_time = Time.at(at_time) unless at_time.is_a?(Time)
-
-        start_prior_ids = self.scheduled_maintenances_by_start.
-          intersect_range(nil, at_time.to_i, :by_score => true).ids
-        end_later_ids = self.scheduled_maintenances_by_end.
-          intersect_range(at_time.to_i + 1, nil, :by_score => true).ids
-
-        start_prior_ids & end_later_ids
-      end
-
-      def unscheduled_maintenance_ids_at(at_time)
-        at_time = Time.at(at_time) unless at_time.is_a?(Time)
-
-        start_prior_ids = self.unscheduled_maintenances_by_start.
-          intersect_range(nil, at_time.to_i + 1, :by_score => true).ids
-        end_later_ids = self.unscheduled_maintenances_by_end.
-          intersect_range(at_time.to_i, nil, :by_score => true).ids
-
-        start_prior_ids & end_later_ids
-      end
-
     end
 
   end

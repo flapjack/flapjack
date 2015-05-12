@@ -272,8 +272,9 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :logger => true do
              :end_time => start_time.to_i + duration,
              :summary => summary).and_return(sched_maint)
 
-      expect(check).to receive(:add_scheduled_maintenance).
-        with(sched_maint)
+      sched_maints = double('sched_maints')
+      expect(sched_maints).to receive(:<<).with(sched_maint)
+      expect(check).to receive(:scheduled_maintenances).and_return(sched_maints)
 
       post "/scheduled_maintenances/checks/#{check.id}?"+
         "start_time=1+day+ago&duration=30+minutes&summary=wow"

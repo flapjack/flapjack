@@ -22,7 +22,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'oj', '>= 2.9.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
-  gem.add_dependency 'zermelo', '= 1.1.0'
+  # gem.add_dependency 'zermelo', '= 1.1.0'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'swagger-blocks'
   gem.add_dependency 'mail'
@@ -38,6 +38,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'terminal-table'
   gem.add_dependency 'toml-rb'
   gem.add_dependency 'puma'
+  # gem.add_dependency 'flapjack-diner', '>= 2.0.0'
 
   gem.add_development_dependency 'rake'
 end

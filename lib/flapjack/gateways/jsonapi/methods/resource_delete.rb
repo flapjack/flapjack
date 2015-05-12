@@ -101,16 +101,26 @@ module Flapjack
                                   params[:captures].first
                   status 204
 
-                  if Flapjack::Data::Rule.eql?(resource_class)
-                    # extra locking to allow rule destroy callback to work
-                    Flapjack::Data::Rule.lock(Flapjack::Data::Contact,
-                      Flapjack::Data::Medium, Flapjack::Data::Tag,
-                      Flapjack::Data::Route, Flapjack::Data::Check) do
+                  # FIXME callbacks requiring extra locking -- need a better
+                  # solution for this
+                  extra_locks = case resource_class.name
+                  when Flapjack::Data::Medium.name
+                    [Flapjack::Data::Contact,
+                     Flapjack::Data::Rule, Flapjack::Data::Check,
+                     Flapjack::Data::Alert, Flapjack::Data::Entry,
+                     Flapjack::Data::ScheduledMaintenance]
+                  when Flapjack::Data::Rule.name
+                    [Flapjack::Data::Contact,
+                     Flapjack::Data::Medium, Flapjack::Data::Tag,
+                     Flapjack::Data::Route, Flapjack::Data::Check]
+                  end
 
-                      resource_delete(Flapjack::Data::Rule, resource_id)
-                    end
-                  else
+                  if extra_locks.nil?
                     resource_delete(resource_class, resource_id)
+                  else
+                    resource_class.lock(*extra_locks) do
+                      resource_delete(resource_class, resource_id)
+                    end
                   end
                 end
               end

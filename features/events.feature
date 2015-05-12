@@ -182,6 +182,7 @@ Feature: events
     And   one minute passes
     And   a critical event is received
     Then  1 notification should have been generated
+    And   one minute passes
     When  an acknowledgement event is received
     Then  2 notifications should have been generated
     When  1 minute passes

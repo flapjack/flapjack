@@ -14,7 +14,7 @@ module Flapjack
   module Data
     class Entry
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
 
       define_attributes :timestamp     => :timestamp,
                         :condition     => :string,
@@ -24,6 +24,7 @@ module Flapjack
                         :perfdata_json => :string
 
       index_by :condition, :action
+      range_index_by :timestamp
 
       belongs_to :latest_notifications_check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :latest_notifications

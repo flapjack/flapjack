@@ -450,15 +450,15 @@ module Flapjack
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
 
-                sched_maint = Flapjack::Data::ScheduledMaintenance.new(
-                  :start_time => started,
-                  :end_time   => started + duration,
-                  :summary    => comment
-                )
-                sched_maint.save
-
                 checks.each do |check|
-                  check.add_scheduled_maintenance(sched_maint)
+                  sched_maint = Flapjack::Data::ScheduledMaintenance.new(
+                    :start_time => started,
+                    :end_time   => started + duration,
+                    :summary    => comment
+                  )
+                  sched_maint.save
+
+                  check.scheduled_maintenances << sched_maint
                 end
 
                 "Scheduled maintenance for #{duration/60} minutes starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")

@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 module Flapjack
   module Data
     class Route
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
 
       define_attributes :conditions_list => :string,
                         :is_alerting => :boolean

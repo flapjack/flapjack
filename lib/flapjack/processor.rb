@@ -65,6 +65,8 @@ module Flapjack
       fqdn          = `/bin/hostname -f`.chomp
       pid           = Process.pid
       @instance_id  = "#{fqdn}:#{pid}"
+
+      @entry_range = Zermelo::Filters::IndexRange.new(1, nil)
     end
 
     def start_stats
@@ -245,7 +247,7 @@ module Flapjack
               entries = old_state.entries
 
               if entries.count > 1
-                entries.intersect_range(1, -1).each do |e|
+                entries.intersect(:timestamp => @entry_range).each do |e|
                   entries.delete(e)
                   Flapjack::Data::Entry.delete_if_unlinked(e)
                 end
@@ -331,7 +333,7 @@ module Flapjack
               :summary => 'Automatically created for new check')
             ncsm_sched_maint.save!
 
-            check.add_scheduled_maintenance(ncsm_sched_maint)
+            check.scheduled_maintenances << ncsm_sched_maint
           end
 
         elsif event_condition.name != old_state.condition
@@ -356,7 +358,7 @@ module Flapjack
       if new_state.nil?
         entries = old_state.entries
         if entries.count > 1
-          entries.intersect_range(1, -1).each {|e| entries.delete(e)}
+          entries.intersect(:timestamp => @entry_range).each {|e| entries.delete(e); Flapjack::Data::Entry.delete_if_unlinked(e) }
         end
         entries << new_entry
       else

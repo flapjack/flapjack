@@ -141,7 +141,7 @@ module Flapjack
           # NB: casts to UTC before converting to a timestamp
           def validate_and_parsetime(value)
             return unless value
-            Time.iso8601(value).getutc.to_i
+            Time.iso8601(value).getutc
           rescue ArgumentError => e
             logger.error "Couldn't parse time from '#{value}'"
             nil

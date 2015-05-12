@@ -58,11 +58,9 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  1 email alert should be queued for malak@example.com
     When  the time is February 1 2013 12:00
-    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  2 email alerts should be queued for malak@example.com
     When  the time is February 1 2013 17:59
-    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 email alerts should be queued for malak@example.com
     When  the time is February 1 2013 18:01
@@ -313,15 +311,12 @@ Feature: Notification rules on a per contact basis
     And   a critical event is received
     Then  1 sms alert should be queued for +61400000004
     When  the time is February 1 2013 12:00
-    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  2 sms alerts should be queued for +61400000004
     When  the time is February 1 2013 17:59
-    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
     When  the time is February 1 2013 18:01
-    Then  all alert dropping keys for user c1 should have expired
     When  a critical event is received
     Then  3 sms alerts should be queued for +61400000004
 

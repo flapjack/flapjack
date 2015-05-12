@@ -2,7 +2,7 @@
 
 require 'swagger/blocks'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -15,7 +15,7 @@ module Flapjack
       # FIXME: add an administrative function to reset global or
       # instance Statistic objects
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations

@@ -18,8 +18,6 @@ module Flapjack
         new_entry = opts[:new_entry]
         timestamp = opts[:timestamp]
 
-        previous_state = opts[:previous_state]
-
         unless new_entry.action.nil? && Flapjack::Data::Condition.healthy?(new_entry.condition)
           Flapjack.logger.debug("Filter: Ok: pass")
           return false
@@ -54,7 +52,7 @@ module Flapjack
           return true
         end
 
-        Flapjack.logger.debug("Filter: Ok: previous_state: #{previous_state.inspect}")
+        Flapjack.logger.debug("Filter: Ok: old_state: #{old_state.inspect}")
         Flapjack.logger.debug("Filter: Ok: pass")
         false
       end

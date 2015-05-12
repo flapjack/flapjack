@@ -25,7 +25,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     link_opts = {}
     if opts[:start] && opts[:finish]
       expect(check_presenter).to receive(action_pres).
-        with(opts[:start].to_i, opts[:finish].to_i).
+        with(opts[:start], opts[:finish]).
         and_return(:type => "#{report_type}_report")
       link_opts[:start_time] = opts[:start].iso8601
       link_opts[:end_time] = opts[:finish].iso8601
@@ -87,7 +87,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     link_opts = {}
     if opts[:start] && opts[:finish]
       expect(check_presenter).to receive(action_pres).
-        with(opts[:start].to_i, opts[:finish].to_i).
+        with(opts[:start], opts[:finish]).
         and_return(:type => "#{report_type}_report")
       link_opts[:start_time] = opts[:start].iso8601
       link_opts[:end_time] = opts[:finish].iso8601

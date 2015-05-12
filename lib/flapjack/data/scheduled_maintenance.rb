@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -9,8 +9,7 @@ require 'flapjack/gateways/jsonapi/data/associations'
 module Flapjack
   module Data
     class ScheduledMaintenance
-
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations
@@ -20,11 +19,10 @@ module Flapjack
                         :end_time   => :timestamp,
                         :summary    => :string
 
-      belongs_to :check_by_start, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :scheduled_maintenances_by_start
+      belongs_to :check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :scheduled_maintenances
 
-      belongs_to :check_by_end, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :scheduled_maintenances_by_end
+      range_index_by :start_time, :end_time
 
       validates :start_time, :presence => true
       validates :end_time, :presence => true
@@ -33,15 +31,6 @@ module Flapjack
 
       def duration
         self.end_time - self.start_time
-      end
-
-      def check
-        self.check_by_start
-      end
-
-      def check=(c)
-        self.check_by_start = c
-        self.check_by_end   = c
       end
 
       def self.jsonapi_type
@@ -141,7 +130,7 @@ module Flapjack
 
       def self.jsonapi_associations
         {
-          :singular => [{:check_by_start => :check, :check_by_end => :check}],
+          :singular => [:check],
           :multiple => []
         }
       end

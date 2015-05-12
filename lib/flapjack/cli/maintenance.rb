@@ -56,47 +56,36 @@ module Flapjack
         duration_range = @options[:duration] ? self.class.extract_duration_range(
           @options[:duration]) : nil
 
+        start_time_range = Zermelo::Filters::IndexRange.new(start_time_begin,
+          start_time_end, :by_score => true)
+        finish_time_range = Zermelo::Filters::IndexRange.new(finish_time_begin,
+          finish_time_end, :by_score => true)
+
         maintenances = case @options[:type].downcase
         when 'scheduled'
           checks.inject([]) do |memo, check|
-            start_ids = check.scheduled_maintenances_by_start.
-              intersect_range(start_time_begin, start_time_end, :by_score => true).ids
 
-            end_ids = check.scheduled_maintenances_by_end.
-              intersect_range(finish_time_begin, finish_time_end, :by_score => true).ids
+            maints = check.scheduled_maintenances.
+              intersect(:start_time => start_time_range, :end_time => finish_time_range).all
 
-            included_ids = start_ids & end_ids
-
-            unless included_ids.empty?
-              maints   = Flapjack::Data::ScheduledMaintenance.find_by_ids(*included_ids)
-
-              if !maints.empty?
-                filtered = duration_range.nil? ? maints :
-                  self.class.filter_duration(maints, duration_range)
-                memo += filtered
-              end
+            if !maints.empty?
+              filtered = duration_range.nil? ? maints :
+                self.class.filter_duration(maints, duration_range)
+              memo += filtered
             end
 
             memo
           end
         when 'unscheduled'
           checks.inject([]) do |memo, check|
-            start_ids = check.unscheduled_maintenances_by_start.
-              intersect_range(start_time_begin, start_time_end, :by_score => true).ids
 
-            end_ids = check.scheduled_maintenances_by_end.
-              intersect_range(finish_time_begin, finish_time_end, :by_score => true).ids
+            maints = check.unscheduled_maintenances.
+              intersect(:start_time => start_time_range, :end_time => finish_time_range).all
 
-            included_ids = start_ids & end_ids
-
-            unless included_ids.empty?
-              maints   = Flapjack::Data::UnscheduledMaintenance.find_by_ids(*included_ids)
-
-              if !maints.empty?
-                filtered = duration_range.nil? ? maints :
-                  self.class.filter_duration(maints, duration_range)
-                memo += filtered
-              end
+            if !maints.empty?
+              filtered = duration_range.nil? ? maints :
+                self.class.filter_duration(maints, duration_range)
+              memo += filtered
             end
 
             memo
@@ -104,8 +93,7 @@ module Flapjack
         end
 
         rows = maintenances.collect do |maint|
-          check = maint.check_by_start
-          [check.name,
+          [maint.check.name,
            Time.at(maint.start_time), maint.end_time - maint.start_time,
            maint.summary, Time.at(maint.end_time)]
         end
@@ -127,16 +115,16 @@ module Flapjack
 
         errors = {}
         maintenances.each do |maint|
-          check = maint.check_by_start
+          check = maint.check
           identifier = "#{check.name}:#{check.start}"
           if maint.end_time < base_time
             errors[identifier] = "Maintenance can't be deleted as it finished in the past"
           else
             success = case @options[:type]
             when 'scheduled'
-              check.end_scheduled_maintenance(check.start_time)
+              check.end_scheduled_maintenance(maint, base_time)
             when 'unscheduled'
-              check.end_unscheduled_maintenance(check.start_time)
+              check.clear_unscheduled_maintenance(base_time)
             end
             errors[identifier] = "The following maintenance failed to delete: #{entry}" unless success
           end
@@ -177,7 +165,7 @@ module Flapjack
               :end_time => started + duration, :summary => @options[:reason])
             sched_maint.save
 
-            check.add_scheduled_maintenance(sched_maint)
+            check.scheduled_maintenances << sched_maint
           when 'unscheduled'
             unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => started,
               :end_time => started + duration, :summary => @options[:reason])

@@ -383,7 +383,7 @@ module Flapjack
     #     sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
     #       :end_time => start_time + duration, :summary => summary)
     #     sched_maint.save
-    #     check.add_scheduled_maintenance(sched_maint)
+    #     check.scheduled_maintenances << sched_maint
 
     #     redirect back
     #   end
@@ -437,13 +437,14 @@ module Flapjack
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
         context = Flapjack::Diner.context
-        unless context.nil?
-          @media = context[:included]
-        end
+        @media = context[:included] unless context.nil?
 
-        @pagerduty_credentials = @media.detect {|m| 'pagerduty'.eql?(m[:transport])}
+        # check_refs = Flapjack::Diner.contacts_link_checks(contact_id)
+        # unless check_refs.nil?
+          # check_ids  =
+        # end
 
-        @checks = [] # @contact.checks
+        @checks = []
 
         erb 'contact.html'.to_sym
       end

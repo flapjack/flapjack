@@ -22,8 +22,7 @@ def set_scheduled_maintenance(entity_name, check_name, duration)
   sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => Time.at(t.to_i - 60),
     :end_time => Time.at(t.to_i + duration), :summary => 'upgrading everything')
   expect(sched_maint.save).to be true
-  check.add_scheduled_maintenance(sched_maint)
-  # expect(check.in_scheduled_maintenance?).to be true  # force route is_alerting to update
+  check.scheduled_maintenances << sched_maint
 end
 
 def remove_scheduled_maintenance(entity_name, check_name)
@@ -31,8 +30,7 @@ def remove_scheduled_maintenance(entity_name, check_name)
   expect(check).not_to be_nil
 
   t = Time.now
-  sched_maints = check.scheduled_maintenances_by_start.all
-  sched_maints.each do |sm|
+  check.scheduled_maintenances.each do |sm|
     check.end_scheduled_maintenance(sm, t)
     sched_maint.destroy
   end
@@ -150,7 +148,7 @@ end
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in an? (ok|critical) state$/ do |check_name, entity_name, state|
   check_name  ||= @check_name
   entity_name ||= @entity_name
-  set_state(entity_name, check_name, state, Time.now.to_i)
+  set_state(entity_name, check_name, state, Time.now)
 end
 
 Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in scheduled maintenance(?: for (.+))?$/ do |check_name, entity_name, duration|
@@ -231,10 +229,6 @@ Then /^show me the (\w+ )*log$/ do |adjective|
   puts Flapjack.logger.messages.join("\n")
 end
 
-Then /^all alert dropping keys for user (\S+) should have expired$/ do |contact_id|
-  expect(Flapjack.redis.keys("drop_alerts_for_contact:#{contact_id}*")).to be_empty
-end
-
 Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))? should be queued for (.*)$/ do |num_queued, media, notification_type, rollup, address|
   case num_queued
   when 'no'
@@ -259,6 +253,8 @@ end
 When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
   rule = Flapjack::Data::Rule.find_by_id(rule_id)
   expect(rule).not_to be_nil
+
+  rule.contact.rules.delete(rule) unless rule.contact.nil?
 
   rule.destroy
 end

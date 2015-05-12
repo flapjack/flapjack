@@ -2,7 +2,7 @@
 
 require 'swagger/blocks'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 
@@ -17,7 +17,7 @@ module Flapjack
 
     class Medium
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations
@@ -36,6 +36,10 @@ module Flapjack
 
       has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
+
+      has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :alerting_media, :before_read => :remove_checks_in_sched_maint,
+        :related_class_names => ['Flapjack::Data::ScheduledMaintenance']
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
 
@@ -65,17 +69,45 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def alerting_checks
-        route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
-        route_ids = route_ids_by_rule_id.values.reduce(&:|)
+      # TODO before_read/after_read association callbacks in zermelo
+      # dynamically update alerting checks as a proper association, map it in
+      # the API/swagger
 
-        check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
-          :is_alerting => true).associated_ids_for(:checks).values.reduce(:|)
+      # def alerting_checks
+      #   route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
+      #   route_ids = route_ids_by_rule_id.values.reduce(&:|)
 
-        # scheduled maintenance may have occurred without the routes being updated
-        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object([]) do |check, memo|
-          memo << check unless check.in_scheduled_maintenance?
-        end
+      #   check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
+      #     :is_alerting => true).associated_ids_for(:checks).values.reduce(:|)
+
+      #   time = Time.now
+
+      #   # scheduled maintenance may have occurred without the routes being updated
+      #   Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
+      #     !check.in_scheduled_maintenance?(time)
+      #   end
+      # end
+
+      # acked checks remove themselves from alerting at the time of ack, not
+      # as easy to do when scheduled maintenance ticks over
+      def remove_checks_in_sched_maint
+        time = Time.now
+
+        start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
+
+        check_ids_by_sched_maint_ids = Flapjack::Data::ScheduledMaintenance.
+          intersect(:start_time => start_range, :end_time => end_range).
+          associated_ids_for(:check)
+
+        sched_maint_check_ids = Set.new(check_ids_by_sched_maint_ids.values.flatten(1))
+
+        return if sched_maint_check_ids.empty?
+
+        sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
+        return if sched_maint_checks.empty?
+
+        self.alerting_checks.delete(*sched_maint_checks.all)
       end
 
       def self.jsonapi_type
@@ -215,6 +247,8 @@ module Flapjack
           :patch => [:transport, :address, :interval, :rollup_threshold]
         }
       end
+
+      # read-only associations: alerting_checks
 
       def self.jsonapi_associations
         {

@@ -5,7 +5,7 @@ require 'set'
 require 'ice_cube'
 require 'swagger/blocks'
 
-require 'zermelo/records/redis_record'
+require 'zermelo/records/redis'
 
 require 'flapjack/data/validators/id_validator'
 require 'flapjack/data/route'
@@ -19,7 +19,7 @@ module Flapjack
 
       extend Flapjack::Utility
 
-      include Zermelo::Records::RedisRecord
+      include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Flapjack::Gateways::JSONAPI::Data::Associations
@@ -180,15 +180,15 @@ module Flapjack
       # nil time_restrictions matches
       # times (start, end) within time restrictions will have any UTC offset removed and will be
       # considered to be in the timezone of the contact
-      def is_occurring_now?(timezone)
+      def is_occurring_at?(time, timezone)
         return true if self.time_restrictions.nil? || self.time_restrictions.empty?
 
-        usertime = timezone.now
+        user_time = time.in_time_zone(timezone)
 
         self.time_restrictions.any? do |tr|
           # add contact's timezone to the time restriction schedule
           schedule = self.class.time_restriction_to_icecube_schedule(tr, timezone)
-          schedule && schedule.occurring_at?(usertime)
+          !schedule.nil? && schedule.occurring_at?(user_time)
         end
       end
 
