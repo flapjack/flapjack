@@ -202,12 +202,6 @@ module Flapjack
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
           options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
 
-          acknowledged = pagerduty_acknowledged?(options)
-          if acknowledged.nil?
-            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
-            next
-          end
-
           # check again that the check is still unacknowledged
           if entity_check.in_unscheduled_maintenance?
             # skip this one
@@ -221,6 +215,12 @@ module Flapjack
             # skip this one
             @logger.warn "#{entity_name}:#{check} seems to have recovered " +
               "while I've been running. Cancelling acknowledgement creation"
+            next
+          end
+
+          acknowledged = pagerduty_acknowledged?(options)
+          if acknowledged.nil?
+            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
             next
           end
 
