@@ -51,7 +51,7 @@ module Flapjack
         ((redis_version.split('.') <=> REQUIRED_VERSION.split('.')) >= 0)
       raise("Redis too old - Flapjack requires #{REQUIRED_VERSION} but " \
             "#{redis_version} is running")
-    rescue Redis::CannotConnectError
+    rescue Redis::CannotConnectError, Errno::EINVAL
       @connection_failed = true
       raise
     end
