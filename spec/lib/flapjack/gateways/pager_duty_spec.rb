@@ -6,9 +6,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
 
   let(:config) { {
     'queue'       => 'pagerduty_notifications',
-    'credentials' => {'subdomain' => 'flpjck',
-                      'username'  => 'flapjack',
-                      'password'  => 'password123'}
+    'credentials' => {'subdomain' => 'flpjck'}
   } }
 
   let(:now)   { Time.new }
@@ -109,6 +107,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
 
     it "doesn't look for acknowledgements if this search is already running" do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
+      expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
@@ -125,6 +124,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
 
     it "looks for and creates acknowledgements if the search is not already running" do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
+      expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
@@ -323,6 +323,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
 
     it 'does not look for acknowledgements if no checks are failing & unacknowledged' do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
+      expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 

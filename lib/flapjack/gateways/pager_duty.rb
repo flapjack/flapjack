@@ -185,31 +185,28 @@ module Flapjack
             Kernel.sleep(10)
           end
 
-        # begin
+          begin
+            Zermelo.redis = Flapjack.redis
 
-          Zermelo.redis = Flapjack.redis
+            loop do
+              @lock.synchronize do
+                # ensure we're the only instance of the PagerDuty acknowledgement check running (with a naive
+                # timeout of one hour to guard against stale locks caused by crashing code) either in this
+                # process or in other processes
+                if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
+                  Flapjack.logger.debug("skipping looking for acks in PagerDuty as this is already happening")
+                else
+                  Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
+                  find_pagerduty_acknowledgements
+                  Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
+                end
 
-          loop do
-            @lock.synchronize do
-              # ensure we're the only instance of the PagerDuty acknowledgement check running (with a naive
-              # timeout of one hour to guard against stale locks caused by crashing code) either in this
-              # process or in other processes
-              if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
-                Flapjack.logger.debug("skipping looking for acks in PagerDuty as this is already happening")
-              else
-                Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
-                find_pagerduty_acknowledgements
-                Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
+                Kernel.sleep 10
               end
-
-              Kernel.sleep 10
             end
+          ensure
+            Flapjack.redis.quit
           end
-
-          # ensure
-          #   Flapjack.redis.quit
-          # end
-
         end
 
         def stop_type
