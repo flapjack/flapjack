@@ -23,6 +23,7 @@ require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
+require 'flapjack/data/status'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
@@ -60,6 +61,7 @@ module Flapjack
         Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
         Flapjack::Data::Statistic,
+        Flapjack::Data::Status,
         Flapjack::Data::Tag,
         Flapjack::Data::UnscheduledMaintenance
       ]

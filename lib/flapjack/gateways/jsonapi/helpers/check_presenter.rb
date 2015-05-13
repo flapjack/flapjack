@@ -25,33 +25,6 @@ module Flapjack
             @check = check
           end
 
-          def status
-            last_change   = @check.states.last
-            last_update   = last_change.nil? ? nil : last_change.entries.last
-            last_problem  = @check.latest_notifications.
-              intersect(:condition => Flapjack::Data::Condition.unhealthy.keys).first
-            last_recovery = @check.latest_notifications.
-              intersect(:condition => Flapjack::Data::Condition.healthy.keys).first
-            last_ack      = @check.latest_notifications.
-              intersect(:action => 'acknowledgement').first
-
-            {'name'                              => @check.name,
-             'condition'                         => (last_update   ? last_update.condition   : nil),
-             'enabled'                           => @check.enabled,
-             'summary'                           => (last_update   ? last_update.summary     : nil),
-             'details'                           => (last_update   ? last_update.details     : nil),
-             'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
-             'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
-             'initial_failure_delay'             => @check.initial_failure_delay,
-             'repeat_failure_delay'              => @check.repeat_failure_delay,
-             'last_update'                       => (last_update   ? last_update.timestamp   : nil),
-             'last_change'                       => (last_change   ? last_change.timestamp   : nil),
-             'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),
-             'last_recovery_notification'        => (last_recovery ? last_recovery.timestamp : nil),
-             'last_acknowledgement_notification' => (last_ack      ? last_ack.timestamp      : nil),
-            }
-          end
-
           def outages(start_time, end_time, options = {})
             state_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
 

@@ -75,7 +75,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
     result.update(:links => links_data)
 
-    par = opts[:start] && opts[:finish] ?
+    par = (opts[:start] && opts[:finish]) ?
       {:start_time => opts[:start].iso8601, :end_time => opts[:finish].iso8601} : {}
 
     get path, par
@@ -139,15 +139,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(result))
   end
 
-  [:status, :scheduled_maintenance, :unscheduled_maintenance, :outage,
+  [:scheduled_maintenance, :unscheduled_maintenance, :outage,
    :downtime].each do |report_type|
 
     action_pres = case report_type
-    when :status, :downtime
+    when :downtime
       report_type
     else
       "#{report_type}s"
     end
+
+    let(:start)  { Time.parse('1 Jan 2012') }
+    let(:finish) { Time.parse('6 Jan 2012') }
 
     it "returns a #{report_type} report for all checks" do
       expect_checks("/#{report_type}_reports/checks", report_type, action_pres, :all => true)
@@ -179,27 +182,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
       expect(last_response).to be_not_found
     end
 
-    unless :status.eql?(report_type)
-
-      let(:start)  { Time.parse('1 Jan 2012') }
-      let(:finish) { Time.parse('6 Jan 2012') }
-
-      it "returns a #{report_type} report for all checks within a time window" do
-        expect_checks("/#{report_type}_reports/checks", report_type, action_pres, :all => true,
-          :start => start, :finish => finish)
-      end
-
-      it "returns a #{report_type} report for a check within a time window" do
-        expect_checks("/#{report_type}_reports/checks/#{check.id}", report_type,
-          action_pres, :one => true, :start => start, :finish => finish)
-      end
-
-      it "returns a #{report_type} report for all checks linked to a tag" do
-        expect_tag_checks("/#{report_type}_reports/tags/#{tag.id}", report_type,
-          action_pres, :start => start, :finish => finish)
-      end
-
+    it "returns a #{report_type} report for all checks within a time window" do
+      expect_checks("/#{report_type}_reports/checks", report_type, action_pres, :all => true,
+        :start => start, :finish => finish)
     end
 
+    it "returns a #{report_type} report for a check within a time window" do
+      expect_checks("/#{report_type}_reports/checks/#{check.id}", report_type,
+        action_pres, :one => true, :start => start, :finish => finish)
+    end
+
+    it "returns a #{report_type} report for all checks linked to a tag" do
+      expect_tag_checks("/#{report_type}_reports/tags/#{tag.id}", report_type,
+        action_pres, :start => start, :finish => finish)
+    end
   end
 end

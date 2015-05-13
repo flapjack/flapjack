@@ -10,10 +10,6 @@ module Flapjack
 
       include Swagger::Blocks
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       def total_keys
         Flapjack.redis.dbsize
       end
@@ -64,6 +60,10 @@ module Flapjack
           :enabled => Flapjack::Data::Check.intersect(:enabled => true).count,
           :failing => Flapjack::Data::Check.intersect(:failing => true).count
         }
+      end
+
+      def self.jsonapi_type
+        self.name.demodulize.underscore
       end
 
       swagger_schema :Metrics do

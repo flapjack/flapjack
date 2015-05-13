@@ -184,4 +184,17 @@ module FixtureData
     }
   end
 
+  def status_data
+    @status_data ||= {
+      :id => 'b25335ca-3e80-42e8-91b3-07026066b515',
+      :last_update          => time.iso8601,
+      :last_change          => time.iso8601,
+      :last_problem         => (time - 20).iso8601,
+      :last_recovery        => time.iso8601,
+      :last_acknowledgement => (time - 10).iso8601,
+      :summary              => 'all good',
+      :details              => "trust me, it's ok"
+    }
+  end
+
 end

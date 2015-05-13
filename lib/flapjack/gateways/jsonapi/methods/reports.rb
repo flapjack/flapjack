@@ -21,7 +21,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             # app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
 
-            app.get %r{^/(status|outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
+            app.get %r{^/(outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
               report_type = params[:captures][0]
 
               resource = params[:captures][1] || params[:captures][3]
@@ -30,7 +30,7 @@ module Flapjack
                                                         params[:captures][2]
 
               report_type_pres = case report_type
-              when 'status', 'downtime'
+              when 'downtime'
                 report_type
               else
                 "#{report_type}s"
@@ -44,11 +44,9 @@ module Flapjack
               end
 
               args = []
-              unless 'status'.eql?(report_type)
-                start_time = validate_and_parsetime(params[:start_time])
-                end_time = validate_and_parsetime(params[:end_time])
-                args += [start_time, end_time]
-              end
+              start_time = validate_and_parsetime(params[:start_time])
+              end_time = validate_and_parsetime(params[:end_time])
+              args += [start_time, end_time]
 
               checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
                 scoped = resource_filter_sort(initial_scope,

@@ -23,7 +23,13 @@ module Flapjack
         :inverse_of => :most_severe
 
       has_sorted_set :entries, :class_name => 'Flapjack::Data::Entry',
-        :key => :timestamp, :inverse_of => :state
+        :key => :timestamp, :inverse_of => :state,
+        :after_add => :update_check_last_update
+
+      def update_check_last_update(e)
+        self.check.last_update = e.timestamp
+        self.check.summary     = e.summary
+      end
 
       validates :timestamp, :presence => true
 

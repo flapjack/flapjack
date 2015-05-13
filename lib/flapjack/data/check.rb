@@ -36,11 +36,7 @@ module Flapjack
                         :repeat_failure_delay  => :integer,
                         :notification_count    => :integer,
                         :condition             => :string,
-                        :failing               => :boolean # ,
-                        # :last_update           => :timestamp, # most recent entry
-                        # :last_change           => :timestamp  # most recent state
-
-      # FIXME update last_update/last_change via callbacks
+                        :failing               => :boolean
 
       index_by :enabled, :failing
       unique_index_by :name, :ack_hash
@@ -91,8 +87,23 @@ module Flapjack
         end
       end
 
+      has_one :status, :class_name => 'Flapjack::Data::Status',
+        :inverse_of => :check
+
+      after_create :create_status
+      def create_status
+        initial_status = Flapjack::Data::Status.new
+        initial_status.save
+        self.status = initial_status
+      end
+
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
-        :key => :timestamp, :inverse_of => :check
+        :key => :timestamp, :inverse_of => :check,
+        :after_add => :update_status
+
+      # def update_status(st)
+      #   self.status.apply_state(st)
+      # end
 
       has_one :most_severe, :class_name => 'Flapjack::Data::State',
         :inverse_of => :most_severe_check
@@ -103,18 +114,6 @@ module Flapjack
 
       def removed_latest_notification(entry)
         Flapjack::Data::Entry.delete_if_unlinked(entry)
-      end
-
-      def last_update
-        s = self.states.last
-        return if s.nil?
-        s.entries.last
-      end
-
-      def last_change
-        s = self.states.last
-        return if s.nil?
-        s.entries.first
       end
 
       has_sorted_set :scheduled_maintenances,
@@ -205,6 +204,10 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :status do
+          key :type, :string
+          key :format, :url
+        end
         property :tags do
           key :type, :string
           key :format, :url
@@ -286,7 +289,7 @@ module Flapjack
       def self.jsonapi_associations
         {
           :read_only  => {
-            :singular => [],
+            :singular => [:status],
             :multiple => [:alerting_media]
           },
           :read_write => {
