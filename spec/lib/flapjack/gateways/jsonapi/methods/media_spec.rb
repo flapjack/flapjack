@@ -35,6 +35,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       email_data.merge(
         :type => 'medium',
         :links => {:self  => "http://example.org/media/#{medium.id}",
+                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
                    :contact => "http://example.org/media/#{medium.id}/contact",
                    :rules => "http://example.org/media/#{medium.id}/rules"})
     ))
@@ -75,6 +76,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       email_data.merge(
         :type => 'medium',
         :links => {:self  => "http://example.org/media/#{medium.id}",
+                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
                    :contact => "http://example.org/media/#{medium.id}/contact",
                    :rules => "http://example.org/media/#{medium.id}/rules"}),
     :links => {:self  => "http://example.org/media/#{medium.id}"}))
@@ -113,6 +115,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
         email_data.merge(
         :type => 'medium',
         :links => {:self  => "http://example.org/media/#{medium.id}",
+                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
                    :contact => "http://example.org/media/#{medium.id}/contact",
                    :rules => "http://example.org/media/#{medium.id}/rules"})],
     :links => links, :meta => meta))

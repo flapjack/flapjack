@@ -106,7 +106,7 @@ module Flapjack
                     [resource_class.find_by_id!(resource_id)]
                   end
 
-                  singular_links, multiple_links = resource_class.association_klasses
+                  singular_links, multiple_links = resource_class.association_klasses(:read_write)
 
                   attributes = (resource_class.respond_to?(:jsonapi_attributes) ?
                     resource_class.jsonapi_attributes[:patch] : nil) || []

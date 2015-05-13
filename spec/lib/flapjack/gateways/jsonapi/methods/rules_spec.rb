@@ -212,6 +212,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     :included => [
       email_data.merge(:type => 'medium', :links => {
         :self => "http://example.org/media/#{medium.id}",
+        :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
         :contact => "http://example.org/media/#{medium.id}/contact",
         :rules => "http://example.org/media/#{medium.id}/rules"
       }
@@ -270,6 +271,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       }),
       email_data.merge(:type => 'medium', :links => {
         :self => "http://example.org/media/#{medium.id}",
+        :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
         :contact => "http://example.org/media/#{medium.id}/contact",
         :rules => "http://example.org/media/#{medium.id}/rules"
       }

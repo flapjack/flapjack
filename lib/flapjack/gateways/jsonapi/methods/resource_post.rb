@@ -63,7 +63,7 @@ module Flapjack
 
                   resources_data, unwrap = wrapped_params
 
-                  singular_links, multiple_links = resource_class.association_klasses
+                  singular_links, multiple_links = resource_class.association_klasses(:read_write)
 
                   attributes = (resource_class.respond_to?(:jsonapi_attributes) ?
                     resource_class.jsonapi_attributes[:post] : nil) || []

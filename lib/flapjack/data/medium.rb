@@ -298,12 +298,16 @@ module Flapjack
         }
       end
 
-      # read-only associations: alerting_checks
-
       def self.jsonapi_associations
         {
-          :singular => [:contact],
-          :multiple => [:rules]
+          :read_only => {
+            :singular => [],
+            :multiple => [:alerting_checks]
+          },
+          :read_write => {
+            :singular => [:contact],
+            :multiple => [:rules]
+          }
         }
       end
     end

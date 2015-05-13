@@ -29,9 +29,6 @@ module Flapjack
       include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
-      # NB: state could be retrieved from states.last instead -- summary, details
-      # and last_update can change without a new check_state being added though
-
       define_attributes :name                  => :string,
                         :enabled               => :boolean,
                         :ack_hash              => :string,
@@ -39,7 +36,11 @@ module Flapjack
                         :repeat_failure_delay  => :integer,
                         :notification_count    => :integer,
                         :condition             => :string,
-                        :failing               => :boolean
+                        :failing               => :boolean # ,
+                        # :last_update           => :timestamp, # most recent entry
+                        # :last_change           => :timestamp  # most recent state
+
+      # FIXME update last_update/last_change via callbacks
 
       index_by :enabled, :failing
       unique_index_by :name, :ack_hash
@@ -196,7 +197,19 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :alerting_media do
+          key :type, :string
+          key :format, :url
+        end
+        property :scheduled_maintenances do
+          key :type, :string
+          key :format, :url
+        end
         property :tags do
+          key :type, :string
+          key :format, :url
+        end
+        property :unscheduled_maintenances do
           key :type, :string
           key :format, :url
         end
@@ -270,13 +283,17 @@ module Flapjack
         }
       end
 
-      # read-only associations: alerting_media
-
       def self.jsonapi_associations
         {
-          :singular => [],
-          :multiple => [:scheduled_maintenances, :tags,
-                        :unscheduled_maintenances]
+          :read_only  => {
+            :singular => [],
+            :multiple => [:alerting_media]
+          },
+          :read_write => {
+            :singular => [],
+            :multiple => [:scheduled_maintenances, :tags,
+                          :unscheduled_maintenances]
+          }
         }
       end
 

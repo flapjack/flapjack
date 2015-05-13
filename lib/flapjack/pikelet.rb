@@ -74,7 +74,7 @@ module Flapjack
               yield
             rescue Flapjack::PikeletStop
               Flapjack.logger.debug "pikelet exception stop for #{@pikelet_class.name}"
-             rescue Flapjack::GlobalStop
+            rescue Flapjack::GlobalStop
               Flapjack.logger.debug "global exception stop for #{@pikelet_class.name}"
               @shutdown_thread = @thread
               shutdown_all = true

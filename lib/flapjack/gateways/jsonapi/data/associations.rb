@@ -15,12 +15,17 @@ module Flapjack
 
           module ClassMethods
 
-            def association_klasses
+            def association_klasses(*types)
               assocs = self.respond_to?(:jsonapi_associations) ?
                 self.jsonapi_associations : {}
 
-              singular = assocs[:singular] || []
-              multiple = assocs[:multiple] || []
+              singular = []
+              multiple = []
+
+              (types & [:read_write, :read_only]).each do |type|
+                singular += ((assocs[type] || {})[:singular] || [])
+                multiple += ((assocs[type] || {})[:multiple] || [])
+              end
 
               singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
               multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}

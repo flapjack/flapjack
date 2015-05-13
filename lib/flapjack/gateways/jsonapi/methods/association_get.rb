@@ -13,7 +13,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              singular_links, multiple_links = resource_class.association_klasses
+              singular_links, multiple_links = resource_class.association_klasses(:read_write, :read_only)
 
               assocs       = singular_links.empty? ? nil : singular_links.keys.map(&:to_s).join('|')
               multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')

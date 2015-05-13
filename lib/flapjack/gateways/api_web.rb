@@ -211,7 +211,6 @@ module Flapjack
       end
 
       get '/checks' do
-        # check_stats
         time = Time.now
 
         opts = {}

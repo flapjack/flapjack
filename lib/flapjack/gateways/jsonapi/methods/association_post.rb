@@ -15,7 +15,7 @@ module Flapjack
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               resource = resource_class.jsonapi_type.pluralize.downcase
 
-              _, multiple_links = resource_class.association_klasses
+              _, multiple_links = resource_class.association_klasses(:read_write)
 
               multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')
 

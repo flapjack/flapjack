@@ -38,8 +38,13 @@ module Flapjack
             assocs = klass.respond_to?(:jsonapi_associations) ?
               klass.jsonapi_associations : {}
 
-            singular = assocs[:singular] || []
-            multiple = assocs[:multiple] || []
+            singular = []
+            multiple = []
+
+            [:read_write, :read_only].each do |type|
+              singular += ((assocs[type] || {})[:singular] || [])
+              multiple += ((assocs[type] || {})[:multiple] || [])
+            end
 
             singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
             multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
@@ -86,6 +91,7 @@ module Flapjack
             end
 
             links.update(aliased_links)
+
             links
           end
 
@@ -133,7 +139,6 @@ module Flapjack
               l = links.keys.each_with_object({}) do |v, memo|
 
                 link_data = links[v]
-
 
                 if link_data.nil?
                   memo[v] = "#{request.base_url}/#{resources_name}/#{r.id}/#{v}"

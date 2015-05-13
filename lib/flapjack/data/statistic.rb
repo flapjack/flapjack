@@ -97,8 +97,14 @@ module Flapjack
 
       def self.jsonapi_associations
         {
-          :singular => [],
-          :multiple => []
+          :read_only => {
+            :singular => [],
+            :multiple => []
+          },
+          :read_write => {
+            :singular => [],
+            :multiple => []
+          }
         }
       end
     end
