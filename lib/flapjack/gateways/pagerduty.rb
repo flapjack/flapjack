@@ -16,6 +16,7 @@ module Flapjack
     class Pagerduty
       PAGERDUTY_EVENTS_API_URL   = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
       SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
+      SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
 
       include Flapjack::Utility
 
@@ -129,7 +130,8 @@ module Flapjack
         # ensure we're the only instance of the pagerduty acknowledgement check running (with a naive
         # timeout of five minutes to guard against stale locks caused by crashing code) either in this
         # process or in other processes
-        if (@pagerduty_acks_started and @pagerduty_acks_started > (Time.now.to_i - 300)) or
+        if (@pagerduty_acks_started and @pagerduty_acks_started >
+          (Time.now.to_i - SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)) or
             @redis.get(SEM_PAGERDUTY_ACKS_RUNNING) == 'true'
           @logger.debug("skipping looking for acks in pagerduty as this is already happening")
           return
@@ -137,7 +139,7 @@ module Flapjack
 
         @pagerduty_acks_started = Time.now.to_i
         @redis.set(SEM_PAGERDUTY_ACKS_RUNNING, 'true')
-        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, 300)
+        @redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
 
         find_pagerduty_acknowledgements
 
@@ -200,19 +202,25 @@ module Flapjack
           # FIXME: try each set of credentials until one works (may have stale contacts turning up)
           options = ec_credentials.first.merge('check' => "#{entity_name}:#{check}")
 
-          acknowledged = pagerduty_acknowledged?(options)
-          if acknowledged.nil?
-            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
+          # check again that the check is still unacknowledged
+          if entity_check.in_unscheduled_maintenance?
+            # skip this one
+            @logger.warn "#{entity_name}:#{check} seems to have been acknowledged by " +
+              "some other process while I've been running. Cancelling acknowledgement creation"
             next
           end
 
-          # check again that the check is still unacknowledged in flapjack
-          unless Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis).map {|ec|
-              "#{ec.entity_name}:#{ec.check}"
-            }.include?("#{entity_name}:#{check}")
+          # check again that the check is still failing
+          unless entity_check.failed?
             # skip this one
-            @logger.warn "#{entity_name}:#{check} seems to have been acknowledged by " +
-              "some other process while I've been running, cancelling acknowledgement creation"
+            @logger.warn "#{entity_name}:#{check} seems to have recovered " +
+              "while I've been running. Cancelling acknowledgement creation"
+            next
+          end
+
+          acknowledged = pagerduty_acknowledged?(options)
+          if acknowledged.nil?
+            @logger.debug "#{entity_name}:#{check} is not acknowledged in pagerduty, skipping"
             next
           end
 
