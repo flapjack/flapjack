@@ -1,5 +1,13 @@
 ## Flapjack Changelog
 
+# 1.6.0 - 2015-05-13
+- Feature: use token authentication for pagerduty gateway #831 (@alperkokmen)
+- Feature: expose failure delays in web UI #849 (@jessereynolds)
+- Bug: performance improvement - fix usage of KEYS command for entity check names c57d3a5 (@ali-graham)
+- Bug: remove disabled checks from rollup calculations #843 (@ali-graham)
+- Bug: fall back to basic auth for pagerduty incidents api #853 (@jessereynolds)
+- Chore: pagerduty ack retrieval improvements #858 (@jessereynolds)
+
 # 1.5.0 - 2015-03-31
 - No changes
 
