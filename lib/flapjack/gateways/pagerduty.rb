@@ -174,11 +174,16 @@ module Flapjack
       end
 
       def find_pagerduty_acknowledgements
-        @logger.debug("looking for acks in pagerduty for unack'd problems")
-
         unacknowledged_failing_checks = Flapjack::Data::EntityCheck.unacknowledged_failing(:redis => @redis)
+        if unacknowledged_failing_checks.empty?
+          @logger.debug("skipping looking for acks in pagerduty as there are no unacknowledged failing checks")
+          return nil
+        else
+          @logger.debug("looking for acks in pagerduty for unack'd problems")
+        end
 
-        @logger.debug "found unacknowledged failing checks as follows: " + unacknowledged_failing_checks.join(', ')
+        @logger.debug "found #{unacknowledged_failing_checks.length} unacknowledged failing checks as follows: " +
+          unacknowledged_failing_checks.map {|c| "#{c.entity_name}:#{c.check}"}.join(', ')
 
         unacknowledged_failing_checks.each do |entity_check|
 

@@ -142,9 +142,9 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     })
 
     entity_check = double('entity_check')
-    expect(entity_check).to receive(:check).exactly(1).times.and_return('PING')
+    expect(entity_check).to receive(:check).exactly(2).times.and_return('PING')
     expect(entity_check).to receive(:contacts).and_return([contact])
-    expect(entity_check).to receive(:entity_name).exactly(1).times.and_return('foo-app-01.bar.net')
+    expect(entity_check).to receive(:entity_name).exactly(2).times.and_return('foo-app-01.bar.net')
     expect(entity_check).to receive(:in_unscheduled_maintenance?).exactly(1).times.and_return(false)
     expect(entity_check).to receive(:failed?).exactly(1).times.and_return(true)
     expect(Flapjack::Data::Event).to receive(:create_acknowledgement).with('foo-app-01.bar.net', 'PING',
