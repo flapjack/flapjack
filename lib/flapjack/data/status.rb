@@ -98,20 +98,31 @@ module Flapjack
         }
       end
 
+      def self.jsonapi_extra_locks
+        {
+          :get    => []
+        }
+      end
+
       def self.jsonapi_associations
         {
           :read_only => {
             :singular => [:check],
-            :multiple => []
-          },
-          :read_write => {
-            :singular => [],
             :multiple => []
           }
         }
       end
 
       # # previously implemented
+
+      # has_sorted_set :latest_notifications, :class_name => 'Flapjack::Data::Entry',
+      #   :key => :timestamp, :inverse_of => :latest_notifications_check,
+      #   :after_remove => :removed_latest_notification
+
+      # def removed_latest_notification(entry)
+      #   Flapjack::Data::Entry.delete_if_unlinked(entry)
+      # end
+
       # def last_update
       #   s = self.states.last
       #   return if s.nil?

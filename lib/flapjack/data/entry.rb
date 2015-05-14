@@ -26,8 +26,8 @@ module Flapjack
       index_by :condition, :action
       range_index_by :timestamp
 
-      belongs_to :latest_notifications_check, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :latest_notifications
+      belongs_to :last_notifications_check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :last_notification
 
       belongs_to :state, :class_name => 'Flapjack::Data::State',
         :inverse_of => :entries
@@ -82,11 +82,11 @@ module Flapjack
       def self.delete_if_unlinked(e)
         Flapjack.logger.debug "checking deletion of #{e.instance_variable_get('@attributes').inspect}"
         Flapjack.logger.debug "state nil #{e.state.nil?}"
-        Flapjack.logger.debug "latest_notifications_check nil #{e.latest_notifications_check.nil?}"
+        Flapjack.logger.debug "last_notification_check nil #{e.last_notification_check.nil?}"
         Flapjack.logger.debug "notification nil #{e.notification.nil?}"
         Flapjack.logger.debug "latest media empty #{e.latest_media.empty?}"
 
-        return unless e.state.nil? && e.latest_notifications_check.nil? &&
+        return unless e.state.nil? && e.last_notification_check.nil? &&
           e.notification.nil? && e.latest_media.empty?
         Flapjack.logger.debug "deleting"
         e.destroy

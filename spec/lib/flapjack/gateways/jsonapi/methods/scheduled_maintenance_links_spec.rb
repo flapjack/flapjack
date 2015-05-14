@@ -13,6 +13,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
   let(:sm_check_by_end)   { double('sm_check_by_end') }
 
   it 'shows the check for a scheduled maintenance period' do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).with(Flapjack::Data::Check).and_yield
+
     expect(scheduled_maintenance).to receive(:check).and_return(check)
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).with(scheduled_maintenance.id).

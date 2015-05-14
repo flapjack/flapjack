@@ -50,20 +50,22 @@ module Flapjack
           return false
         end
 
-        last_notif  = check.latest_notifications.last
-        last_problem = check.latest_notifications.intersect(:condition => Flapjack::Data::Condition.unhealthy.keys).last
+        status = check.status
+
+        last_notif   = status.nil? ? nil :
+          [status.last_problem, status.last_recovery, status.last_acknowledgement].compact.max
+        last_problem = status.nil? ? nil : status.last_problem
 
         last_change_time   = old_state ? old_state.timestamp : nil
 
-        last_problem_alert = last_problem ? last_problem.timestamp : nil
-
         alert_type        = Flapjack::Data::Alert.notification_type(new_entry.action,
           new_entry.condition)
-        last_alert_type   = last_notif.nil? ? nil :
-          Flapjack::Data::Alert.notification_type(last_notif.action, last_notif.condition)
+
+        # last_alert_type   = last_notif.nil? ? nil :
+        #   Flapjack::Data::Alert.notification_type(last_notif.action, last_notif.condition)
 
         current_condition_duration = last_change_time.nil? ? nil : (timestamp - last_change_time)
-        time_since_last_alert = last_problem_alert.nil? ? nil : (timestamp - last_problem_alert)
+        time_since_last_alert = last_problem.nil? ? nil : (timestamp - last_problem)
 
         Flapjack.logger.debug("#{label} last_problem_alert: #{last_problem_alert || 'nil'}, " +
                       "last_change: #{last_change_time || 'nil'}, " +

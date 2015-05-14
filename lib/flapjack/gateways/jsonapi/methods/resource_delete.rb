@@ -14,13 +14,15 @@ module Flapjack
 
               ids = resources_data.nil? ? [id] : resources_data.map {|d| d['id']}
 
-              if id.nil?
-                resources = klass.intersect(:id => ids)
-                halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
-                resources.destroy_all
-              else
-                halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
-                klass.find_by_id!(id).destroy
+              klass.lock(*klass.jsonapi_locks(:delete)) do
+                if id.nil?
+                  resources = klass.intersect(:id => ids)
+                  halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
+                  resources.destroy_all
+                else
+                  halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
+                  klass.find_by_id!(id).destroy
+                end
               end
 
               true
@@ -101,27 +103,7 @@ module Flapjack
                                   params[:captures].first
                   status 204
 
-                  # FIXME callbacks requiring extra locking -- need a better
-                  # solution for this
-                  extra_locks = case resource_class.name
-                  when Flapjack::Data::Medium.name
-                    [Flapjack::Data::Contact,
-                     Flapjack::Data::Rule, Flapjack::Data::Check,
-                     Flapjack::Data::Alert, Flapjack::Data::Entry,
-                     Flapjack::Data::ScheduledMaintenance]
-                  when Flapjack::Data::Rule.name
-                    [Flapjack::Data::Contact,
-                     Flapjack::Data::Medium, Flapjack::Data::Tag,
-                     Flapjack::Data::Route, Flapjack::Data::Check]
-                  end
-
-                  if extra_locks.nil?
-                    resource_delete(resource_class, resource_id)
-                  else
-                    resource_class.lock(*extra_locks) do
-                      resource_delete(resource_class, resource_id)
-                    end
-                  end
+                  resource_delete(resource_class, resource_id)
                 end
               end
             end

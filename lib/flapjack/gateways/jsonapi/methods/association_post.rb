@@ -15,8 +15,7 @@ module Flapjack
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               resource = resource_class.jsonapi_type.pluralize.downcase
 
-              _, multiple_links = resource_class.association_klasses(:read_write)
-
+              multiple_links = resource_class.jsonapi_association_links(:read_write)[:multiple]
               multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')
 
               unless multi_assocs.nil?
@@ -87,14 +86,10 @@ module Flapjack
 
                   # Not checking for duplication on adding existing to a multiple
                   # association, the JSONAPI spec doesn't ask for it
-                  if multiple_klass.nil?
-                    # TODO ensure wrapped_link_params will make this unreachable, remove
-                  else
-                    assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
-                    resource_class.lock(*assoc_classes) do
-                      associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
-                      resource_obj.send(assoc_name.to_sym).add(*associated)
-                    end
+                  assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
+                  resource_class.lock(*assoc_classes) do
+                    associated = multiple_klass[:data].find_by_ids!(*assoc_ids)
+                    resource_obj.send(assoc_name.to_sym).add(*associated)
                   end
                 end
               end

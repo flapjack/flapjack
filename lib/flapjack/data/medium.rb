@@ -298,6 +298,16 @@ module Flapjack
         }
       end
 
+      def self.jsonapi_extra_locks
+        {
+          :post   => [],
+          :get    => [],
+          :patch  => [],
+          :delete => [Flapjack::Data::Alert, Flapjack::Data::Entry,
+                      Flapjack::Data::ScheduledMaintenance]
+        }
+      end
+
       def self.jsonapi_associations
         {
           :read_only => {

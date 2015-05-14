@@ -8,8 +8,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
-  let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter) }
-
   let(:meta) {
     {
       :pagination => {
@@ -23,19 +21,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
   def expect_checks(path, report_type, action_pres, opts = {})
     link_opts = {}
-    if opts[:start] && opts[:finish]
-      expect(check_presenter).to receive(action_pres).
-        with(opts[:start], opts[:finish]).
-        and_return(:type => "#{report_type}_report")
-      link_opts[:start_time] = opts[:start].iso8601
-      link_opts[:end_time] = opts[:finish].iso8601
-    else
-      expect(check_presenter).to receive(action_pres).
-        and_return(:type => "#{report_type}_report")
-    end
-
-    expect(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter).to receive(:new).
-      with(check).and_return(check_presenter)
+    expect(Flapjack::Data::Report).to receive(action_pres).
+      with(check, :start_time => opts[:start], :end_time => opts[:finish]).
+      and_return(:type => "#{report_type}_report")
+    link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
+    link_opts[:end_time] = opts[:finish].iso8601 unless opts[:finish].nil?
 
     one_lnk = opts[:one] ? "/#{check.id}" : ''
     report_data = {
@@ -85,19 +75,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
 
   def expect_tag_checks(path, report_type, action_pres, opts = {})
     link_opts = {}
-    if opts[:start] && opts[:finish]
-      expect(check_presenter).to receive(action_pres).
-        with(opts[:start], opts[:finish]).
-        and_return(:type => "#{report_type}_report")
-      link_opts[:start_time] = opts[:start].iso8601
-      link_opts[:end_time] = opts[:finish].iso8601
-    else
-      expect(check_presenter).to receive(action_pres).
-        and_return(:type => "#{report_type}_report")
-    end
-
-    expect(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter).to receive(:new).
-      with(check).and_return(check_presenter)
+    expect(Flapjack::Data::Report).to receive(action_pres).
+      with(check, :start_time => opts[:start], :end_time => opts[:finish]).
+      and_return(:type => "#{report_type}_report")
+    link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
+    link_opts[:end_time] = opts[:finish].iso8601 unless opts[:start].nil?
 
     checks = double('checks')
     expect(tag).to receive(:checks).and_return(checks)

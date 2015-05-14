@@ -249,8 +249,8 @@ module Flapjack
 
       error do
         e = env['sinatra.error']
-        # trace = e.backtrace.join("\n")
-        # puts trace
+        trace = e.backtrace.join("\n")
+        puts trace
         err(response.status, "#{e.class} - #{e.message}")
       end
 

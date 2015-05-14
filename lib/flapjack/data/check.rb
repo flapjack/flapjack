@@ -98,23 +98,13 @@ module Flapjack
       end
 
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
-        :key => :timestamp, :inverse_of => :check,
-        :after_add => :update_status
-
-      # def update_status(st)
-      #   self.status.apply_state(st)
-      # end
+        :key => :timestamp, :inverse_of => :check
 
       has_one :most_severe, :class_name => 'Flapjack::Data::State',
         :inverse_of => :most_severe_check
 
-      has_sorted_set :latest_notifications, :class_name => 'Flapjack::Data::Entry',
-        :key => :timestamp, :inverse_of => :latest_notifications_check,
-        :after_remove => :removed_latest_notification
-
-      def removed_latest_notification(entry)
-        Flapjack::Data::Entry.delete_if_unlinked(entry)
-      end
+      has_one :last_notification, :class_name => 'Flapjack::Data::Entry',
+        :inverse_of => :last_notification_check
 
       has_sorted_set :scheduled_maintenances,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
@@ -283,6 +273,15 @@ module Flapjack
           :post  => [:name, :enabled],
           :get   => [:name, :enabled, :ack_hash, :failing, :condition],
           :patch => [:name, :enabled]
+        }
+      end
+
+      def self.jsonapi_extra_locks
+        {
+          :post   => [Flapjack::Data::Status],
+          :get    => [],
+          :patch  => [],
+          :delete => []
         }
       end
 

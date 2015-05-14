@@ -137,10 +137,14 @@ module Flapjack
                   resources, links, meta = if resource_id.nil?
                     scoped = resource_filter_sort(resource_class,
                      :filter => params[:filter], :sort => params[:sort])
-                    paginate_get(scoped, :page => params[:page],
-                      :per_page => params[:per_page])
+                    resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                      paginate_get(scoped, :page => params[:page],
+                        :per_page => params[:per_page])
+                    end
                   else
-                    [[resource_class.find_by_id!(resource_id)], {}, {}]
+                    resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                      [[resource_class.find_by_id!(resource_id)], {}, {}]
+                    end
                   end
 
                   links[:self] = request_url

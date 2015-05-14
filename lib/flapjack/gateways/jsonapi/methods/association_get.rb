@@ -13,10 +13,11 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              singular_links, multiple_links = resource_class.association_klasses(:read_write, :read_only)
 
-              assocs       = singular_links.empty? ? nil : singular_links.keys.map(&:to_s).join('|')
-              multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')
+              jsonapi_links = resource_class.jsonapi_association_links(:read_only, :read_write)
+
+              assocs       = jsonapi_links[:singular].empty? ? nil : jsonapi_links[:singular].keys.map(&:to_s).join('|')
+              multi_assocs = jsonapi_links[:multiple].empty? ? nil : jsonapi_links[:multiple].keys.map(&:to_s).join('|')
 
               if assocs.nil?
                 assocs = multi_assocs
@@ -32,7 +33,7 @@ module Flapjack
                   # make it difficult to DRY things due to the different contexts in use
                   single = resource.singularize
 
-                  singular_links.each_pair do |link_name, link_data|
+                  jsonapi_links[:singular].each_pair do |link_name, link_data|
                     link_type = link_data[:type]
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
@@ -89,7 +90,7 @@ module Flapjack
                     end
                   end
 
-                  multiple_links.each_pair do |link_name, link_data|
+                  jsonapi_links[:multiple].each_pair do |link_name, link_data|
                     link_type = link_data[:type]
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
@@ -164,15 +165,21 @@ module Flapjack
 
                   status 200
 
-                  accessor, assoc_type = if multiple_links.has_key?(assoc_name.to_sym)
-                    [:ids, multiple_links[assoc_name.to_sym][:data].jsonapi_type]
-                  elsif singular_links.has_key?(assoc_name.to_sym)
-                    [:id, singular_links[assoc_name.to_sym][:data].jsonapi_type]
+                  accessor, assoc_num = if jsonapi_links[:multiple].has_key?(assoc_name.to_sym)
+                    [:ids, :multiple]
+                  elsif jsonapi_links[:singular].has_key?(assoc_name.to_sym)
+                    [:id, :singular]
                   else
                     halt(err(404, 'Unknown association'))
                   end
 
-                  associated = resource_class.find_by_id!(resource_id).send(assoc_name.to_sym).send(accessor)
+                  assoc = jsonapi_links[assoc_num][assoc_name.to_sym]
+                  assoc_classes = [assoc[:data]] + assoc[:related]
+                  associated = resource_class.lock(*assoc_classes) do
+                    resource_class.find_by_id!(resource_id).send(assoc_name.to_sym).send(accessor)
+                  end
+
+                  assoc_type = assoc[:data].jsonapi_type
 
                   links = {
                     :self    => "#{request.base_url}/#{resource}/#{resource_id}/links/#{assoc_name}",

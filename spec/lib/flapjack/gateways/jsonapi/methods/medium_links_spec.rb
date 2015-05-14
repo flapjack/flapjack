@@ -12,6 +12,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   let(:medium_rules)  { double('medium_rules') }
 
   it 'shows the contact for a medium' do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact).and_yield
+
     expect(medium).to receive(:contact).and_return(contact)
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
@@ -84,6 +87,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'lists rules for a medium' do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Rule).and_yield
+
     expect(medium_rules).to receive(:ids).and_return([rule.id])
     expect(medium).to receive(:rules).and_return(medium_rules)
 
@@ -142,6 +148,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
   end
 
   it 'deletes a rule from a medium' do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Rule).and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 

@@ -3,8 +3,7 @@
 require 'sinatra/base'
 
 require 'flapjack/data/check'
-
-require 'flapjack/gateways/jsonapi/helpers/check_presenter'
+require 'flapjack/data/report'
 
 module Flapjack
   module Gateways
@@ -20,6 +19,8 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             # app.helpers Flapjack::Gateways::JSONAPI::Methods::Reports::Helpers
+
+            # FIXME swagger docs for reports
 
             app.get %r{^/(outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
               report_type = params[:captures][0]
@@ -43,10 +44,8 @@ module Flapjack
                 Flapjack::Data::Tag.find_by_id!(resource_id).checks
               end
 
-              args = []
-              start_time = validate_and_parsetime(params[:start_time])
-              end_time = validate_and_parsetime(params[:end_time])
-              args += [start_time, end_time]
+              args = {:start_time => validate_and_parsetime(params[:start_time]),
+                      :end_time   => validate_and_parsetime(params[:end_time])}
 
               checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
                 scoped = resource_filter_sort(initial_scope,
@@ -60,8 +59,7 @@ module Flapjack
               links[:self] = request_url
 
               rd = checks.each_with_object([]) do |check, memo|
-                r = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.
-                      new(check).send(report_type_pres.to_sym, *args)
+                r = Flapjack::Data::Report.send(report_type_pres.to_sym, check, args)
                 memo << r.merge(:type => "#{report_type}_report")
               end
 

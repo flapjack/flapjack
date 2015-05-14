@@ -374,11 +374,12 @@ module Flapjack
         # sent via association to a state or check
         severity = Flapjack::Data::Condition.most_unhealthy
       else
-        lat_notif = check.latest_notifications
-        lat_notif.intersect(:condition => new_entry.condition).each do |e|
-          lat_notif.delete(e)
-        end
-        lat_notif << new_entry
+
+        # lat_notif = check.latest_notifications
+        # lat_notif.intersect(:condition => new_entry.condition).each do |e|
+        #   lat_notif.delete(e)
+        # end
+        # lat_notif << new_entry
 
         most_severe = check.most_severe
         most_severe_cond = most_severe.nil? ? nil :

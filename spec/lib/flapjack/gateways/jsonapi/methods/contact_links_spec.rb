@@ -31,6 +31,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'lists media for a contact' do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(contact_media).to receive(:ids).and_return([medium.id])
     expect(contact).to receive(:media).and_return(contact_media)
 
@@ -68,6 +71,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'deletes a medium from a contact' do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
@@ -102,6 +108,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'lists rules for a contact' do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(contact_rules).to receive(:ids).and_return([rule.id])
     expect(contact).to receive(:rules).and_return(contact_rules)
 
@@ -140,6 +150,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   end
 
   it 'deletes a rule from a contact' do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 

@@ -14,6 +14,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   let(:rule_media) { double('rule_media') }
 
   it 'shows the contact for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Contact).and_yield
+
     expect(rule).to receive(:contact).and_return(contact)
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
@@ -66,6 +69,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'lists media for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(rule_media).to receive(:ids).and_return([medium.id])
     expect(rule).to receive(:media).and_return(rule_media)
 
@@ -103,6 +109,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'deletes a medium from a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Medium).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
@@ -137,6 +146,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'lists tags for a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(rule_tags).to receive(:ids).and_return([tag.id])
     expect(rule).to receive(:tags).and_return(rule_tags)
 
@@ -175,6 +188,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   end
 
   it 'deletes a tag from a rule' do
+    expect(Flapjack::Data::Rule).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Check,
+           Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 

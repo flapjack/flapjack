@@ -95,13 +95,15 @@ module Flapjack
         }
       end
 
+      def self.jsonapi_extra_locks
+        {
+          :get    => []
+        }
+      end
+
       def self.jsonapi_associations
         {
           :read_only => {
-            :singular => [],
-            :multiple => []
-          },
-          :read_write => {
             :singular => [],
             :multiple => []
           }
