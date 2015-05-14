@@ -75,7 +75,8 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     let(:uri) { '/' }
 
     let(:query) { {'TopicArn' => 'HelloWorld',
-                  'Action' => 'Publish'} }
+                   'Action' => 'Publish',
+                   'Message' => 'Hello World'} }
 
     let(:string_to_sign) { Flapjack::Gateways::AwsSns.string_to_sign(method, host, uri, query) }
 
@@ -94,7 +95,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     end
 
     it 'should put the encoded, sorted query-string on the fourth line' do
-      expect(lines[3]).to eq("Action=Publish&TopicArn=HelloWorld")
+      expect(lines[3]).to eq("Action=Publish&Message=Hello%20World&TopicArn=HelloWorld")
     end
 
   end
