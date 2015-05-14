@@ -53,6 +53,28 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(req).to have_been_requested
   end
 
+  it 'truncates an overly long subject when sending' do
+    req = stub_request(:post, "http://sns.us-east-1.amazonaws.com/").
+      with(:query => hash_including({'Action'           => 'Publish',
+                                     'AWSAccessKeyId'   => config['access_key'],
+                                     'TopicArn'         => message['address'],
+                                     'SignatureVersion' => '2',
+                                     'SignatureMethod'  => 'HmacSHA256',
+                                     'Subject'          => "Recovery: '#{'1234567890' * 8}123456..."})).
+      to_return(:status => 200)
+
+    EM.synchrony do
+      expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+      long_event_id = "example.com:#{'1234567890' * 10}"
+      alert = Flapjack::Data::Alert.new(message.merge('event_id' => long_event_id), :logger => @logger)
+      aws_sns = Flapjack::Gateways::AwsSns.new(:config => config, :logger => @logger)
+      aws_sns.deliver(alert)
+      EM.stop
+    end
+    expect(req).to have_been_requested
+  end
+
   it "does not send an SMS message with an invalid config" do
     EM.synchrony do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)

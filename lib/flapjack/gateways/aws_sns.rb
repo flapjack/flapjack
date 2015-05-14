@@ -66,7 +66,11 @@ module Flapjack
         notification_id = alert.notification_id
         message_type    = alert.rollup ? 'rollup' : 'alert'
 
-        sms_template_erb, sms_template =
+        aws_sns_subject_template_erb, aws_sns_subject_template =
+          load_template(@config['templates'], "#{message_type}_subject",
+                        'text', File.join(File.dirname(__FILE__), 'aws_sns'))
+
+        aws_sns_template_erb, aws_sns_template =
           load_template(@config['templates'], message_type, 'text',
                         File.join(File.dirname(__FILE__), 'aws_sns'))
 
@@ -74,10 +78,14 @@ module Flapjack
         bnd     = binding
 
         begin
-          message = sms_template_erb.result(bnd).chomp
+          erb_to_be_executed = aws_sns_subject_template
+          subject = aws_sns_subject_template_erb.result(bnd).chomp
+
+          erb_to_be_executed = aws_sns_template
+          message = aws_sns_template_erb.result(bnd).chomp
         rescue => e
-          @logger.error "Error while executing the ERB for an sms: " +
-            "ERB being executed: #{sms_template}"
+          @logger.error "Error while executing the ERB for an AWS SNS message: " +
+            "ERB being executed: #{erb_to_be_executed}"
           raise
         end
 
@@ -102,7 +110,8 @@ module Flapjack
           return
         end
 
-        query = {'Subject'          => message,
+        query = {'Subject'          => (subject.length > 100) ?
+                                       subject[0..99].gsub(/...$/, '...') : subject,
                  'TopicArn'         => address,
                  'Message'          => message,
                  'Action'           => 'Publish',
@@ -144,11 +153,11 @@ module Flapjack
       def self.string_to_sign(method, host, uri, query)
         @safe_re ||= Regexp.new("[^#{URI::PATTERN::UNRESERVED}]")
 
+        # we should possibly escape the keys as well, but they are less
+        # likely to have problematic characters
         encoded_query = query.keys.sort.collect {|key|
           "#{key}=#{URI.escape(query[key].to_s, @safe_re)}"
         }.join("&")
-
-        query = query.sort_by { |key, value| key }
 
         [method.upcase,
          host.downcase,
