@@ -1,6 +1,10 @@
 ## Flapjack Changelog
 
-# 1.6.0 - 2015-05-13
+# 1.6.0rc2 - 2015-05-14
+- Bug: Fix SNS query encoding and subject length #867 (@ali-graham, @xcxsxvx)
+- Chore: improve debug logging in pagerduty when looking for acks e44abd5 (@jessereynolds)
+
+# 1.6.0rc1 - 2015-05-13
 - Feature: use token authentication for pagerduty gateway #831 (@alperkokmen)
 - Feature: expose failure delays in web UI #849 (@jessereynolds)
 - Bug: performance improvement - fix usage of KEYS command for entity check names c57d3a5 (@ali-graham)
