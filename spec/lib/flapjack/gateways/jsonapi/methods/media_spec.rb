@@ -202,7 +202,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 
     media = double('media')
@@ -218,7 +218,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 
     media = double('media')
@@ -240,7 +240,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).

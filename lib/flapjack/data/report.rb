@@ -109,7 +109,7 @@ module Flapjack
         start_time = options[:start_time]
         end_time   = options[:end_time]
 
-        outs = outages(check, start_time, end_time)[:outages]
+        outs = outages(check, :start_time => start_time, :end_time => end_time)[:outages]
 
         total_secs  = {}
         percentages = {}
@@ -127,7 +127,8 @@ module Flapjack
           # the scheduled maintenance period, and remove the original.
 
           delete_outs = []
-          sched_maintenances = scheduled_maintenances(check, start_time, end_time)[:scheduled_maintenances]
+          sched_maintenances = scheduled_maintenances(check,
+            :start_time => start_time, :end_time => end_time)[:scheduled_maintenances]
 
           sched_maintenances.each do |sm|
 

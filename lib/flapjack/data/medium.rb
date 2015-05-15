@@ -304,7 +304,7 @@ module Flapjack
           :get    => [],
           :patch  => [],
           :delete => [Flapjack::Data::Alert, Flapjack::Data::Entry,
-                      Flapjack::Data::ScheduledMaintenance]
+                      Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance]
         }
       end
 
