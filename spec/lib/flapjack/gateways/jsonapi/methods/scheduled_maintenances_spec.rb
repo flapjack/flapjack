@@ -67,6 +67,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it 'returns a single scheduled maintenance period' do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
       with(scheduled_maintenance.id).and_return(scheduled_maintenance)
 
@@ -84,6 +87,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it 'returns multiple scheduled_maintenance periods' # do
+  #   expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+  #     with(Flapjack::Data::Check).and_yield
+
   #   sorted = double('sorted')
   #   expect(sorted).to receive(:find_by_ids!).
   #     with(scheduled_maintenance.id, scheduled_maintenance_2.id).
@@ -112,6 +118,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   # end
 
   it 'returns paginated scheduled maintenance periods' do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -149,6 +158,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it "deletes a scheduled maintenance period" do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     expect(scheduled_maintenance).to receive(:destroy)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
       with(scheduled_maintenance.id).and_return(scheduled_maintenance)
@@ -158,6 +170,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it "deletes multiple scheduled maintenance periods" do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     scheduled_maintenances = double('scheduled_maintenances')
     expect(scheduled_maintenances).to receive(:count).and_return(2)
     expect(scheduled_maintenances).to receive(:destroy_all)
@@ -175,6 +190,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
   end
 
   it "does not delete a scheduled maintenance period that's not found" do
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
       with(scheduled_maintenance.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::ScheduledMaintenance, scheduled_maintenance.id))
 

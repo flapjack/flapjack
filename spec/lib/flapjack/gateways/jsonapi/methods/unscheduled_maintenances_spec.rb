@@ -43,6 +43,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   end
 
   it 'returns a single unscheduled maintenance period' do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).
       with(unscheduled_maintenance.id).and_return(unscheduled_maintenance)
 
@@ -61,6 +64,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   end
 
   it 'returns multiple unscheduled_maintenance periods' # do
+  #   expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+  #     with(Flapjack::Data::Check).and_yield
+
   #   sorted = double('sorted')
   #   expect(sorted).to receive(:find_by_ids!).
   #     with(unscheduled_maintenance.id, unscheduled_maintenance_2.id).
@@ -90,6 +96,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   # end
 
   it 'returns paginated unscheduled maintenance periods' do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -127,6 +136,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
   end
 
   it "ends an unscheduled maintenance period for a check" do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
     end_time = Time.now + (60 * 60)
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).

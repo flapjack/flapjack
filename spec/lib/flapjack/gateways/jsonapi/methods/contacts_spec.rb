@@ -62,6 +62,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "returns paginated contacts" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {:pagination => {
       :page        => 1,
       :per_page    => 20,
@@ -100,6 +104,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "retrieves paginated contacts matching a filter" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -142,6 +150,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "retrieves paginated contacts matching two filter values" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -184,6 +196,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "returns the second page of a multi-page contact list" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {:pagination => {
       :page        => 2,
       :per_page    => 3,
@@ -241,6 +257,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "returns paginated sorted contacts" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {:pagination => {
       :page        => 1,
       :per_page    => 20,
@@ -287,6 +307,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "does not return contacts if sort parameter is incorrectly specified" do
+    expect(Flapjack::Data::Contact).not_to receive(:lock)
     expect(Flapjack::Data::Contact).not_to receive(:sort)
 
     get '/contacts?sort=enabled'
@@ -295,6 +316,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "returns a contact" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)
 
@@ -317,6 +342,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "does not return a contact that does not exist" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
 
@@ -325,6 +354,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "updates a contact" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)
 
@@ -340,6 +373,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "deletes a contact" do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     contacts = double('contacts')
     expect(contact).to receive(:destroy)
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).

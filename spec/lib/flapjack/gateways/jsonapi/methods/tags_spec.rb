@@ -46,6 +46,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves paginated tags" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -83,6 +87,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves paginated tags matching a filter" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -125,6 +133,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves one tag" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
       with(tag.id).and_return(tag)
 
@@ -143,6 +155,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "retrieves several tags" # do
+  #  expect(Flapjack::Data::Tag).to receive(:lock).
+  #    with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+  #    and_yield
+
   #   sorted = double('sorted')
   #   expect(sorted).to receive(:find_by_ids!).
   #     with(tag.id, tag_2.id).and_return([tag, tag_2])
@@ -172,6 +188,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   # end
 
   it 'sets a linked check for a tag' do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
       with(check.id).and_return([check])
 
@@ -194,6 +214,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "deletes a tag" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     expect(tag).to receive(:destroy)
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
       with(tag.id).and_return(tag)
@@ -203,6 +227,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "deletes multiple tags" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     tags = double('tags')
     expect(tags).to receive(:count).and_return(2)
     expect(tags).to receive(:destroy_all)
@@ -220,6 +248,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   end
 
   it "does not delete a tag that does not exist" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
+
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
       with(tag.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Tag, tag.id))
 

@@ -64,6 +64,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "returns a single medium" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_return(medium)
 
@@ -83,6 +87,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "returns all media" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -122,6 +130,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "does not return a medium if the medium is not present" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
@@ -130,6 +142,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "updates a medium" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).
+      and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_return(medium)
 
@@ -144,6 +160,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "updates multiple media" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).
+      and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
       with(medium.id, medium_2.id).and_return([medium, medium_2])
 
@@ -165,6 +185,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   end
 
   it "does not update a medium that's not present" do
+    expect(Flapjack::Data::Medium).to receive(:lock).
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).
+      and_yield
+
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
@@ -176,8 +200,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
            Flapjack::Data::ScheduledMaintenance).
       and_yield
@@ -193,8 +216,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes multiple media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
            Flapjack::Data::ScheduledMaintenance).
       and_yield
@@ -216,8 +238,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not delete a medium that's not found" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Alert, Flapjack::Data::Entry,
            Flapjack::Data::ScheduledMaintenance).
       and_yield

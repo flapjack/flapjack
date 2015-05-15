@@ -63,6 +63,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "gets all rules" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     meta = {
       :pagination => {
         :page        => 1,
@@ -103,6 +107,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "gets a single rule" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
@@ -122,6 +130,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not get a rule that does not exist" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).
       and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
@@ -131,6 +143,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "retrieves a rule and its linked contact record" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
@@ -175,6 +191,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "retrieves a rule and all its contact's media records" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
@@ -220,6 +240,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "retrieves a rule, its contact, and the contact's media records" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
@@ -279,6 +303,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "sets a contact for a rule" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).and_return(rule)
 
@@ -298,6 +326,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "sets a contact for multiple rules" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_ids!).
       with(rule.id, rule_2.id).and_return([rule, rule_2])
 
@@ -326,6 +358,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   end
 
   it "does not set a contact for a rule that does not exist" do
+    expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
+      Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
+      Flapjack::Data::Route).and_yield
+
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
       with(rule.id).
       and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Rule, rule.id))
@@ -342,7 +378,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "deletes a rule" do
     expect(Flapjack::Data::Rule).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
-           Flapjack::Data::Route, Flapjack::Data::Check).
+           Flapjack::Data::Check, Flapjack::Data::Route).
       and_yield
 
     expect(rule).to receive(:destroy)
@@ -356,7 +392,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "deletes multiple rules" do
     expect(Flapjack::Data::Rule).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
-           Flapjack::Data::Route, Flapjack::Data::Check).
+           Flapjack::Data::Check, Flapjack::Data::Route).
       and_yield
 
     rules = double('rules')
@@ -377,7 +413,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
   it "does not delete a rule that does not exist" do
     expect(Flapjack::Data::Rule).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Medium, Flapjack::Data::Tag,
-           Flapjack::Data::Route, Flapjack::Data::Check).
+           Flapjack::Data::Check, Flapjack::Data::Route).
       and_yield
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).
