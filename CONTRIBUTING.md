@@ -23,13 +23,18 @@ Please see the [Contributing to Flapjack](http://flapjack.io/docs/1.0/developmen
 
         rake spec
 
-5. run integration tests
+5. run [pact](https://github.com/realestate-com-au/pact) tests
+
+        rake pact:verify
+
+6. run integration tests
 
         rake features
 
-6. code coverage for tests
+7. code coverage for tests
 
         COVERAGE=x rake spec
+        COVERAGE=x rake pact:verify
         COVERAGE=x rake features
 
 7. make changes with tests, send a [pull request](https://help.github.com/articles/creating-a-pull-request), share love!
