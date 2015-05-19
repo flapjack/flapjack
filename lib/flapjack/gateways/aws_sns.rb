@@ -118,7 +118,7 @@ module Flapjack
                  'SignatureVersion' => 2,
                  'SignatureMethod'  => 'HmacSHA256',
                  'Timestamp'        => timestamp,
-                 'AWSAccessKeyId'   => access_key}
+                 'AWSAccessKeyId'   => access_key.upcase}
 
         string_to_sign = self.class.string_to_sign('POST', hostname, "/", query)
 
@@ -153,10 +153,8 @@ module Flapjack
       def self.string_to_sign(method, host, uri, query)
         @safe_re ||= Regexp.new("[^#{URI::PATTERN::UNRESERVED}]")
 
-        # we should possibly escape the keys as well, but they are less
-        # likely to have problematic characters
         encoded_query = query.keys.sort.collect {|key|
-          "#{key}=#{URI.escape(query[key].to_s, @safe_re)}"
+          "#{URI.escape(key, @safe_re)}=#{URI.escape(query[key].to_s, @safe_re)}"
         }.join("&")
 
         [method.upcase,
