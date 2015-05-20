@@ -41,9 +41,10 @@ module Flapjack
         age_ranges = ages.reverse.each_cons(2)
 
         current_checks.each_with_object(skeleton) do |check, memo|
-          last_update = check.last_update
+          current_state = check.current_state
+          last_update = current_state.nil? ? nil : current_state.updated_at
           next if last_update.nil?
-          check_age = start_time - last_update.timestamp
+          check_age = start_time - last_update
           check_age = 0 unless check_age > 0
           if check_age >= ages.last
             memo[ages.last] += 1

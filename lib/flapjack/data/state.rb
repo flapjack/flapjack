@@ -213,21 +213,7 @@ module Flapjack
         return true
       end
 
-
-      # # FIXME call these at the appropriate points
-      # def apply_change(entry)
-      #   self.last_change = entry.timestamp
-      #   apply_update(entry)
-      # end
-
-      # def apply_update(entry)
-      #   self.last_update = entry.timestamp
-      #   self.summary = entry.summary
-      #   self.details = entry.details
-      # end
-
       # # previously implemented
-
       # def status
         # last_change   = @check.last_change
         # last_update   = @check.last_update
