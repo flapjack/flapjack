@@ -184,6 +184,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     :included => [
       contact_data.merge(:type => 'contact', :links => {
         :self => "http://example.org/contacts/#{contact.id}",
+        :checks => "http://example.org/contacts/#{contact.id}/checks",
         :media => "http://example.org/contacts/#{contact.id}/media",
         :rules => "http://example.org/contacts/#{contact.id}/rules"
       }
@@ -290,6 +291,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     :included => [
       contact_data.merge(:type => 'contact', :links => {
         :self => "http://example.org/contacts/#{contact.id}",
+        :checks => "http://example.org/contacts/#{contact.id}/checks",
         :media => "http://example.org/contacts/#{contact.id}/media",
         :rules => "http://example.org/contacts/#{contact.id}/rules"
       }),

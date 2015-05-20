@@ -33,9 +33,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       contact_data.merge(
         :type => 'contact',
-        :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                   :media => "http://example.org/contacts/#{contact.id}/media",
-                   :rules => "http://example.org/contacts/#{contact.id}/rules"})
+        :links => {
+          :self   => "http://example.org/contacts/#{contact.id}",
+          :checks => "http://example.org/contacts/#{contact.id}/checks",
+          :media  => "http://example.org/contacts/#{contact.id}/media",
+          :rules  => "http://example.org/contacts/#{contact.id}/rules"
+        })
     ))
   end
 
@@ -97,9 +100,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
       contact_data.merge(
         :type => 'contact',
-        :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                   :media => "http://example.org/contacts/#{contact.id}/media",
-                   :rules => "http://example.org/contacts/#{contact.id}/rules"})
+        :links => {
+          :self   => "http://example.org/contacts/#{contact.id}",
+          :checks => "http://example.org/contacts/#{contact.id}/checks",
+          :media  => "http://example.org/contacts/#{contact.id}/media",
+          :rules  => "http://example.org/contacts/#{contact.id}/rules"
+        })
       ], :links => links, :meta => meta))
   end
 
@@ -143,9 +149,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       [contact_data.merge(
         :type => 'contact',
-        :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                   :media => "http://example.org/contacts/#{contact.id}/media",
-                   :rules => "http://example.org/contacts/#{contact.id}/rules"})],
+        :links => {
+          :self   => "http://example.org/contacts/#{contact.id}",
+          :checks => "http://example.org/contacts/#{contact.id}/checks",
+          :media  => "http://example.org/contacts/#{contact.id}/media",
+          :rules  => "http://example.org/contacts/#{contact.id}/rules"
+        })],
       :links => links, :meta => meta))
   end
 
@@ -189,9 +198,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       [contact_data.merge(
         :type => 'contact',
-        :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                   :media => "http://example.org/contacts/#{contact.id}/media",
-                   :rules => "http://example.org/contacts/#{contact.id}/rules"})],
+        :links => {
+          :self   => "http://example.org/contacts/#{contact.id}",
+          :checks => "http://example.org/contacts/#{contact.id}/checks",
+          :media  => "http://example.org/contacts/#{contact.id}/media",
+          :rules  => "http://example.org/contacts/#{contact.id}/rules"
+        })
+      ],
       :links => links, :meta => meta))
   end
 
@@ -240,19 +253,31 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
         contact_data.merge(
           :type => 'contact',
-          :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                     :media => "http://example.org/contacts/#{contact.id}/media",
-                     :rules => "http://example.org/contacts/#{contact.id}/rules"}),
+          :links => {
+            :self  => "http://example.org/contacts/#{contact.id}",
+            :checks => "http://example.org/contacts/#{contact.id}/checks",
+            :media => "http://example.org/contacts/#{contact.id}/media",
+            :rules => "http://example.org/contacts/#{contact.id}/rules"
+          }
+        ),
         contact_2_data.merge(
           :type => 'contact',
-          :links => {:self  => "http://example.org/contacts/#{contact_2.id}",
-                     :media => "http://example.org/contacts/#{contact_2.id}/media",
-                     :rules => "http://example.org/contacts/#{contact_2.id}/rules"}),
+          :links => {
+            :self   => "http://example.org/contacts/#{contact_2.id}",
+            :checks => "http://example.org/contacts/#{contact_2.id}/checks",
+            :media  => "http://example.org/contacts/#{contact_2.id}/media",
+            :rules  => "http://example.org/contacts/#{contact_2.id}/rules"
+          }
+        ),
         contact_3_data.merge(
           :type => 'contact',
-          :links => {:self  => "http://example.org/contacts/#{contact_3.id}",
-                     :media => "http://example.org/contacts/#{contact_3.id}/media",
-                     :rules => "http://example.org/contacts/#{contact_3.id}/rules"})
+          :links => {
+            :self   => "http://example.org/contacts/#{contact_3.id}",
+            :checks => "http://example.org/contacts/#{contact_3.id}/checks",
+            :media  => "http://example.org/contacts/#{contact_3.id}/media",
+            :rules  => "http://example.org/contacts/#{contact_3.id}/rules"
+          }
+        )
       ], :links => links, :meta => meta))
   end
 
@@ -295,14 +320,20 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
         contact_2_data.merge(
           :type => 'contact',
-          :links => {:self  => "http://example.org/contacts/#{contact_2.id}",
-                     :media => "http://example.org/contacts/#{contact_2.id}/media",
-                     :rules => "http://example.org/contacts/#{contact_2.id}/rules"}),
+          :links => {
+            :self   => "http://example.org/contacts/#{contact_2.id}",
+            :checks => "http://example.org/contacts/#{contact_2.id}/checks",
+            :media  => "http://example.org/contacts/#{contact_2.id}/media",
+            :rules  => "http://example.org/contacts/#{contact_2.id}/rules"
+          }),
         contact_data.merge(
           :type => 'contact',
-          :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                     :media => "http://example.org/contacts/#{contact.id}/media",
-                     :rules => "http://example.org/contacts/#{contact.id}/rules"})
+          :links => {
+            :self   => "http://example.org/contacts/#{contact.id}",
+            :checks => "http://example.org/contacts/#{contact.id}/checks",
+            :media  => "http://example.org/contacts/#{contact.id}/media",
+            :rules  => "http://example.org/contacts/#{contact.id}/rules"
+          })
       ], :links => links, :meta => meta))
   end
 
@@ -333,9 +364,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
       contact_data.merge(
         :type => 'contact',
-        :links => {:self  => "http://example.org/contacts/#{contact.id}",
-                   :media => "http://example.org/contacts/#{contact.id}/media",
-                   :rules => "http://example.org/contacts/#{contact.id}/rules"}),
+        :links => {
+          :self   => "http://example.org/contacts/#{contact.id}",
+          :checks => "http://example.org/contacts/#{contact.id}/checks",
+          :media => "http://example.org/contacts/#{contact.id}/media",
+          :rules => "http://example.org/contacts/#{contact.id}/rules"
+        }
+      ),
       :links => {
       :self  => "http://example.org/contacts/#{contact.id}",
     }))

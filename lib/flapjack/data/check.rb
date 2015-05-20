@@ -89,14 +89,18 @@ module Flapjack
 
       has_sorted_set :scheduled_maintenances,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
-        :key => :start_time, :inverse_of => :check
+        :key => :start_time, :order => :desc, :inverse_of => :check
 
       has_sorted_set :unscheduled_maintenances,
         :class_name => 'Flapjack::Data::UnscheduledMaintenance',
-        :key => :start_time, :inverse_of => :check
+        :key => :start_time, :order => :desc, :inverse_of => :check
 
       has_sorted_set :states, :class_name => 'Flapjack::Data::State',
         :key => :created_at, :order => :desc, :inverse_of => :check
+
+      # shortcut to expose the latest of the above to the API
+      has_one :current_state, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :current_check
 
       has_sorted_set :latest_notifications, :class_name => 'Flapjack::Data::State',
         :key => :created_at, :order => :desc, :inverse_of => :latest_notifications_check,
@@ -107,6 +111,9 @@ module Flapjack
         # before_destroy callback
         st.map(&:destroy)
       end
+
+      has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',
+        :inverse_of => :checks
 
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
@@ -182,14 +189,22 @@ module Flapjack
       end
 
       swagger_schema :CheckLinks do
-        key :required, [:self, :alerting_media, :last_change,
-                        :latest_notifications, :scheduled_maintenance, :tags,
-                        :unscheduled_maintenances]
+        key :required, [:self, :alerting_media, :contacts, :current_state,
+                        :latest_notifications, :scheduled_maintenance,
+                        :states, :tags, :unscheduled_maintenances]
         property :self do
           key :type, :string
           key :format, :url
         end
         property :alerting_media do
+          key :type, :string
+          key :format, :url
+        end
+        property :contacts do
+          key :type, :string
+          key :format, :url
+        end
+        property :current_state do
           key :type, :string
           key :format, :url
         end
@@ -295,8 +310,9 @@ module Flapjack
       def self.jsonapi_associations
         {
           :read_only  => {
-            :singular => [],
-            :multiple => [:alerting_media, :latest_notifications, :states]
+            :singular => [:current_state],
+            :multiple => [:alerting_media, :contacts, :latest_notifications,
+                          :states]
           },
           :read_write => {
             :singular => [],

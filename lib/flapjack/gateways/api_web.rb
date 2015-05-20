@@ -225,7 +225,8 @@ module Flapjack
         opts.update(:failing => @failing) unless @failing.nil?
 
         @checks = Flapjack::Diner.checks(:filter => opts,
-                                         :page => (params[:page] || 1))
+                    :page => (params[:page] || 1),
+                    :include => [:current_state, :latest_notifications])
 
         unless @checks.nil?
           @pagination = pagination_from_context(Flapjack::Diner.context)

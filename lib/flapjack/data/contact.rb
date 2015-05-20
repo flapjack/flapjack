@@ -36,6 +36,9 @@ module Flapjack
 
       index_by :name
 
+      has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :contacts
+
       has_many :media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :contact
 
@@ -67,15 +70,16 @@ module Flapjack
         ActiveSupport::TimeZone[self.timezone]
       end
 
-      def checks
-        route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
-        route_ids = route_ids_by_rule_id.values.reduce(&:|)
+      # FIXME update associations dynamically in the recalculate_routes methods
+      # def checks
+      #   route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
+      #   route_ids = route_ids_by_rule_id.values.reduce(&:|)
 
-        check_ids = Flapjack::Data::Route.intersect(:id => route_ids).
-          associated_ids_for(:checks).values.reduce(:|)
+      #   check_ids = Flapjack::Data::Route.intersect(:id => route_ids).
+      #     associated_ids_for(:checks).values.reduce(:|)
 
-        Flapjack::Data::Check.intersect(:id => check_ids)
-      end
+      #   Flapjack::Data::Check.intersect(:id => check_ids)
+      # end
 
       def self.jsonapi_type
         self.name.demodulize.underscore
@@ -104,8 +108,12 @@ module Flapjack
       end
 
       swagger_schema :ContactLinks do
-        key :required, [:self, :media, :rules]
+        key :required, [:self, :checks, :media, :rules]
         property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :checks do
           key :type, :string
           key :format, :url
         end
@@ -197,7 +205,7 @@ module Flapjack
         {
           :read_only => {
             :singular => [],
-            :multiple => []
+            :multiple => [:checks]
           },
           :read_write => {
             :singular => [],

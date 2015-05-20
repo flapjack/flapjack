@@ -221,6 +221,7 @@ module Flapjack
 
           new_state.save!
           check.states << new_state
+          check.current_state = new_state
           old_state.destroy unless old_state.nil? # will fail if still linked
 
           # If the service event's condition is ok and there was no previous condition, don't alert.
@@ -258,6 +259,7 @@ module Flapjack
           if save_to_history
             new_state.save!
             check.states << new_state
+            check.current_state = new_state
           elsif new_state.action.nil?
             old_state.updated_at = timestamp
             old_state.summary = new_state.summary

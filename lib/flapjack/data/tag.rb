@@ -171,7 +171,6 @@ module Flapjack
             :multiple => [:checks, :rules]
           }
         }
-
       end
 
     end

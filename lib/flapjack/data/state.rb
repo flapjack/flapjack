@@ -47,6 +47,9 @@ module Flapjack
 
       # these 'Check' values will be the same as the above, but zermelo
       # requires that the inverse of the association be stored as well
+      belongs_to :current_check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :current_state
+
       belongs_to :latest_notifications_check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :latest_notifications
 
