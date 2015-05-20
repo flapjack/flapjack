@@ -61,7 +61,6 @@ def set_state(entity_name, check_name, condition, last_update = Time.now)
   state = Flapjack::Data::State.new(:created_at => last_update, :updated_at => last_update,
     :condition => condition)
   state.save
-  puts state.id + " " + caller(0).first
   check.states << state
 end
 

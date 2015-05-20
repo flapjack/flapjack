@@ -278,7 +278,6 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
     state = Flapjack::Data::State.new(:created_at => timestamp, :updated_at => timestamp,
       :condition => 'critical')
     state.save
-    puts state.id + " " + caller(0).first
     check.states << state
     check.most_severe = state
 
