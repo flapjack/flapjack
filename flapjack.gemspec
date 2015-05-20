@@ -33,7 +33,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'ice_cube'
   gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
-  gem.add_dependency 'gli', '= 2.13.0'
+  gem.add_dependency 'gli', '= 2.13.1'
   gem.add_dependency 'rbtrace'
   gem.add_dependency 'terminal-table'
   gem.add_dependency 'toml-rb'
