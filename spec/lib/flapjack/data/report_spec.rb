@@ -80,7 +80,7 @@ describe Flapjack::Data::Report do
   let(:maint_start_range) { double(Zermelo::Filters::IndexRange) }
   let(:maint_end_range) { double(Zermelo::Filters::IndexRange) }
 
-  context 'outages' do
+  context 'outage' do
 
     it "returns a list of outage hashes for an entity check" do
       all_states = double('all_states', :all => states)
@@ -103,12 +103,12 @@ describe Flapjack::Data::Report do
       expect(check).to receive(:states).twice.and_return(states_assoc)
 
       check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      outages = check_presenter.outages(time - (5 * 60 * 60), time - (2 * 60 * 60))
-      expect(outages).not_to be_nil
-      expect(outages).to be_a(Hash)
-      expect(outages).to have_key(:outages)
-      expect(outages[:outages]).to be_an(Array)
-      expect(outages[:outages].size).to eq(4)
+      outage = check_presenter.outage(time - (5 * 60 * 60), time - (2 * 60 * 60))
+      expect(outage).not_to be_nil
+      expect(outage).to be_a(Hash)
+      expect(outage).to have_key(:outage)
+      expect(outage[:outage]).to be_an(Array)
+      expect(outage[:outage].size).to eq(4)
     end
 
     it "returns a list of outage hashes with no start and end time set" do
@@ -125,12 +125,12 @@ describe Flapjack::Data::Report do
       expect(check).to receive(:states).and_return(states_assoc)
 
       check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      outages = check_presenter.outages(nil, nil)
-      expect(outages).not_to be_nil
-      expect(outages).to be_a(Hash)
-      expect(outages).to have_key(:outages)
-      expect(outages[:outages]).to be_an(Array)
-      expect(outages[:outages].size).to eq(4)
+      outage = check_presenter.outage(nil, nil)
+      expect(outage).not_to be_nil
+      expect(outage).to be_a(Hash)
+      expect(outage).to have_key(:outage)
+      expect(outage[:outage]).to be_an(Array)
+      expect(outage[:outage].size).to eq(4)
     end
 
     it "returns a consolidated list of outage hashes with repeated state events" do
@@ -154,12 +154,12 @@ describe Flapjack::Data::Report do
       expect(check).to receive(:states).and_return(states_assoc)
 
       check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      outages = check_presenter.outages(nil, nil)
-      expect(outages).not_to be_nil
-      expect(outages).to be_a(Hash)
-      expect(outages).to have_key(:outages)
-      expect(outages[:outages]).to be_an(Array)
-      expect(outages[:outages].size).to eq(3)
+      outage = check_presenter.outage(nil, nil)
+      expect(outage).not_to be_nil
+      expect(outage).to be_a(Hash)
+      expect(outage).to have_key(:outage)
+      expect(outage[:outage]).to be_an(Array)
+      expect(outage[:outage].size).to eq(3)
     end
 
     it "returns a (small) outage hash for a single state change" do
@@ -179,69 +179,14 @@ describe Flapjack::Data::Report do
       expect(check).to receive(:states).and_return(states_assoc)
 
       ecp = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      outages = ecp.outages(nil, nil)
-      expect(outages).not_to be_nil
-      expect(outages).to be_a(Hash)
-      expect(outages).to have_key(:outages)
-      expect(outages[:outages]).to be_an(Array)
-      expect(outages[:outages].size).to eq(1)
+      outage = ecp.outage(nil, nil)
+      expect(outage).not_to be_nil
+      expect(outage).to be_a(Hash)
+      expect(outage).to have_key(:outage)
+      expect(outage[:outage]).to be_an(Array)
+      expect(outage[:outage].size).to eq(1)
     end
 
-  end
-
-  context 'maintenance periods' do
-
-    it "unscheduled for a check" do
-      all_unsched = double('all_unsched', :all => unscheduled_maintenances)
-
-      expect(Zermelo::Filters::IndexRange).to receive(:new).
-        with(nil, time, :by_score => true).
-        and_return(maint_start_range)
-
-      expect(Zermelo::Filters::IndexRange).to receive(:new).
-        with(time - (12 * 60 * 60), time, :by_score => true).
-        and_return(maint_end_range)
-
-      unsched_assoc = double('unsched_assoc')
-      expect(unsched_assoc).to receive(:intersect).
-        with(:start_time => maint_start_range, :end_time => maint_end_range).
-        and_return(all_unsched)
-      expect(check).to receive(:unscheduled_maintenances).and_return(unsched_assoc)
-
-      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      unsched_maint = check_presenter.unscheduled_maintenances(time - (12 * 60 * 60), time)
-      expect(unsched_maint).not_to be_nil
-      expect(unsched_maint).to be_a(Hash)
-      expect(unsched_maint).to have_key(:unscheduled_maintenances)
-      expect(unsched_maint[:unscheduled_maintenances]).to be_an(Array)
-      expect(unsched_maint[:unscheduled_maintenances].size).to eq(4)
-    end
-
-    it "scheduled for a check" do
-      all_sched = double('all_sched', :all => scheduled_maintenances)
-
-      expect(Zermelo::Filters::IndexRange).to receive(:new).
-        with(nil, time, :by_score => true).
-        and_return(maint_start_range)
-
-      expect(Zermelo::Filters::IndexRange).to receive(:new).
-        with(time - (12 * 60 * 60), time, :by_score => true).
-        and_return(maint_end_range)
-
-      sched_assoc = double('unsched_assoc')
-      expect(sched_assoc).to receive(:intersect).
-        with(:start_time => maint_start_range, :end_time => maint_end_range).
-        and_return(all_sched)
-      expect(check).to receive(:scheduled_maintenances).and_return(sched_assoc)
-
-      check_presenter = Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter.new(check)
-      sched_maint = check_presenter.scheduled_maintenances(time - (12 * 60 * 60), time)
-      expect(sched_maint).not_to be_nil
-      expect(sched_maint).to be_a(Hash)
-      expect(sched_maint).to have_key(:scheduled_maintenances)
-      expect(sched_maint[:scheduled_maintenances]).to be_an(Array)
-      expect(sched_maint[:scheduled_maintenances].size).to eq(4)
-    end
   end
 
   context 'downtime' do

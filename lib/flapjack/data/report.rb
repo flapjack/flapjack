@@ -15,20 +15,20 @@ module Flapjack
                       :duration, :summary, :details
       end
 
-      def self.outages(check, options = {})
+      def self.outage(check, options = {})
         start_time = options[:start_time]
         end_time   = options[:end_time]
         state_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
 
-        hist_states = check.states.intersect(:timestamp => state_range).all
-        return {:outages => []} if hist_states.empty?
+        hist_states = check.states.intersect(:created_at => state_range).all
+        return [{:outage => []}, {}] if hist_states.empty?
 
         unless start_time.nil?
           first_and_prior_range = Zermelo::Filters::IndexRange.new(nil, start_time, :by_score => true)
           first_and_prior = check.states.
-            intersect(:timestamp => first_and_prior_range).
-            sort(:timestamp, :desc => true).offset(0, :limit => 2).all
-          hist_states.unshift(first_and_prior.last) if first_and_prior.size == 2
+            intersect(:created_at => first_and_prior_range).
+            offset(0, :limit => 2).all
+          hist_states.unshift(first_and_prior.first) if first_and_prior.size == 2
         end
 
         # TODO the following works, but isn't the neatest
@@ -53,10 +53,10 @@ module Flapjack
             next
           end
 
-          ts = obj.timestamp
+          ts = obj.created_at
 
           next_ts_obj = hist_states[index..-1].detect {|hs| hs.condition != obj.condition }
-          obj_et  = next_ts_obj ? next_ts_obj.timestamp : end_time
+          obj_et  = next_ts_obj ? next_ts_obj.created_at : end_time
 
           outage = Outage.new
           outage.condition  = obj.condition
@@ -69,35 +69,8 @@ module Flapjack
           result << outage
         end
 
-        {:outages => result}
-      end
-
-      # TODO check that this doesn't double up if an unscheduled maintenance starts exactly
-      # on the start_time param
-      def self.unscheduled_maintenances(check, options = {})
-        start_time = options[:start_time]
-        end_time   = options[:end_time]
-
-        start_range  = Zermelo::Filters::IndexRange.new(nil, end_time, :by_score => true)
-        finish_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
-        unsched_maintenances = check.unscheduled_maintenances.
-          intersect(:start_time => start_range,
-                    :end_time   => finish_range).all
-
-        {:unscheduled_maintenances => unsched_maintenances}
-      end
-
-      def self.scheduled_maintenances(check, options = {})
-        start_time = options[:start_time]
-        end_time   = options[:end_time]
-
-        start_range  = Zermelo::Filters::IndexRange.new(nil, end_time, :by_score => true)
-        finish_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
-        sched_maintenances = check.scheduled_maintenances.
-          intersect(:start_time => start_range,
-                    :end_time   => finish_range).all
-
-        {:scheduled_maintenances => sched_maintenances}
+        [{:outage => result},
+         {}]
       end
 
       # TODO test whether the below overlapping logic is prone to off-by-one
@@ -109,7 +82,7 @@ module Flapjack
         start_time = options[:start_time]
         end_time   = options[:end_time]
 
-        outs = outages(check, :start_time => start_time, :end_time => end_time)[:outages]
+        outs = outage(check, :start_time => start_time, :end_time => end_time).first[:outage]
 
         total_secs  = {}
         percentages = {}
@@ -127,8 +100,11 @@ module Flapjack
           # the scheduled maintenance period, and remove the original.
 
           delete_outs = []
-          sched_maintenances = scheduled_maintenances(check,
-            :start_time => start_time, :end_time => end_time)[:scheduled_maintenances]
+
+          start_range  = Zermelo::Filters::IndexRange.new(nil, end_time, :by_score => true)
+          finish_range = Zermelo::Filters::IndexRange.new(start_time, end_time, :by_score => true)
+          sched_maintenances = check.scheduled_maintenances.
+            intersect(:start_time => start_range, :end_time => finish_range).all
 
           sched_maintenances.each do |sm|
 
@@ -205,7 +181,8 @@ module Flapjack
           end
         end
 
-        {:total_seconds => total_secs, :percentages => percentages, :downtime => outs}
+        [{:downtime => outs},
+         {:total_seconds => total_secs, :percentages => percentages}]
       end
 
 
@@ -244,27 +221,3 @@ module Flapjack
     end
   end
 end
-
-# move functions above
-
-# #!/usr/bin/env ruby
-
-# require 'sinatra/base'
-
-# require 'flapjack/data/check'
-
-# module Flapjack
-
-#   module Gateways
-
-#     class JSONAPI < Sinatra::Base
-
-#       module Helpers
-
-#         class CheckPresenter
-
-#         end
-#       end
-#     end
-#   end
-# end

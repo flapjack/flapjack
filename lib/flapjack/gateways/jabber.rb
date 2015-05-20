@@ -308,14 +308,13 @@ module Flapjack
               pattern     = $2
               tag         = $3
 
-              msg = derive_check_ids_for(pattern, tag, nil, :limit => limit_checks,
-                      :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor, num_checks|
+              msg = derive_check_ids_for(pattern, tag, nil, :limit => limit_checks) do |check_ids, descriptor, num_checks|
                 resp = "Checks #{descriptor}:\n"
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
                 resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
                 resp += checks.map {|check|
-                  state = check.states.last
-                  "#{check.name} is #{state.nil? ? '[none]' : state.condition.upcase}"
+                  cond = check.condition
+                  "#{check.name} is #{cond.nil? ? '[none]' : cond.upcase}"
                 }.join(', ')
                 resp
               end
@@ -325,12 +324,11 @@ module Flapjack
               tag        = $2
               check_name = $3
 
-              msg = derive_check_ids_for(pattern, tag, check_name,
-                       :lock_klasses => [Flapjack::Data::State]) do |check_ids, descriptor|
+              msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
                   Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                    state = check.states.last
-                    "#{check.name} - #{state.nil? ? '[none]' : state.condition.upcase}"
+                    cond = check.condition
+                    "#{check.name} - #{cond.nil? ? '[none]' : cond.upcase}"
                   }.join("\n")
               end
 
@@ -403,34 +401,26 @@ module Flapjack
               duration     = ChronicDuration.parse(duration_str)
 
               msg = derive_check_ids_for(pattern, tag, check_name,
-                      :lock_klasses => [Flapjack::Data::State,
-                                        Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
+                      :lock_klasses => [Flapjack::Data::UnscheduledMaintenance]) do |check_ids, descriptor|
 
-                state_ids_by_check_id = Flapjack::Data::Check.
-                  intersect(:id => check_ids).associated_ids_for(:state)
+                failing_checks = Flapjack::Data::Check.
+                  intersect(:id => check_ids, :failing => true)
 
-                failing_check_ids = Flapjack::Data::State.
-                  intersect(:id => state_ids_by_check_id.values,
-                            :condition => Flapjack::Data::Condition.unhealthy.keys).
-                  associated_ids_for(:check).values
-
-                if failing_check_ids.empty?
+                if failing_checks.empty?
                   "No failing checks #{descriptor}"
                 else
                   summary = "#{nick}: #{comment.blank? ? 'Set via chatbot' : comment}"
 
-                  failing = Flapjack::Data::Check.find_by_ids(*failing_check_ids)
-
                   action = Proc.new {
                     Flapjack::Data::Event.create_acknowledgements(
                       @config['processor_queue'] || 'events',
-                      failing,
+                      failing_checks,
                       :summary  => summary,
                       :duration => duration
                     )
                   }
 
-                  "Ack list:\n" + failing.collect {|c| "#{c.name}" }.join("\n")
+                  "Ack list:\n" + failing_checks.map(&:name).join("\n")
                 end
               end
 

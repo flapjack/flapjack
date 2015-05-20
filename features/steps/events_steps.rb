@@ -58,14 +58,15 @@ def set_state(entity_name, check_name, condition, last_update = Time.now)
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   expect(check).not_to be_nil
 
-  state = Flapjack::Data::State.new(:timestamp => last_update,
+  state = Flapjack::Data::State.new(:created_at => last_update, :updated_at => last_update,
     :condition => condition)
   state.save
+  puts state.id + " " + caller(0).first
   check.states << state
 end
 
-def submit_event(state, entity_name, check_name, opts = {})
-  err_rate = case state
+def submit_event(condition, entity_name, check_name, opts = {})
+  err_rate = case condition
   when 'ok'
     '0'
   when 'warning'
@@ -75,7 +76,7 @@ def submit_event(state, entity_name, check_name, opts = {})
   end
   event = {
     'type'    => 'service',
-    'state'   => state,
+    'state'   => condition,
     'summary' => "#{err_rate}% packet loss",
     'entity'  => entity_name,
     'check'   => check_name,
@@ -164,7 +165,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   set_unscheduled_maintenance(entity_name, check_name, 60*60*2)
 end
 
-When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial|repeat) failure delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |state, init_or_repeat, failure_delay, check_name, entity_name|
+When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial|repeat) failure delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |condition, init_or_repeat, failure_delay, check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
   opts = case init_or_repeat
@@ -175,7 +176,7 @@ When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial|repe
   else
     {}
   end
-  submit_event(state, entity_name, check_name, opts)
+  submit_event(condition, entity_name, check_name, opts)
   drain_events
 end
 

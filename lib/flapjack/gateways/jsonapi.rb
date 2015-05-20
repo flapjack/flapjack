@@ -23,7 +23,7 @@ require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
-require 'flapjack/data/status'
+require 'flapjack/data/state'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
@@ -61,7 +61,7 @@ module Flapjack
         Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
         Flapjack::Data::Statistic,
-        Flapjack::Data::Status,
+        Flapjack::Data::State,
         Flapjack::Data::Tag,
         Flapjack::Data::UnscheduledMaintenance
       ]
@@ -249,8 +249,8 @@ module Flapjack
 
       error do
         e = env['sinatra.error']
-        trace = e.backtrace.join("\n")
-        puts trace
+        # trace = e.backtrace.join("\n")
+        # puts trace
         err(response.status, "#{e.class} - #{e.message}")
       end
 

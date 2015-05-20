@@ -22,20 +22,14 @@ module Flapjack
 
             # FIXME swagger docs for reports
 
-            app.get %r{^/(outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
+            # app.get %r{^/(outage|(?:un)?scheduled_maintenance|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
+            app.get %r{^/(outage|downtime)_reports/(?:(checks)(?:/(.+))?|(tags)/(.+))$} do
               report_type = params[:captures][0]
 
               resource = params[:captures][1] || params[:captures][3]
 
               resource_id = params[:captures][1].nil? ? params[:captures][4] :
                                                         params[:captures][2]
-
-              report_type_pres = case report_type
-              when 'downtime'
-                report_type
-              else
-                "#{report_type}s"
-              end
 
               initial_scope = case resource
               when 'checks'
@@ -58,9 +52,15 @@ module Flapjack
 
               links[:self] = request_url
 
-              rd = checks.each_with_object([]) do |check, memo|
-                r = Flapjack::Data::Report.send(report_type_pres.to_sym, check, args)
-                memo << r.merge(:type => "#{report_type}_report")
+              rd = []
+
+              checks.each do |check|
+                r, stats = Flapjack::Data::Report.send(report_type.to_sym, check, args)
+                rd << r.merge(:type => "#{report_type}_report")
+                unless stats.nil? || stats.empty?
+                  meta[:statistics] ||= {}
+                  meta[:statistics][check.id] = stats
+                end
               end
 
               # unwrap, if single check requested

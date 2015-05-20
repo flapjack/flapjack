@@ -22,52 +22,48 @@ module Flapjack
 
       def block?(check, opts = {})
         old_state = opts[:old_state]
-        new_entry = opts[:new_entry]
+        new_state = opts[:new_state]
         timestamp = opts[:timestamp]
 
-        initial_failure_delay = check.initial_failure_delay
-        if initial_failure_delay.nil? || (initial_failure_delay < 0)
-          initial_failure_delay = opts[:initial_failure_delay]
-          if initial_failure_delay.nil? || (initial_failure_delay < 0)
-            initial_failure_delay = Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
-          end
-        end
-
-        repeat_failure_delay = check.repeat_failure_delay
-        if repeat_failure_delay.nil? || (repeat_failure_delay < 0)
-          repeat_failure_delay = opts[:repeat_failure_delay]
-          if repeat_failure_delay.nil? || (repeat_failure_delay < 0)
-            repeat_failure_delay = Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
-          end
-        end
+        initial_failure_delay = opts[:initial_failure_delay]
+        repeat_failure_delay = opts[:repeat_failure_delay]
 
         label = 'Filter: Delays:'
 
-        unless new_entry.action.nil? && !Flapjack::Data::Condition.healthy?(new_entry.condition)
+        if new_state.nil? || !new_state.action.nil? ||
+          Flapjack::Data::Condition.healthy?(new_state.condition)
+
           Flapjack.logger.debug {
             "#{label} pass - not a service event in a failure state"
           }
           return false
         end
 
-        status = check.status
+        last_problem  = check.latest_notifications.
+          intersect(:condition => Flapjack::Data::Condition.unhealthy.keys).first
+        last_recovery = check.latest_notifications.
+          intersect(:condition => Flapjack::Data::Condition.healthy.keys).first
+        last_ack      = check.latest_notifications.
+          intersect(:action => 'acknowledgement').first
 
-        last_notif   = status.nil? ? nil :
-          [status.last_problem, status.last_recovery, status.last_acknowledgement].compact.max
-        last_problem = status.nil? ? nil : status.last_problem
+        last_problem_time  = last_problem.nil?  ? nil : last_problem.created_at
+        last_recovery_time = last_recovery.nil? ? nil : last_recovery.created_at
+        last_ack_time      = last_ack.nil?      ? nil : last_ack.created_at
+        last_notif = [last_problem, last_recovery, last_ack].compact.
+                       sort_by(&:created_at).last
 
-        last_change_time   = old_state ? old_state.timestamp : nil
+        last_change_time = old_state.nil? ? nil : old_state.created_at
 
-        alert_type        = Flapjack::Data::Alert.notification_type(new_entry.action,
-          new_entry.condition)
+        alert_type = Flapjack::Data::Alert.notification_type(new_state.action,
+          new_state.condition)
 
-        # last_alert_type   = last_notif.nil? ? nil :
-        #   Flapjack::Data::Alert.notification_type(last_notif.action, last_notif.condition)
+        last_alert_type = last_notif.nil? ? nil :
+          Flapjack::Data::Alert.notification_type(last_notif.action, last_notif.condition)
 
         current_condition_duration = last_change_time.nil? ? nil : (timestamp - last_change_time)
-        time_since_last_alert = last_problem.nil? ? nil : (timestamp - last_problem)
+        time_since_last_alert = last_problem_time.nil? ? nil : (timestamp - last_problem_time)
 
-        Flapjack.logger.debug("#{label} last_problem_alert: #{last_problem_alert || 'nil'}, " +
+        Flapjack.logger.debug("#{label} last_problem: #{last_problem_time || 'nil'}, " +
                       "last_change: #{last_change_time || 'nil'}, " +
                       "current_condition_duration: #{current_condition_duration || 'nil'}, " +
                       "time_since_last_alert: #{time_since_last_alert || 'nil'}, " +
@@ -80,7 +76,7 @@ module Flapjack
           return true
         end
 
-        if !(last_problem_alert.nil? || time_since_last_alert.nil?) &&
+        if !(last_problem_time.nil? || time_since_last_alert.nil?) &&
           (time_since_last_alert <= repeat_failure_delay) &&
           (last_alert_type == alert_type)
 

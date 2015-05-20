@@ -270,33 +270,33 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
                                     'check'   => check_name.split(':', 2).last,
                                     'time'    => timestamp)
 
-  check = Flapjack::Data::Check.intersect(:name => check_name).all.first
-  expect(check).not_to be_nil
+  Flapjack::Data::Check.lock(Flapjack::Data::State, Flapjack::Data::Notification) do
 
-  state = Flapjack::Data::State.new(:timestamp => timestamp,
-    :condition => 'critical')
-  state.save
-  check.states << state
+    check = Flapjack::Data::Check.intersect(:name => check_name).all.first
+    expect(check).not_to be_nil
 
-  entry = Flapjack::Data::Entry.new(:timestamp => timestamp,
-    :condition => 'critical')
-  entry.save
-  state.entries << entry
-  check.most_severe = state
+    state = Flapjack::Data::State.new(:created_at => timestamp, :updated_at => timestamp,
+      :condition => 'critical')
+    state.save
+    puts state.id + " " + caller(0).first
+    check.states << state
+    check.most_severe = state
 
-  notification = Flapjack::Data::Notification.new(
-    :condition_duration  => 0.0,
-    :severity            => 'critical',
-    :duration            => event.duration,
-  )
+    notification = Flapjack::Data::Notification.new(
+      :condition_duration  => 0.0,
+      :severity            => 'critical',
+      :duration            => event.duration,
+    )
 
-  unless notification.save
-    raise "Couldn't save notification: #{notification.errors.full_messages.inspect}"
+    unless notification.save
+      raise "Couldn't save notification: #{notification.errors.full_messages.inspect}"
+    end
+
+    notification.state = state
+    check.notifications << notification
+    @notifier.instance_variable_get('@queue').push(notification)
   end
 
-  entry.notification = notification
-
-  @notifier.instance_variable_get('@queue').push(notification)
   drain_notifications
 end
 

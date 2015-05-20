@@ -7,7 +7,7 @@ require 'zermelo/records/redis'
 require 'flapjack/utility'
 
 require 'flapjack/data/condition'
-require 'flapjack/data/entry'
+require 'flapjack/data/state'
 
 # Alert is the object ready to send to someone, complete with an address and all
 # the data with which to render the text of the alert in the appropriate gateway
@@ -42,7 +42,7 @@ module Flapjack
         :inclusion => { :in => Flapjack::Data::Condition.healthy.keys +
                                Flapjack::Data::Condition.unhealthy.keys }
 
-      validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::Entry::ACTIONS}
+      validates :action, :allow_nil => true, :inclusion => {:in => Flapjack::Data::State::ACTIONS}
 
       validates :condition_duration, :presence => true, :allow_nil => true,
         :numericality => {:minimum => 0}, :unless => proc {|n| n.type == 'test'}

@@ -35,7 +35,6 @@ require 'zermelo'
 require 'flapjack'
 require 'flapjack/data/condition'
 require 'flapjack/data/check'
-require 'flapjack/data/entry'
 require 'flapjack/data/state'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
@@ -319,17 +318,11 @@ module Flapjack
             count     = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:count")
 
             state = Flapjack::Data::State.new(:condition => condition,
-              :timestamp => timestamp.to_i)
+              :created_at => timestamp, :updated_at => timestamp,
+              :summary => summary, :details => details)
+            # TODO perfdata ?
             state.save
             raise state.errors.full_messages.join(", ") unless state.persisted?
-
-            entry = Flapjack::Data::Entry.new(:timestamp => timestamp.to_i,
-              :condition => condition, :summary => summary, :details => details)
-            # TODO perfdata ?
-            entry.save
-            raise entry.errors.full_messages.join(", ") unless entry.persisted?
-
-            state.entries << entry
 
             if Flapjack::Data::Condition.healthy?(condition)
               most_severe = nil
@@ -344,7 +337,7 @@ module Flapjack
             notif_state = 'ok'.eql?(condition) ? :recovery : condition.to_sym
 
             if timestamp.to_i == last_notifications[notif_state]
-              check.last_notifications << entry
+              check.last_notifications << state
             end
 
             check.states << state

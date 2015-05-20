@@ -15,10 +15,12 @@ module Flapjack
 
       def block?(check, opts = {})
         old_state = opts[:old_state]
-        new_entry = opts[:new_entry]
+        new_state = opts[:new_state]
         timestamp = opts[:timestamp]
 
-        unless new_entry.action.nil? && Flapjack::Data::Condition.healthy?(new_entry.condition)
+        if !new_state.nil? && !(new_state.action.nil? &&
+          Flapjack::Data::Condition.healthy?(new_state.condition))
+
           Flapjack.logger.debug("Filter: Ok: pass")
           return false
         end
@@ -35,17 +37,18 @@ module Flapjack
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
           Flapjack.logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           Flapjack.logger.debug(old_state.inspect)
-          Flapjack.logger.debug(new_entry.inspect)
+          Flapjack.logger.debug(new_state.inspect) unless new_state.nil?
           return true
         end
 
-        last_notification = check.latest_notifications.last
-        Flapjack.logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
+        last_notification = check.latest_notifications.first
 
         if last_notification.nil?
           Flapjack.logger.debug("Filter: Ok: block - last notification is nil (never notified)")
           return true
         end
+
+        Flapjack.logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
 
         if Flapjack::Data::Condition.healthy?(last_notification.condition)
           Flapjack.logger.debug("Filter: Ok: block - last notification was a recovery")

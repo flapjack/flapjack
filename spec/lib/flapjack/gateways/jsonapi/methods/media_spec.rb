@@ -201,7 +201,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "deletes a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
-           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::Alert, Flapjack::Data::State,
            Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 
@@ -217,7 +217,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "deletes multiple media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
-           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::Alert, Flapjack::Data::State,
            Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 
@@ -239,7 +239,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "does not delete a medium that's not found" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule,
-           Flapjack::Data::Alert, Flapjack::Data::Entry,
+           Flapjack::Data::Alert, Flapjack::Data::State,
            Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance).
       and_yield
 

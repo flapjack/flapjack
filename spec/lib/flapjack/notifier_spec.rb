@@ -40,7 +40,7 @@ describe Flapjack::Notifier, :logger => true do
   # let(:event)   { double(Flapjack::Data::Event) }
 
   # let(:check)       { double(Flapjack::Data::Check) }
-  # let(:check_state) { double(Flapjack::Data::CheckState) }
+  # let(:check_state) { double(Flapjack::Data::State) }
 
   # let(:contact) { double(Flapjack::Data::Contact) }
 
@@ -62,7 +62,7 @@ describe Flapjack::Notifier, :logger => true do
   #   expect(check).to receive(:id).twice.and_return('abcde')
   #   expect(check).to receive(:name).twice.and_return('example.com:ping')
 
-  #   state = double(Flapjack::Data::CheckState)
+  #   state = double(Flapjack::Data::CheckOldState)
   #   expect(state).to receive(:state).exactly(6).times.and_return('critical')
 
   #   expect(notification).to receive(:state).exactly(12).times.and_return(state)

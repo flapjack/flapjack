@@ -46,8 +46,14 @@ module Flapjack
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
 
-      belongs_to :last_entry, :class_name => 'Flapjack::Data::Entry',
-        :inverse_of => :latest_media
+      belongs_to :last_state, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :latest_media, :after_clear => :destroy_state
+
+      def destroy_state(st)
+        # won't be deleted if still referenced elsewhere -- see the State
+        # before_destroy callback
+        st.destroy
+      end
 
       index_by :transport
 
@@ -87,25 +93,6 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      # TODO before_read/after_read association callbacks in zermelo
-      # dynamically update alerting checks as a proper association, map it in
-      # the API/swagger
-
-      # def alerting_checks
-      #   route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
-      #   route_ids = route_ids_by_rule_id.values.reduce(&:|)
-
-      #   check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
-      #     :is_alerting => true).associated_ids_for(:checks).values.reduce(:|)
-
-      #   time = Time.now
-
-      #   # scheduled maintenance may have occurred without the routes being updated
-      #   Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
-      #     !check.in_scheduled_maintenance?(time)
-      #   end
-      # end
-
       # acked checks remove themselves from alerting at the time of ack, not
       # as easy to do when scheduled maintenance ticks over
       def remove_checks_in_sched_maint
@@ -125,6 +112,7 @@ module Flapjack
         sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
         return if sched_maint_checks.empty?
 
+        # maybe delete_ids could be a thing?
         self.alerting_checks.delete(*sched_maint_checks.all)
       end
 
@@ -303,7 +291,7 @@ module Flapjack
           :post   => [],
           :get    => [],
           :patch  => [],
-          :delete => [Flapjack::Data::Alert, Flapjack::Data::Entry,
+          :delete => [Flapjack::Data::Alert, Flapjack::Data::State,
                       Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance]
         }
       end

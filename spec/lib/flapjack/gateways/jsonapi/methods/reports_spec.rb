@@ -19,9 +19,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     }
   }
 
-  def expect_checks(path, report_type, action_pres, opts = {})
+  def expect_checks(path, report_type, opts = {})
     link_opts = {}
-    expect(Flapjack::Data::Report).to receive(action_pres).
+    expect(Flapjack::Data::Report).to receive(report_type).
       with(check, :start_time => opts[:start], :end_time => opts[:finish]).
       and_return(:type => "#{report_type}_report")
     link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
@@ -73,9 +73,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(result))
   end
 
-  def expect_tag_checks(path, report_type, action_pres, opts = {})
+  def expect_tag_checks(path, report_type, opts = {})
     link_opts = {}
-    expect(Flapjack::Data::Report).to receive(action_pres).
+    expect(Flapjack::Data::Report).to receive(report_type).
       with(check, :start_time => opts[:start], :end_time => opts[:finish]).
       and_return(:type => "#{report_type}_report")
     link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
@@ -121,29 +121,21 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(result))
   end
 
-  [:scheduled_maintenance, :unscheduled_maintenance, :outage,
-   :downtime].each do |report_type|
-
-    action_pres = case report_type
-    when :downtime
-      report_type
-    else
-      "#{report_type}s"
-    end
+  [:outage, :downtime].each do |report_type|
 
     let(:start)  { Time.parse('1 Jan 2012') }
     let(:finish) { Time.parse('6 Jan 2012') }
 
     it "returns a #{report_type} report for all checks" do
-      expect_checks("/#{report_type}_reports/checks", report_type, action_pres, :all => true)
+      expect_checks("/#{report_type}_reports/checks", report_type, :all => true)
     end
 
     it "returns a #{report_type} report for a check" do
-      expect_checks("/#{report_type}_reports/checks/#{check.id}", report_type, action_pres, :one => true)
+      expect_checks("/#{report_type}_reports/checks/#{check.id}", report_type, :one => true)
     end
 
     it "returns a #{report_type} report for all checks linked to a tag" do
-      expect_tag_checks("/#{report_type}_reports/tags/#{tag.id}", report_type, action_pres)
+      expect_tag_checks("/#{report_type}_reports/tags/#{tag.id}", report_type)
     end
 
     it "doesn't return a #{report_type} report for a check that's not found" do
@@ -165,18 +157,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     end
 
     it "returns a #{report_type} report for all checks within a time window" do
-      expect_checks("/#{report_type}_reports/checks", report_type, action_pres, :all => true,
+      expect_checks("/#{report_type}_reports/checks", report_type, :all => true,
         :start => start, :finish => finish)
     end
 
     it "returns a #{report_type} report for a check within a time window" do
       expect_checks("/#{report_type}_reports/checks/#{check.id}", report_type,
-        action_pres, :one => true, :start => start, :finish => finish)
+        :one => true, :start => start, :finish => finish)
     end
 
     it "returns a #{report_type} report for all checks linked to a tag" do
       expect_tag_checks("/#{report_type}_reports/tags/#{tag.id}", report_type,
-        action_pres, :start => start, :finish => finish)
+        :start => start, :finish => finish)
     end
   end
 end

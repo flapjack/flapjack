@@ -169,7 +169,6 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :logger => true do
 
       expect(check).to receive(:name).twice.and_return(check_name)
 
-      failing_entry = double(Flapjack::Data::Entry)
       failing_state = double(Flapjack::Data::State)
       failing_entries = double(:failing_entries, :last => failing_entry)
       failing_time = time - ((3 * 60 * 60) + (5 * 60))
@@ -181,7 +180,6 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :logger => true do
       expect(failing_entry).to receive(:condition).and_return('critical')
       expect(failing_entry).to receive(:summary).twice.and_return('BAAAAD')
 
-      ok_entry = double(Flapjack::Data::Entry)
       ok_state = double(Flapjack::Data::State)
       ok_entries = double(:ok_entries, :last => ok_entry)
       ok_time = time - (3 * 60 * 60)

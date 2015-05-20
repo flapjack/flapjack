@@ -15,13 +15,22 @@ module Flapjack
 
       include Zermelo::Records::Redis
 
-      define_attributes :severity       => :string,
-                        :duration       => :integer,
+      define_attributes :severity           => :string,
+                        :duration           => :integer,
                         :condition_duration => :float,
-                        :event_hash     => :string
+                        :event_hash         => :string
 
-      belongs_to :entry, :class_name => 'Flapjack::Data::Entry',
-        :inverse_of => :notification
+      belongs_to :check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :notifications
+
+      has_one :state, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :notification, :after_clear => :destroy_state
+
+      def destroy_state(st)
+        # won't be deleted if still referenced elsewhere -- see the State
+        # before_destroy callback
+        st.destroy
+      end
 
       validates :severity,
         :inclusion => {:in => Flapjack::Data::Condition.unhealthy.keys +

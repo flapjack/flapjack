@@ -7,14 +7,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
   let(:check)   { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:check_2) { double(Flapjack::Data::Check, :id => check_2_data[:id]) }
-  let(:status)  { double(Flapjack::Data::Status, :id => status_data[:id]) }
   let(:tag)     { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
 
   it "creates a check" do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
-        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status).
+        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -39,8 +37,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances",
                  }
@@ -51,8 +50,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'creates two checks' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
-        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status).
+        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -86,16 +84,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
        check_2_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check_2.id}",
                    :alerting_media => "http://example.org/checks/#{check_2.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check_2.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check_2.id}/status",
+                   :states => "http://example.org/checks/#{check_2.id}/states",
                    :tags => "http://example.org/checks/#{check_2.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})]
     ))
@@ -104,8 +104,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'creates a link to a tag along with a check' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
-        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status).
+        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -139,8 +138,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances",
                  }
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     meta = {
@@ -207,8 +207,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
       :links => links, :meta => meta))
@@ -218,7 +219,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     meta = {
@@ -258,8 +259,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"})],
       :links => links, :meta => meta))
@@ -269,7 +271,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
@@ -287,8 +289,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
       :links => {:self => "http://example.org/checks/#{check.id}"}))
@@ -298,7 +301,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
@@ -316,79 +319,19 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
       :links => {:self => "http://example.org/checks/#{check.id}?fields=name%2Cenabled"}))
-  end
-
-  it 'retrieves a check and its status' do
-    expect(Flapjack::Data::Check).to receive(:lock).
-      with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
-        Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
-      and_yield
-
-    expect(Flapjack::Data::Check).to receive(:find_by_id!).
-      with(check.id).and_return(check)
-
-    checks = double('checks')
-    expect(checks).to receive(:associated_ids_for).with(:status).
-      and_return(check.id => status.id)
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id]).and_return(checks)
-
-    full_status = double('full_status')
-    expect(full_status).to receive(:collect) {|&arg| [arg.call(status)] }
-
-    expect(Flapjack::Data::Status).to receive(:intersect).
-      with(:id => [status.id]).and_return(full_status)
-
-    full_checks = double('full_checks')
-    expect(full_checks).to receive(:associated_ids_for).
-      with(:status).and_return(check.id => status.id)
-
-    expect(Flapjack::Data::Check).to receive(:intersect).
-      with(:id => [check.id]).and_return(full_checks)
-
-    expect(status).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(status_data.merge(:id => status.id))
-
-    expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(check_data)
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-    expect(Flapjack::Data::Status).to receive(:jsonapi_type).and_return('status')
-
-    get "/checks/#{check.id}?include=status"
-    expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data => check_data.merge(:type => 'check', :links =>
-        {:self => "http://example.org/checks/#{check.id}",
-         :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
-         :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-         :status => {
-           :self    => "http://example.org/checks/#{check.id}/links/status",
-           :related => "http://example.org/checks/#{check.id}/status",
-           :linkage => {:type => 'status', :id => status.id}
-         },
-         :tags => "http://example.org/checks/#{check.id}/tags",
-         :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
-      :included => [status_data.merge(:id => status.id, :type => 'status',
-        :links => {
-          :self   => "http://example.org/statuses/#{status.id}",
-          :check => "http://example.org/statuses/#{status.id}/check"
-          })],
-       :links => {:self => "http://example.org/checks/#{check.id}?include=status"}
-      ))
   end
 
   it "retrieves one check and all its linked tag records" do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
@@ -428,8 +371,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       :data => check_data.merge(:type => 'check', :links =>
         {:self => "http://example.org/checks/#{check.id}",
          :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+         :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
          :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-         :status => "http://example.org/checks/#{check.id}/status",
+         :states => "http://example.org/checks/#{check.id}/states",
          :tags => {
            :self    => "http://example.org/checks/#{check.id}/links/tags",
            :related => "http://example.org/checks/#{check.id}/tags",
@@ -450,7 +394,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Status, Flapjack::Data::Medium).
+        Flapjack::Data::State, Flapjack::Data::Medium).
       and_yield
 
     meta = {
@@ -496,16 +440,18 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check.id}",
                    :alerting_media => "http://example.org/checks/#{check.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check.id}/status",
+                   :states => "http://example.org/checks/#{check.id}/states",
                    :tags => "http://example.org/checks/#{check.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances"}),
        check_2_data.merge(
         :type => 'check',
         :links => {:self => "http://example.org/checks/#{check_2.id}",
                    :alerting_media => "http://example.org/checks/#{check_2.id}/alerting_media",
+                   :latest_notifications => "http://example.org/checks/#{check_2.id}/latest_notifications",
                    :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
-                   :status => "http://example.org/checks/#{check_2.id}/status",
+                   :states => "http://example.org/checks/#{check_2.id}/states",
                    :tags => "http://example.org/checks/#{check_2.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})
       ], :links => links, :meta => meta))

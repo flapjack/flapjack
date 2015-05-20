@@ -87,25 +87,6 @@ module Flapjack
         end
       end
 
-      has_one :status, :class_name => 'Flapjack::Data::Status',
-        :inverse_of => :check
-
-      after_create :create_status
-      def create_status
-        initial_status = Flapjack::Data::Status.new
-        initial_status.save
-        self.status = initial_status
-      end
-
-      has_sorted_set :states, :class_name => 'Flapjack::Data::State',
-        :key => :timestamp, :inverse_of => :check
-
-      has_one :most_severe, :class_name => 'Flapjack::Data::State',
-        :inverse_of => :most_severe_check
-
-      has_one :last_notification, :class_name => 'Flapjack::Data::Entry',
-        :inverse_of => :last_notification_check
-
       has_sorted_set :scheduled_maintenances,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
         :key => :start_time, :inverse_of => :check
@@ -114,8 +95,26 @@ module Flapjack
         :class_name => 'Flapjack::Data::UnscheduledMaintenance',
         :key => :start_time, :inverse_of => :check
 
+      has_sorted_set :states, :class_name => 'Flapjack::Data::State',
+        :key => :created_at, :order => :desc, :inverse_of => :check
+
+      has_sorted_set :latest_notifications, :class_name => 'Flapjack::Data::State',
+        :key => :created_at, :order => :desc, :inverse_of => :latest_notifications_check,
+        :after_remove => :destroy_states
+
+      def destroy_states(*st)
+        # won't be deleted if still referenced elsewhere -- see the State
+        # before_destroy callback
+        st.map(&:destroy)
+      end
+
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
+      has_one :most_severe, :class_name => 'Flapjack::Data::State',
+        :inverse_of => :most_severe_check, :after_clear => :destroy_states
+
+      has_many :notifications, :class_name => 'Flapjack::Data::Notification',
+        :inverse_of => :check
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert',
         :inverse_of => :check
@@ -125,12 +124,14 @@ module Flapjack
 
       has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :alerting_checks
+      # end internal associations
 
       validates :name, :presence => true
       validates :enabled, :inclusion => {:in => [true, false]}
 
       validates :condition, :presence => true, :unless => proc {|c| c.failing.nil? }
-      validates :failing, :inclusion => {:in => [true, false]}, :unless => proc {|c| c.condition.nil? }
+      validates :failing, :inclusion => {:in => [true, false]},
+        :unless => proc {|c| c.condition.nil? }
 
       validates :initial_failure_delay, :allow_nil => true,
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
@@ -181,7 +182,9 @@ module Flapjack
       end
 
       swagger_schema :CheckLinks do
-        key :required, [:self, :tags]
+        key :required, [:self, :alerting_media, :last_change,
+                        :latest_notifications, :scheduled_maintenance, :tags,
+                        :unscheduled_maintenances]
         property :self do
           key :type, :string
           key :format, :url
@@ -190,11 +193,15 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :latest_notifications do
+          key :type, :string
+          key :format, :url
+        end
         property :scheduled_maintenances do
           key :type, :string
           key :format, :url
         end
-        property :status do
+        property :states do
           key :type, :string
           key :format, :url
         end
@@ -278,7 +285,7 @@ module Flapjack
 
       def self.jsonapi_extra_locks
         {
-          :post   => [Flapjack::Data::Status],
+          :post   => [],
           :get    => [],
           :patch  => [],
           :delete => []
@@ -288,8 +295,8 @@ module Flapjack
       def self.jsonapi_associations
         {
           :read_only  => {
-            :singular => [:status],
-            :multiple => [:alerting_media]
+            :singular => [],
+            :multiple => [:alerting_media, :latest_notifications, :states]
           },
           :read_write => {
             :singular => [],
@@ -357,15 +364,15 @@ module Flapjack
 
           self.unscheduled_maintenances << unsched_maint
 
-          # TODO add an ack action to the event state directly, uless this is the
-          # result of one
-          if options[:create_state].is_a?(TrueClass)
-            last_state = self.states.last
-            ack_state = Flapjack::Data::State.new
-            # TODO set state data
-            ack_state.save
-            self.states << ack_state
-          end
+          # # TODO maybe add an ack action to the event state directly, uless this is the
+          # # result of one
+          # if options[:create_state].is_a?(TrueClass)
+          #   last_state = self.states.last
+          #   ack_state = Flapjack::Data::State.new
+          #   # TODO set state data
+          #   ack_state.save
+          #   self.states << ack_state
+          # end
 
           self.routes.intersect(:is_alerting => true).each do |route|
             route.is_alerting = false
