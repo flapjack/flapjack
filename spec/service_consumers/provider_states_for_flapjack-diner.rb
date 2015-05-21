@@ -48,6 +48,25 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
+  provider_state "a contact with one medium and one rule exists" do
+    set_up do
+      contact = Flapjack::Data::Contact.new(contact_data)
+      contact.save!
+
+      email = Flapjack::Data::Medium.new(email_data)
+      email.save!
+
+      contact.media << email
+
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
+
+      contact.rules << rule
+    end
+
+    tear_down { default_tear_down }
+  end
+
   provider_state "two contacts exist" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)
