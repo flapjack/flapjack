@@ -307,6 +307,19 @@ module Flapjack
         }
       end
 
+      # read-only by definition; singular & multiple hashes of
+      # method_name => [other classes to lock]
+      def self.jsonapi_linked_methods
+        {
+          :singular => {
+            :current_unscheduled_maintenance => [Flapjack::Data::UnscheduledMaintenance]
+          },
+          :multiple => {
+            :current_scheduled_maintenances => [Flapjack::Data::ScheduledMaintenance]
+          }
+        }
+      end
+
       def self.jsonapi_associations
         {
           :read_only  => {
@@ -323,25 +336,24 @@ module Flapjack
       end
 
       def in_scheduled_maintenance?(t = Time.now)
-        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
-        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
-        return false if self.scheduled_maintenances.intersect(:start_time => start_range,
-          :end_time => end_range).empty?
-
-        # TODO clear from alerting_media here?
-
-        self.routes.intersect(:is_alerting => true).each do |route|
-          route.is_alerting = false
-          route.save
-        end
+        return false if scheduled_maintenances_at(t).empty?
+        no_longer_alerting
         true
       end
 
+      def current_scheduled_maintenances
+        csm = scheduled_maintenances_at(Time.now).all
+        return [] if csm.empty?
+        no_longer_alerting
+        csm
+      end
+
       def in_unscheduled_maintenance?(t = Time.now)
-        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
-        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
-        !self.unscheduled_maintenances.intersect(:start_time => start_range,
-          :end_time => end_range).empty?
+        !unscheduled_maintenances_at(t).empty?
+      end
+
+      def current_unscheduled_maintenance
+        unscheduled_maintenances_at(Time.now).all.first
       end
 
       # TODO allow summary to be changed as part of the termination
@@ -477,6 +489,32 @@ module Flapjack
         self.id = self.class.generate_id if self.id.nil?
         self.ack_hash = Digest.hexencode(Digest::SHA1.new.digest(self.id))[0..7].downcase
       end
+
+      def no_longer_alerting
+        self.routes.intersect(:is_alerting => true).each do |route|
+          route.is_alerting = false
+          route.save
+        end
+
+        unless self.alerting_media.empty?
+          self.alerting_media.delete(*self.alerting_media)
+        end
+      end
+
+      def scheduled_maintenances_at(t)
+        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
+        self.scheduled_maintenances.intersect(:start_time => start_range,
+          :end_time => end_range)
+      end
+
+      def unscheduled_maintenances_at(t)
+        start_range = Zermelo::Filters::IndexRange.new(nil, t, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(t, nil, :by_score => true)
+        self.unscheduled_maintenances.intersect(:start_time => start_range,
+          :end_time => end_range)
+      end
+
     end
 
   end

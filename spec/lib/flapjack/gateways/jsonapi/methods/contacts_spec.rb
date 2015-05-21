@@ -338,7 +338,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   end
 
   it "does not return contacts if sort parameter is incorrectly specified" do
-    expect(Flapjack::Data::Contact).not_to receive(:lock)
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+           Flapjack::Data::ScheduledMaintenance).and_yield
     expect(Flapjack::Data::Contact).not_to receive(:sort)
 
     get '/contacts?sort=enabled'

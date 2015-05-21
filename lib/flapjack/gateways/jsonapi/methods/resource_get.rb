@@ -134,36 +134,36 @@ module Flapjack
                                   params[:captures].first
                   status 200
 
-                  resources, links, meta = if resource_id.nil?
-                    scoped = resource_filter_sort(resource_class,
-                     :filter => params[:filter], :sort => params[:sort])
-                    resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                  json_data = {}
+
+                  resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                    resources, links, meta = if resource_id.nil?
+                      scoped = resource_filter_sort(resource_class,
+                       :filter => params[:filter], :sort => params[:sort])
                       paginate_get(scoped, :page => params[:page],
                         :per_page => params[:per_page])
-                    end
-                  else
-                    resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                    else
                       [[resource_class.find_by_id!(resource_id)], {}, {}]
                     end
-                  end
 
-                  links[:self] = request_url
+                    links[:self] = request_url
 
-                  json_data = {:links => links}
-                  if resources.empty?
-                    json_data[:data] = []
-                  else
-                    fields = params[:fields].nil?  ? nil : params[:fields].split(',')
-                    incl   = params[:include].nil? ? nil : params[:include].split(',')
-                    data, included = as_jsonapi(resource_class, resource_class.jsonapi_type,
-                                                resource, resources,
-                                                (resource_id.nil? ? resources.map(&:id) : [resource_id]),
-                                                :fields => fields, :include => incl,
-                                                :unwrap => !resource_id.nil?)
+                    json_data[:links] = links
+                    if resources.empty?
+                      json_data[:data] = []
+                    else
+                      fields = params[:fields].nil?  ? nil : params[:fields].split(',')
+                      incl   = params[:include].nil? ? nil : params[:include].split(',')
+                      data, included = as_jsonapi(resource_class, resource_class.jsonapi_type,
+                                                  resource, resources,
+                                                  (resource_id.nil? ? resources.map(&:id) : [resource_id]),
+                                                  :fields => fields, :include => incl,
+                                                  :unwrap => !resource_id.nil?)
 
-                    json_data[:data] = data
-                    json_data[:included] = included unless included.nil? || included.empty?
-                    json_data[:meta] = meta unless meta.nil? || meta.empty?
+                      json_data[:data] = data
+                      json_data[:included] = included unless included.nil? || included.empty?
+                      json_data[:meta] = meta unless meta.nil? || meta.empty?
+                    end
                   end
                   Flapjack.dump_json(json_data)
                 end

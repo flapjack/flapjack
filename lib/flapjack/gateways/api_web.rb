@@ -226,22 +226,68 @@ module Flapjack
 
         @checks = Flapjack::Diner.checks(:filter => opts,
                     :page => (params[:page] || 1),
-                    :include => 'current_state,latest_notifications')
+                    :include => 'current_state,latest_notifications,' \
+                      'current_scheduled_maintenances,' \
+                      'current_unscheduled_maintenance')
 
-        unless @checks.nil?
+        @states = {}
+
+        unless @checks.nil? || @checks.empty?
           @pagination = pagination_from_context(Flapjack::Diner.context)
           unless @pagination.nil?
             @links = create_pagination_links(@pagination[:page],
               @pagination[:total_pages])
           end
+
+          included = Flapjack::Diner.context[:included]
+
+          unless included.nil? || included.empty?
+            @checks.each do |check, memo|
+
+              current_state_id = check[:links][:current_state][:linkage][:id]
+
+              current_state = current_state_id.nil? ? nil : included.detect do |incl|
+                 'state'.eql?(incl[:type]) && current_state_id.eql?(incl[:id])
+              end
+
+              latest_notification_ids =
+                check[:links][:latest_notifications][:linkage].collect {|ln| ln[:id]}
+
+              latest_notifications = latest_notification_ids.empty? ? [] : included.select do |incl|
+                'state'.eql?(incl[:type]) && latest_notification_ids.include?(incl[:id])
+              end
+
+              in_scheduled_maintenance = !check[:links][:current_scheduled_maintenances][:linkage].nil? &&
+                !check[:links][:latest_notifications][:linkage].empty?
+
+              in_unscheduled_maintenance = !check[:links][:current_unscheduled_maintenance][:linkage].nil?
+
+              # get latest (by time) of the latest notifications
+              notif_times = latest_notifications.each_with_object({}) do |ln, memo|
+                begin
+                  memo[ln[:id]] = DateTime.parse(ln[:created_at]).to_i
+                rescue ArgumentError
+                  Flapjack.logger.warn("error parsing notification :created_at ( #{ln.inspect} )")
+                end
+              end
+
+              latest_notification_id_time = notif_times.sort_by {|id, ti| ti}
+
+              last_notification = latest_notification_id_time.nil? ? nil :
+                latest_notifications.detect {|ln| latest_notification_id_time[0].eql?(ln[:id]) }
+
+              @states[check[:id]] = {
+                :condition     => current_state.nil? ? '-' : current_state[:condition],
+                :summary       => current_state.nil? ? '-' : current_state[:summary],
+                :last_changed  => render_state_duration(time, current_state, :created_at),
+                :last_updated  => render_state_duration(time, current_state, :updated_at),
+                :last_notified => render_state_duration(time, last_notification, :created_at),
+                :in_scheduled_maintenance => in_scheduled_maintenance,
+                :in_unscheduled_maintenance => in_unscheduled_maintenance
+              }
+            end
+          end
         end
-
-        @states = {}
-
-    #     @states = @checks.inject({}) do |memo, check|
-    #       memo[check] = check_state(check, time)
-    #       memo
-    #     end
 
         erb 'checks.html'.to_sym
       end
@@ -467,50 +513,7 @@ module Flapjack
         self.class.instance_variable_get('@show_exceptions').pretty(env, e)
       end
 
-
     private
-
-    #   def check_state(check, time)
-    #     latest_notif = check.latest_notifications.last
-
-    #     lc = check.states.last
-    #     last_change   = lc.nil? ? 'never' :
-    #       (ChronicDuration.output(time.to_i - lc.timestamp.to_i,
-    #                               :format => :short, :keep_zero => true,
-    #                               :units => 2) || '0s')
-
-    #     lu = lc.nil? ? nil : lc.entries.last
-    #     last_update   = lu.nil? ? 'never' :
-    #       (ChronicDuration.output(time.to_i - lu.timestamp.to_i,
-    #                               :format => :short, :keep_zero => true,
-    #                               :units => 2) || '0s')
-
-    #     summary = nil
-    #     cond    = nil
-
-    #     if latest_notif.nil?
-    #       last_notified = 'never'
-    #     else
-    #       cond = latest_notif.condition
-
-    #       summary = latest_notif.summary
-    #       summary = summary[0..76] + '...' unless summary.nil? || (summary.length < 81)
-
-    #       ln = latest_notif.timestamp
-
-    #       last_notified = (ChronicDuration.output(time.to_i - ln.to_i,
-    #                        :format => :short, :keep_zero => true, :units => 2) || '0s')
-    #     end
-
-    #     [(cond     || '-'),
-    #      (summary  || '-'),
-    #      last_change,
-    #      last_update,
-    #      check.in_unscheduled_maintenance?,
-    #      check.in_scheduled_maintenance?,
-    #      last_notified
-    #     ]
-    #   end
 
       def pagination_from_context(context)
         ((context || {})[:meta] || {})[:pagination]
@@ -596,8 +599,22 @@ module Flapjack
         links
       end
 
+      def render_state_duration(base_time, state, field)
+        if state.nil? || state[field].nil?
+          'never'
+        else
+          begin
+            parsed = DateTime.parse(state[field])
+            ChronicDuration.output(base_time.to_i - parsed.to_i,
+                                   :format => :short, :keep_zero => true,
+                                   :units => 2) || '0s'
+          rescue ArgumentError
+            Flapjack.logger.warn("error parsing time field #{field} ( #{state.inspect} )")
+            "error parsing time field #{field}"
+          end
+        end
+      end
+
     end
-
   end
-
 end

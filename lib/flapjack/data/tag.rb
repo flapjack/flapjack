@@ -160,6 +160,17 @@ module Flapjack
         }
       end
 
+      # read-only by definition; singular & multiple hashes of
+      # method_name => [other classes to lock]
+      def self.jsonapi_linked_methods
+        {
+          :singular => {
+          },
+          :multiple => {
+          }
+        }
+      end
+
       def self.jsonapi_associations
         {
           :read_only => {

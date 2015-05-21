@@ -35,64 +35,30 @@ module Flapjack
           end
 
           def jsonapi_linkages(klass, resource_ids, opts = {})
-            assocs = klass.respond_to?(:jsonapi_associations) ?
-              klass.jsonapi_associations : {}
+            jsonapi_links = klass.jsonapi_association_links(:read_only, :read_write)
+            all_links = jsonapi_links[:singular].merge(jsonapi_links[:multiple])
 
-            singular = []
-            multiple = []
+            all_links.each_with_object({}) do |(jl_name, jl_data), memo|
+              type = jl_data[:data].jsonapi_type
 
-            [:read_write, :read_only].each do |type|
-              singular += ((assocs[type] || {})[:singular] || [])
-              multiple += ((assocs[type] || {})[:multiple] || [])
-            end
+              memo[jl_name] = if !opts[:resolve].nil? && opts[:resolve].include?(jl_name.to_s)
+                if jl_data[:is_association]
+                  data = resource_ids.empty? ? {} :
+                    klass.intersect(:id => resource_ids).associated_ids_for(jl_name)
 
-            singular_aliases, singular_names = singular.partition {|s| s.is_a?(Hash)}
-            multiple_aliases, multiple_names = multiple.partition {|m| m.is_a?(Hash)}
+                  LinkedData.new(:name => jl_name, :type => type, :data => data)
+                else
+                  data = resource_ids.empty? ? {} :
+                    klass.intersect(:id => resource_ids).all.each_with_object({}) {|r, memo|
+                      memo[r.id] = r.send(jl_name.to_sym)
+                    }
 
-            links = (singular_names + multiple_names).each_with_object({}) do |n, memo|
-              memo[n] = if !opts[:resolve].nil? && opts[:resolve].include?(n.to_s)
-                data = resource_ids.empty? ? {} :
-                  klass.intersect(:id => resource_ids).associated_ids_for(n)
-
-                type = nil
-
-                # SMELL mucking about with a zermelo protected method...
-                klass.send(:with_association_data, n.to_sym) do |ad|
-                  type = ad.data_klass.name.demodulize.underscore
+                  LinkedData.new(:name => jl_name, :type => type, :data => data)
                 end
-
-                LinkedData.new(:name => n, :type => type, :data => data)
               else
                 nil
               end
             end
-
-            aliases = [singular_aliases.inject({}, :merge),
-                       multiple_aliases.inject({}, :merge)].inject(:merge)
-
-            aliased_links = aliases.each_with_object({}) do |(n, a), memo|
-              next if memo.has_key?(a)
-              memo[a] = if !opts[:resolve].nil? && opts[:resolve].include?(a.to_s)
-
-                data = resource_ids.empty? ? {} :
-                  klass.intersect(:id => resource_ids).associated_ids_for(n)
-
-                type = nil
-
-                # SMELL mucking about with a zermelo protected method...
-                klass.send(:with_association_data, n.to_sym) do |ad|
-                  type = ad.data_klass.name.demodulize.underscore
-                end
-
-                LinkedData.new(:name => a, :type => type, :data => data)
-              else
-                nil
-              end
-            end
-
-            links.update(aliased_links)
-
-            links
           end
 
           def as_jsonapi(klass, jsonapi_type, resources_name, resources,
