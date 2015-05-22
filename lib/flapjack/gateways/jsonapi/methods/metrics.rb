@@ -22,7 +22,8 @@ module Flapjack
             app.get %r{^/metrics$} do
               fields = params[:fields]
               fields = [fields] unless fields.nil? || fields.is_a?(Array)
-              whitelist = Flapjack::Data::Metrics.jsonapi_attributes[:get]
+
+              whitelist = Flapjack::Data::Metrics.jsonapi_methods[:get].attributes
 
               jsonapi_fields = if fields.nil?
                 whitelist

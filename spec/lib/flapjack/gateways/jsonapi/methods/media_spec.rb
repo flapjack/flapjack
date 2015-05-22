@@ -65,8 +65,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "returns a single medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::Contact, Flapjack::Data::Rule, ).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_return(medium)
@@ -88,8 +88,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "returns all media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::Contact, Flapjack::Data::Rule, ).and_yield
 
     meta = {
       :pagination => {
@@ -131,8 +131,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not return a medium if the medium is not present" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::Contact, Flapjack::Data::Rule, ).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))

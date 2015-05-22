@@ -17,6 +17,16 @@ module Flapjack
               if resource_class.jsonapi_methods.include?(:post)
                 resource = resource_class.jsonapi_type.pluralize.downcase
 
+                jsonapi_links = resource_class.jsonapi_association_links
+
+                singular_links = jsonapi_links.select {|n, jd|
+                  :singular.eql?(jd.number)
+                }
+
+                multiple_links = jsonapi_links.select {|n, jd|
+                  :multiple.eql?(jd.number)
+                }
+
                 app.class_eval do
                   single = resource.singularize
 
@@ -63,14 +73,15 @@ module Flapjack
 
                   resources_data, unwrap = wrapped_params
 
-                  jsonapi_links = resource_class.jsonapi_association_links(:read_write)
-
-                  attributes = (resource_class.respond_to?(:jsonapi_attributes) ?
-                    resource_class.jsonapi_attributes[:post] : nil) || []
+                  attributes = if resource_class.respond_to?(:jsonapi_methods)
+                    (resource_class.jsonapi_methods[:get] || {}).attributes || []
+                  else
+                    []
+                  end
 
                   validate_data(resources_data, :attributes => attributes,
-                    :singular_links => jsonapi_links[:singular].keys,
-                    :multiple_links => jsonapi_links[:multiple].keys,
+                    :singular_links => singular_links.keys,
+                    :multiple_links => multiple_links.keys,
                     :klass => resource_class)
 
                   resources = nil
@@ -85,7 +96,8 @@ module Flapjack
 
                   jsonapi_type = resource_class.jsonapi_type
 
-                  resource_class.lock(*resource_class.jsonapi_locks(:post)) do
+                  resource_class.jsonapi_lock_method(:post) do
+
                     unless data_ids.empty?
                       conflicted_ids = resource_class.intersect(idf => data_ids).ids
                       halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
@@ -106,16 +118,16 @@ module Flapjack
                     resource_links = links_by_resource.each_with_object({}) do |(r, links), memo|
                       next if links.nil?
 
-                      jsonapi_links[:singular].each_pair do |assoc, assoc_klass|
+                      singular_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.object_id] ||= {}
-                        memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['linkage']['id'])
+                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['linkage']['id'])
                       end
 
-                      jsonapi_links[:multiple].each_pair do |assoc, assoc_klass|
+                      multiple_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.object_id] ||= {}
-                        memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_ids!(*(links[assoc.to_s]['linkage'].map {|l| l['id']}))
+                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_ids!(*(links[assoc.to_s]['linkage'].map {|l| l['id']}))
                       end
                     end
 
@@ -144,8 +156,6 @@ module Flapjack
                                        :unwrap => unwrap)
 
                   Flapjack.dump_json(:data => data)
-
-
                 end
               end
 

@@ -136,7 +136,7 @@ module Flapjack
 
                   json_data = {}
 
-                  resource_class.lock(*resource_class.jsonapi_locks(:get)) do
+                  resource_class.jsonapi_lock_method(:get) do
                     resources, links, meta = if resource_id.nil?
                       scoped = resource_filter_sort(resource_class,
                        :filter => params[:filter], :sort => params[:sort])

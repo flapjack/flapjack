@@ -7,6 +7,8 @@ require 'zermelo/records/redis'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/gateways/jsonapi/data/join_descriptor'
+require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
@@ -130,47 +132,27 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:post, :get, :patch, :delete]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :post  => [:start_time, :end_time, :summary],
-          :get   => [:start_time, :end_time, :summary],
-          :patch => [:start_time, :end_time, :summary]
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :post   => [],
-          :get    => [],
-          :patch  => [],
-          :delete => []
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:start_time, :end_time, :summary]
+          ),
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:start_time, :end_time, :summary]
+          ),
+          :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:start_time, :end_time, :summary]
+          ),
+          :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => []
-          },
-          :read_write => {
-            :singular => [:check],
-            :multiple => []
-          }
+        @jsonapi_associations ||= {
+          :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :singular,
+            :link => true, :include => true
+          )
         }
       end
 

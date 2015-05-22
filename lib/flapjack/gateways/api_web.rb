@@ -242,49 +242,8 @@ module Flapjack
           included = Flapjack::Diner.context[:included]
 
           unless included.nil? || included.empty?
-            @checks.each do |check, memo|
-
-              current_state_id = check[:links][:current_state][:linkage][:id]
-
-              current_state = current_state_id.nil? ? nil : included.detect do |incl|
-                 'state'.eql?(incl[:type]) && current_state_id.eql?(incl[:id])
-              end
-
-              latest_notification_ids =
-                check[:links][:latest_notifications][:linkage].collect {|ln| ln[:id]}
-
-              latest_notifications = latest_notification_ids.empty? ? [] : included.select do |incl|
-                'state'.eql?(incl[:type]) && latest_notification_ids.include?(incl[:id])
-              end
-
-              in_scheduled_maintenance = !check[:links][:current_scheduled_maintenances][:linkage].nil? &&
-                !check[:links][:latest_notifications][:linkage].empty?
-
-              in_unscheduled_maintenance = !check[:links][:current_unscheduled_maintenance][:linkage].nil?
-
-              # get latest (by time) of the latest notifications
-              notif_times = latest_notifications.each_with_object({}) do |ln, memo|
-                begin
-                  memo[ln[:id]] = DateTime.parse(ln[:created_at]).to_i
-                rescue ArgumentError
-                  Flapjack.logger.warn("error parsing notification :created_at ( #{ln.inspect} )")
-                end
-              end
-
-              latest_notification_id_time = notif_times.sort_by {|id, ti| ti}
-
-              last_notification = latest_notification_id_time.nil? ? nil :
-                latest_notifications.detect {|ln| latest_notification_id_time[0].eql?(ln[:id]) }
-
-              @states[check[:id]] = {
-                :condition     => current_state.nil? ? '-' : current_state[:condition],
-                :summary       => current_state.nil? ? '-' : current_state[:summary],
-                :last_changed  => render_state_duration(time, current_state, :created_at),
-                :last_updated  => render_state_duration(time, current_state, :updated_at),
-                :last_notified => render_state_duration(time, last_notification, :created_at),
-                :in_scheduled_maintenance => in_scheduled_maintenance,
-                :in_unscheduled_maintenance => in_unscheduled_maintenance
-              }
+            @states = @checks.each_with_object({}) do |check, memo|
+              memo[check.id] = check_state(check, included)
             end
           end
         end
@@ -297,86 +256,32 @@ module Flapjack
 
         @current_time = Time.now
 
-        # @check = Flapjack::Data::Check.find_by_id(check_id)
-        # halt(404, "Could not find check '#{check_id}'") if @check.nil?
+        @check = Flapjack::Diner.checks(check_id,
+                   :include => 'contacts,contacts.media,current_state,' \
+                               'latest_notifications,' \
+                               'current_scheduled_maintenances,' \
+                               'current_unscheduled_maintenance')
 
-    #     last_change = @check.states.last
-    #     last_update = @check.latest_notifications.last
+        halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
-    #     @check_last_change      = last_change ? last_change.timestamp : nil
+        included = Flapjack::Diner.context[:included]
 
-    #     @check_state            = last_update ? last_update.condition : nil
-    #     @check_last_update      = last_update ? last_update.timestamp : nil
-    #     @check_summary          = last_update ? last_update.summary   : nil
-    #     @check_details          = last_update ? last_update.details   : nil
-    #     @check_perfdata         = last_update ? last_update.perfdata  : nil
+        unless included.nil? || included.empty?
+          @state = check_extra_state(check, included)
+        end
 
-    #     @last_notifications = @check.latest_notifications.all.each_with_object({}) do |entry, memo|
-    #       t = Time.at(entry.timestamp)
-    #       memo[(entry.action || entry.condition).to_sym] = {
-    #         :time => t.to_s,
-    #         :relative => relative_time_ago(@current_time, t) + " ago",
-    #         :summary => entry.summary
-    #       }
-    #     end
+        # will only get first page of 20 records
+        @state_changes = Flapjack::Diner.check_links_states(check_id)
 
-    #     # # don't think this is needed any more
-    #     # @last_notifications[:acknowledgement] =
-    #     #   @check.states.intersect(:action => 'acknowledgement',
-    #     #                           :notified => true).last
+        @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check.ack_hash
 
-    #     @scheduled_maintenances = @check.scheduled_maintenances_by_start.all
-    #     @acknowledgement_id = if Flapjack::Data::Condition.healthy?(@check_state)
-    #       nil
-    #     else
-    #       @check.ack_hash
-    #     end
+        @contacts = included_records(check[:links], :contacts,
+          included, 'contact')
 
-    #     @current_scheduled_maintenance   = @check.scheduled_maintenance_at(@current_time)
-    #     @current_unscheduled_maintenance = @check.unscheduled_maintenance_at(@current_time)
+        # contact_ids = contacts.collect {|c| c[:id] }
 
-    #     Flapjack::Data::Contact.lock(Flapjack::Data::Medium,
-    #       Flapjack::Data::Rule, Flapjack::Data::Route) do
-
-    #       rule_ids_by_contact_id, route_ids_by_rule_id =
-    #         @check.rule_ids_and_route_ids
-
-    #       if rule_ids_by_contact_id.empty?
-    #         @contacts = []
-    #         @media_by_contact_id = {}
-    #       else
-    #         @contacts = Flapjack::Data::Contact.
-    #           intersect(:id => rule_ids_by_contact_id.keys).sort(:name).all
-
-    #         rule_ids = Set.new(rule_ids_by_contact_id.values.flatten)
-
-    #         if rule_ids.empty?
-    #           @media_by_contact_id = {}
-    #         else
-
-    #           media_ids_by_rule_id = Flapjack::Data::Rule.
-    #             intersect(:id => rule_ids).associated_ids_for(:media)
-
-    #           media_ids = Set.new(media_ids_by_rule_id.values.flatten)
-
-    #           if media_ids.empty?
-    #             @media_by_contact_id = {}
-    #           else
-    #             media_ids_by_contact_id = Flapjack::Data::Medium.
-    #               intersect(:id => media_ids).associated_ids_for(:contact)
-
-    #             @media_by_contact_id = @contacts.each_with_object({}) do |contact, memo|
-    #               m_ids = media_ids_by_contact_id[contact.id]
-    #               next if m_ids.nil? || m_ids.empty?
-    #               memo[contact.id] = Flapjack::Data::Medium.intersect(:id => m_ids).all
-    #             end
-    #           end
-    #         end
-    #       end
-        # end
-
-    #     @state_changes = @check.states.intersect_range(nil, @current_time.to_i,
-    #                        :desc => true, :limit => 20, :by_score => true).all
+        @contact_media = included_records(check[:links], :'contacts.media',
+          included, 'medium')
 
         erb 'check.html'.to_sym
       end
@@ -514,6 +419,102 @@ module Flapjack
       end
 
     private
+
+      def check_state(check, included)
+        current_state_id = check[:links][:current_state][:linkage][:id]
+
+        current_state = current_state_id.nil? ? nil : included.detect do |incl|
+           'state'.eql?(incl[:type]) && current_state_id.eql?(incl[:id])
+        end
+
+        current_state = included_records(check[:links], :current_state,
+          included, 'state')
+
+        latest_notifications = included_records(check[:links], :latest_notifications,
+          included, 'state')
+
+        in_scheduled_maintenance = !check[:links][:current_scheduled_maintenances][:linkage].nil? &&
+          !check[:links][:latest_notifications][:linkage].empty?
+
+        in_unscheduled_maintenance = !check[:links][:current_unscheduled_maintenance][:linkage].nil?
+
+        # get latest (by time) of the latest notifications
+        notif_times = latest_notifications.each_with_object({}) do |ln, memo|
+          begin
+            memo[ln[:id]] = DateTime.parse(ln[:created_at]).to_i
+          rescue ArgumentError
+            Flapjack.logger.warn("error parsing notification :created_at ( #{ln.inspect} )")
+          end
+        end
+
+        latest_notification_id_time = notif_times.sort_by {|id, ti| ti}
+
+        last_notification = latest_notification_id_time.nil? ? nil :
+          latest_notifications.detect {|ln| latest_notification_id_time[0].eql?(ln[:id]) }
+
+        {
+          :condition     => current_state.nil? ? '-' : current_state[:condition],
+          :summary       => current_state.nil? ? '-' : current_state[:summary],
+          :latest_notifications => (latest_notifications || []),
+          :last_changed  => render_state_duration(time, current_state, :created_at),
+          :last_updated  => render_state_duration(time, current_state, :updated_at),
+          :last_notified => render_state_duration(time, last_notification, :created_at),
+          :in_scheduled_maintenance => in_scheduled_maintenance,
+          :in_unscheduled_maintenance => in_unscheduled_maintenance
+        }
+      end
+
+      def check_extra_state(check, included)
+        state = check_state(check, included)
+
+        current_scheduled_maintenances = included_records(check[:links],
+          :current_scheduled_maintenances, included, 'scheduled_maintenance')
+
+        current_unscheduled_maintenance = included_records(check[:links],
+          :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
+
+        #     @last_notifications = @check.latest_notifications.all.each_with_object({}) do |entry, memo|
+        #       t = Time.at(entry.timestamp)
+        #       memo[(entry.action || entry.condition).to_sym] = {
+        #         :time => t.to_s,
+        #         :relative => relative_time_ago(@current_time, t) + " ago",
+        #         :summary => entry.summary
+        #       }
+        #     end
+
+        #     # # don't think this is needed any more
+        #     # @last_notifications[:acknowledgement] =
+        #     #   @check.states.intersect(:action => 'acknowledgement',
+        #     #                           :notified => true).last
+
+        state.merge(
+          :details       => current_state.nil? ? '-' : current_state[:details],
+          :perfdata      => current_state.nil? ? '-' : current_state[:perfdata],
+          :current_scheduled_maintenances => (current_scheduled_maintenances || []),
+          :current_unscheduled_maintenance => current_unscheduled_maintenance
+        )
+      end
+
+      def included_records(links, field, included, type)
+        return unless links.has_key?(field) && links[field].has_key?(:linkage) &&
+          !links[field][:linkage].nil?
+
+        if links[field][:linkage].is_a?(Array)
+          ids = links[field][:linkage].collect {|lr| lr[:id]}
+          return [] if ids.empty?
+
+          included.select do |incl|
+            type.eql?(incl[:type]) && ids.include?(incl[:id])
+          end
+        else
+          id = links[field][:linkage][:id]
+          return if id.nil?
+
+          included.detect do |incl|
+            type.eql?(incl[:type]) && id.eql?(incl[:id])
+          end
+        end
+      end
 
       def pagination_from_context(context)
         ((context || {})[:meta] || {})[:pagination]

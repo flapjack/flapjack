@@ -14,7 +14,7 @@ module Flapjack
 
               ids = resources_data.nil? ? [id] : resources_data.map {|d| d['id']}
 
-              klass.lock(*klass.jsonapi_locks(:delete)) do
+              klass.jsonapi_lock_method(:delete) do
                 if id.nil?
                   resources = klass.intersect(:id => ids)
                   halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size

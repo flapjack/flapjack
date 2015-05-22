@@ -14,6 +14,7 @@ module Flapjack
 
           def wrapped_params(options = {})
             result = params['data']
+
             if result.nil?
               return([nil, false]) if options[:allow_nil].is_a?(TrueClass)
               logger.debug("No 'data' object found in the supplied JSON:")
@@ -36,26 +37,30 @@ module Flapjack
 
           def wrapped_link_params(options = {})
             result = params['data']
+
+            assoc = options[:association]
+            number = assoc.number
+
             if result.nil?
-              return([nil, false]) if !options[:singular].nil? && options[:allow_nil].is_a?(TrueClass)
+              return([nil, false]) if :singular.eql?(number) && options[:allow_nil].is_a?(TrueClass)
               logger.debug("No 'data' object found in the following supplied JSON:")
               logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
               halt err(403, "No 'data' object received")
             end
 
-            if !options[:multiple].nil?
-              unless result.is_a?(Array) && result.all? {|r| options[:multiple][:data].jsonapi_type.eql?(r['type']) && !r['id'].nil? }
-
+            case number
+            when :multiple
+              unless result.is_a?(Array) && result.all? {|r| assoc.type.eql?(r['type']) && !r['id'].nil? }
                 halt(err(403, "Malformed data for multiple link endpoint"))
               end
               [result.map {|r| r[:id]}, false]
-            elsif !options[:singular].nil?
-              unless result.is_a?(Hash) && options[:singular][:data].jsonapi_type.eql?(result['type'])
+            when :singular
+              unless result.is_a?(Hash) && assoc.type.eql?(result['type'])
                 halt(err(403, "Malformed data for singular link endpoint"))
               end
               [[result[:id]], true]
             else
-              halt(err(403, "Invalid endpoint definition")) # should never happen -- remove?
+              halt(err(403, "Invalid endpoint definition"))
             end
           end
 

@@ -7,6 +7,7 @@ require 'zermelo/records/redis'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
@@ -85,40 +86,17 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:get]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :get   => [:instance_name, :created_at, :all_events, :ok_events,
-                     :failure_events, :action_events, :invalid_events],
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :get    => []
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:instance_name, :created_at, :all_events,
+                            :ok_events, :failure_events, :action_events,
+                            :invalid_events]
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => []
-          }
-        }
+        @jsonapi_associations ||= {}
       end
     end
   end

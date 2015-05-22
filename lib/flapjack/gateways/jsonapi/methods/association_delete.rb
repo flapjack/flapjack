@@ -15,7 +15,12 @@ module Flapjack
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               resource = resource_class.jsonapi_type.pluralize.downcase
 
-              multiple_links = resource_class.jsonapi_association_links(:read_write)[:multiple]
+              jsonapi_links = resource_class.jsonapi_association_links || {}
+
+              multiple_links = jsonapi_links.select {|n, jd|
+                 jd.writable && :multiple.eql?(jd.number)
+              }
+
               multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')
 
               unless multi_assocs.nil?
@@ -24,7 +29,7 @@ module Flapjack
                   single = resource.singularize
 
                   multiple_links.each_pair do |link_name, link_data|
-                    link_type = link_data[:type]
+                    link_type = link_data.type
 
                     swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
                       operation :delete do
@@ -76,14 +81,13 @@ module Flapjack
 
                   status 204
 
-                  multiple_klass = multiple_links[assoc_name.to_sym]
+                  assoc = multiple_links[assoc_name.to_sym]
 
-                  assoc_ids, _ = wrapped_link_params(:multiple => multiple_klass)
+                  assoc_ids, _ = wrapped_link_params(:association => assoc)
 
                   halt(err(403, 'No link ids')) if assoc_ids.empty?
 
-                  assoc_classes = [multiple_klass[:data]] + multiple_klass[:related]
-                  resource_class.lock(*assoc_classes) do
+                 resource_class.lock(*assoc.lock_klasses) do
                     resource_obj = resource_class.find_by_id!(resource_id)
                     assoc = resource_obj.send(assoc_name.to_sym)
                     associated = assoc.find_by_ids!(*assoc_ids)

@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+# FIXME report code should move to Flapjack::Diner
+
 require 'securerandom'
 
 require 'swagger/blocks'
@@ -7,8 +9,6 @@ require 'swagger/blocks'
 module Flapjack
   module Data
     class Report
-
-      include Swagger::Blocks
 
       class Outage
         attr_accessor :condition, :start_time, :end_time,
@@ -185,49 +185,20 @@ module Flapjack
          {:total_seconds => total_secs, :percentages => percentages}]
       end
 
-
       def self.jsonapi_type
         self.name.demodulize.underscore
       end
 
-      swagger_schema :Report do
-        # FIXME
-      end
-
       def self.jsonapi_methods
-        [:get]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :get => []
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :get    => [],
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => []
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => []
-          }
-        }
+        @jsonapi_associations ||= {}
       end
     end
   end

@@ -17,6 +17,8 @@ require 'flapjack/data/notification'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/gateways/jsonapi/data/join_descriptor'
+require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
@@ -164,39 +166,20 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:get]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :get => [:created_at, :updated_at, :condition, :action, :summary,
-                   :details, :perfdata]
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :get    => []
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:created_at, :updated_at, :condition, :action,
+                            :summary, :details, :perfdata]
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [:check],
-            :multiple => []
-          }
+        @jsonapi_associations ||= {
+          :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => false, :number => :singular,
+            :link => true, :include => true
+          )
         }
       end
 
@@ -223,35 +206,6 @@ module Flapjack
 
         return true
       end
-
-      # # previously implemented
-      # def status
-        # last_change   = @check.last_change
-        # last_update   = @check.last_update
-        # last_problem  = @check.latest_notifications.
-        #   intersect(:condition => Flapjack::Data::Condition.unhealthy.keys).first
-        # last_recovery = @check.latest_notifications.
-        #   intersect(:condition => Flapjack::Data::Condition.healthy.keys).first
-        # last_ack      = @check.latest_notifications.
-        #   intersect(:action => 'acknowledgement').first
-
-        # {'name'                              => @check.name,
-        #  'condition'                         => @check.condition,
-        #  'enabled'                           => @check.enabled,
-        #  'summary'                           => @check.summary,
-        #  'details'                           => @check.details,
-        #  'in_unscheduled_maintenance'        => @check.in_unscheduled_maintenance?,
-        #  'in_scheduled_maintenance'          => @check.in_scheduled_maintenance?,
-        #  'initial_failure_delay'             => @check.initial_failure_delay,
-        #  'repeat_failure_delay'              => @check.repeat_failure_delay,
-        #  'last_update'                       => last_update,
-        #  'last_change'                       => last_change   ? last_change.timestamp   : nil),
-        #  'last_problem_notification'         => (last_problem  ? last_problem.timestamp  : nil),
-        #  'last_recovery_notification'        => (last_recovery ? last_recovery.timestamp : nil),
-        #  'last_acknowledgement_notification' => (last_ack      ? last_ack.timestamp      : nil),
-        # }
-      # end
-
     end
   end
 end

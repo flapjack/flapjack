@@ -16,6 +16,16 @@ module Flapjack
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               if resource_class.jsonapi_methods.include?(:patch)
 
+                jsonapi_links = resource_class.jsonapi_association_links
+
+                singular_links = jsonapi_links.select {|n, jd|
+                  :singular.eql?(jd.number)
+                }
+
+                multiple_links = jsonapi_links.select {|n, jd|
+                  :multiple.eql?(jd.number)
+                }
+
                 resource = resource_class.jsonapi_type.pluralize.downcase
 
                 app.class_eval do
@@ -99,7 +109,7 @@ module Flapjack
 
                   ids = resources_data.map {|d| d['id']}
 
-                  resource_class.lock(*resource_class.jsonapi_locks(:patch)) do
+                  resource_class.jsonapi_lock_method(:patch) do
 
                     resources = if resource_id.nil?
                       resources = resource_class.find_by_ids!(*ids)
@@ -108,15 +118,18 @@ module Flapjack
                       [resource_class.find_by_id!(resource_id)]
                     end
 
-                    jsonapi_links = resource_class.jsonapi_association_links(:read_write)
-
-                    attributes = (resource_class.respond_to?(:jsonapi_attributes) ?
-                      resource_class.jsonapi_attributes[:patch] : nil) || []
+                    # FIXME can this move outside the lock?
+                    attributes = if resource_class.respond_to?(:jsonapi_methods)
+                      (resource_class.jsonapi_methods[:patch] || {}).attributes || []
+                    else
+                      []
+                    end
 
                     validate_data(resources_data, :attributes => attributes,
-                      :singular_links => jsonapi_links[:singular].keys,
-                      :multiple_links => jsonapi_links[:multiple].keys,
+                      :singular_links => singular_links.keys,
+                      :multiple_links => multiple_links.keys,
                       :klass => resource_class)
+                    # end query can move
 
                     resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
@@ -140,13 +153,13 @@ module Flapjack
                       links = d['links']
                       next if links.nil?
 
-                      jsonapi_links[:singular].each_pair do |assoc, assoc_klass|
+                      singular_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.id] ||= {}
-                        memo[r.id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['linkage']['id'])
+                        memo[r.id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['linkage']['id'])
                       end
 
-                      jsonapi_links[:multiple].each_pair do |assoc, assoc_klass|
+                      multiple_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         current_assoc_ids = r.send(assoc.to_sym).ids
                         memo[r.id] ||= {}
@@ -157,8 +170,8 @@ module Flapjack
                         to_add    = link_ids - current_assoc_ids
 
                         memo[r.id][assoc] = [
-                          to_remove.empty? ? [] : assoc_klass[:data].find_by_ids!(*to_remove),
-                          to_add.empty?    ? [] : assoc_klass[:data].find_by_ids!(*to_add)
+                          to_remove.empty? ? [] : assoc_klass.data_klass.find_by_ids!(*to_remove),
+                          to_add.empty?    ? [] : assoc_klass.data_klass.find_by_ids!(*to_add)
                         ]
                       end
                     end

@@ -14,10 +14,18 @@ module Flapjack
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
 
-              jsonapi_links = resource_class.jsonapi_association_links(:read_only, :read_write)
+              jsonapi_links = resource_class.jsonapi_association_links || {}
 
-              assocs       = jsonapi_links[:singular].empty? ? nil : jsonapi_links[:singular].keys.map(&:to_s).join('|')
-              multi_assocs = jsonapi_links[:multiple].empty? ? nil : jsonapi_links[:multiple].keys.map(&:to_s).join('|')
+              singular_links = jsonapi_links.select {|n, jd|
+                :singular.eql?(jd.number)
+              }
+
+              multiple_links = jsonapi_links.select {|n, jd|
+                :multiple.eql?(jd.number)
+              }
+
+              assocs = singular_links.empty? ? nil : singular_links.keys.map(&:to_s).join('|')
+              multi_assocs = multiple_links.empty? ? nil: multiple_links.keys.map(&:to_s).join('|')
 
               if assocs.nil?
                 assocs = multi_assocs
@@ -33,8 +41,8 @@ module Flapjack
                   # make it difficult to DRY things due to the different contexts in use
                   single = resource.singularize
 
-                  jsonapi_links[:singular].each_pair do |link_name, link_data|
-                    link_type = link_data[:type]
+                  singular_links.each_pair do |link_name, link_data|
+                    link_type = link_data.type
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"
@@ -90,8 +98,8 @@ module Flapjack
                     end
                   end
 
-                  jsonapi_links[:multiple].each_pair do |link_name, link_data|
-                    link_type = link_data[:type]
+                  multiple_links.each_pair do |link_name, link_data|
+                    link_type = link_data.type
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"
@@ -165,21 +173,22 @@ module Flapjack
 
                   status 200
 
-                  accessor, assoc_num = if jsonapi_links[:multiple].has_key?(assoc_name.to_sym)
-                    [:ids, :multiple]
-                  elsif jsonapi_links[:singular].has_key?(assoc_name.to_sym)
-                    [:id, :singular]
-                  else
-                    halt(err(404, 'Unknown association'))
+                  assoc = jsonapi_links[assoc_name.to_sym]
+
+                  halt(err(404, 'Unknown association')) if assoc.nil?
+
+                  accessor = case assoc.number
+                  when :multiple
+                    :ids
+                  when :singular
+                    :id
                   end
 
-                  assoc = jsonapi_links[assoc_num][assoc_name.to_sym]
-                  assoc_classes = [assoc[:data]] + assoc[:related]
-                  associated = resource_class.lock(*assoc_classes) do
+                  halt(err(404, 'Unknown association number type')) if accessor.nil?
+
+                  associated = resource_class.lock(*assoc.lock_klasses) do
                     resource_class.find_by_id!(resource_id).send(assoc_name.to_sym).send(accessor)
                   end
-
-                  assoc_type = assoc[:data].jsonapi_type
 
                   links = {
                     :self    => "#{request.base_url}/#{resource}/#{resource_id}/links/#{assoc_name}",
@@ -188,9 +197,9 @@ module Flapjack
 
                   data = case associated
                   when Array
-                    associated.map {|assoc_id| {:type => assoc_type, :id => assoc_id} }
+                    associated.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
                   when String
-                    {:type => assoc_type, :id => associated}
+                    {:type => assoc.type, :id => associated}
                   else
                     nil
                   end

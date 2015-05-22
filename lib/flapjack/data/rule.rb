@@ -12,6 +12,8 @@ require 'flapjack/data/route'
 require 'flapjack/data/time_restriction'
 
 require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/gateways/jsonapi/data/join_descriptor'
+require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
@@ -292,47 +294,36 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:post, :get, :patch, :delete]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :post  => [], # [:time_restrictions]
-          :get   => [:conditions_list], # [:time_restrictions]
-          :patch => []  # [:time_restrictions]
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :post   => [],
-          :get    => [],
-          :patch  => [],
-          :delete => [Flapjack::Data::Route, Flapjack::Data::Check]
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [] # [:time_restrictions]
+          ),
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:conditions_list] # [:time_restrictions]
+          ),
+          :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [] # [:time_restrictions]
+          ),
+          :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :lock_klasses => [Flapjack::Data::Route, Flapjack::Data::Check]
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => []
-          },
-          :read_write => {
-            :singular => [:contact],
-            :multiple => [:media, :tags]
-          }
+        @jsonapi_associations ||= {
+          :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :singular,
+            :link => true, :include => true
+          ),
+          :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :multiple,
+            :link => true, :include => true
+          ),
+          :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :multiple,
+            :link => true, :include => true
+          )
         }
       end
 

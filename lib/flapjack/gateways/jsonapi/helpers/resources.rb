@@ -35,28 +35,23 @@ module Flapjack
           end
 
           def jsonapi_linkages(klass, resource_ids, opts = {})
-            jsonapi_links = klass.jsonapi_association_links(:read_only, :read_write)
-            all_links = jsonapi_links[:singular].merge(jsonapi_links[:multiple])
-
-            all_links.each_with_object({}) do |(jl_name, jl_data), memo|
-              type = jl_data[:data].jsonapi_type
-
-              memo[jl_name] = if !opts[:resolve].nil? && opts[:resolve].include?(jl_name.to_s)
-                if jl_data[:is_association]
-                  data = resource_ids.empty? ? {} :
-                    klass.intersect(:id => resource_ids).associated_ids_for(jl_name)
-
-                  LinkedData.new(:name => jl_name, :type => type, :data => data)
+            klass.jsonapi_association_links.each_with_object({}) do |(jl_name, jl_data), memo|
+              memo[jl_name] = if opts[:resolve].nil? || !opts[:resolve].include?(jl_name.to_s)
+                nil
+              else
+                data = if resource_ids.empty?
+                  {}
                 else
-                  data = resource_ids.empty? ? {} :
-                    klass.intersect(:id => resource_ids).all.each_with_object({}) {|r, memo|
+                  id_rel = klass.intersect(:id => resource_ids)
+                  if jl_data.association_data.nil?
+                    id_rel.all.each_with_object({}) {|r, memo|
                       memo[r.id] = r.send(jl_name.to_sym)
                     }
-
-                  LinkedData.new(:name => jl_name, :type => type, :data => data)
+                  else
+                    id_rel.associated_ids_for(jl_name)
+                  end
                 end
-              else
-                nil
+                LinkedData.new(:name => jl_name, :type => jl_data.type, :data => data)
               end
             end
           end
@@ -68,8 +63,13 @@ module Flapjack
             incl   = options[:include] || []
             fields = options[:fields].nil? ? nil : options[:fields].map(&:to_sym)
 
-            whitelist = (klass.respond_to?(:jsonapi_attributes) ?
-              (klass.jsonapi_attributes[:get] || []) : []) | [:id]
+            whitelist = if klass.respond_to?(:jsonapi_methods)
+              (klass.jsonapi_methods[:get] || {}).attributes || []
+            else
+              []
+            end
+
+            whitelist |= [:id]
 
             jsonapi_fields = if fields.nil?
               whitelist
@@ -140,8 +140,12 @@ module Flapjack
           end
 
           def filter_params(klass, filter)
-            attributes = (klass.respond_to?(:jsonapi_attributes) ?
-              klass.jsonapi_attributes[:get] : nil) || []
+            attributes = if klass.respond_to?(:jsonapi_methods)
+              (klass.jsonapi_methods[:get] || {}).attributes || []
+            else
+              []
+            end
+
             attribute_types = klass.attribute_types
 
             string_attrs = [:id] + (attributes.select {|a|

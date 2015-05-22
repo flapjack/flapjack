@@ -157,40 +157,16 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:get]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :get => [:total_keys, :processed_events, :event_queue_length,
-                   :check_freshness, :check_counts]
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :get    => [],
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:total_keys, :processed_events, :event_queue_length,
+                            :check_freshness, :check_counts]
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => []
-          }
-        }
+        @jsonapi_associations ||= {}
       end
     end
   end

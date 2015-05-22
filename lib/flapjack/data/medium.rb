@@ -10,6 +10,8 @@ require 'flapjack/data/alert'
 require 'flapjack/data/check'
 
 require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/gateways/jsonapi/data/join_descriptor'
+require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
 
@@ -272,51 +274,44 @@ module Flapjack
       end
 
       def self.jsonapi_methods
-        [:post, :get, :patch, :delete]
-      end
-
-      def self.jsonapi_attributes
-        {
-          :post  => [:transport, :address, :interval, :rollup_threshold,
-                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration],
-          :get   => [:transport, :address, :interval, :rollup_threshold,
-                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration],
-          :patch => [:transport, :address, :interval, :rollup_threshold,
-                     :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration]
-        }
-      end
-
-      def self.jsonapi_extra_locks
-        {
-          :post   => [],
-          :get    => [],
-          :patch  => [],
-          :delete => [Flapjack::Data::Alert, Flapjack::Data::State,
-                      Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance]
-        }
-      end
-
-      # read-only by definition; singular & multiple hashes of
-      # method_name => [other classes to lock]
-      def self.jsonapi_linked_methods
-        {
-          :singular => {
-          },
-          :multiple => {
-          }
+        @jsonapi_methods ||= {
+          :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:transport, :address, :interval, :rollup_threshold,
+                            :pagerduty_subdomain, :pagerduty_token,
+                            :pagerduty_ack_duration]
+          ),
+          :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:transport, :address, :interval, :rollup_threshold,
+                            :pagerduty_subdomain, :pagerduty_token,
+                            :pagerduty_ack_duration]
+          ),
+          :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :attributes => [:transport, :address, :interval, :rollup_threshold,
+                            :pagerduty_subdomain, :pagerduty_token,
+                            :pagerduty_ack_duration]
+          ),
+          :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :lock_klasses => [Flapjack::Data::Alert, Flapjack::Data::State,
+                              Flapjack::Data::Check,
+                              Flapjack::Data::ScheduledMaintenance]
+          )
         }
       end
 
       def self.jsonapi_associations
-        {
-          :read_only => {
-            :singular => [],
-            :multiple => [:alerting_checks]
-          },
-          :read_write => {
-            :singular => [:contact],
-            :multiple => [:rules]
-          }
+        @jsonapi_associations ||= {
+          :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => false, :number => :multiple,
+            :link => true, :include => true
+          ),
+          :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :singular,
+            :link => true, :include => true
+          ),
+          :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :writable => true, :number => :multiple,
+            :link => true, :include => true
+          )
         }
       end
     end
