@@ -141,10 +141,8 @@ module Flapjack
                       current_assoc_ids = resource.send(assoc_name.to_sym).ids
                       to_remove = current_assoc_ids - assoc_ids
                       to_add    = assoc_ids - current_assoc_ids
-                      tr = to_remove.empty? ? [] : assoc.data_klass.find_by_ids!(*to_remove)
-                      ta = to_add.empty?    ? [] : assoc.data_klass.find_by_ids!(*to_add)
-                      resource.send(assoc_name.to_sym).delete(*tr) unless tr.empty?
-                      resource.send(assoc_name.to_sym).add(*ta) unless ta.empty?
+                      resource.send(assoc_name.to_sym).remove_ids(*to_remove) unless to_remove.empty?
+                      resource.send(assoc_name.to_sym).add_ids(*to_add) unless to_add.empty?
                     elsif :singular.eql?(assoc.number)
                       if assoc_ids.nil?
                         resource.send("#{assoc_name}=".to_sym, nil)

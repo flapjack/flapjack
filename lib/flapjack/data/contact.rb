@@ -51,7 +51,7 @@ module Flapjack
 
       def clear_rule_alerting_media(rule)
         rule.media.each do |medium|
-          medium.alerting_checks.delete(*medium.alerting_checks.all)
+          medium.alerting_checks.clear
         end
       end
 

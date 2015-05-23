@@ -56,10 +56,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
 
-    expect(rule_media).to receive(:add).with(medium)
+    expect(rule_media).to receive(:add_ids).with(medium.id)
     expect(rule).to receive(:media).and_return(rule_media)
 
     post "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
@@ -95,11 +93,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
 
     expect(rule_media).to receive(:ids).and_return([])
-    expect(rule_media).to receive(:add).with(medium)
+    expect(rule_media).to receive(:add_ids).with(medium.id)
     expect(rule).to receive(:media).twice.and_return(rule_media)
 
     patch "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
@@ -115,9 +111,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    expect(rule_media).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
-    expect(rule_media).to receive(:delete).with(medium)
+    expect(rule_media).to receive(:remove_ids).with(medium.id)
     expect(rule).to receive(:media).and_return(rule_media)
 
     delete "/rules/#{rule.id}/links/media", Flapjack.dump_json(:data => [{
@@ -133,10 +127,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
-      and_return([tag])
 
-    expect(rule_tags).to receive(:add).with(tag)
+    expect(rule_tags).to receive(:add_ids).with(tag.id)
     expect(rule).to receive(:tags).and_return(rule_tags)
 
     post "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{
@@ -174,11 +166,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
 
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
-    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).
-      and_return([tag])
 
     expect(rule_tags).to receive(:ids).and_return([])
-    expect(rule_tags).to receive(:add).with(tag)
+    expect(rule_tags).to receive(:add_ids).with(tag.id)
     expect(rule).to receive(:tags).twice.and_return(rule_tags)
 
     patch "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{
@@ -195,9 +185,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
       and_return(rule)
 
-    expect(rule_tags).to receive(:find_by_ids!).with(tag.id).
-      and_return([tag])
-    expect(rule_tags).to receive(:delete).with(tag)
+    expect(rule_tags).to receive(:remove_ids).with(tag.id)
     expect(rule).to receive(:tags).and_return(rule_tags)
 
     delete "/rules/#{rule.id}/links/tags", Flapjack.dump_json(:data => [{

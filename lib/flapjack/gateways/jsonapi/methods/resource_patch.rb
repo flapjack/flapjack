@@ -186,7 +186,7 @@ module Flapjack
                           to_remove = value.first
                           to_add    = value.last
 
-                          r.send(assoc.to_sym).delete(*to_remove) unless to_remove.empty?
+                          r.send(assoc.to_sym).remove(*to_remove) unless to_remove.empty?
                           r.send(assoc.to_sym).add(*to_add) unless to_add.empty?
                         else
                           r.send("#{assoc}=".to_sym, value)

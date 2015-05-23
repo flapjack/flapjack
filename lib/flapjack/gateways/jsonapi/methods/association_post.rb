@@ -90,8 +90,7 @@ module Flapjack
                     # Not checking for duplication on adding existing to a multiple
                     # association, the JSONAPI spec doesn't ask for it
                     resource_obj = resource_class.find_by_id!(resource_id)
-                    associated = assoc.data_klass.find_by_ids!(*assoc_ids)
-                    resource_obj.send(assoc_name.to_sym).add(*associated)
+                    resource_obj.send(assoc_name.to_sym).add_ids(*assoc_ids)
                   end
                 end
               end

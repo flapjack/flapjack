@@ -378,7 +378,7 @@ module Flapjack
 
         if sched_maint.start_time >= at_time
           # the scheduled maintenance period is in the future
-          self.scheduled_maintenances.delete(sched_maint)
+          self.scheduled_maintenances.remove(sched_maint)
           sched_maint.destroy
           return true
         elsif sched_maint.end_time >= at_time
@@ -513,7 +513,7 @@ module Flapjack
         end
 
         unless self.alerting_media.empty?
-          self.alerting_media.delete(*self.alerting_media)
+          self.alerting_media.remove(*self.alerting_media)
         end
       end
 

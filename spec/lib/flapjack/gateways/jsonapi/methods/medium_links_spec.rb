@@ -75,10 +75,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
 
-    expect(medium_rules).to receive(:add).with(rule)
+    expect(medium_rules).to receive(:add_ids).with(rule.id)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
     post "/media/#{medium.id}/links/rules", Flapjack.dump_json(
@@ -113,11 +111,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
 
     expect(medium_rules).to receive(:ids).and_return([])
-    expect(medium_rules).to receive(:add).with(rule)
+    expect(medium_rules).to receive(:add_ids).with(rule.id)
     expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
     patch "/media/#{medium.id}/links/rules", Flapjack.dump_json(
@@ -134,11 +130,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
 
     expect(medium_rules).to receive(:ids).and_return([rule.id])
-    expect(medium_rules).to receive(:delete).with(rule)
+    expect(medium_rules).to receive(:remove_ids).with(rule.id)
     expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
     patch "/media/#{medium.id}/links/rules", Flapjack.dump_json(
@@ -154,9 +148,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 
-    expect(medium_rules).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
-    expect(medium_rules).to receive(:delete).with(rule)
+    expect(medium_rules).to receive(:remove_ids).with(rule.id)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
     delete "/media/#{medium.id}/links/rules", Flapjack.dump_json(

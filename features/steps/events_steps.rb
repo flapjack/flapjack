@@ -254,7 +254,7 @@ When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
   rule = Flapjack::Data::Rule.find_by_id(rule_id)
   expect(rule).not_to be_nil
 
-  rule.contact.rules.delete(rule) unless rule.contact.nil?
+  rule.contact.rules.remove(rule) unless rule.contact.nil?
 
   rule.destroy
 end

@@ -360,7 +360,7 @@ module Flapjack
           latest_notif.intersect(:action => new_state.action).all
         end
         latest_notif.add(new_state)
-        latest_notif.delete(*notifications_to_remove) unless notifications_to_remove.empty?
+        latest_notif.remove(*notifications_to_remove) unless notifications_to_remove.empty?
 
         most_severe = check.most_severe
         most_severe_cond = most_severe.nil? ? nil :

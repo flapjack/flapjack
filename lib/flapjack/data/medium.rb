@@ -114,8 +114,8 @@ module Flapjack
         sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
         return if sched_maint_checks.empty?
 
-        # maybe delete_ids could be a thing?
-        self.alerting_checks.delete(*sched_maint_checks.all)
+        # remove_ids here (in before_read) leads to infinite callback recursion :(
+        self.alerting_checks.remove(*sched_maint_checks.all)
       end
 
       def self.jsonapi_type

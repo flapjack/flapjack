@@ -18,10 +18,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
 
-    expect(contact_media).to receive(:add).with(medium)
+    expect(contact_media).to receive(:add_ids).with(medium.id)
     expect(contact).to receive(:media).and_return(contact_media)
 
     post "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
@@ -57,11 +55,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
-    expect(Flapjack::Data::Medium).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
 
     expect(contact_media).to receive(:ids).and_return([])
-    expect(contact_media).to receive(:add).with(medium)
+    expect(contact_media).to receive(:add_ids).with(medium.id)
     expect(contact).to receive(:media).twice.and_return(contact_media)
 
     patch "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
@@ -77,9 +73,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
-    expect(contact_media).to receive(:find_by_ids!).with(medium.id).
-      and_return([medium])
-    expect(contact_media).to receive(:delete).with(medium)
+    expect(contact_media).to receive(:remove_ids).with(medium.id)
     expect(contact).to receive(:media).and_return(contact_media)
 
     delete "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
@@ -95,10 +89,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
 
-    expect(contact_rules).to receive(:add).with(rule)
+    expect(contact_rules).to receive(:add_ids).with(rule.id)
     expect(contact).to receive(:rules).and_return(contact_rules)
 
     post "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{
@@ -136,11 +128,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
-    expect(Flapjack::Data::Rule).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
 
     expect(contact_rules).to receive(:ids).and_return([])
-    expect(contact_rules).to receive(:add).with(rule)
+    expect(contact_rules).to receive(:add_ids).with(rule.id)
     expect(contact).to receive(:rules).twice.and_return(contact_rules)
 
     patch "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{
@@ -157,9 +147,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
       and_return(contact)
 
-    expect(contact_rules).to receive(:find_by_ids!).with(rule.id).
-      and_return([rule])
-    expect(contact_rules).to receive(:delete).with(rule)
+    expect(contact_rules).to receive(:remove_ids).with(rule.id)
     expect(contact).to receive(:rules).and_return(contact_rules)
 
     delete "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{

@@ -203,7 +203,7 @@ module Flapjack
           if this_notification_failure
             medium.alerting_checks << check
           elsif this_notification_ok
-            medium.alerting_checks.delete(check)
+            medium.alerting_checks.remove(check)
           end
 
           Flapjack.logger.debug {

@@ -9,7 +9,7 @@ GIT
 
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: 7ea8e0f57c8b21b72dc216eb93578428eaf2af92
+  revision: e25cd8b24d5993b6d6262322405cb2162ae7fbad
   branch: 16_zset_indices
   specs:
     zermelo (1.1.0)

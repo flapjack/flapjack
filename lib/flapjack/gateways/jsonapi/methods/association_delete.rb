@@ -87,11 +87,10 @@ module Flapjack
 
                   halt(err(403, 'No link ids')) if assoc_ids.empty?
 
-                 resource_class.lock(*assoc.lock_klasses) do
+                  resource_class.lock(*assoc.lock_klasses) do
                     resource_obj = resource_class.find_by_id!(resource_id)
                     assoc = resource_obj.send(assoc_name.to_sym)
-                    associated = assoc.find_by_ids!(*assoc_ids)
-                    assoc.delete(*associated)
+                    assoc.remove_ids(*assoc_ids)
                   end
                 end
               end
