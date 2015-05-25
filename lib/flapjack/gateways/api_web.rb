@@ -278,8 +278,6 @@ module Flapjack
         @contacts = included_records(check[:links], :contacts,
           included, 'contact')
 
-        # contact_ids = contacts.collect {|c| c[:id] }
-
         @contact_media = included_records(check[:links], :'contacts.media',
           included, 'medium')
 

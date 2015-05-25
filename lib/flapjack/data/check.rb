@@ -50,10 +50,12 @@ module Flapjack
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :checks, :after_add => :recalculate_routes,
         :after_remove => :recalculate_routes,
-        :related_class_names => ['Flapjack::Data::Rule', 'Flapjack::Data::Route']
+        :related_class_names => ['Flapjack::Data::Contact',
+          'Flapjack::Data::Rule', 'Flapjack::Data::Route']
 
       def recalculate_routes(*t)
         self.routes.destroy_all
+        self.contacts.clear
         return if self.tags.empty?
 
         # find all rules matching these tags
@@ -78,6 +80,11 @@ module Flapjack
         rule_ids = rule_tags_ids.keys | generic_rule_ids.to_a
 
         return if rule_ids.empty?
+
+        contact_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
+          associated_ids_for(:contact).values.reduce(:|) || []
+
+        self.contacts.add_ids(*contact_ids) unless contact_ids.empty?
 
         Flapjack::Data::Rule.intersect(:id => rule_ids).each do |r|
           route = Flapjack::Data::Route.new(:is_alerting => false,

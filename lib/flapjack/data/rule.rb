@@ -64,14 +64,19 @@ module Flapjack
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
         :inverse_of => :rules, :after_add => :tags_added,
         :after_remove => :tags_removed,
-        :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Route']
+        :related_class_names => ['Flapjack::Data::Contact',
+          'Flapjack::Data::Check', 'Flapjack::Data::Route']
 
       # NB when a rule is created, recalculate_routes should be called
-      # by the creating code if no tags are being added.
+      # by the creating code if no tags are being added. FIXME -- maybe do
+      # from an after_create hook just to be safe?
       #
       # TODO on change to conditions_list, update value for all routes
       def recalculate_routes
         self.routes.destroy_all
+
+        co = self.contact
+        contact_id = co.nil? ? nil : co.id
 
         route_for_check = proc {|c|
           route = Flapjack::Data::Route.new(:is_alerting => false,
@@ -80,6 +85,7 @@ module Flapjack
 
           self.routes << route
           c.routes << route
+          c.contacts.add_ids(contact_id) unless contact_id.nil?
         }
 
         if self.has_tags

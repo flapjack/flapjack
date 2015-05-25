@@ -271,11 +271,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag = Flapjack::Data::Tag.new(tag_data)
       tag.save!
 
-      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
-        Flapjack::Data::Rule, Flapjack::Data::Route) do
-
-        check.tags << tag
-      end
+      check.tags << tag
     end
 
     tear_down { default_tear_down }
@@ -307,11 +303,7 @@ Pact.provider_states_for "flapjack-diner" do
       tag_2 = Flapjack::Data::Tag.new(tag_2_data)
       tag_2.save!
 
-      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
-        Flapjack::Data::Rule, Flapjack::Data::Route) do
-
-        check.tags.add(tag, tag_2)
-      end
+      check.tags.add(tag, tag_2)
     end
 
     tear_down { default_tear_down }
@@ -328,12 +320,7 @@ Pact.provider_states_for "flapjack-diner" do
       check_2 = Flapjack::Data::Check.new(check_2_data)
       check_2.save!
 
-      Flapjack::Data::Check.lock(Flapjack::Data::Tag,
-        Flapjack::Data::Rule, Flapjack::Data::Route) do
-
-        tag.checks.add(check, check_2)
-
-      end
+      tag.checks.add(check, check_2)
     end
 
     tear_down { default_tear_down }

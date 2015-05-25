@@ -12,8 +12,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it "creates a check" do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -55,8 +55,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'creates two checks' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -118,8 +118,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'creates a link to a tag along with a check' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -513,8 +513,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'disables a check' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).
@@ -535,8 +535,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it 'disables two checks' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
@@ -562,8 +562,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   it "replaces the tags for a check" do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::Tag,
-           Flapjack::Data::Rule, Flapjack::Data::Route,
-           Flapjack::Data::UnscheduledMaintenance).
+           Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route, Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_id!).

@@ -15,7 +15,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'adds a check to a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+      with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
@@ -32,7 +32,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'lists checks for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+      with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route).and_yield
 
     expect(tag_checks).to receive(:ids).and_return([check.id])
@@ -54,7 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'updates checks for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+      with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
@@ -72,7 +72,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'deletes a check from a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Rule,
+      with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
@@ -89,7 +89,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'adds a rule to a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Rule, Flapjack::Data::Check, Flapjack::Data::Contact,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
@@ -106,7 +106,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'lists rules for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Rule, Flapjack::Data::Check, Flapjack::Data::Contact,
            Flapjack::Data::Route).and_yield
 
     expect(tag_rules).to receive(:ids).and_return([rule.id])
@@ -128,7 +128,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'updates rules for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Rule, Flapjack::Data::Check, Flapjack::Data::Contact,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
@@ -146,7 +146,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   it 'deletes a rule from a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Rule, Flapjack::Data::Check, Flapjack::Data::Contact,
            Flapjack::Data::Route).and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
