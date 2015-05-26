@@ -35,14 +35,14 @@
     <% if @alert.summary %>
       <tr>
         <td><strong>Summary</strong></td>
-        <td><%= @alert.summary %></td>
+        <td><pre><%= @alert.summary %></pre></td>
       </tr>
     <% end %>
 
     <% if @alert.details %>
       <tr>
         <td><strong>Details</strong></td>
-        <td><%= @alert.details %></td>
+        <td><pre><%= @alert.details %></pre></td>
       </tr>
     <% end %>
 
@@ -70,7 +70,7 @@
     <% if @alert.last_summary %>
       <tr>
         <td><strong>Previous Summary</strong></td>
-        <td><%= @alert.last_summary %></td>
+        <td><pre><%= @alert.last_summary %></pre></td>
       </tr>
     <% end %>
 

@@ -1,0 +1,8 @@
+
+div.check_summary {
+    /* The div used to display the check summaries.
+       We assume that the check output may contain newlines, which we want to preserve,
+       but we also want wrapping when required by the layout.
+    */
+    white-space: pre-line; /* Like pre, except it also wraps when necessary, and collapses consecutive whitespace */
+}
