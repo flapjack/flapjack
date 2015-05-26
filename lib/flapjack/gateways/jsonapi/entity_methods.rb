@@ -105,9 +105,7 @@ module Flapjack
                   if 'name'.eql?(property)
                     name = entity.name
                     if name != value
-                      existing = Flapjack::Data::Entity.find_by_name(value, :redis => redis)
-                      Flapjack::Data::Entity.send(existing.nil? ? :rename : :merge,
-                        name, value, :redis => redis)
+                      Flapjack::Data::Entity.merge(name, value, :redis => redis)
                     end
                   end
                 when 'add'

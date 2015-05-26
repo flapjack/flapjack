@@ -223,8 +223,6 @@ describe Flapjack::Data::Entity, :redis => true do
                                    :redis       => @redis)
     end
 
-    context 'check that rename and merge are called by add'
-
     context 'entity renaming on #add' do
 
       let(:time_i) { Time.now.to_i }
@@ -279,6 +277,9 @@ describe Flapjack::Data::Entity, :redis => true do
       end
 
       it 'renames stored check state changes' do
+        data = {'state' => 'critical', 'last_change' => time_i.to_s, 'last_update' => time_i.to_s}
+        @redis.mapped_hmset('check:name1:PING', data)
+
         @redis.rpush('name1:PING:states', time_i)
         @redis.set("name1:PING:#{time_i}:state", 'critical')
         @redis.set("name1:PING:#{time_i}:summary", 'bad')
@@ -409,6 +410,9 @@ describe Flapjack::Data::Entity, :redis => true do
       end
 
       it 'renames stored notifications' do
+        data = {'state' => 'critical', 'last_change' => time_i.to_s, 'last_update' => time_i.to_s}
+        @redis.mapped_hmset('check:name1:PING', data)
+
         @redis.lpush('name1:PING:problem_notifications', time_i)
         @redis.lpush('name1:PING:unknown_notifications', time_i - 100)
         @redis.lpush('name1:PING:warning_notifications', time_i - 50)

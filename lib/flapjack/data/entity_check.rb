@@ -929,7 +929,7 @@ module Flapjack
       alias_method :tags, :tags_with_entity_and_check_name
 
       def ack_hash
-        @ack_hash ||= @redis.hget('check_hashes_by_id', @key)
+        @ack_hash ||= @redis.hget('checks_by_hash', @key)
         if @ack_hash.nil?
           sha1 = Digest::SHA1.new
           @ack_hash = Digest.hexencode(sha1.digest(@key))[0..7].downcase
