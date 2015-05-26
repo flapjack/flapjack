@@ -933,7 +933,10 @@ module Flapjack
         if @ack_hash.nil?
           sha1 = Digest::SHA1.new
           @ack_hash = Digest.hexencode(sha1.digest(@key))[0..7].downcase
-          @redis.hset("checks_by_hash", @ack_hash, @key)
+          @redis.multi do |r|
+            r.hset("checks_by_hash", @ack_hash, @key)
+            r.hset("check_hashes_by_id", @key, @ack_hash)
+          end
         end
         @ack_hash
       end
