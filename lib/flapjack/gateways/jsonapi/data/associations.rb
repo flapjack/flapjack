@@ -37,7 +37,7 @@ module Flapjack
               return @jsonapi_association_links unless @jsonapi_association_links.nil?
 
               # SMELL mucking about with a zermelo protected method...
-              self.with_association_data do |assoc_data|
+              self.send(:with_association_data) do |assoc_data|
                 assoc_data.each_pair do |name, data|
                   ja = jsonapi_associations[name.to_sym]
                   next if ja.nil?
