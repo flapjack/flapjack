@@ -42,19 +42,44 @@ module Flapjack
       has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
 
+      # TODO minimise number of reads of this association
       has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :alerting_media, :before_read => :remove_checks_in_sched_maint,
         :related_class_names => ['Flapjack::Data::ScheduledMaintenance']
+
+      # acked checks remove themselves from alerting at the time of ack, not
+      # as easy to do when scheduled maintenance ticks over
+      def self.remove_checks_in_sched_maint(medium_id)
+        time = Time.now
+
+        start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
+        end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
+
+        check_ids_by_sched_maint_ids = Flapjack::Data::ScheduledMaintenance.
+          intersect(:start_time => start_range, :end_time => end_range).
+          associated_ids_for(:check)
+
+        sched_maint_check_ids = Set.new(check_ids_by_sched_maint_ids.values.flatten(1))
+
+        return if sched_maint_check_ids.empty?
+
+        sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
+        return if sched_maint_checks.empty?
+
+        medium = Flapjack::Data::Medium.find_by_id!(medium_id)
+        # remove_ids here (in before_read) leads to infinite callback recursion :(
+        medium.alerting_checks.remove(*sched_maint_checks.all)
+      end
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
 
       belongs_to :last_state, :class_name => 'Flapjack::Data::State',
         :inverse_of => :latest_media, :after_clear => :destroy_state
 
-      def destroy_state(st)
+      def self.destroy_state(medium_id, st_id)
         # won't be deleted if still referenced elsewhere -- see the State
         # before_destroy callback
-        st.destroy
+        Flapjack::Data::State.intersect(:id => st_id).destroy_all
       end
 
       index_by :transport
@@ -94,29 +119,6 @@ module Flapjack
       end
 
       validates_with Flapjack::Data::Validators::IdValidator
-
-      # acked checks remove themselves from alerting at the time of ack, not
-      # as easy to do when scheduled maintenance ticks over
-      def remove_checks_in_sched_maint
-        time = Time.now
-
-        start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
-        end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
-
-        check_ids_by_sched_maint_ids = Flapjack::Data::ScheduledMaintenance.
-          intersect(:start_time => start_range, :end_time => end_range).
-          associated_ids_for(:check)
-
-        sched_maint_check_ids = Set.new(check_ids_by_sched_maint_ids.values.flatten(1))
-
-        return if sched_maint_check_ids.empty?
-
-        sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
-        return if sched_maint_checks.empty?
-
-        # remove_ids here (in before_read) leads to infinite callback recursion :(
-        self.alerting_checks.remove(*sched_maint_checks.all)
-      end
 
       def self.jsonapi_type
         self.name.demodulize.underscore

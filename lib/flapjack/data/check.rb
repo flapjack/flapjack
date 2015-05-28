@@ -48,12 +48,16 @@ module Flapjack
       # TODO verify that callbacks are called no matter which side
       # of the association fires the initial event
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :checks, :after_add => :recalculate_routes,
-        :after_remove => :recalculate_routes,
+        :inverse_of => :checks, :after_add => :changed_tags,
+        :after_remove => :changed_tags,
         :related_class_names => ['Flapjack::Data::Contact',
           'Flapjack::Data::Rule', 'Flapjack::Data::Route']
 
-      def recalculate_routes(*t)
+      def self.changed_tags(check_id, *t_ids)
+        Flapjack::Data::Check.find_by_id!(check_id).recalculate_routes
+      end
+
+      def recalculate_routes
         self.routes.destroy_all
         self.contacts.clear
         return if self.tags.empty?
@@ -115,10 +119,10 @@ module Flapjack
         :key => :created_at, :order => :desc, :inverse_of => :latest_notifications_check,
         :after_remove => :destroy_states
 
-      def destroy_states(*st)
-        # won't be deleted if still referenced elsewhere -- see the State
+      def self.destroy_states(check_id, *st_ids)
+        # states won't be deleted if still referenced elsewhere -- see the State
         # before_destroy callback
-        st.map(&:destroy)
+        Flapjack::Data::State.intersect(:id => st_ids).destroy_all
       end
 
       has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',

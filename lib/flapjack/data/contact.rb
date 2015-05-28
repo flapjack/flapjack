@@ -46,11 +46,14 @@ module Flapjack
 
       has_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :contact, :after_remove => :clear_rule_alerting_media,
-        :related_class_names => ['Flapjack::Data::Medium', 'Flapjack::Data::Check',
-          'Flapjack::Data::ScheduledMaintenance']
+        :related_class_names => ['Flapjack::Data::Medium',
+          'Flapjack::Data::Check', 'Flapjack::Data::ScheduledMaintenance']
 
-      def clear_rule_alerting_media(rule)
-        rule.media.each do |medium|
+      def self.clear_rule_alerting_media(contact_id, *r_ids)
+        media_ids = Flapjack::Data::Rule.intersect(:id => r_ids).
+          associated_ids_for(:media).values.reduce(:|)
+
+        Flapjack::Data::Medium.intersect(:id => media_ids).each do |medium|
           medium.alerting_checks.clear
         end
       end
@@ -71,17 +74,6 @@ module Flapjack
         return nil if self.timezone.nil?
         ActiveSupport::TimeZone[self.timezone]
       end
-
-      # FIXME update associations dynamically in the recalculate_routes methods
-      # def checks
-      #   route_ids_by_rule_id = self.rules.associated_ids_for(:routes)
-      #   route_ids = route_ids_by_rule_id.values.reduce(&:|)
-
-      #   check_ids = Flapjack::Data::Route.intersect(:id => route_ids).
-      #     associated_ids_for(:checks).values.reduce(:|)
-
-      #   Flapjack::Data::Check.intersect(:id => check_ids)
-      # end
 
       def self.jsonapi_type
         self.name.demodulize.underscore

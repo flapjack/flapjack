@@ -26,10 +26,10 @@ module Flapjack
       has_one :state, :class_name => 'Flapjack::Data::State',
         :inverse_of => :notification, :after_clear => :destroy_state
 
-      def destroy_state(st)
+      def self.destroy_state(notification_id, st_id)
         # won't be deleted if still referenced elsewhere -- see the State
         # before_destroy callback
-        st.destroy
+        Flapjack::Data::State.intersect(:id => st_id).destroy_all
       end
 
       validates :severity,

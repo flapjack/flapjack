@@ -30,8 +30,10 @@ module Flapjack
         :after_add => :changed_checks, :after_remove => :changed_checks,
         :related_class_names => ['Flapjack::Data::Contact', 'Flapjack::Data::Rule', 'Flapjack::Data::Route']
 
-      def changed_checks(*cs)
-        cs.each {|check| check.recalculate_routes }
+      def self.changed_checks(tag_id, *ch_ids)
+        Flapjack::Data::Check.intersect(:id => ch_ids).each do |check|
+          check.recalculate_routes
+        end
       end
 
       has_and_belongs_to_many :rules,
@@ -39,8 +41,10 @@ module Flapjack
         :after_add => :changed_rules, :after_remove => :changed_rules,
         :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Contact', 'Flapjack::Data::Route']
 
-      def changed_rules(*rs)
-        rs.each {|rule| rule.recalculate_routes }
+      def self.changed_rules(tag_id, *r_ids)
+        Flapjack::Data::Rule.intersect(:id => r_ids).each do |rule|
+          rule.recalculate_routes
+        end
       end
 
       unique_index_by :name

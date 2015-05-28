@@ -50,15 +50,17 @@ module Flapjack
         self.routes.destroy_all
       end
 
-      def has_some_media(*m)
-        self.has_media = true
-        self.save
+      def self.has_some_media(rule_id, *m)
+        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
+        rule.has_media = true
+        rule.save!
       end
 
-      def has_no_media(*m)
-        return unless self.media.empty?
-        self.has_media = false
-        self.save
+      def self.has_no_media(rule_id, *m)
+        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
+        return unless rule.media.empty?
+        rule.has_media = false
+        rule.save!
       end
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
@@ -105,16 +107,18 @@ module Flapjack
         end
       end
 
-      def tags_added(*t)
-        self.has_tags = true
-        recalculate_routes
-        self.save
+      def self.tags_added(rule_id, *t_ids)
+        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
+        rule.has_tags = true
+        rule.recalculate_routes
+        rule.save!
       end
 
-      def tag_removed(*t)
-        self.has_tags = self.tags.empty?
-        recalculate_routes
-        self.save
+      def self.tags_removed(rule_id, *t_ids)
+        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
+        rule.has_tags = rule.tags.empty?
+        rule.recalculate_routes
+        rule.save!
       end
 
       has_many :routes, :class_name => 'Flapjack::Data::Route',
