@@ -243,7 +243,7 @@ module Flapjack
 
           unless included.nil? || included.empty?
             @states = @checks.each_with_object({}) do |check, memo|
-              memo[check.id] = check_state(check, included)
+              memo[check[:id]] = check_state(check, included, time)
             end
           end
         end
@@ -267,98 +267,79 @@ module Flapjack
         included = Flapjack::Diner.context[:included]
 
         unless included.nil? || included.empty?
-          @state = check_extra_state(check, included)
+          @state = check_extra_state(@check, included, @current_time)
         end
 
         # will only get first page of 20 records
-        @state_changes = Flapjack::Diner.check_links_states(check_id)
+        @state_changes = Flapjack::Diner.checks_link_states(check_id)
 
-        @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check.ack_hash
+        @scheduled_maintenances = Flapjack::Diner.checks_link_scheduled_maintenances(check_id)
 
-        @contacts = included_records(check[:links], :contacts,
+        @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check[:ack_hash]
+
+        @contacts = included_records(@check[:links], :contacts,
           included, 'contact')
 
-        @contact_media = included_records(check[:links], :'contacts.media',
+        @contact_media = included_records(@check[:links], :'contacts.media',
           included, 'medium')
 
         erb 'check.html'.to_sym
       end
 
-    #   post "/unscheduled_maintenances/checks/:id" do
-    #     check_id           = params[:id]
-    #     summary            = params[:summary]
-    #     acknowledgement_id = params[:acknowledgement_id]
+      post "/unscheduled_maintenances" do
+        summary  = params[:summary]
+        check_id = params[:check_id]
 
-    #     dur = ChronicDuration.parse(params[:duration] || '')
-    #     duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
+        dur = ChronicDuration.parse(params[:duration] || '')
+        duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-    #     check = Flapjack::Data::Check.find_by_id(check_id)
-    #     halt(404, "Could not find check '#{check_id}'") if check.nil?
+        # FIXME link to check in same operation
+        Flapjack::Diner.create_unscheduled_maintenances(:summary => summary,
+          :end_time => (Time.now + duration))
 
-    #     ack = Flapjack::Data::Event.create_acknowledgements(
-    #       config['processor_queue'] || 'events',
-    #       [check],
-    #       :summary => (summary || ''),
-    #       :acknowledgement_id => acknowledgement_id,
-    #       :duration => duration,
-    #     )
+        # FIXME error if above operation failed
 
-    #     redirect back
-    #   end
+        redirect back
+      end
 
-    #   patch '/unscheduled_maintenances/checks/:id' do
-    #     check_id  = params[:id]
+      patch '/unscheduled_maintenances/:id' do
+        unscheduled_maintenance_id = params[:id]
 
-    #     check = Flapjack::Data::Check.find_by_id(check_id)
-    #     halt(404, "Could not find check '#{check_id}'") if check.nil?
+        Flapjack::Diner.update_unscheduled_maintenances(
+          unscheduled_maintenance_id, :end_time => Time.now)
 
-    #     check.clear_unscheduled_maintenance(Time.now.to_i)
+        # FIXME error if above operation failed
 
-    #     redirect back
-    #   end
+        redirect back
+      end
 
-    #   # create scheduled maintenance
-    #   post '/scheduled_maintenances/checks/:id' do
-    #     check_id  = params[:id]
+      post '/scheduled_maintenances' do
+        check_id  = params[:check_id]
 
-    #     start_time = Chronic.parse(params[:start_time]).to_i
-    #     raise ArgumentError, "start time parsed to zero" unless start_time > 0
-    #     duration   = ChronicDuration.parse(params[:duration])
-    #     summary    = params[:summary]
+        start_time = Chronic.parse(params[:start_time]).to_i
+        raise ArgumentError, "start time parsed to zero" unless start_time > 0
+        duration   = ChronicDuration.parse(params[:duration])
+        summary    = params[:summary]
 
-    #     check = Flapjack::Data::Check.find_by_id(check_id)
-    #     halt(404, "Could not find check '#{check_id}'") if check.nil?
+        # FIXME link to check in same operation
+        Flapjack::Diner.create_scheduled_maintenance(check_id,
+          :summary => summary, :start_time => start_time,
+          :end_time => (Time.now + duration))
 
-    #     sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => start_time,
-    #       :end_time => start_time + duration, :summary => summary)
-    #     sched_maint.save
-    #     check.scheduled_maintenances << sched_maint
+        # FIXME error if above operation failed
 
-    #     redirect back
-    #   end
+        redirect back
+      end
 
-    #   # delete a scheduled maintenance
-    #   delete '/scheduled_maintenances/checks/:id' do
-    #     check_id  = params[:id]
+      delete '/scheduled_maintenances/:id' do
+        scheduled_maintenance_id = params[:id]
 
-    #     # TODO better error checking on this param?
-    #     start_time = Time.parse(params[:start_time])
+        Flapjack::Diner.delete_scheduled_maintenances(scheduled_maintenance_id)
 
-    #     check = Flapjack::Data::Check.find_by_id(check_id)
-    #     halt(404, "Could not find check '#{check_id}'") if check.nil?
+        # FIXME error if above operation failed
 
-    #     # TODO maybe intersect_range should auto-coerce for timestamp fields?
-    #     # (actually, this should just pass sched maint ID in now that it can)
-    #     sched_maints = check.scheduled_maintenances_by_start.
-    #       intersect_range(start_time.to_i, start_time.to_i, :by_score => true).all
-    #     halt(404, "No scheduled maintenance periods found") if sched_maints.empty?
-
-    #     sched_maints.each do |sched_maint|
-    #       check.end_scheduled_maintenance(sched_maint, Time.now)
-    #     end
-
-    #     redirect back
-    #   end
+        redirect back
+      end
 
       get '/contacts' do
         opts = {}
@@ -382,18 +363,18 @@ module Flapjack
       get "/contacts/:id" do
         contact_id = params[:id]
 
-        @contact = Flapjack::Diner.contacts(contact_id, :include => 'media')
+        @contact = Flapjack::Diner.contacts(contact_id, :include => 'checks,media')
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
         context = Flapjack::Diner.context
-        @media = context[:included] unless context.nil?
 
-        # check_refs = Flapjack::Diner.contacts_link_checks(contact_id)
-        # unless check_refs.nil?
-          # check_ids  =
-        # end
+        unless context.nil?
+          @checks = included_records(@contact[:links], :checks,
+            included, 'check')
 
-        @checks = []
+          @media = included_records(check[:links], :'media',
+            included, 'medium')
+        end
 
         erb 'contact.html'.to_sym
       end
@@ -418,7 +399,7 @@ module Flapjack
 
     private
 
-      def check_state(check, included)
+      def check_state(check, included, time)
         current_state_id = check[:links][:current_state][:linkage][:id]
 
         current_state = current_state_id.nil? ? nil : included.detect do |incl|
@@ -462,8 +443,8 @@ module Flapjack
         }
       end
 
-      def check_extra_state(check, included)
-        state = check_state(check, included)
+      def check_extra_state(check, included, time)
+        state = check_state(check, included, time)
 
         current_scheduled_maintenances = included_records(check[:links],
           :current_scheduled_maintenances, included, 'scheduled_maintenance')
@@ -471,25 +452,26 @@ module Flapjack
         current_unscheduled_maintenance = included_records(check[:links],
           :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
 
-        #     @last_notifications = @check.latest_notifications.all.each_with_object({}) do |entry, memo|
-        #       t = Time.at(entry.timestamp)
-        #       memo[(entry.action || entry.condition).to_sym] = {
-        #         :time => t.to_s,
-        #         :relative => relative_time_ago(@current_time, t) + " ago",
-        #         :summary => entry.summary
-        #       }
-        #     end
+        latest_notifications = state[:latest_notifications]
 
-        #     # # don't think this is needed any more
-        #     # @last_notifications[:acknowledgement] =
-        #     #   @check.states.intersect(:action => 'acknowledgement',
-        #     #                           :notified => true).last
+        lat_not = latest_notifications.each_with_object({}) do |ln, memo|
+          memo[ln[:action] || ln[:condition].to_sym] = {
+            :time     => ln[:created_at],
+            :relative =>  relative_time_ago(time,
+                            DateTime.parse(ln[:created_at])) + " ago",
+            :summary  => ln[:summary]
+          }
+        end
+
+        current_state = included_records(check[:links], :current_state,
+          included, 'state')
 
         state.merge(
           :details       => current_state.nil? ? '-' : current_state[:details],
           :perfdata      => current_state.nil? ? '-' : current_state[:perfdata],
           :current_scheduled_maintenances => (current_scheduled_maintenances || []),
-          :current_unscheduled_maintenance => current_unscheduled_maintenance
+          :current_unscheduled_maintenance => current_unscheduled_maintenance,
+          :latest_notifications => lat_not
         )
       end
 
