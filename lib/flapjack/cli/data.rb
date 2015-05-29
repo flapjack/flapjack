@@ -51,7 +51,7 @@ module Flapjack
         source_entity_id = @options[:source]
         dest_entity_id = @options[:destination]
 
-        [source_entity_name, dest_entity_name] = [source_entity_id, source_entity_id].collect do |e_id|
+        source_entity_name, dest_entity_name = [source_entity_id, source_entity_id].collect do |e_id|
           entity = Flapjack::Data::Entity.find_by_id(e_id, :redis => redis)
           raise "No entity found with id #{en}" if entity.nil?
           entity.name
