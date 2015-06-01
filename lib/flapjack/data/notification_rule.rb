@@ -128,7 +128,7 @@ module Flapjack
         @entities.include?(event_entity)
       end
 
-      # If the rule has any regex_entities, then at least one of them must match the
+      # If the rule has any regex_entities, then all of them must match the
       # event's entity
       def match_regex_entities?(event_id)
         return true unless @regex_entities && @regex_entities.length > 0
@@ -137,7 +137,7 @@ module Flapjack
         @regex_entities.each do |regex_entity|
           matches += 1 if /#{regex_entity}/ === event_entity
         end
-        matches >= 1
+        matches >= @regex_entities.length
       end
 
       # If the rule has any tags, then they must all be present in the

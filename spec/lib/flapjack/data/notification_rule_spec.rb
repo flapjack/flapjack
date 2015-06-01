@@ -49,7 +49,7 @@ describe Flapjack::Data::NotificationRule, :redis => true do
      :tags               => [],
      :regex_tags         => ["^data.*$","^(physical|bare_metal)$"],
      :entities           => [],
-     :regex_entities     => ['^foo-\S{3}-\d{2}.example.com$','^bar-\S{3}.example.com'],
+     :regex_entities     => ['^foo-\S{3}-\d{2}.example.com$','.*abc.*'],
      :time_restrictions  => [ weekdays_8_18 ],
      :unknown_media      => [],
      :warning_media      => ["email"],
@@ -129,11 +129,11 @@ describe Flapjack::Data::NotificationRule, :redis => true do
   it "checks whether entity names match a regex" do
     rule = existing_regex_rule
 
-    expect(rule.match_regex_entities?('foo-app-01.example.com')).to be true
-    expect(rule.match_regex_entities?('foo-app-11.example.com')).to be true
-    expect(rule.match_regex_entities?('foo-other.example.com')).to be false
-    expect(rule.match_regex_entities?('bar-app.example.com')).to be true
-    expect(rule.match_regex_entities?('bar-other.example.com')).to be false
+    expect(rule.match_regex_entities?('foo-abc-01.example.com')).to be true
+    expect(rule.match_regex_entities?('foo-abc-99.example.com')).to be true
+    expect(rule.match_regex_entities?('foo-app-01.example.com')).to be false # does not match second regexp_entities
+    expect(rule.match_regex_entities?('foo-abc.example.com')).to be false
+    expect(rule.match_regex_entities?('bar-abc-01.example.com')).to be false
 
     expect(existing_empty_rule.match_regex_entities?('anything.example.com')).to be true
   end
