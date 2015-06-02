@@ -129,6 +129,8 @@ module Flapjack
                   end
                 end
 
+                # FIXME return 400 if any 'include' param path not recognised
+
                 app.get %r{^/#{resource}(?:/(.+))?$} do
                   resource_id = params[:captures].nil? ? nil :
                                   params[:captures].first
@@ -143,25 +145,30 @@ module Flapjack
                       paginate_get(scoped, :page => params[:page],
                         :per_page => params[:per_page])
                     else
-                      [[resource_class.find_by_id!(resource_id)], {}, {}]
+                      [resource_class.intersect(:id => resource_id), {}, {}]
                     end
 
                     links[:self] = request_url
 
                     json_data[:links] = links
                     if resources.empty?
-                      json_data[:data] = []
+                      if resource_id.nil?
+                        json_data[:data] = []
+                      else
+                        halt(404)
+                      end
                     else
                       fields = params[:fields].nil?  ? nil : params[:fields].split(',')
                       incl   = params[:include].nil? ? nil : params[:include].split(',')
-                      data, included = as_jsonapi(resource_class, resource_class.jsonapi_type,
-                                                  resource, resources,
-                                                  (resource_id.nil? ? resources.map(&:id) : [resource_id]),
-                                                  :fields => fields, :include => incl,
-                                                  :unwrap => !resource_id.nil?)
-
-                      json_data[:data] = data
-                      json_data[:included] = included unless included.nil? || included.empty?
+                      d = as_jsonapi(resource_class, resource_class.jsonapi_type,
+                                     resource, resources,
+                                     (resource_id.nil? ? resources.ids : [resource_id]),
+                                     :fields => fields, :include => incl,
+                                     :unwrap => !resource_id.nil?)
+                      json_data[:data] = d[:data]
+                      unless d[:included].nil? || d[:included].empty?
+                        json_data[:included] = d[:included]
+                      end
                       json_data[:meta] = meta unless meta.nil? || meta.empty?
                     end
                   end

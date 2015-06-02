@@ -8,6 +8,35 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   let(:contact)   { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
   let(:contact_2) { double(Flapjack::Data::Contact, :id => contact_2_data[:id]) }
 
+  def contact_json(co_data)
+    id = co_data[:id]
+    {
+      :id => id,
+      :type => 'contact',
+      :attributes => co_data.reject {|k,v| :id.eql?(k) },
+      :relationships => {
+        :checks => {
+          :links => {
+            :self => "http://example.org/contacts/#{id}/relationships/checks",
+            :related => "http://example.org/contacts/#{id}/checks"
+          }
+        },
+        :media => {
+          :links => {
+            :self => "http://example.org/contacts/#{id}/relationships/media",
+            :related => "http://example.org/contacts/#{id}/media"
+          }
+        },
+        :rules => {
+          :links => {
+            :self => "http://example.org/contacts/#{id}/relationships/rules",
+            :related => "http://example.org/contacts/#{id}/rules"
+          }
+        }
+      }
+    }
+  end
+
   it "creates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
       with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
@@ -31,15 +60,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     post "/contacts", Flapjack.dump_json(:data => contact_data.merge(:type => 'contact')), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      contact_data.merge(
-        :type => 'contact',
-        :links => {
-          :self   => "http://example.org/contacts/#{contact.id}",
-          :checks => "http://example.org/contacts/#{contact.id}/checks",
-          :media  => "http://example.org/contacts/#{contact.id}/media",
-          :rules  => "http://example.org/contacts/#{contact.id}/rules"
-        })
-    ))
+      contact_json(contact_data)))
   end
 
   it "does not create a contact if the data is improperly formatted" do
@@ -82,7 +103,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       :last  => 'http://example.org/contacts?page=1'
     }
 
-    page = double('page', :all => [contact])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([contact.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(contact)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -98,15 +122,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get '/contacts'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      contact_data.merge(
-        :type => 'contact',
-        :links => {
-          :self   => "http://example.org/contacts/#{contact.id}",
-          :checks => "http://example.org/contacts/#{contact.id}/checks",
-          :media  => "http://example.org/contacts/#{contact.id}/media",
-          :rules  => "http://example.org/contacts/#{contact.id}/rules"
-        })
-      ], :links => links, :meta => meta))
+      contact_json(contact_data)], :links => links, :meta => meta))
   end
 
   it "retrieves paginated contacts matching a filter" do
@@ -133,7 +149,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => 'Jim Smith').
       and_return(filtered)
 
-    page = double('page', :all => [contact])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([contact.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(contact)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(sorted).to receive(:count).and_return(1)
@@ -147,15 +166,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get '/contacts?filter=name%3AJim+Smith'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      [contact_data.merge(
-        :type => 'contact',
-        :links => {
-          :self   => "http://example.org/contacts/#{contact.id}",
-          :checks => "http://example.org/contacts/#{contact.id}/checks",
-          :media  => "http://example.org/contacts/#{contact.id}/media",
-          :rules  => "http://example.org/contacts/#{contact.id}/rules"
-        })],
-      :links => links, :meta => meta))
+      [contact_json(contact_data)], :links => links, :meta => meta))
   end
 
   it "retrieves paginated contacts matching two filter values" do
@@ -182,7 +193,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:intersect).with(:name => 'Jim Smith', :timezone => Regexp.new(/UTC/)).
       and_return(filtered)
 
-    page = double('page', :all => [contact])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([contact.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(contact)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(sorted).to receive(:count).and_return(1)
@@ -196,16 +210,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get '/contacts?filter%5B%5D=name%3AJim+Smith&filter%5B%5D=timezone%3A%2FUTC%2F'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      [contact_data.merge(
-        :type => 'contact',
-        :links => {
-          :self   => "http://example.org/contacts/#{contact.id}",
-          :checks => "http://example.org/contacts/#{contact.id}/checks",
-          :media  => "http://example.org/contacts/#{contact.id}/media",
-          :rules  => "http://example.org/contacts/#{contact.id}/rules"
-        })
-      ],
-      :links => links, :meta => meta))
+      [contact_json(contact_data)], :links => links, :meta => meta))
   end
 
   it "returns the second page of a multi-page contact list" do
@@ -231,7 +236,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     contact_3_data = {:id => SecureRandom.uuid, :name => 'Bill Brown'}
     contact_3 = double(Flapjack::Data::Contact, :id => contact_3_data[:id])
 
-    page = double('page', :all => [contact, contact_2, contact_3])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([contact.id])
+    expect(page).to receive(:collect) {|&arg| [
+      arg.call(contact), arg.call(contact_2), arg.call(contact_3)
+    ] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(2, :per_page => 3).
       and_return(page)
@@ -251,34 +261,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get '/contacts?page=2&per_page=3'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-        contact_data.merge(
-          :type => 'contact',
-          :links => {
-            :self  => "http://example.org/contacts/#{contact.id}",
-            :checks => "http://example.org/contacts/#{contact.id}/checks",
-            :media => "http://example.org/contacts/#{contact.id}/media",
-            :rules => "http://example.org/contacts/#{contact.id}/rules"
-          }
-        ),
-        contact_2_data.merge(
-          :type => 'contact',
-          :links => {
-            :self   => "http://example.org/contacts/#{contact_2.id}",
-            :checks => "http://example.org/contacts/#{contact_2.id}/checks",
-            :media  => "http://example.org/contacts/#{contact_2.id}/media",
-            :rules  => "http://example.org/contacts/#{contact_2.id}/rules"
-          }
-        ),
-        contact_3_data.merge(
-          :type => 'contact',
-          :links => {
-            :self   => "http://example.org/contacts/#{contact_3.id}",
-            :checks => "http://example.org/contacts/#{contact_3.id}/checks",
-            :media  => "http://example.org/contacts/#{contact_3.id}/media",
-            :rules  => "http://example.org/contacts/#{contact_3.id}/rules"
-          }
-        )
-      ], :links => links, :meta => meta))
+      contact_json(contact_data), contact_json(contact_2_data),
+      contact_json(contact_3_data)], :links => links, :meta => meta))
   end
 
   it "returns paginated sorted contacts" do
@@ -299,7 +283,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       :last  => 'http://example.org/contacts?page=1&sort=-name'
     }
 
-    page = double('page', :all => [contact_2, contact])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([contact.id])
+    expect(page).to receive(:collect) {|&arg| [
+      arg.call(contact_2), arg.call(contact)
+    ] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -318,23 +307,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(last_response).to be_ok
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-        contact_2_data.merge(
-          :type => 'contact',
-          :links => {
-            :self   => "http://example.org/contacts/#{contact_2.id}",
-            :checks => "http://example.org/contacts/#{contact_2.id}/checks",
-            :media  => "http://example.org/contacts/#{contact_2.id}/media",
-            :rules  => "http://example.org/contacts/#{contact_2.id}/rules"
-          }),
-        contact_data.merge(
-          :type => 'contact',
-          :links => {
-            :self   => "http://example.org/contacts/#{contact.id}",
-            :checks => "http://example.org/contacts/#{contact.id}/checks",
-            :media  => "http://example.org/contacts/#{contact.id}/media",
-            :rules  => "http://example.org/contacts/#{contact.id}/rules"
-          })
-      ], :links => links, :meta => meta))
+      contact_json(contact_2_data), contact_json(contact_data)],
+      :links => links, :meta => meta))
   end
 
   it "does not return contacts if sort parameter is incorrectly specified" do
@@ -353,8 +327,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
-      with(contact.id).and_return(contact)
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => contact.id).and_return([contact])
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data)
@@ -364,16 +338,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get "/contacts/#{contact.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      contact_data.merge(
-        :type => 'contact',
-        :links => {
-          :self   => "http://example.org/contacts/#{contact.id}",
-          :checks => "http://example.org/contacts/#{contact.id}/checks",
-          :media => "http://example.org/contacts/#{contact.id}/media",
-          :rules => "http://example.org/contacts/#{contact.id}/rules"
-        }
-      ),
-      :links => {
+      contact_json(contact_data), :links => {
       :self  => "http://example.org/contacts/#{contact.id}",
     }))
   end
@@ -383,8 +348,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
       with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).and_yield
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
-      with(contact.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
+    no_contacts = double('no_contacts')
+    expect(no_contacts).to receive(:empty?).and_return(true)
+
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => contact.id).and_return(no_contacts)
+
+      # Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
 
     get "/contacts/#{contact.id}"
     expect(last_response.status).to eq(404)

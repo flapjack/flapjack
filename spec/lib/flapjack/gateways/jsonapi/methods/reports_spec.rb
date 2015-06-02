@@ -42,7 +42,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     end
 
     if opts[:all]
-      page = double('page', :all => [check])
+      page = double('page')
+      expect(page).to receive(:each) {|&arg| arg.call(check); [check] }
       sorted = double('sorted')
       expect(sorted).to receive(:page).with(1, :per_page => 20).
         and_return(page)
@@ -59,8 +60,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
       )
       result.update(:meta => meta)
     elsif opts[:one]
-      expect(Flapjack::Data::Check).to receive(:find_by_id!).
-        with(check.id).and_return(check)
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => check.id).and_return([check])
     end
 
     result.update(:links => links_data)
@@ -86,7 +87,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).
       with(tag.id).and_return(tag)
 
-    page = double('page', :all => [check])
+    page = double('page')
+    expect(page).to receive(:each) {|&arg| arg.call(check); [check] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -139,9 +141,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     end
 
     it "doesn't return a #{report_type} report for a check that's not found" do
-      expect(Flapjack::Data::Check).to receive(:find_by_id!).
-        with(check.id).
-        and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Check, check.id))
+      no_checks = double('no_checks')
+      expect(no_checks).to receive(:empty?).and_return(true)
+
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => check.id).and_return(no_checks)
 
       get "/#{report_type}_reports/checks/#{check.id}"
       expect(last_response).to be_not_found

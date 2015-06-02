@@ -30,7 +30,6 @@ module Flapjack
 
               resource_id = params[:captures][1].nil? ? params[:captures][4] :
                                                         params[:captures][2]
-
               initial_scope = case resource
               when 'checks'
                 resource_id.nil? ? Flapjack::Data::Check : nil
@@ -47,8 +46,10 @@ module Flapjack
                 paginate_get(scoped, :page => params[:page],
                   :per_page => params[:per_page])
               else
-                [[Flapjack::Data::Check.find_by_id!(resource_id)], {}, {}]
+                [Flapjack::Data::Check.intersect(:id => resource_id), {}, {}]
               end
+
+              halt(404) if initial_scope.nil? && checks.empty?
 
               links[:self] = request_url
 

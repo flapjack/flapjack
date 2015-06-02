@@ -217,7 +217,6 @@ daemonize = true
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
     auto_refresh = 120
     access_log = "/var/log/flapjack/web_access.log"
-    api_url = "http://localhost:3081/"
     [gateways.web.logger]
       level = "INFO"
       syslog_errors = true

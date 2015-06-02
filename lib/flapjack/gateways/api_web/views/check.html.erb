@@ -27,7 +27,7 @@
 
   <div class="col-md-6">
    <%
-    current_scheduled_maintenance = @state[:current_scheduled_maintenances].first
+    current_scheduled_maintenance = @state[:current_scheduled_maintenance]
     current_unscheduled_maintenance = @state[:current_unscheduled_maintenance]
     latest_notifications = @state[:latest_notifications]
 
@@ -99,8 +99,8 @@
           <label class="col-md-3 control-label">Finishing</label>
           <div class="col-md-9">
             <p class="form-control-static">
-              <% finish = current_unscheduled_maintenance[:end_time] %>
-              <%= h(finish) %>
+              <% current_unscheduled_maintenance[:end_time] %>
+              <%= h(current_unscheduled_maintenance[:end_time]) %>
             </p>
           </div>
         </div>
@@ -109,8 +109,15 @@
           <label class="col-md-3 control-label">Remaining</label>
           <div class="col-md-9">
             <p class="form-control-static">
-              <% remaining = time_period_in_words( (finish - @current_time).ceil ) %>
-              <%= h(remaining) %>
+              <%
+                remaining = begin
+                  finish = DateTime.parse(current_unscheduled_maintenance[:end_time])
+                  time_period_in_words( (finish - @current_time).ceil )
+                rescue ArgumentError
+                  nil
+                end
+              %>
+              <%= remaining.nil? ? "???" : h(remaining) %>
             </p>
           </div>
         </div>
@@ -206,8 +213,15 @@
       <div class="row">
         <div class="col-md-3 text-right">Remaining</div>
         <div class="col-md-9">
-          <% remaining = time_period_in_words( (finish - @current_time).ceil ) %>
-          <%= h(remaining) %>
+          <%
+            remaining = begin
+              finish = DateTime.parse(current_unscheduled_maintenance[:end_time])
+              time_period_in_words( (finish - @current_time).ceil )
+            rescue ArgumentError
+              nil
+            end
+          %>
+          <%= remaining.nil? ? "???" : h(remaining) %>
         </div>
       </div>
     </div>
@@ -217,12 +231,12 @@
 
 <div class="row">
   <div id="output" class="col-md-6">
-    <h3>Output: <%= h @check[:summary] %></h3>
-    <p><%= h @check[:details] %></p>
-    <% if @check_perfdata && @check_perfdata.is_a?(Array) %>
+    <h3>Output: <%= h @state[:summary] %></h3>
+    <p><%= h @state[:details] %></p>
+    <% if @state[:perfdata] && @state[:perfdata].is_a?(Array) %>
     <h3>Performance Data:</h3>
     <table>
-      <% @check_perfdata.each do |perfdata| %>
+      <% @state[:perfdata].each do |perfdata| %>
       <tr>
         <td><%= perfdata["key"] %></td>
         <td><%= perfdata["value"] %></td>
@@ -233,22 +247,47 @@
     <table class="table table-hover table-condensed">
       <tr>
         <td>Last state change:</td>
-        <td><%= h relative_time_ago(Time.at(@check_last_change.to_i), @current_time) %> ago</td>
-        <td><%= h Time.at(@check_last_change.to_i).to_s %></td>
+        <% if @state[:last_changed].nil? %>
+          <td>-</td>
+          <td>-</td>
+        <% else %>
+          <td><%= h relative_time_ago(@state[:last_changed], @current_time) %> ago</td>
+          <td><%= h @state[:last_changed].to_s %></td>
+        <% end %>
         <td>&nbsp;</td>
       </tr>
       <tr>
         <td>Last update:</td>
-        <td><%= h relative_time_ago(Time.at(@check_last_update.to_i), @current_time) %> ago</td>
-        <td><%= h Time.at(@check_last_update.to_i).to_s %></td>
+        <% if @state[:last_updated].nil? %>
+          <td>-</td>
+          <td>-</td>
+        <% else %>
+          <td><%= h relative_time_ago(@state[:last_updated], @current_time) %> ago</td>
+          <td><%= h @state[:last_updated].to_s %></td>
+        <% end %>
         <td>&nbsp;</td>
       </tr>
       <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
         <tr>
           <td>Last <%= h type.to_s %> notification:</td>
-          <td><%= latest_notifications[type] ? h(latest_notifications[type][:relative]) : 'never' %></td>
-          <td><%= latest_notifications[type] ? h(latest_notifications[type][:time].to_s) : '&nbsp;' %></td>
-          <td><%= latest_notifications[type] ? h(latest_notifications[type][:summary]) : '&nbsp;' %></td>
+          <% notif = latest_notifications.detect {|ln| ln[:condition] = type.to_s } %>
+          <% if notif.nil? %>
+            <td>never</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+          <% else %>
+            <%
+              notif_relative = begin
+                notif_created = DateTime.parse(notif[:created_at])
+                relative_time_ago(time, notif_created) + " ago"
+              rescue ArgumentError
+                nil
+              end
+            %>
+            <td><%= h(notif_relative) %></td>
+            <td><%= h(notif[:created_at]) %></td>
+            <td><%= h(notif[:summary]) %></td>
+          <% end %>
         </tr>
       <% end %>
     </table>
@@ -293,22 +332,29 @@
 
     <% @scheduled_maintenances.sort_by {|sm| sm[:start_time] }.each do |scheduled_maintenance| %>
       <%
-        start_time = scheduled_maintenance[:start_time]
-        end_time   = scheduled_maintenance[:end_time]
-        duration   = scheduled_maintenance[:end_time] - scheduled_maintenance[:start_time]
-        summary    = scheduled_maintenance[:summary]
+        start_time = begin
+          DateTime.parse(scheduled_maintenance[:start_time])
+        rescue ArgumentError
+          nil
+        end
+        end_time = begin
+          DateTime.parse(scheduled_maintenance[:end_time])
+        rescue ArgumentError
+          nil
+        end
+        duration = start_time.nil? || end_time.nil? ? nil : (end_time - start_time)
+        summary = scheduled_maintenance[:summary]
       %>
       <tr>
-        <td><%= h start_time %></td>
-        <td><%= h end_time %></td>
+        <td><%= h start_time.to_s %></td>
+        <td><%= h end_time.to_s %></td>
         <td><%= h(ChronicDuration.output(duration.round, :keep_zero => true) || '0 secs') %></td>
         <td><%= h summary %></td>
         <td>
         <% if end_time > @current_time %>
           <% label = (start_time > @current_time) ? 'Delete' : 'End Now' %>
-            <form action="<%= @base_url %>scheduled_maintenances/checks/<%= u(@check[:id]) %>" method="post">
+            <form action="<%= @base_url %>scheduled_maintenances/<%= u(scheduled_maintenance[:id]) %>" method="post">
               <input type="hidden" name="_method" value="delete">
-              <input type="hidden" name="start_time" value="<%= start_time %>">
               <button type="submit" class="btn btn-danger"><%= label %></button>
             </form>
           <% else %>

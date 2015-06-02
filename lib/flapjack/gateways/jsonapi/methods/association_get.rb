@@ -186,6 +186,8 @@ module Flapjack
 
                   halt(err(404, 'Unknown association number type')) if accessor.nil?
 
+                  # FIXME accept include= etc
+
                   associated = resource_class.lock(*assoc.lock_klasses) do
                     resource_class.find_by_id!(resource_id).send(assoc_name.to_sym).send(accessor)
                   end
@@ -204,7 +206,7 @@ module Flapjack
                     nil
                   end
 
-                  Flapjack.dump_json(:links => links, :data => data)
+                  Flapjack.dump_json(:data => data, :links => links)
                 end
               end
             end

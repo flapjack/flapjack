@@ -46,23 +46,6 @@ module Flapjack
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
 
-          # FIXME don't need an instance variable for @api_url any more
-          @api_url = @config['api_url']
-          if @api_url
-            if URI.regexp(['http', 'https']).match(@api_url).nil?
-              Flapjack.logger.error "api_url is not a valid http or https URI (#{@api_url}), discarding"
-              @api_url = nil
-              # FIXME raise error
-            end
-            unless @api_url.match(/^.*\/$/)
-              Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
-              @api_url = "#{@api_url}/"
-            end
-          else
-            # FIXME raise error
-          end
-
-          Flapjack::Diner.base_uri(@api_url) unless @api_url.nil?
           Flapjack::Diner.logger = ::Logger.new('log/flapjack_diner.log')
 
           # constants won't be exposed to eRb scope
@@ -115,7 +98,6 @@ module Flapjack
       before do
         content_type charset_for_content_type('text/html')
 
-        @api_url          = self.class.instance_variable_get('@api_url')
         @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
@@ -256,8 +238,9 @@ module Flapjack
 
         @current_time = Time.now
 
+        # contacts.media will also return contacts, per JSONAPI v1 relationships
         @check = Flapjack::Diner.checks(check_id,
-                   :include => 'contacts,contacts.media,current_state,' \
+                   :include => 'contacts.media,current_state,' \
                                'latest_notifications,' \
                                'current_scheduled_maintenances,' \
                                'current_unscheduled_maintenance')
@@ -282,6 +265,8 @@ module Flapjack
 
         @contact_media = included_records(@check[:links], :'contacts.media',
           included, 'medium')
+
+        # FIXME need to retrieve contact-media linkage info
 
         erb 'check.html'.to_sym
       end
@@ -329,6 +314,16 @@ module Flapjack
         # FIXME error if above operation failed
 
         redirect back
+      end
+
+      delete '/checks/:id' do
+        check_id = params[:id]
+
+        Flapjack::Diner.update_checks(:id => check_id, :enabled => false)
+
+        # FIXME error if above operation failed
+
+        redirect '/'
       end
 
       delete '/scheduled_maintenances/:id' do
@@ -400,14 +395,28 @@ module Flapjack
     private
 
       def check_state(check, included, time)
-        current_state_id = check[:links][:current_state][:linkage][:id]
-
-        current_state = current_state_id.nil? ? nil : included.detect do |incl|
-           'state'.eql?(incl[:type]) && current_state_id.eql?(incl[:id])
-        end
-
         current_state = included_records(check[:links], :current_state,
           included, 'state')
+
+        last_changed = if current_state.nil? || current_state[:created_at].nil?
+          nil
+        else
+          begin
+            DateTime.parse(current_state[:created_at]).to_i
+          rescue ArgumentError
+            Flapjack.logger.warn("error parsing check state :created_at ( #{current_state.inspect} )")
+          end
+        end
+
+        last_updated = if current_state.nil? || current_state[:updated_at].nil?
+          nil
+        else
+          begin
+            DateTime.parse(current_state[:updated_at]).to_i
+          rescue ArgumentError
+            Flapjack.logger.warn("error parsing check state :updated_at ( #{current_state.inspect} )")
+          end
+        end
 
         latest_notifications = included_records(check[:links], :latest_notifications,
           included, 'state')
@@ -417,27 +426,12 @@ module Flapjack
 
         in_unscheduled_maintenance = !check[:links][:current_unscheduled_maintenance][:linkage].nil?
 
-        # get latest (by time) of the latest notifications
-        notif_times = latest_notifications.each_with_object({}) do |ln, memo|
-          begin
-            memo[ln[:id]] = DateTime.parse(ln[:created_at]).to_i
-          rescue ArgumentError
-            Flapjack.logger.warn("error parsing notification :created_at ( #{ln.inspect} )")
-          end
-        end
-
-        latest_notification_id_time = notif_times.sort_by {|id, ti| ti}
-
-        last_notification = latest_notification_id_time.nil? ? nil :
-          latest_notifications.detect {|ln| latest_notification_id_time[0].eql?(ln[:id]) }
-
         {
           :condition     => current_state.nil? ? '-' : current_state[:condition],
           :summary       => current_state.nil? ? '-' : current_state[:summary],
           :latest_notifications => (latest_notifications || []),
-          :last_changed  => render_state_duration(time, current_state, :created_at),
-          :last_updated  => render_state_duration(time, current_state, :updated_at),
-          :last_notified => render_state_duration(time, last_notification, :created_at),
+          :last_changed  => last_changed,
+          :last_updated  => last_updated,
           :in_scheduled_maintenance => in_scheduled_maintenance,
           :in_unscheduled_maintenance => in_unscheduled_maintenance
         }
@@ -449,19 +443,17 @@ module Flapjack
         current_scheduled_maintenances = included_records(check[:links],
           :current_scheduled_maintenances, included, 'scheduled_maintenance')
 
+        current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
+          begin
+            DateTime.parse(sm[:end_time]).to_i
+          rescue ArgumentError
+            Flapjack.logger.warn "Couldn't parse time from current_unscheduled_maintenances"
+            -1
+          end
+        end
+
         current_unscheduled_maintenance = included_records(check[:links],
           :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
-
-        latest_notifications = state[:latest_notifications]
-
-        lat_not = latest_notifications.each_with_object({}) do |ln, memo|
-          memo[ln[:action] || ln[:condition].to_sym] = {
-            :time     => ln[:created_at],
-            :relative =>  relative_time_ago(time,
-                            DateTime.parse(ln[:created_at])) + " ago",
-            :summary  => ln[:summary]
-          }
-        end
 
         current_state = included_records(check[:links], :current_state,
           included, 'state')
@@ -470,6 +462,7 @@ module Flapjack
           :details       => current_state.nil? ? '-' : current_state[:details],
           :perfdata      => current_state.nil? ? '-' : current_state[:perfdata],
           :current_scheduled_maintenances => (current_scheduled_maintenances || []),
+          :current_scheduled_maintenance => current_scheduled_maintenance,
           :current_unscheduled_maintenance => current_unscheduled_maintenance,
           :latest_notifications => lat_not
         )
@@ -579,23 +572,6 @@ module Flapjack
         end
         links
       end
-
-      def render_state_duration(base_time, state, field)
-        if state.nil? || state[field].nil?
-          'never'
-        else
-          begin
-            parsed = DateTime.parse(state[field])
-            ChronicDuration.output(base_time.to_i - parsed.to_i,
-                                   :format => :short, :keep_zero => true,
-                                   :units => 2) || '0s'
-          rescue ArgumentError
-            Flapjack.logger.warn("error parsing time field #{field} ( #{state.inspect} )")
-            "error parsing time field #{field}"
-          end
-        end
-      end
-
     end
   end
 end

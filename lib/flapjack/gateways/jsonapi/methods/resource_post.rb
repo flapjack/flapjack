@@ -151,11 +151,11 @@ module Flapjack
 
                   response.headers['Location'] = "#{request.base_url}/#{resource}/#{resource_ids.join(',')}"
 
-                  data, _ = as_jsonapi(resource_class, jsonapi_type, resource,
-                                       resources, resource_ids,
-                                       :unwrap => unwrap)
+                  ajs = as_jsonapi(resource_class, jsonapi_type, resource,
+                                   resources, resource_ids,
+                                   :unwrap => unwrap)
 
-                  Flapjack.dump_json(:data => data)
+                  Flapjack.dump_json(ajs)
                 end
               end
 

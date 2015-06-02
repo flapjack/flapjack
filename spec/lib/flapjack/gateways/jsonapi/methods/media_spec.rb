@@ -10,6 +10,35 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   let(:contact)  { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
 
+  def medium_json(me_data)
+    id = me_data[:id]
+    {
+      :id => id,
+      :type => 'medium',
+      :attributes => me_data.reject {|k,v| :id.eql?(k) },
+      :relationships => {
+        :alerting_checks => {
+          :links => {
+            :self => "http://example.org/media/#{id}/relationships/alerting_checks",
+            :related => "http://example.org/media/#{id}/alerting_checks"
+          }
+        },
+        :contact => {
+          :links => {
+            :self => "http://example.org/media/#{id}/relationships/contact",
+            :related => "http://example.org/media/#{id}/contact"
+          }
+        },
+        :rules => {
+          :links => {
+            :self => "http://example.org/media/#{id}/relationships/rules",
+            :related => "http://example.org/media/#{id}/rules"
+          }
+        }
+      }
+    }
+  end
+
   it "creates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
@@ -32,13 +61,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     post "/media", Flapjack.dump_json(:data => email_data.merge(:type => 'medium')), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      email_data.merge(
-        :type => 'medium',
-        :links => {:self  => "http://example.org/media/#{medium.id}",
-                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
-                   :contact => "http://example.org/media/#{medium.id}/contact",
-                   :rules => "http://example.org/media/#{medium.id}/rules"})
-    ))
+      medium_json(email_data)))
   end
 
   it "does not create a medium if the data is improperly formatted" do
@@ -68,8 +91,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::Contact, Flapjack::Data::Rule, ).and_yield
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).
-      with(medium.id).and_return(medium)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => medium.id).and_return([medium])
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data)
@@ -77,13 +100,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      email_data.merge(
-        :type => 'medium',
-        :links => {:self  => "http://example.org/media/#{medium.id}",
-                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
-                   :contact => "http://example.org/media/#{medium.id}/contact",
-                   :rules => "http://example.org/media/#{medium.id}/rules"}),
-    :links => {:self  => "http://example.org/media/#{medium.id}"}))
+      medium_json(email_data), :links => {:self  => "http://example.org/media/#{medium.id}"}))
   end
 
   it "returns all media" do
@@ -106,7 +123,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       :last  => 'http://example.org/media?page=1'
     }
 
-    page = double('page', :all => [medium])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([medium.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(medium)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -120,13 +140,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     get '/media'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-        email_data.merge(
-        :type => 'medium',
-        :links => {:self  => "http://example.org/media/#{medium.id}",
-                   :alerting_checks => "http://example.org/media/#{medium.id}/alerting_checks",
-                   :contact => "http://example.org/media/#{medium.id}/contact",
-                   :rules => "http://example.org/media/#{medium.id}/rules"})],
-    :links => links, :meta => meta))
+      medium_json(email_data)], :links => links, :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do
@@ -134,8 +148,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(Flapjack::Data::Check, Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::Contact, Flapjack::Data::Rule, ).and_yield
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
+    no_media = double('no_media')
+    expect(no_media).to receive(:empty?).and_return(true)
+
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => medium.id).and_return(no_media)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found

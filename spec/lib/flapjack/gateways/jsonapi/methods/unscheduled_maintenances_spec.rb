@@ -12,6 +12,23 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
+  def unscheduled_maintenance_json(usm_data)
+    id = usm_data[:id]
+    {
+      :id => id,
+      :type => 'unscheduled_maintenance',
+      :attributes => usm_data.reject {|k,v| :id.eql?(k) },
+      :relationships => {
+        :check => {
+          :links => {
+            :self => "http://example.org/unscheduled_maintenances/#{id}/relationships/check",
+            :related => "http://example.org/unscheduled_maintenances/#{id}/check"
+          }
+        }
+      }
+    }
+  end
+
   it "creates an unscheduled maintenance period" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
       with(Flapjack::Data::Check).and_yield
@@ -35,32 +52,24 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     post "/unscheduled_maintenances", Flapjack.dump_json(:data =>unscheduled_maintenance_data.merge(:type => 'unscheduled_maintenance')), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      unscheduled_maintenance_data.merge(
-        :type => 'unscheduled_maintenance',
-        :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})
-    ))
+      unscheduled_maintenance_json(unscheduled_maintenance_data)))
   end
 
   it 'returns a single unscheduled maintenance period' do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
       with(Flapjack::Data::Check).and_yield
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).
-      with(unscheduled_maintenance.id).and_return(unscheduled_maintenance)
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:id => unscheduled_maintenance.id).and_return([unscheduled_maintenance])
 
     expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(unscheduled_maintenance_data)
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}"
     expect(last_response).to be_ok
-
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      unscheduled_maintenance_data.merge(
-        :type => 'unscheduled_maintenance',
-        :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"}),
-    :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}"}))
+      unscheduled_maintenance_json(unscheduled_maintenance_data),
+      :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}"}))
   end
 
   it 'returns multiple unscheduled_maintenance periods' # do
@@ -114,7 +123,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       :last  => 'http://example.org/unscheduled_maintenances?page=1'
     }
 
-    page = double('page', :all => [unscheduled_maintenance])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([unscheduled_maintenance.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(unscheduled_maintenance)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -128,11 +140,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     get '/unscheduled_maintenances'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      unscheduled_maintenance_data.merge(
-        :type => 'unscheduled_maintenance',
-        :links => {:self  => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}",
-                   :check => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"})],
-    :links => links, :meta => meta))
+      unscheduled_maintenance_json(unscheduled_maintenance_data)], :links => links, :meta => meta))
   end
 
   it "ends an unscheduled maintenance period for a check" do

@@ -14,6 +14,29 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 
+  def tag_json(ta_data)
+    id = ta_data[:name]
+    {
+      :id => id,
+      :type => 'tag',
+      :attributes => ta_data,
+      :relationships => {
+        :checks => {
+          :links => {
+            :self => "http://example.org/tags/#{id}/relationships/checks",
+            :related => "http://example.org/tags/#{id}/checks"
+          }
+        },
+        :rules => {
+          :links => {
+            :self => "http://example.org/tags/#{id}/relationships/rules",
+            :related => "http://example.org/tags/#{id}/rules"
+          }
+        }
+      }
+    }
+  end
+
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
@@ -38,12 +61,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     post "/tags", Flapjack.dump_json(:data => tag_data.merge(:type => 'tag')), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      tag_data_with_id.merge(
-        :type => 'tag',
-        :links => {:self  => "http://example.org/tags/#{tag.id}",
-                   :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules => "http://example.org/tags/#{tag.id}/rules"})
-    ))
+      tag_json(tag_data)))
   end
 
   it "retrieves paginated tags" do
@@ -67,7 +85,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       :last  => 'http://example.org/tags?page=1'
     }
 
-    page = double('page', :all => [tag])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([tag.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(tag)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).
       and_return(page)
@@ -80,12 +101,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     get '/tags'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      tag_data_with_id.merge(
-        :type => 'tag',
-        :links => {:self  => "http://example.org/tags/#{tag.id}",
-                   :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules => "http://example.org/tags/#{tag.id}/rules"})],
-    :links => links, :meta => meta))
+      tag_json(tag_data)], :links => links, :meta => meta))
   end
 
   it "retrieves paginated tags matching a filter" do
@@ -113,7 +129,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:intersect).with(:name => Regexp.new('database')).
       and_return(filtered)
 
-    page = double('page', :all => [tag])
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([tag.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(tag)] }
     sorted = double('sorted')
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
     expect(sorted).to receive(:count).and_return(1)
@@ -127,12 +146,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     get '/tags?filter%5B%5D=name%3Adatabase'
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      tag_data.merge(
-        :type => 'tag',
-        :links => {:self   => "http://example.org/tags/#{tag.id}",
-                   :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules  => "http://example.org/tags/#{tag.id}/rules"})],
-      :links => links, :meta => meta))
+      tag_json(tag_data)], :links => links, :meta => meta))
   end
 
   it "retrieves one tag" do
@@ -141,8 +155,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Route).
       and_yield
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_id!).
-      with(tag.id).and_return(tag)
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => tag.id).and_return([tag])
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
@@ -150,12 +164,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     get "/tags/#{tag.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      tag_data_with_id.merge(
-        :type => 'tag',
-        :links => {:self  => "http://example.org/tags/#{tag.id}",
-                   :checks => "http://example.org/tags/#{tag.id}/checks",
-                   :rules => "http://example.org/tags/#{tag.id}/rules"}),
-    :links => {:self  => "http://example.org/tags/#{tag.id}"}))
+      tag_json(tag_data), :links => {:self  => "http://example.org/tags/#{tag.id}"}))
   end
 
   it "retrieves several tags" # do
