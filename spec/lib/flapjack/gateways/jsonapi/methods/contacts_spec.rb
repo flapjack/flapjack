@@ -8,6 +8,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
   let(:contact)   { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
   let(:contact_2) { double(Flapjack::Data::Contact, :id => contact_2_data[:id]) }
 
+  let(:medium)    { double(Flapjack::Data::Medium, :id => email_data[:id]) }
+
   def contact_json(co_data)
     id = co_data[:id]
     {
@@ -354,10 +356,78 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(Flapjack::Data::Contact).to receive(:intersect).
       with(:id => contact.id).and_return(no_contacts)
 
-      # Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Contact, contact.id))
-
     get "/contacts/#{contact.id}"
     expect(last_response.status).to eq(404)
+  end
+
+  it 'returns a contact and the transport and address of its media records' do
+    expect(Flapjack::Data::Contact).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance).and_yield
+
+    contacts = double('contacts')
+    expect(contacts).to receive(:empty?).and_return(false)
+    expect(contacts).to receive(:collect) {|&arg| [arg.call(contact)] }
+    expect(contacts).to receive(:associated_ids_for).with(:media).
+      and_return(contact.id => [medium.id])
+
+    full_media = double('full_media')
+    expect(full_media).to receive(:collect) {|&arg| [arg.call(medium)] }
+
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => [medium.id]).and_return(full_media)
+
+    expect(medium).to receive(:as_json).with(:only => [:transport, :address]).
+      and_return(:transport => email_data[:transport], :address => email_data[:address])
+
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => contact.id).and_return(contacts)
+
+    expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(contact_data)
+
+    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
+    expect(Flapjack::Data::Medium).to receive(:jsonapi_type).twice.and_return('medium')
+
+    get "/contacts/#{contact.id}?fields[media]=transport,address&include=media"
+    expect(last_response).to be_ok
+
+    response_data = contact_json(contact_data)
+    response_data[:relationships][:media][:data] = [{:type => 'medium', :id => medium.id}]
+
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => response_data,
+      :included => [{
+        :type => 'medium',
+        :id => medium.id,
+        :attributes => {
+          :transport => email_data[:transport],
+          :address => email_data[:address]
+        },
+        :relationships => {
+          :alerting_checks => {
+            :links => {
+              :self => "http://example.org/media/#{medium.id}/relationships/alerting_checks",
+              :related => "http://example.org/media/#{medium.id}/alerting_checks"
+            }
+          },
+          :contact => {
+            :links => {
+              :self => "http://example.org/media/#{medium.id}/relationships/contact",
+              :related => "http://example.org/media/#{medium.id}/contact"
+            }
+          },
+          :rules => {
+            :links => {
+              :self => "http://example.org/media/#{medium.id}/relationships/rules",
+              :related => "http://example.org/media/#{medium.id}/rules"
+            }
+          }
+        }
+      }],
+      :links => {
+        :self  => "http://example.org/contacts/#{contact.id}?fields%5Bmedia%5D=transport%2Caddress&include=media",
+      }))
   end
 
   it "updates a contact" do

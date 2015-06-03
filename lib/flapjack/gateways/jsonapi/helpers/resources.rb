@@ -65,6 +65,13 @@ module Flapjack
             end
           end
 
+          def extract_fields(fields, resources_name)
+            return if fields.nil?
+            raise "Field limits must be passed as a Hash" unless fields.is_a?(Hash)
+            return unless fields.has_key?(resources_name)
+            fields[resources_name].split(',').map(&:to_sym)
+          end
+
           # NB resources must be a Zermelo filter scope, not an array of Zermelo records
 
           def as_jsonapi_data(klass, jsonapi_type, resources_name, resources,
@@ -75,7 +82,7 @@ module Flapjack
             ids_cache = options[:ids_cache] || {}
             clause_done = options[:clause_done] || []
 
-            fields = options[:fields].nil? ? nil : options[:fields].map(&:to_sym)
+            fields = extract_fields(options[:fields], resources_name)
 
             whitelist = if klass.respond_to?(:jsonapi_methods)
               (klass.jsonapi_methods[:get] || {}).attributes || []
@@ -93,19 +100,20 @@ module Flapjack
               :ids_cache => ids_cache, :clause_done => clause_done, :resolve => incl)
 
             resources_as_json = resources.collect do |r|
+              r_id = r.id
               l = links.keys.each_with_object({}) do |k, memo|
 
                 link_data = links[k]
 
                 memo[k] = {
                   :links => {
-                    :self    => "#{request.base_url}/#{resources_name}/#{r.id}/relationships/#{k}",
-                    :related => "#{request.base_url}/#{resources_name}/#{r.id}/#{k}"
+                    :self    => "#{request.base_url}/#{resources_name}/#{r_id}/relationships/#{k}",
+                    :related => "#{request.base_url}/#{resources_name}/#{r_id}/#{k}"
                   }
                 }
 
                 unless link_data.nil?
-                  ids = link_data.data[r.id]
+                  ids = link_data.data[r_id]
                   case ids
                   when Array, Set
                     memo[k].update(:data => ids.to_a.collect {|id| {:type => link_data.type, :id => id} })
@@ -116,7 +124,7 @@ module Flapjack
               end
               data = {
                 :type => jsonapi_type,
-                :id => r.id,
+                :id => r_id,
                 :attributes => r.as_json(:only => jsonapi_fields)
               }
               data[:relationships] = l unless l.nil? || l.empty?
@@ -130,18 +138,20 @@ module Flapjack
             resources_as_json.first
           end
 
-          def as_jsonapi_included(klass, resources, options = {})
+          def as_jsonapi_included(klass, resources_name, resources, options = {})
             incl = options[:include]
-            raise "No data to include" if incl.empty?
+            raise "No data to include" if incl.nil? || incl.empty?
 
             ids_cache = options[:ids_cache] || {}
             clause_done = options[:clause_done] || []
+
+            fields = options[:fields]
 
             included = incl.collect {|i| i.split('.')}.sort_by(&:length)
 
             included.inject([]) do |memo, incl_clause|
               memo += data_for_include_clause(klass, resources,
-                incl_clause, :clause_done => clause_done,
+                incl_clause, :fields => fields, :clause_done => clause_done,
                 :ids_cache => ids_cache)
               memo
             end
@@ -151,103 +161,26 @@ module Flapjack
                          resource_ids, options = {})
 
             incl = options[:include]
+            fields = options[:fields]
 
             ids_cache   = {}
             clause_done = []
 
             ret = {
               :data => as_jsonapi_data(klass, jsonapi_type, resources_name,
-                resources, resource_ids, :fields => options[:fields],
+                resources, resource_ids, :fields => fields,
                 :unwrap => options[:unwrap], :ids_cache => ids_cache,
                 :clause_done => clause_done, :include => incl)
             }
 
             unless incl.nil? || incl.empty?
-              ret[:included] = as_jsonapi_included(klass, resources,
-                :include => incl, :ids_cache => ids_cache,
+              ret[:included] = as_jsonapi_included(klass, resources_name, resources,
+                :include => incl, :fields => fields, :ids_cache => ids_cache,
                 :clause_done => clause_done)
             end
 
             ret
           end
-
-          # # TODO maybe split into 'regular' and 'included' methods?
-          # def as_jsonapi(klass, jsonapi_type, resources_name, resources,
-          #                resource_ids, options = {})
-
-          #   ids_cache = options[:ids_cache] || {}
-          #   clause_done = options[:clause_done] || []
-
-          #   incl   = options[:include] || []
-          #   fields = options[:fields].nil? ? nil : options[:fields].map(&:to_sym)
-
-          #   whitelist = if klass.respond_to?(:jsonapi_methods)
-          #     (klass.jsonapi_methods[:get] || {}).attributes || []
-          #   else
-          #     []
-          #   end
-
-          #   jsonapi_fields = if fields.nil?
-          #     whitelist
-          #   else
-          #     Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
-          #   end
-
-          #   links = jsonapi_linkages(klass, resources, resource_ids,
-          #     :resolve => incl, :ids_cache => ids_cache,
-          #     :clause_done => clause_done)
-
-          #   unless incl.empty?
-          #     linked    = []
-          #     included  = incl.collect {|i| i.split('.')}.sort_by(&:length)
-
-          #     included.each do |incl_clause|
-          #       d = data_for_include_clause(klass, resources,
-          #         incl_clause, :clause_done => clause_done,
-          #         :ids_cache => ids_cache, :linked => options[:linked])
-          #       linked += d[:data] + (d[:included] || [])
-          #     end
-          #   end
-
-          #   resources_as_json = resources.collect do |r|
-          #     l = links.keys.each_with_object({}) do |k, memo|
-
-          #       link_data = links[k]
-
-          #       memo[k] = {
-          #         :links => {
-          #           :self    => "#{request.base_url}/#{resources_name}/#{r.id}/relationships/#{k}",
-          #           :related => "#{request.base_url}/#{resources_name}/#{r.id}/#{k}"
-          #         }
-          #       }
-
-          #       unless link_data.nil?
-          #         ids = link_data.data[r.id]
-          #         case ids
-          #         when Array, Set
-          #           memo[k].update(:data => ids.to_a.collect {|id| {:type => link_data.type, :id => id} })
-          #         when String
-          #           memo[k].update(:data => {:type => link_data.type, :id => ids})
-          #         end
-          #       end
-          #     end
-          #     data = {
-          #       :type => jsonapi_type,
-          #       :id => r.id,
-          #       :attributes => r.as_json(:only => jsonapi_fields)
-          #     }
-          #     data[:relationships] = l unless l.nil? || l.empty?
-          #     data
-          #   end
-
-          #   if (resources_as_json.size == 1) && options[:unwrap].is_a?(TrueClass)
-          #     resources_as_json = resources_as_json.first
-          #   end
-
-          #   json_data = {:data => resources_as_json}
-          #   json_data[:included] = linked unless linked.nil? || linked.empty?
-          #   json_data
-          # end
 
           def filter_params(klass, filter)
             attributes = if klass.respond_to?(:jsonapi_methods)
@@ -389,6 +322,7 @@ module Flapjack
 
             clause_done = options[:clause_done]
             ids_cache   = options[:ids_cache]
+            fields      = options[:fields]
 
             clause_fragment = clause_left.shift
             clause_done.push(clause_fragment)
@@ -426,13 +360,14 @@ module Flapjack
 
             data = as_jsonapi_data(fragment_klass, fragment_klass.jsonapi_type,
               fragment_name, fragment_resources, fragment_ids, :unwrap => false,
-              :include => clause_left, :clause_done => clause_done, :ids_cache => ids_cache)
+              :include => clause_left, :fields => fields,
+              :clause_done => clause_done, :ids_cache => ids_cache)
 
             return data if clause_left.empty?
 
-            linked = as_jsonapi_included(fragment_klass, fragment_resources,
-              :include => clause_left, :clause_done => clause_done,
-              :ids_cache => ids_cache)
+            linked = as_jsonapi_included(fragment_klass, fragment_name,
+              fragment_resources, :include => clause_left, :fields => fields,
+              :clause_done => clause_done, :ids_cache => ids_cache)
 
             data + linked
           end

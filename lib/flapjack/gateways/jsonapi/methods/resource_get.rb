@@ -158,12 +158,11 @@ module Flapjack
                         halt(404)
                       end
                     else
-                      fields = params[:fields].nil?  ? nil : params[:fields].split(',')
-                      incl   = params[:include].nil? ? nil : params[:include].split(',')
+                      incl = params[:include].nil? ? nil : params[:include].split(',')
                       d = as_jsonapi(resource_class, resource_class.jsonapi_type,
                                      resource, resources,
                                      (resource_id.nil? ? resources.ids : [resource_id]),
-                                     :fields => fields, :include => incl,
+                                     :fields => params[:fields], :include => incl,
                                      :unwrap => !resource_id.nil?)
                       json_data[:data] = d[:data]
                       unless d[:included].nil? || d[:included].empty?

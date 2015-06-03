@@ -17,15 +17,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     expect(scheduled_maintenance).to receive(:check).and_return(check)
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).with(scheduled_maintenance.id).
-      and_return(scheduled_maintenance)
+    scheduled_maintenances = double('scheduled_maintenances', :all => [scheduled_maintenance])
+    expect(scheduled_maintenances).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
+      with(:id => scheduled_maintenance.id).and_return(scheduled_maintenances)
 
     get "/scheduled_maintenances/#{scheduled_maintenance.id}/check"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => {:type => 'check', :id => check.id},
       :links => {
-        :self    => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+        :self    => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/relationships/check",
         :related => "http://example.org/scheduled_maintenances/#{scheduled_maintenance.id}/check",
       }
     ))
@@ -41,7 +43,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     expect(scheduled_maintenance).to receive(:check=).with(check)
 
-    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/relationships/check",
     Flapjack.dump_json(:data => {
       :type => 'check', :id => check.id
     }), jsonapi_env
@@ -56,7 +58,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenanceLinks', :sin
 
     expect(scheduled_maintenance).to receive(:check=).with(nil)
 
-    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/links/check",
+    patch "/scheduled_maintenances/#{scheduled_maintenance.id}/relationships/check",
     Flapjack.dump_json(:data => {
       :type => 'check', :id => nil
     }), jsonapi_env

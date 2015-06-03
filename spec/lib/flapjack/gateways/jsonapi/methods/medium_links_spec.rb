@@ -17,15 +17,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(medium).to receive(:contact).and_return(contact)
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_return(medium)
+    media = double('media', :all => [medium])
+    expect(media).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => medium.id).and_return(media)
 
     get "/media/#{medium.id}/contact"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => {:type => 'contact', :id => contact.id},
       :links => {
-        :self    => "http://example.org/media/#{medium.id}/links/contact",
+        :self    => "http://example.org/media/#{medium.id}/relationships/contact",
         :related => "http://example.org/media/#{medium.id}/contact",
       }
     ))
@@ -42,7 +44,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(medium).to receive(:contact=).with(contact)
 
-    patch "/media/#{medium.id}/links/contact", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/contact", Flapjack.dump_json(
       :data => {
         :type => 'contact',
         :id   => contact.id,
@@ -60,7 +62,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
     expect(medium).to receive(:contact=).with(nil)
 
-    patch "/media/#{medium.id}/links/contact", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/contact", Flapjack.dump_json(
       :data => {
         :type => 'contact',
         :id   => nil,
@@ -79,7 +81,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:add_ids).with(rule.id)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
-    post "/media/#{medium.id}/links/rules", Flapjack.dump_json(
+    post "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => [{:type => 'rule', :id => rule.id}]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -91,15 +93,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:ids).and_return([rule.id])
     expect(medium).to receive(:rules).and_return(medium_rules)
 
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_return(medium)
+    media = double('media', :all => [medium])
+    expect(media).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Medium).to receive(:intersect).
+      with(:id => medium.id).and_return(media)
 
     get "/media/#{medium.id}/rules"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => [{:type => 'rule', :id => rule.id}],
       :links => {
-        :self    => "http://example.org/media/#{medium.id}/links/rules",
+        :self    => "http://example.org/media/#{medium.id}/relationships/rules",
         :related => "http://example.org/media/#{medium.id}/rules",
       }
     ))
@@ -116,7 +120,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:add_ids).with(rule.id)
     expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
-    patch "/media/#{medium.id}/links/rules", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => [
         {:type => 'rule', :id => rule.id}
       ]
@@ -135,7 +139,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:remove_ids).with(rule.id)
     expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
-    patch "/media/#{medium.id}/links/rules", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => []
     ), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -151,7 +155,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(medium_rules).to receive(:remove_ids).with(rule.id)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
-    delete "/media/#{medium.id}/links/rules", Flapjack.dump_json(
+    delete "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => [{:type => 'rule', :id => rule.id}]
     ), jsonapi_env
     expect(last_response.status).to eq(204)

@@ -17,15 +17,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     expect(unscheduled_maintenance).to receive(:check).and_return(check)
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:find_by_id!).with(unscheduled_maintenance.id).
-      and_return(unscheduled_maintenance)
+    unscheduled_maintenances = double('unscheduled_maintenances', :all => [unscheduled_maintenance])
+    expect(unscheduled_maintenances).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:id => unscheduled_maintenance.id).and_return(unscheduled_maintenances)
 
     get "/unscheduled_maintenances/#{unscheduled_maintenance.id}/check"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => {:type => 'check', :id => check.id},
       :links => {
-        :self    => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+        :self    => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/relationships/check",
         :related => "http://example.org/unscheduled_maintenances/#{unscheduled_maintenance.id}/check",
       }
     ))
@@ -41,7 +43,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     expect(unscheduled_maintenance).to receive(:check=).with(check)
 
-    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/relationships/check",
       Flapjack.dump_json(:data => {
         :type => 'check', :id => check.id
       }), jsonapi_env
@@ -56,7 +58,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenanceLinks', :s
 
     expect(unscheduled_maintenance).to receive(:check=).with(nil)
 
-    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/links/check",
+    patch "/unscheduled_maintenances/#{unscheduled_maintenance.id}/relationships/check",
       Flapjack.dump_json(:data => {
         :type => 'check', :id => nil
       }), jsonapi_env

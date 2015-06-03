@@ -22,7 +22,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:add_ids).with(medium.id)
     expect(contact).to receive(:media).and_return(contact_media)
 
-    post "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
+    post "/contacts/#{contact.id}/relationships/media", Flapjack.dump_json(:data => [{
       :type => 'medium', :id => medium.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -35,15 +35,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:ids).and_return([medium.id])
     expect(contact).to receive(:media).and_return(contact_media)
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
-      and_return(contact)
+    contacts = double('contacts', :all => [contact])
+    expect(contacts).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => contact.id).and_return(contacts)
 
     get "/contacts/#{contact.id}/media"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => [{:type => 'medium', :id => medium.id}],
       :links => {
-        :self    => "http://example.org/contacts/#{contact.id}/links/media",
+        :self    => "http://example.org/contacts/#{contact.id}/relationships/media",
         :related => "http://example.org/contacts/#{contact.id}/media",
       }
     ))
@@ -60,7 +62,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:add_ids).with(medium.id)
     expect(contact).to receive(:media).twice.and_return(contact_media)
 
-    patch "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
+    patch "/contacts/#{contact.id}/relationships/media", Flapjack.dump_json(:data => [{
       :type => 'medium', :id => medium.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -76,7 +78,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_media).to receive(:remove_ids).with(medium.id)
     expect(contact).to receive(:media).and_return(contact_media)
 
-    delete "/contacts/#{contact.id}/links/media", Flapjack.dump_json(:data => [{
+    delete "/contacts/#{contact.id}/relationships/media", Flapjack.dump_json(:data => [{
       :type => 'medium', :id => medium.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -93,7 +95,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:add_ids).with(rule.id)
     expect(contact).to receive(:rules).and_return(contact_rules)
 
-    post "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{
+    post "/contacts/#{contact.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -107,15 +109,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:ids).and_return([rule.id])
     expect(contact).to receive(:rules).and_return(contact_rules)
 
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
-      and_return(contact)
+    contacts = double('contacts', :all => [contact])
+    expect(contacts).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => contact.id).and_return(contacts)
 
     get "/contacts/#{contact.id}/rules"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => [{:type => 'rule', :id => rule.id}],
       :links => {
-        :self    => "http://example.org/contacts/#{contact.id}/links/rules",
+        :self    => "http://example.org/contacts/#{contact.id}/relationships/rules",
         :related => "http://example.org/contacts/#{contact.id}/rules",
       }
     ))
@@ -133,7 +137,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:add_ids).with(rule.id)
     expect(contact).to receive(:rules).twice.and_return(contact_rules)
 
-    patch "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{
+    patch "/contacts/#{contact.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -150,7 +154,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contact_rules).to receive(:remove_ids).with(rule.id)
     expect(contact).to receive(:rules).and_return(contact_rules)
 
-    delete "/contacts/#{contact.id}/links/rules", Flapjack.dump_json(:data => [{
+    delete "/contacts/#{contact.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)

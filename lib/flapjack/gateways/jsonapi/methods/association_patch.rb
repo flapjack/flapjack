@@ -43,7 +43,7 @@ module Flapjack
 
                   singular_links.each_pair do |link_name, link_data|
                     link_type = link_data.type
-                    swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                    swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
                         key :description, "Replace associated #{link_name} for a #{single}"
                         key :operationId, "replace_#{single}_#{link_name}"
@@ -79,7 +79,7 @@ module Flapjack
 
                   multiple_links.each_pair do |link_name, link_data|
                     link_type = link_data.type
-                    swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                    swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
                         key :description, "Replace associated #{link_name} for a #{single}"
                         key :operationId, "replace_#{single}_#{link_name}"
@@ -123,7 +123,7 @@ module Flapjack
                   Flapjack::UUID_RE
                 end
 
-                app.patch %r{^/#{resource}/(#{id_patt})/links/(#{assocs})$} do
+                app.patch %r{^/#{resource}/(#{id_patt})/relationships/(#{assocs})$} do
                   resource_id = params[:captures][0]
                   assoc_name  = params[:captures][1]
 

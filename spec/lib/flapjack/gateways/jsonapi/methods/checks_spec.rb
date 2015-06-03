@@ -328,16 +328,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       with(:id => check.id).and_return([check])
 
     expect(check).to receive(:as_json).with(:only => [:name, :enabled]).
-      and_return(check_data)
+      and_return(:name => check_data[:name], :enabled => check_data[:enabled])
 
     expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
-    get "/checks/#{check.id}?fields=name%2Cenabled"
+    get "/checks/#{check.id}?fields[checks]=name%2Cenabled"
     expect(last_response).to be_ok
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data => check_json(check_data),
-      :links => {:self => "http://example.org/checks/#{check.id}?fields=name%2Cenabled"}))
+      :data => check_json(:id => check_data[:id],
+        :name => check_data[:name], :enabled => check_data[:enabled]),
+      :links => {:self => "http://example.org/checks/#{check.id}?fields%5Bchecks%5D=name%2Cenabled"}))
   end
 
   it "retrieves one check and all its linked tag records" do

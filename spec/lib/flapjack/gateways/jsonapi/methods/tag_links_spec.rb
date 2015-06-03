@@ -24,7 +24,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_checks).to receive(:add_ids).with(check.id)
     expect(tag).to receive(:checks).and_return(tag_checks)
 
-    post "/tags/#{tag.id}/links/checks", Flapjack.dump_json(:data => [{
+    post "/tags/#{tag.id}/relationships/checks", Flapjack.dump_json(:data => [{
       :type => 'check', :id => check.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -38,15 +38,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_checks).to receive(:ids).and_return([check.id])
     expect(tag).to receive(:checks).and_return(tag_checks)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
-      and_return(tag)
+    tags = double('tags', :all => [tag])
+    expect(tags).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => tag.id).and_return(tags)
 
     get "/tags/#{tag.id}/checks"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => [{:type => 'check', :id => check.id}],
       :links => {
-        :self    => "http://example.org/tags/#{tag.id}/links/checks",
+        :self    => "http://example.org/tags/#{tag.id}/relationships/checks",
         :related => "http://example.org/tags/#{tag.id}/checks",
       }
     ))
@@ -64,7 +66,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_checks).to receive(:add_ids).with(check.id)
     expect(tag).to receive(:checks).twice.and_return(tag_checks)
 
-    patch "/tags/#{tag.id}/links/checks", Flapjack.dump_json(:data => [{
+    patch "/tags/#{tag.id}/relationships/checks", Flapjack.dump_json(:data => [{
       :type => 'check', :id => check.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -81,7 +83,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_checks).to receive(:remove_ids).with(check.id)
     expect(tag).to receive(:checks).and_return(tag_checks)
 
-    delete "/tags/#{tag.id}/links/checks", Flapjack.dump_json(:data => [{
+    delete "/tags/#{tag.id}/relationships/checks", Flapjack.dump_json(:data => [{
       :type => 'check', :id => check.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -98,7 +100,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_rules).to receive(:add_ids).with(rule.id)
     expect(tag).to receive(:rules).and_return(tag_rules)
 
-    post "/tags/#{tag.id}/links/rules", Flapjack.dump_json(:data => [{
+    post "/tags/#{tag.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -112,15 +114,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_rules).to receive(:ids).and_return([rule.id])
     expect(tag).to receive(:rules).and_return(tag_rules)
 
-    expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).
-      and_return(tag)
+    tags = double('tags', :all => [tag])
+    expect(tags).to receive(:empty?).and_return(false)
+    expect(Flapjack::Data::Tag).to receive(:intersect).
+      with(:id => tag.id).and_return(tags)
 
     get "/tags/#{tag.id}/rules"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data  => [{:type => 'rule', :id => rule.id}],
       :links => {
-        :self    => "http://example.org/tags/#{tag.id}/links/rules",
+        :self    => "http://example.org/tags/#{tag.id}/relationships/rules",
         :related => "http://example.org/tags/#{tag.id}/rules",
       }
     ))
@@ -138,7 +142,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_rules).to receive(:add_ids).with(rule.id)
     expect(tag).to receive(:rules).twice.and_return(tag_rules)
 
-    patch "/tags/#{tag.id}/links/rules", Flapjack.dump_json(:data => [{
+    patch "/tags/#{tag.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)
@@ -155,7 +159,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
     expect(tag_rules).to receive(:remove_ids).with(rule.id)
     expect(tag).to receive(:rules).and_return(tag_rules)
 
-    delete "/tags/#{tag.id}/links/rules", Flapjack.dump_json(:data => [{
+    delete "/tags/#{tag.id}/relationships/rules", Flapjack.dump_json(:data => [{
       :type => 'rule', :id => rule.id
     }]), jsonapi_env
     expect(last_response.status).to eq(204)

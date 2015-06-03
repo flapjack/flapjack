@@ -70,7 +70,7 @@ module Flapjack
                       end
                     end
 
-                    swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                    swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"
                         key :operationId, "get_#{single}_#{link_name}"
@@ -129,7 +129,7 @@ module Flapjack
                         # end
                       end
                     end
-                    swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                    swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"
                         key :operationId, "get_#{single}_links_#{link_name}"
@@ -171,6 +171,9 @@ module Flapjack
                   resource_id = params[:captures][0]
                   assoc_name  = params[:captures][1]
 
+                  fields = params[:fields]
+                  incl   = params[:include].nil? ? nil : params[:include].split(',')
+
                   status 200
 
                   assoc = jsonapi_links[assoc_name.to_sym]
@@ -188,12 +191,28 @@ module Flapjack
 
                   # FIXME accept include= etc
 
-                  associated = resource_class.lock(*assoc.lock_klasses) do
-                    resource_class.find_by_id!(resource_id).send(assoc_name.to_sym).send(accessor)
+                  empty = false
+                  associated = nil
+                  included = nil
+
+                  resource_class.lock(*assoc.lock_klasses) do
+                    res = resource_class.intersect(:id => resource_id)
+                    empty = res.empty?
+
+                    unless empty
+                      associated = res.all.first.send(assoc_name.to_sym).send(accessor)
+
+                      unless incl.nil?
+                        p incl
+                        included = as_jsonapi_included(resource_class, resource, res,
+                          :include => incl, :fields => fields)
+                      end
+                    end
                   end
+                  halt(404) if empty
 
                   links = {
-                    :self    => "#{request.base_url}/#{resource}/#{resource_id}/links/#{assoc_name}",
+                    :self    => "#{request.base_url}/#{resource}/#{resource_id}/relationships/#{assoc_name}",
                     :related => "#{request.base_url}/#{resource}/#{resource_id}/#{assoc_name}"
                   }
 
@@ -206,7 +225,10 @@ module Flapjack
                     nil
                   end
 
-                  Flapjack.dump_json(:data => data, :links => links)
+                  ret = {:data => data, :links => links}
+                  ret[:included] = included unless included.nil?
+
+                  Flapjack.dump_json(ret)
                 end
               end
             end

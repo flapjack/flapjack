@@ -31,7 +31,7 @@ module Flapjack
                   multiple_links.each_pair do |link_name, link_data|
                     link_type = link_data.type
 
-                    swagger_path "/#{resource}/{#{single}_id}/links/#{link_name}" do
+                    swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :post do
                         key :description, "Associate one or more #{link_name} to a #{single}"
                         key :operationId, "add_#{single}_#{link_name}"
@@ -75,7 +75,7 @@ module Flapjack
                   Flapjack::UUID_RE
                 end
 
-                app.post %r{^/#{resource}/(#{id_patt})/links/(#{multi_assocs})$} do
+                app.post %r{^/#{resource}/(#{id_patt})/relationships/(#{multi_assocs})$} do
                   resource_id = params[:captures][0]
                   assoc_name  = params[:captures][1]
 
