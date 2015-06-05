@@ -46,6 +46,19 @@ module Flapjack
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
 
+          api_url = @config['api_url']
+          if api_url.nil?
+            raise "'api_url' config must contain a Flapjack API instance address"
+          end
+          if URI.regexp(['http', 'https']).match(api_url).nil?
+            raise "'api_url' is not a valid http or https URI (#{api_url})"
+          end
+          unless api_url.match(/^.*\/$/)
+            Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{api_url}/'"
+            api_url = "#{@api_url}/"
+          end
+
+          Flapjack::Diner.base_uri(api_url)
           Flapjack::Diner.logger = ::Logger.new('log/flapjack_diner.log')
 
           # constants won't be exposed to eRb scope
@@ -260,11 +273,11 @@ module Flapjack
 
         @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check[:ack_hash]
 
-        @contacts = included_records(@check[:links], :contacts,
+        @contacts = included_records(@check[:relationships], :contacts,
           included, 'contact')
 
-        @contact_media = included_records(@check[:links], :'contacts.media',
-          included, 'medium')
+        # @contact_media = included_records(@check[:relationships], :'contacts.media',
+        #   included, 'medium')
 
         # FIXME need to retrieve contact-media linkage info
 
@@ -278,9 +291,8 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        # FIXME link to check in same operation
         Flapjack::Diner.create_unscheduled_maintenances(:summary => summary,
-          :end_time => (Time.now + duration))
+          :end_time => (Time.now + duration), :check => check_id)
 
         # FIXME error if above operation failed
 
@@ -306,10 +318,9 @@ module Flapjack
         duration   = ChronicDuration.parse(params[:duration])
         summary    = params[:summary]
 
-        # FIXME link to check in same operation
-        Flapjack::Diner.create_scheduled_maintenance(check_id,
-          :summary => summary, :start_time => start_time,
-          :end_time => (Time.now + duration))
+        Flapjack::Diner.create_scheduled_maintenances(:summary => summary,
+          :start_time => start_time, :end_time => (Time.now + duration),
+          :check => check_id)
 
         # FIXME error if above operation failed
 
@@ -364,10 +375,10 @@ module Flapjack
         context = Flapjack::Diner.context
 
         unless context.nil?
-          @checks = included_records(@contact[:links], :checks,
+          @checks = included_records(@contact[:relationships], :checks,
             included, 'check')
 
-          @media = included_records(check[:links], :'media',
+          @media = included_records(check[:relationships], :'media',
             included, 'medium')
         end
 
@@ -395,7 +406,7 @@ module Flapjack
     private
 
       def check_state(check, included, time)
-        current_state = included_records(check[:links], :current_state,
+        current_state = included_records(check[:relationships], :current_state,
           included, 'state')
 
         last_changed = if current_state.nil? || current_state[:created_at].nil?
@@ -418,13 +429,13 @@ module Flapjack
           end
         end
 
-        latest_notifications = included_records(check[:links], :latest_notifications,
+        latest_notifications = included_records(check[:relationships], :latest_notifications,
           included, 'state')
 
-        in_scheduled_maintenance = !check[:links][:current_scheduled_maintenances][:linkage].nil? &&
-          !check[:links][:latest_notifications][:linkage].empty?
+        in_scheduled_maintenance = !check[:relationships][:current_scheduled_maintenances][:linkage].nil? &&
+          !check[:relationships][:latest_notifications][:linkage].empty?
 
-        in_unscheduled_maintenance = !check[:links][:current_unscheduled_maintenance][:linkage].nil?
+        in_unscheduled_maintenance = !check[:relationships][:current_unscheduled_maintenance][:linkage].nil?
 
         {
           :condition     => current_state.nil? ? '-' : current_state[:condition],
@@ -440,7 +451,7 @@ module Flapjack
       def check_extra_state(check, included, time)
         state = check_state(check, included, time)
 
-        current_scheduled_maintenances = included_records(check[:links],
+        current_scheduled_maintenances = included_records(check[:relationships],
           :current_scheduled_maintenances, included, 'scheduled_maintenance')
 
         current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
@@ -452,10 +463,10 @@ module Flapjack
           end
         end
 
-        current_unscheduled_maintenance = included_records(check[:links],
+        current_unscheduled_maintenance = included_records(check[:relationships],
           :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
 
-        current_state = included_records(check[:links], :current_state,
+        current_state = included_records(check[:relationships], :current_state,
           included, 'state')
 
         state.merge(
