@@ -10,35 +10,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   let(:contact)  { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
 
-  def medium_json(me_data)
-    id = me_data[:id]
-    {
-      :id => id,
-      :type => 'medium',
-      :attributes => me_data.reject {|k,v| :id.eql?(k) },
-      :relationships => {
-        :alerting_checks => {
-          :links => {
-            :self => "http://example.org/media/#{id}/relationships/alerting_checks",
-            :related => "http://example.org/media/#{id}/alerting_checks"
-          }
-        },
-        :contact => {
-          :links => {
-            :self => "http://example.org/media/#{id}/relationships/contact",
-            :related => "http://example.org/media/#{id}/contact"
-          }
-        },
-        :rules => {
-          :links => {
-            :self => "http://example.org/media/#{id}/relationships/rules",
-            :related => "http://example.org/media/#{id}/rules"
-          }
-        }
-      }
-    }
-  end
-
   it "creates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
@@ -54,14 +25,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       and_return(medium)
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(email_data)
+      and_return(email_data.reject {|k,v| :id.eql?(k)})
 
     expect(Flapjack::Data::Medium).to receive(:jsonapi_type).and_return('medium')
 
-    post "/media", Flapjack.dump_json(:data => email_data.merge(:type => 'medium')), jsonapi_env
+    req_data = medium_json(email_data)
+    resp_data = req_data.merge(:relationships => medium_rel(email_data))
+
+    post "/media", Flapjack.dump_json(:data => req_data), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      medium_json(email_data)))
+      resp_data))
   end
 
   it "does not create a medium if the data is improperly formatted" do
@@ -81,7 +55,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:new).with(email_data).
       and_return(medium)
 
-    post "/media", Flapjack.dump_json(:data => email_data.merge(:type => 'medium')), jsonapi_env
+    req_data = medium_json(email_data)
+
+    post "/media", Flapjack.dump_json(:data => req_data), jsonapi_env
     expect(last_response.status).to eq(403)
     # TODO error body
   end
@@ -95,12 +71,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(:id => medium.id).and_return([medium])
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(email_data)
+      and_return(email_data.reject {|k,v| :id.eql?(k)})
+
+    resp_data = medium_json(email_data).merge(:relationships => medium_rel(email_data))
 
     get "/media/#{medium.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      medium_json(email_data), :links => {:self  => "http://example.org/media/#{medium.id}"}))
+      resp_data, :links => {:self  => "http://example.org/media/#{medium.id}"}))
   end
 
   it "returns all media" do
@@ -135,12 +113,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(:id).and_return(sorted)
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(email_data)
+      and_return(email_data.reject {|k,v| :id.eql?(k)})
+
+    resp_data = [medium_json(email_data).merge(:relationships => medium_rel(email_data))]
 
     get '/media'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      medium_json(email_data)], :links => links, :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => resp_data,
+      :links => links, :meta => meta))
   end
 
   it "does not return a medium if the medium is not present" do
@@ -171,7 +151,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium).to receive(:save!).and_return(true)
 
     patch "/media/#{medium.id}",
-      Flapjack.dump_json(:data => {:id => medium.id, :type => 'medium', :address => '12345'}),
+      Flapjack.dump_json(:data => {:id => medium.id, :type => 'medium', :attributes => {:address => '12345'}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -194,8 +174,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
     patch "/media",
       Flapjack.dump_json(:data => [
-        {:id => medium.id, :type => 'medium', :address => '12345'},
-        {:id => medium_2.id, :type => 'medium', :interval => 120}
+        {:id => medium.id, :type => 'medium', :attributes => {:address => '12345'}},
+        {:id => medium_2.id, :type => 'medium', :attributes => {:interval => 120}}
       ]),
       jsonapi_bulk_env
     expect(last_response.status).to eq(204)
@@ -210,7 +190,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(medium.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Medium, medium.id))
 
     patch "/media/#{medium.id}",
-      Flapjack.dump_json(:data => {:id => medium.id, :type => 'medium', :address => '12345'}),
+      Flapjack.dump_json(:data => {:id => medium.id, :type => 'medium', :attributes => {:address => '12345'}}),
       jsonapi_env
     expect(last_response.status).to eq(404)
   end

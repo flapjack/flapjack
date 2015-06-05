@@ -20,16 +20,20 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
   }
 
   def expect_checks(path, report_type, opts = {})
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::State).and_yield
+
     link_opts = {}
     expect(Flapjack::Data::Report).to receive(report_type).
       with(check, :start_time => opts[:start], :end_time => opts[:finish]).
-      and_return(:type => "#{report_type}_report")
+      and_return({})
     link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
     link_opts[:end_time] = opts[:finish].iso8601 unless opts[:finish].nil?
 
     one_lnk = opts[:one] ? "/#{check.id}" : ''
     report_data = {
-      :type => "#{report_type}_report"
+      :type => "#{report_type}_report",
+      :attributes => {}
     }
 
     result = {
@@ -75,10 +79,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
   end
 
   def expect_tag_checks(path, report_type, opts = {})
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::State, Flapjack::Data::Tag).and_yield
+
     link_opts = {}
     expect(Flapjack::Data::Report).to receive(report_type).
       with(check, :start_time => opts[:start], :end_time => opts[:finish]).
-      and_return(:type => "#{report_type}_report")
+      and_return({})
     link_opts[:start_time] = opts[:start].iso8601 unless opts[:start].nil?
     link_opts[:end_time] = opts[:finish].iso8601 unless opts[:start].nil?
 
@@ -110,7 +117,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     result = {
       :links => links_data,
       :data => [
-        {:type => "#{report_type}_report"}
+        {:type => "#{report_type}_report", :attributes => {}}
       ],
       :meta => meta
     }
@@ -141,6 +148,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     end
 
     it "doesn't return a #{report_type} report for a check that's not found" do
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State).and_yield
+
       no_checks = double('no_checks')
       expect(no_checks).to receive(:empty?).and_return(true)
 
@@ -152,6 +162,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Reports', :sinatra => true, :log
     end
 
     it "doesn't return a #{report_type} report for checks linked to a tag that's not found" do
+      expect(Flapjack::Data::Check).to receive(:lock).
+        with(Flapjack::Data::State, Flapjack::Data::Tag).and_yield
+
       expect(Flapjack::Data::Tag).to receive(:find_by_id!).
         with(tag.id).
         and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Tag, tag.id))

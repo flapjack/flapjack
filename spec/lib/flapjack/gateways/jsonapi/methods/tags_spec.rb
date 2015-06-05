@@ -14,29 +14,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 
-  def tag_json(ta_data)
-    id = ta_data[:name]
-    {
-      :id => id,
-      :type => 'tag',
-      :attributes => ta_data,
-      :relationships => {
-        :checks => {
-          :links => {
-            :self => "http://example.org/tags/#{id}/relationships/checks",
-            :related => "http://example.org/tags/#{id}/checks"
-          }
-        },
-        :rules => {
-          :links => {
-            :self => "http://example.org/tags/#{id}/relationships/rules",
-            :related => "http://example.org/tags/#{id}/rules"
-          }
-        }
-      }
-    }
-  end
-
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
@@ -58,10 +35,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
-    post "/tags", Flapjack.dump_json(:data => tag_data.merge(:type => 'tag')), jsonapi_env
+    req_data  = tag_json(tag_data)
+    resp_data = req_data.merge(:relationships => tag_rel(tag_data))
+
+    post "/tags", Flapjack.dump_json(:data => req_data), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      tag_json(tag_data)))
+      resp_data))
   end
 
   it "retrieves paginated tags" do
@@ -98,10 +78,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
 
+    resp_data = [tag_json(tag_data).merge(:relationships => tag_rel(tag_data))]
+
     get '/tags'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      tag_json(tag_data)], :links => links, :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      resp_data, :links => links, :meta => meta))
   end
 
   it "retrieves paginated tags matching a filter" do
@@ -143,10 +125,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
+    resp_data = [tag_json(tag_data).merge(:relationships => tag_rel(tag_data))]
+
     get '/tags?filter%5B%5D=name%3Adatabase'
     expect(last_response).to be_ok
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      tag_json(tag_data)], :links => links, :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      resp_data, :links => links, :meta => meta))
   end
 
   it "retrieves one tag" do
@@ -161,45 +145,67 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
 
+    resp_data = tag_json(tag_data).merge(:relationships => tag_rel(tag_data))
+
     get "/tags/#{tag.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      tag_json(tag_data), :links => {:self  => "http://example.org/tags/#{tag.id}"}))
+      resp_data, :links => {:self  => "http://example.org/tags/#{tag.id}"}))
   end
 
-  it "retrieves several tags" # do
-  #  expect(Flapjack::Data::Tag).to receive(:lock).
-  #    with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
-  #         Flapjack::Data::Route).
-  #    and_yield
+  it "retrieves several tags" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
+           Flapjack::Data::Route).
+      and_yield
 
-  #   sorted = double('sorted')
-  #   expect(sorted).to receive(:find_by_ids!).
-  #     with(tag.id, tag_2.id).and_return([tag, tag_2])
-  #   expect(Flapjack::Data::Tag).to receive(:sort).with(:id).and_return(sorted)
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 2
+      }
+    }
 
-  #   expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
-  #     and_return(tag_data)
+    links = {
+      :self  => "http://example.org/tags?filter%5B%5D=id%3A#{tag.id}%7C#{tag_2.id}",
+      :first => "http://example.org/tags?filter%5B%5D=id%3A#{tag.id}%7C#{tag_2.id}&page=1",
+      :last  => "http://example.org/tags?filter%5B%5D=id%3A#{tag.id}%7C#{tag_2.id}&page=1"
+    }
 
-  #   expect(tag_2).to receive(:as_json).with(:only => an_instance_of(Array)).
-  #     and_return(tag_2_data)
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([tag.id, tag_2.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(tag), arg.call(tag_2)] }
 
-  #   get "/tags/#{tag.id},#{tag_2.id}"
-  #   expect(last_response).to be_ok
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(page)
+    expect(sorted).to receive(:count).and_return(2)
 
-  #   expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-  #     tag_data_with_id.merge(
-  #       :type => 'tag',
-  #       :links => {:self  => "http://example.org/tags/#{tag.id}",
-  #                  :checks => "http://example.org/tags/#{tag.id}/checks",
-  #                  :rules => "http://example.org/tags/#{tag.id}/rules"}),
-  #     tag_2_data_with_id.merge(
-  #       :type => 'tag',
-  #       :links => {:self  => "http://example.org/tags/#{tag_2.id}",
-  #                  :checks => "http://example.org/tags/#{tag_2.id}/checks",
-  #                  :rules => "http://example.org/tags/#{tag_2.id}/rules"})],
-  #   :links => {:self  => "http://example.org/tags/#{tag.id},#{tag_2.id}"}))
-  # end
+    filtered = double('filtered')
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+    expect(Flapjack::Data::Tag).to receive(:intersect).with(:id => [tag.id, tag_2.id]).
+      and_return(filtered)
+
+    expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_data)
+
+    expect(tag_2).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(tag_2_data)
+
+    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
+
+    resp_data = [
+      tag_json(tag_data).merge(:relationships => tag_rel(tag_data)),
+      tag_json(tag_2_data).merge(:relationships => tag_rel(tag_2_data))
+    ]
+
+    get "/tags?filter=id%3A#{tag.id}%7C#{tag_2.id}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => resp_data, :links => links, :meta => meta))
+  end
 
   it 'sets a linked check for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
@@ -222,8 +228,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
     patch "/tags/#{tag.id}",
-      Flapjack.dump_json(:data => {:id => tag.id, :type => 'tag', :links =>
-        {:checks => {:linkage => [{:type => 'check', :id => check.id}]}}}),
+      Flapjack.dump_json(:data => {:id => tag.id, :type => 'tag', :relationships =>
+        {:checks => {:data => [{:type => 'check', :id => check.id}]}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end

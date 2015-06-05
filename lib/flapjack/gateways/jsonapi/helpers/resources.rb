@@ -21,7 +21,7 @@ module Flapjack
           # TODO refactor some of these methods into a module, included in data/ classes
 
           def normalise_json_data(attribute_types, data)
-            record_data = data.reject {|k| 'links'.eql?(k)}
+            record_data = data.dup
             attribute_types.each_pair do |name, type|
               t = record_data[name.to_s]
               next unless t.is_a?(String) && :timestamp.eql?(type)
@@ -93,7 +93,7 @@ module Flapjack
             jsonapi_fields = if fields.nil?
               whitelist
             else
-              Set.new(fields).add(:id).keep_if {|f| whitelist.include?(f) }.to_a
+              Set.new(fields).keep_if {|f| whitelist.include?(f) }.to_a
             end
 
             links = jsonapi_linkages(klass, resources, resource_ids,
@@ -124,9 +124,10 @@ module Flapjack
               end
               data = {
                 :type => jsonapi_type,
-                :id => r_id,
-                :attributes => r.as_json(:only => jsonapi_fields)
+                :id => r_id
               }
+              attrs = r.as_json(:only => jsonapi_fields)
+              data[:attributes] = attrs unless attrs.empty?
               data[:relationships] = l unless l.nil? || l.empty?
               data
             end

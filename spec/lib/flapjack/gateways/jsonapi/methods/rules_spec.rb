@@ -12,35 +12,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
   let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
 
-  def rule_json(ru_data)
-    id = ru_data[:id]
-    {
-      :id => id,
-      :type => 'rule',
-      :attributes => ru_data.reject {|k,v| :id.eql?(k) },
-      :relationships => {
-        :contact => {
-          :links => {
-            :self => "http://example.org/rules/#{id}/relationships/contact",
-            :related => "http://example.org/rules/#{id}/contact"
-          }
-        },
-        :media => {
-          :links => {
-            :self => "http://example.org/rules/#{id}/relationships/media",
-            :related => "http://example.org/rules/#{id}/media"
-          }
-        },
-        :tags => {
-          :links => {
-            :self => "http://example.org/rules/#{id}/relationships/tags",
-            :related => "http://example.org/rules/#{id}/tags"
-          }
-        }
-      }
-    }
-  end
-
   it "creates a rule" do
     expect(Flapjack::Data::Rule).to receive(:lock).with(Flapjack::Data::Contact,
       Flapjack::Data::Medium, Flapjack::Data::Tag, Flapjack::Data::Check,
@@ -58,10 +29,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     expect(Flapjack::Data::Rule).to receive(:jsonapi_type).and_return('rule')
 
-    post "/rules", Flapjack.dump_json(:data => rule_data.merge(:type => 'rule')), jsonapi_env
+    req_data  = rule_json(rule_data)
+    resp_data = req_data.merge(:relationships => rule_rel(rule_data))
+
+    post "/rules", Flapjack.dump_json(:data => req_data), jsonapi_env
     expect(last_response.status).to eq(201)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      rule_json(rule_data)))
+      resp_data))
   end
 
   it "does not create a rule if the data is improperly formatted" do
@@ -81,7 +55,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    post "/rules", Flapjack.dump_json(:data => rule_data.merge(:type => 'rule')), jsonapi_env
+    req_data  = rule_json(rule_data)
+
+    post "/rules", Flapjack.dump_json(:data => req_data), jsonapi_env
     expect(last_response.status).to eq(403)
   end
 
@@ -117,13 +93,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id).and_return(sorted)
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(rule_data)
+      and_return({})
+
+    resp_data = [rule_json(rule_data).merge(:relationships => rule_rel(rule_data))]
 
     get '/rules'
     expect(last_response).to be_ok
-
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => [
-      rule_json(rule_data)], :links => links, :meta => meta))
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => resp_data,
+      :links => links, :meta => meta))
   end
 
   it "gets a single rule" do
@@ -135,12 +112,14 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id => rule.id).and_return([rule])
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(rule_data)
+      and_return({})
+
+    resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
 
     get "/rules/#{rule.id}"
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
-      rule_json(rule_data), :links => {:self  => "http://example.org/rules/#{rule.id}"}))
+      resp_data, :links => {:self  => "http://example.org/rules/#{rule.id}"}))
   end
 
   it "does not get a rule that does not exist" do
@@ -177,44 +156,22 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id => [contact.id]).and_return(contacts)
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(contact_data)
+      and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(rule_data)
+      and_return({})
 
     get "/rules/#{rule.id}?include=contact"
     expect(last_response).to be_ok
 
-    response_data = rule_json(rule_data)
-    response_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
+    resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
+    resp_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
+
+    resp_included = [contact_json(contact_data).merge(:relationships => contact_rel(contact_data))]
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data => response_data,
-      :included => [{
-        :id => contact.id,
-        :type => 'contact',
-        :attributes => contact_data.reject {|k,v| :id.eql?(k) },
-        :relationships => {
-          :checks => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/checks",
-              :related => "http://example.org/contacts/#{contact.id}/checks"
-            }
-          },
-          :media => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/media",
-              :related => "http://example.org/contacts/#{contact.id}/media"
-            }
-          },
-          :rules => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/rules",
-              :related => "http://example.org/contacts/#{contact.id}/rules"
-            }
-          }
-        }
-      }],
+      :data => resp_data,
+      :included => resp_included,
       :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact"}))
   end
 
@@ -244,76 +201,33 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id => [medium.id]).and_return(media)
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(email_data)
+      and_return(email_data.reject {|k,v| :id.eql?(k)})
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(contact_data)
+      and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return(rule_data)
+      and_return({})
 
     get "/rules/#{rule.id}?include=contact.media"
     expect(last_response).to be_ok
 
-    response_data = rule_json(rule_data)
-    response_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
+    resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
+    resp_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
+
+    resp_incl_contact = contact_json(contact_data).merge(:relationships => contact_rel(contact_data))
+    resp_incl_contact[:relationships][:media][:data] = [{:type => 'medium', :id => medium.id}]
+
+    resp_included = [
+      resp_incl_contact,
+      medium_json(email_data).merge(:relationships => medium_rel(email_data))
+    ]
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data => response_data,
-      :included => [{
-        :type => 'contact',
-        :id => contact.id,
-        :attributes => contact_data.reject {|k,v| :id.eql?(k) },
-        :relationships => {
-          :checks => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/checks",
-              :related => "http://example.org/contacts/#{contact.id}/checks"
-            }
-          },
-          :media => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/media",
-              :related => "http://example.org/contacts/#{contact.id}/media"
-            },
-            :data => [
-              {:type => 'medium', :id => medium.id}
-            ]
-          },
-          :rules => {
-            :links => {
-              :self => "http://example.org/contacts/#{contact.id}/relationships/rules",
-              :related => "http://example.org/contacts/#{contact.id}/rules"
-            }
-          },
-        }
-      }, {
-        :type => 'medium',
-        :id => medium.id,
-        :attributes => email_data.reject {|k,v| :id.eql?(k) },
-        :relationships => {
-          :alerting_checks => {
-            :links => {
-              :self => "http://example.org/media/#{medium.id}/relationships/alerting_checks",
-              :related => "http://example.org/media/#{medium.id}/alerting_checks"
-            }
-          },
-          :contact => {
-            :links => {
-              :self => "http://example.org/media/#{medium.id}/relationships/contact",
-              :related => "http://example.org/media/#{medium.id}/contact"
-            }
-          },
-          :rules => {
-            :links => {
-              :self => "http://example.org/media/#{medium.id}/relationships/rules",
-              :related => "http://example.org/media/#{medium.id}/rules"
-            }
-          }
-        }
-      }
-    ],
-    :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact.media"}))
+      :data => resp_data,
+      :included => resp_included,
+      :links => {:self  => "http://example.org/rules/#{rule.id}?include=contact.media"}
+    ))
   end
 
   it "sets a contact for a rule" do
@@ -333,8 +247,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(rule).to receive(:contact=).with(contact)
 
     patch "/rules/#{rule.id}",
-      Flapjack.dump_json(:data => {:id => rule.id, :type => 'rule', :links =>
-        {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}}),
+      Flapjack.dump_json(:data => {:id => rule.id, :type => 'rule', :relationships =>
+        {:contact => {:data => {:type => 'contact', :id => contact.id}}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end
@@ -361,11 +275,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     patch "/rules",
       Flapjack.dump_json(:data => [
-        {:id => rule.id, :type => 'rule', :links =>
-          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        {:id => rule.id, :type => 'rule', :relationships =>
+          {:contact => {:data => {:type => 'contact', :id => contact.id}}}
         },
-        {:id => rule_2.id, :type => 'rule', :links =>
-          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        {:id => rule_2.id, :type => 'rule', :relationships =>
+          {:contact => {:data => {:type => 'contact', :id => contact.id}}}
         }]),
       jsonapi_bulk_env
     expect(last_response.status).to eq(204)
@@ -382,8 +296,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
 
     patch "/rules/#{rule.id}",
       Flapjack.dump_json(:data =>
-        {:id => rule.id, :type => 'rule', :links =>
-          {:contact => {:linkage => {:type => 'contact', :id => contact.id}}}
+        {:id => rule.id, :type => 'rule', :relationships =>
+          {:contact => {:data => {:type => 'contact', :id => contact.id}}}
         }),
       jsonapi_env
     expect(last_response.status).to eq(404)

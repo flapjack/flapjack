@@ -203,13 +203,12 @@ module Flapjack
                       associated = res.all.first.send(assoc_name.to_sym).send(accessor)
 
                       unless incl.nil?
-                        p incl
                         included = as_jsonapi_included(resource_class, resource, res,
                           :include => incl, :fields => fields)
                       end
                     end
                   end
-                  halt(404) if empty
+                  raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id) if empty
 
                   links = {
                     :self    => "#{request.base_url}/#{resource}/#{resource_id}/relationships/#{assoc_name}",

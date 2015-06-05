@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/flapjack-diner.git
-  revision: 6e2bde71be217d1d08da77984cd49f066d488ce2
+  revision: 44afb3bdcf13e3792d640b27809bb413fe7728f1
   branch: v2_pre
   specs:
     flapjack-diner (2.0.0a1)
@@ -9,7 +9,7 @@ GIT
 
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: 510c3e6449acd7c719e2dd08d9f480d82260fc55
+  revision: cce78ff058596cdf70cdb8bbf8b085e1becd9e21
   branch: 16_zset_indices
   specs:
     zermelo (1.1.0)
@@ -85,7 +85,7 @@ GEM
       multi_xml (>= 0.5.2)
     i18n (0.7.0)
     ice_cube (0.13.0)
-    json (1.8.2)
+    json (1.8.3)
     json_spec (1.1.4)
       multi_json (~> 1.0)
       rspec (>= 2.0, < 4.0)
@@ -98,7 +98,7 @@ GEM
     multi_test (0.1.2)
     multi_xml (0.5.5)
     numerizer (0.1.1)
-    oj (2.12.8)
+    oj (2.12.9)
     pact (1.8.0)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)

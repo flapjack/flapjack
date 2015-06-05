@@ -7,6 +7,10 @@ module FixtureData
     Flapjack.redis.flushdb
   end
 
+  def api_host
+    'example.org'
+  end
+
   def time
     @time ||= Time.now
   end
@@ -15,7 +19,7 @@ module FixtureData
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
      :name => 'www.example.com:SSH',
-     :enabled               => true
+     :enabled => true
     }
   end
 
@@ -23,7 +27,82 @@ module FixtureData
     @check_2_data ||= {
      :id   => '29e913cf-29ea-4ae5-94f6-7069cf4a1514',
      :name => 'www2.example.com:PING',
-     :enabled               => true
+     :enabled => true
+    }
+  end
+
+  def check_json(ch_data, opts = {})
+    id = ch_data[:id]
+    {
+      :id => id,
+      :type => 'check',
+      :attributes => ch_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def check_rel(ch_data)
+    id = ch_data[:id]
+    {
+      :alerting_media => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/alerting_media",
+          :related => "http://example.org/checks/#{id}/alerting_media"
+        }
+      },
+      :contacts => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/contacts",
+          :related => "http://example.org/checks/#{id}/contacts"
+        }
+       },
+      :current_scheduled_maintenances =>  {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/current_scheduled_maintenances",
+          :related => "http://example.org/checks/#{id}/current_scheduled_maintenances"
+        }
+      },
+      :current_state => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/current_state",
+          :related => "http://example.org/checks/#{id}/current_state"
+        }
+      },
+      :current_unscheduled_maintenance => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/current_unscheduled_maintenance",
+          :related => "http://example.org/checks/#{id}/current_unscheduled_maintenance"
+        }
+      },
+      :latest_notifications => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/latest_notifications",
+          :related => "http://example.org/checks/#{id}/latest_notifications"
+        }
+      },
+      :scheduled_maintenances => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/scheduled_maintenances",
+          :related => "http://example.org/checks/#{id}/scheduled_maintenances"
+        }
+      },
+      :states => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/states",
+          :related => "http://example.org/checks/#{id}/states"
+        }
+      },
+      :tags => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/tags",
+          :related => "http://example.org/checks/#{id}/tags"
+        }
+      },
+      :unscheduled_maintenances => {
+        :links => {
+          :self => "http://example.org/checks/#{id}/relationships/unscheduled_maintenances",
+          :related => "http://example.org/checks/#{id}/unscheduled_maintenances"
+        }
+      }
     }
   end
 
@@ -39,6 +118,39 @@ module FixtureData
     @contact_2_data ||= {
      :id       => 'ff41bfbb-0d04-45e3-a4d2-579ed1655fb8',
      :name     => 'Joan Smith'
+    }
+  end
+
+  def contact_json(co_data, opts = {})
+    id = co_data[:id]
+    {
+      :id => id,
+      :type => 'contact',
+      :attributes => co_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def contact_rel(co_data)
+    id = co_data[:id]
+    {
+      :checks => {
+        :links => {
+          :self => "http://#{api_host}/contacts/#{id}/relationships/checks",
+          :related => "http://#{api_host}/contacts/#{id}/checks"
+        }
+      },
+      :media => {
+        :links => {
+          :self => "http://#{api_host}/contacts/#{id}/relationships/media",
+          :related => "http://#{api_host}/contacts/#{id}/media"
+        }
+      },
+      :rules => {
+        :links => {
+          :self => "http://#{api_host}/contacts/#{id}/relationships/rules",
+          :related => "http://#{api_host}/contacts/#{id}/rules"
+        }
+      }
     }
   end
 
@@ -76,13 +188,36 @@ module FixtureData
     }
   end
 
+  def maintenance_json(type, m_data)
+    {
+      :id => m_data[:id],
+      :type => "#{type}_maintenance",
+      :attributes => m_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def maintenance_rel(type, m_data)
+    id = m_data[:id]
+    {
+      :check => {
+        :links => {
+          :self => "http://example.org/#{type}_maintenances/#{id}/relationships/check",
+          :related => "http://example.org/#{type}_maintenances/#{id}/check"
+        }
+      }
+    }
+  end
+
   def sms_data
     @sms_data ||= {
       :id               => 'e2e09943-ed6c-476a-a8a5-ec165426f298',
       :transport        => 'sms',
       :address          => '0123456789',
       :interval         => 300,
-      :rollup_threshold => 5
+      :rollup_threshold => 5,
+      :pagerduty_subdomain => nil,
+      :pagerduty_token => nil,
+      :pagerduty_ack_duration => nil
     }
   end
 
@@ -92,7 +227,43 @@ module FixtureData
       :transport        => 'email',
       :address          => 'ablated@example.org',
       :interval         => 180,
-      :rollup_threshold => 3
+      :rollup_threshold => 3,
+      :pagerduty_subdomain => nil,
+      :pagerduty_token => nil,
+      :pagerduty_ack_duration => nil
+    }
+  end
+
+  def medium_json(me_data, opts = {})
+    id = me_data[:id]
+    {
+      :id => id,
+      :type => 'medium',
+      :attributes => me_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def medium_rel(me_data)
+    id = me_data[:id]
+    {
+      :alerting_checks => {
+        :links => {
+          :self => "http://#{api_host}/media/#{id}/relationships/alerting_checks",
+          :related => "http://#{api_host}/media/#{id}/alerting_checks"
+        }
+      },
+      :contact => {
+        :links => {
+          :self => "http://#{api_host}/media/#{id}/relationships/contact",
+          :related => "http://#{api_host}/media/#{id}/contact"
+        }
+      },
+      :rules => {
+        :links => {
+          :self => "http://#{api_host}/media/#{id}/relationships/rules",
+          :related => "http://#{api_host}/media/#{id}/rules"
+        }
+      }
     }
   end
 
@@ -110,35 +281,11 @@ module FixtureData
     }
   end
 
-  def pagerduty_credentials_data
-    @pagerduty_credentials_data ||= {
-      :id          => '87b65bf6-9cd8-4247-bd7d-70fcbe233b46',
-      :service_key => 'abc',
-      :subdomain   => 'def',
-      :username    => 'ghi',
-      :password    => 'jkl',
-    }
-  end
-
-  def pagerduty_credentials_2_data
-    @pagerduty_credentials_2_data ||= {
-      :id          => 'cfd55e24-f572-42ae-a0eb-5f86bc8e900f',
-      :service_key => 'mno',
-      :subdomain   => 'pqr',
-      :username    => 'stu',
-      :password    => 'vwx',
-    }
-  end
-
-  def route_data
-    @route_data ||= {
-      :id          => 'da37d2a9-da41-47ce-85ac-537b2ed1443a',
-    }
-  end
-
-  def route_2_data
-    @route_2_data ||= {
-      :id          => '121fa5a6-7d87-43fc-a231-a746619ed98c',
+  def notification_json(no_data, opts = {})
+    {
+      :id => no_data[:id],
+      :type => 'test_notification',
+      :attributes => no_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
@@ -154,9 +301,35 @@ module FixtureData
     }
   end
 
-  def state_data
-    @state_data ||= {
-     :name => 'ok',
+  def rule_json(ru_data)
+    {
+      :id => ru_data[:id],
+      :type => 'rule' #,
+      # :attributes => ru_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def rule_rel(ru_data)
+    id = ru_data[:id]
+    {
+      :contact => {
+        :links => {
+          :self => "http://example.org/rules/#{id}/relationships/contact",
+          :related => "http://example.org/rules/#{id}/contact"
+        }
+      },
+      :media => {
+        :links => {
+          :self => "http://example.org/rules/#{id}/relationships/media",
+          :related => "http://example.org/rules/#{id}/media"
+        }
+      },
+      :tags => {
+        :links => {
+          :self => "http://example.org/rules/#{id}/relationships/tags",
+          :related => "http://example.org/rules/#{id}/tags"
+        }
+      }
     }
   end
 
@@ -172,8 +345,58 @@ module FixtureData
     }
   end
 
+  def tag_json(ta_data, opts = {})
+    id = ta_data[:name]
+    {
+      :type => 'tag',
+      :attributes => ta_data
+    }
+  end
+
+  def tag_rel(ta_data)
+    id = ta_data[:name]
+    {
+      :checks => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/checks",
+          :related => "http://#{api_host}/tags/#{id}/checks"
+        }
+      },
+      :rules => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/rules",
+          :related => "http://#{api_host}/tags/#{id}/rules"
+        }
+      }
+    }
+  end
+
+  def metrics_data
+    @metrics_data ||= {
+      :total_keys         => 0,
+      :processed_events   => {
+        :all_events     => 0,
+        :ok_events      => 0,
+        :failure_events => 0,
+        :action_events  => 0,
+        :invalid_events => 0
+      },
+      :event_queue_length => 0,
+      :check_freshness    => {:"0" => 0, :"60" => 0, :"300" => 0, :"900" => 0, :"3600" => 0},
+      :check_counts       => {:all => 0, :enabled => 0, :failing => 0}
+    }
+  end
+
+  def metrics_json(met_data)
+    {
+      :type => 'metrics',
+      :attributes => met_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
   def global_statistics_data
     @global_statistics_data ||= {
+      :id => 'c63f8029-7c2b-4a33-b9f9-fbb2228c8037',
       :instance_name  => 'global',
       :created_at     => time.iso8601,
       :all_events     => 0,
@@ -184,16 +407,11 @@ module FixtureData
     }
   end
 
-  def status_data
-    @status_data ||= {
-      :id => 'b25335ca-3e80-42e8-91b3-07026066b515',
-      :last_update          => time.iso8601,
-      :last_change          => time.iso8601,
-      :last_problem         => (time - 20).iso8601,
-      :last_recovery        => time.iso8601,
-      :last_acknowledgement => (time - 10).iso8601,
-      :summary              => 'all good',
-      :details              => "trust me, it's ok"
+  def global_statistics_json
+    {
+      :id => global_statistics_data[:id],
+      :type => 'statistic',
+      :attributes => global_statistics_data.reject {|k,v| :id.eql?(k) }
     }
   end
 

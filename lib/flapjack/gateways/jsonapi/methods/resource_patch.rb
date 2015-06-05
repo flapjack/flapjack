@@ -139,9 +139,9 @@ module Flapjack
 
                     resource_links = resources_data.each_with_object({}) do |d, memo|
                       r = resources_by_id[d['id']]
-                      rd = normalise_json_data(attribute_types, d)
+                      rd = normalise_json_data(attribute_types, d['attributes'] || {})
 
-                      type = rd.delete(:type)
+                      type = d['type']
                       halt(err(409, "Resource missing data type")) if type.nil?
                       halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
 
@@ -150,13 +150,14 @@ module Flapjack
                         r.send("#{att}=".to_sym, value)
                       end
                       halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
-                      links = d['links']
+
+                      links = d['relationships']
                       next if links.nil?
 
                       singular_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.id] ||= {}
-                        memo[r.id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['linkage']['id'])
+                        memo[r.id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['data']['id'])
                       end
 
                       multiple_links.each_pair do |assoc, assoc_klass|
@@ -164,7 +165,7 @@ module Flapjack
                         current_assoc_ids = r.send(assoc.to_sym).ids
                         memo[r.id] ||= {}
 
-                        link_ids = links[assoc.to_s]['linkage'].map {|l| l['id']}
+                        link_ids = links[assoc.to_s]['data'].map {|l| l['id']}
 
                         to_remove = current_assoc_ids - link_ids
                         to_add    = link_ids - current_assoc_ids

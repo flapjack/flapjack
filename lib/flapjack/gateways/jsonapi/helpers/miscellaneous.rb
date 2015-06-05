@@ -65,51 +65,61 @@ module Flapjack
           end
 
           def validate_data(data, options = {})
-            valid_keys = ((options[:attributes] || []).map(&:to_s) + ['id', 'type', 'links'])
+            valid_keys = ['id', 'type', 'attributes', 'relationships']
+            valid_attrs = (options[:attributes] || []).map(&:to_s)
             sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
             ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
             all_links = sl + ml
             klass = options[:klass]
 
+            # FIXME check error codes against JSONAPI spec
+
             data.each do |d|
               invalid_keys = d.keys - valid_keys
-              halt(err(403, "Invalid attribute(s): #{invalid_keys.join(', ')}")) unless invalid_keys.empty?
-              links = d['links']
-              unless links.nil?
-                halt(err(403, "Link(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
+              halt(err(403, "Invalid key(s): #{invalid_keys.join(', ')}")) unless invalid_keys.empty?
+              if d.has_key?('attributes')
+                attrs = d['attributes']
+                halt(err(403, "Attributes must be a Hash with String keys")) unless attrs.is_a?(Hash) &&
+                  attrs.keys.all? {|k| k.is_a?(String)}
+                invalid_attrs = attrs.keys - valid_attrs
+                halt(err(403, "Invalid attribute(s): #{invalid_attrs.join(', ')}")) unless invalid_attrs.empty?
+              end
+              if d.has_key?('relationships')
+                links = d['relationships']
+                halt(err(403, "Relationships(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
                   links.keys.all? {|k| k.is_a?(String)}
                 invalid_links = links.keys - all_links
-                halt(err(404, "Unknown link type(s): #{invalid_links.join(', ')}")) unless invalid_links.empty?
+                halt(err(404, "Unknown relationship type(s): #{invalid_links.join(', ')}")) unless invalid_links.empty?
                 links.each_pair do |k, v|
-                  halt(err(403, "Link data for '#{k}' must be a Hash with String keys")) unless v.is_a?(Hash) && v.keys.all? {|vk| vk.is_a?(String)}
-                  halt(err(403, "Link data for '#{k}' must have linkage references")) unless links[k].has_key?('linkage')
+                  halt(err(403, "Related data for '#{k}' must be a Hash with String keys")) unless v.is_a?(Hash) && v.keys.all? {|vk| vk.is_a?(String)}
+                  halt(err(403, "Related data for '#{k}' must have data references")) unless links[k].has_key?('data')
 
                   if sl.include?(k)
-                    halt(err(403, "Linkage reference for '#{k}' must be a Hash with 'id' & 'type' String values")) unless links[k]['linkage'].is_a?(Hash) &&
-                      v['linkage'].has_key?('id') &&
-                      v['linkage'].has_key?('type') &&
-                      v['linkage']['id'].is_a?(String) &&
-                      v['linkage']['type'].is_a?(String)
+                    halt(err(403, "Data reference for '#{k}' must be a Hash with 'id' & 'type' String values")) unless links[k]['data'].is_a?(Hash) &&
+                      v['data'].has_key?('id') &&
+                      v['data'].has_key?('type') &&
+                      v['data']['id'].is_a?(String) &&
+                      v['data']['type'].is_a?(String)
 
-                    unless is_link_type?(k, v['linkage']['type'], :klass => klass)
-                      halt(err(403, "Linked '#{k}' has wrong type #{v['linkage']['type']}"))
+                    unless is_related_type?(k, v['data']['type'], :klass => klass)
+                      halt(err(403, "Related '#{k}' has wrong type #{v['data']['type']}"))
                     end
                   else
-                    halt(err(403, "Linkage reference for '#{k}' must be an Array of Hashes with 'id' & 'type' String values")) unless v['linkage'].is_a?(Array) &&
-                      v['linkage'].all? {|l| l.has_key?('id') } &&
-                      v['linkage'].all? {|l| l.has_key?('type') } &&
-                      v['linkage'].all? {|l| l['id'].is_a?(String) } &&
-                      v['linkage'].all? {|l| l['type'].is_a?(String) }
+                    halt(err(403, "Data reference for '#{k}' must be an Array of Hashes with 'id' & 'type' String values")) unless v['data'].is_a?(Array) &&
+                      v['data'].all? {|l| l.has_key?('id') } &&
+                      v['data'].all? {|l| l.has_key?('type') } &&
+                      v['data'].all? {|l| l['id'].is_a?(String) } &&
+                      v['data'].all? {|l| l['type'].is_a?(String) }
 
-                    bad_type = v['linkage'].detect {|l| !is_link_type?(k, l['type'], :klass => klass)}
-                    halt(err(403, "Linked '#{k}' has wrong type #{bad_type['type']}")) unless bad_type.nil?
+                    bad_type = v['data'].detect {|l| !is_related_type?(k, l['type'], :klass => klass)}
+                    halt(err(403, "Related '#{k}' has wrong type #{bad_type['type']}")) unless bad_type.nil?
                   end
                 end
               end
             end
           end
 
-          def is_link_type?(link_name, type, options = {})
+          def is_related_type?(link_name, type, options = {})
             klass = options[:klass]
             klass_type = nil
 

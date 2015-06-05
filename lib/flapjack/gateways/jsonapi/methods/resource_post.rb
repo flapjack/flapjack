@@ -8,10 +8,26 @@ module Flapjack
       module Methods
         module ResourcePost
 
+          module Helpers
+            def id_from_data(id_field, data)
+              case id_field
+              when :id
+                data['id']
+              else
+                if data.has_key?('attributes')
+                  data['attributes'][id_field]
+                else
+                  nil
+                end
+              end
+            end
+          end
+
           def self.registered(app)
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+            app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               if resource_class.jsonapi_methods.include?(:post)
@@ -86,11 +102,13 @@ module Flapjack
 
                   resources = nil
 
-                  id_field = resource_class.respond_to?(:jsonapi_id) ? resource_class.jsonapi_id : nil
-                  idf      = id_field || :id
+                  id_field = resource_class.respond_to?(:jsonapi_id) ?
+                               resource_class.jsonapi_id.to_sym : :id
 
-                  data_ids = resources_data.reject {|d| d[idf.to_s].nil? }.
-                                            map    {|i| i[idf.to_s].to_s }
+                  data_ids = resources_data.each_with_object([]) do |d, memo|
+                    d_id = id_from_data(id_field, d)
+                    memo << d_id.to_s unless d_id.nil?
+                  end
 
                   attribute_types = resource_class.attribute_types
 
@@ -99,19 +117,26 @@ module Flapjack
                   resource_class.jsonapi_lock_method(:post) do
 
                     unless data_ids.empty?
-                      conflicted_ids = resource_class.intersect(idf => data_ids).ids
-                      halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
+                      conflicted_ids = resource_class.intersect(id_field => data_ids).ids
+                      halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{id_field}s: " +
                                conflicted_ids.join(', '))) unless conflicted_ids.empty?
                     end
                     links_by_resource = resources_data.each_with_object({}) do |rd, memo|
-                      record_data = normalise_json_data(attribute_types, rd)
-                      type = record_data.delete(:type)
+                      record_data = rd['attributes'].nil? ? {} :
+                        normalise_json_data(attribute_types, rd['attributes'])
+                      type = rd['type']
                       halt(err(409, "Resource missing data type")) if type.nil?
                       halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
-                      record_data[:id] = record_data[id_field] unless id_field.nil?
+                      r_id = case id_field
+                      when :id
+                        rd['id']
+                      else
+                        record_data[id_field]
+                      end
+                      record_data[:id] = r_id unless r_id.nil?
                       r = resource_class.new(record_data)
                       halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
-                      memo[r] = rd['links']
+                      memo[r] = rd['relationships']
                     end
 
                     # get linked objects, fail before save if we don't find them
@@ -121,13 +146,13 @@ module Flapjack
                       singular_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.object_id] ||= {}
-                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['linkage']['id'])
+                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_id!(links[assoc.to_s]['data']['id'])
                       end
 
                       multiple_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
                         memo[r.object_id] ||= {}
-                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_ids!(*(links[assoc.to_s]['linkage'].map {|l| l['id']}))
+                        memo[r.object_id][assoc.to_s] = assoc_klass.data_klass.find_by_ids!(*(links[assoc.to_s]['data'].map {|l| l['id']}))
                       end
                     end
 

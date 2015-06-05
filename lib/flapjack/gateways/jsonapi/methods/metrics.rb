@@ -33,7 +33,11 @@ module Flapjack
 
               metrics = Flapjack::Data::Metrics.new
               result = Hash[ *(jsonapi_fields.collect{|f| [f, metrics.send(f.to_sym)]}.flatten) ]
-              Flapjack.dump_json(:data => result)
+              Flapjack.dump_json(:data => {
+                :id => SecureRandom.uuid,
+                :type => 'metrics',
+                :attributes => result
+              })
             end
           end
         end

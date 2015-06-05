@@ -155,7 +155,7 @@ module Flapjack
                       if resource_id.nil?
                         json_data[:data] = []
                       else
-                        halt(404)
+                       raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id)
                       end
                     else
                       incl = params[:include].nil? ? nil : params[:include].split(',')

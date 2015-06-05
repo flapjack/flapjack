@@ -30,37 +30,47 @@ module Flapjack
 
               resource_id = params[:captures][1].nil? ? params[:captures][4] :
                                                         params[:captures][2]
-              initial_scope = case resource
-              when 'checks'
-                resource_id.nil? ? Flapjack::Data::Check : nil
-              when 'tags'
-                Flapjack::Data::Tag.find_by_id!(resource_id).checks
-              end
-
-              args = {:start_time => validate_and_parsetime(params[:start_time]),
-                      :end_time   => validate_and_parsetime(params[:end_time])}
-
-              checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
-                scoped = resource_filter_sort(initial_scope,
-                 :filter => params[:filter], :sort => params[:sort])
-                paginate_get(scoped, :page => params[:page],
-                  :per_page => params[:per_page])
-              else
-                [Flapjack::Data::Check.intersect(:id => resource_id), {}, {}]
-              end
-
-              halt(404) if initial_scope.nil? && checks.empty?
-
-              links[:self] = request_url
 
               rd = []
+              links = nil
+              meta = nil
 
-              checks.each do |check|
-                r, stats = Flapjack::Data::Report.send(report_type.to_sym, check, args)
-                rd << r.merge(:type => "#{report_type}_report")
-                unless stats.nil? || stats.empty?
-                  meta[:statistics] ||= {}
-                  meta[:statistics][check.id] = stats
+              extra_lock = 'tags'.eql?(resource) ? [Flapjack::Data::Tag] : []
+
+              Flapjack::Data::Check.lock(*([Flapjack::Data::State] + extra_lock)) do
+
+                initial_scope = case resource
+                when 'checks'
+                  resource_id.nil? ? Flapjack::Data::Check : nil
+                when 'tags'
+                  Flapjack::Data::Tag.find_by_id!(resource_id).checks
+                end
+
+                args = {:start_time => validate_and_parsetime(params[:start_time]),
+                        :end_time   => validate_and_parsetime(params[:end_time])}
+
+                checks, links, meta = if 'tags'.eql?(resource) || resource_id.nil?
+                  scoped = resource_filter_sort(initial_scope,
+                   :filter => params[:filter], :sort => params[:sort])
+                  paginate_get(scoped, :page => params[:page],
+                    :per_page => params[:per_page])
+                else
+                  [Flapjack::Data::Check.intersect(:id => resource_id), {}, {}]
+                end
+
+                if initial_scope.nil? && checks.empty?
+                  raise ::Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::Check, resource_id)
+                end
+
+                links[:self] = request_url
+
+                checks.each do |check|
+                  r, stats = Flapjack::Data::Report.send(report_type.to_sym, check, args)
+                  rd << {:type => "#{report_type}_report", :attributes => r}
+                  unless stats.nil? || stats.empty?
+                    meta[:statistics] ||= {}
+                    meta[:statistics][check.id] = stats
+                  end
                 end
               end
 
