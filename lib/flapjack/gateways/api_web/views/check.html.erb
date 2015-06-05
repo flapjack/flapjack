@@ -270,7 +270,7 @@
       <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
         <tr>
           <td>Last <%= h type.to_s %> notification:</td>
-          <% notif = latest_notifications.detect {|ln| ln[:condition] = type.to_s } %>
+          <% notif = latest_notifications.detect {|ln| ln[:condition].eql?(type.to_s) } %>
           <% if notif.nil? %>
             <td>never</td>
             <td>&nbsp;</td>
@@ -279,7 +279,7 @@
             <%
               notif_relative = begin
                 notif_created = DateTime.parse(notif[:created_at])
-                relative_time_ago(time, notif_created) + " ago"
+                relative_time_ago(@current_time, notif_created) + " ago"
               rescue ArgumentError
                 nil
               end

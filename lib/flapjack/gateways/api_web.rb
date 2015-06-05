@@ -414,7 +414,7 @@ module Flapjack
           nil
         else
           begin
-            DateTime.parse(current_state[:created_at]).to_i
+            DateTime.parse(current_state[:created_at])
           rescue ArgumentError
             Flapjack.logger.warn("error parsing check state :created_at ( #{current_state.inspect} )")
           end
@@ -424,7 +424,7 @@ module Flapjack
           nil
         else
           begin
-            DateTime.parse(current_state[:updated_at]).to_i
+            DateTime.parse(current_state[:updated_at])
           rescue ArgumentError
             Flapjack.logger.warn("error parsing check state :updated_at ( #{current_state.inspect} )")
           end
@@ -452,6 +452,9 @@ module Flapjack
       def check_extra_state(check, included, time)
         state = check_state(check, included, time)
 
+        current_state = included_records(check[:relationships], :current_state,
+          included, 'state')
+
         current_scheduled_maintenances = included_records(check[:relationships],
           :current_scheduled_maintenances, included, 'scheduled_maintenance')
 
@@ -467,32 +470,28 @@ module Flapjack
         current_unscheduled_maintenance = included_records(check[:relationships],
           :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
 
-        current_state = included_records(check[:relationships], :current_state,
-          included, 'state')
-
         state.merge(
           :details       => current_state.nil? ? '-' : current_state[:details],
           :perfdata      => current_state.nil? ? '-' : current_state[:perfdata],
           :current_scheduled_maintenances => (current_scheduled_maintenances || []),
           :current_scheduled_maintenance => current_scheduled_maintenance,
           :current_unscheduled_maintenance => current_unscheduled_maintenance,
-          :latest_notifications => lat_not
         )
       end
 
       def included_records(links, field, included, type)
-        return unless links.has_key?(field) && links[field].has_key?(:relationships) &&
-          !links[field][:relationships].nil?
+        return unless links.has_key?(field) && links[field].has_key?(:data) &&
+          !links[field][:data].nil?
 
-        if links[field][:relationships].is_a?(Array)
-          ids = links[field][:relationships].collect {|lr| lr[:id]}
+        if links[field][:data].is_a?(Array)
+          ids = links[field][:data].collect {|lr| lr[:id]}
           return [] if ids.empty?
 
           included.select do |incl|
             type.eql?(incl[:type]) && ids.include?(incl[:id])
           end
         else
-          id = links[field][:relationships][:id]
+          id = links[field][:data][:id]
           return if id.nil?
 
           included.detect do |incl|

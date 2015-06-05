@@ -236,7 +236,7 @@ module Flapjack
                         resources, _, meta = paginate_get(associated, :page => params[:page],
                           :per_page => params[:per_page])
 
-                        result = resources.ids
+                        result = resources.eql?([]) ? [] : resources.ids
                       when :singular
                         result = associated.id
                       end
