@@ -15,6 +15,35 @@ module FixtureData
     @time ||= Time.now
   end
 
+  def resultify(data)
+    ret = nil
+    case data
+    when Array
+      ret = data.inject([]) do |memo, d|
+        attrs = d[:attributes] || {}
+        d.each_pair do |k, v|
+          next if :attributes.eql?(k)
+          attrs.update(k => v)
+        end
+        memo += [attrs]
+        memo
+      end
+    when Hash
+      ret = data[:attributes] || {}
+      data.each_pair do |k, v|
+        next if :attributes.eql?(k)
+        ret.update(k => v)
+      end
+    else
+      ret = data
+    end
+    ret
+  end
+
+  # def contextify(resp_data)
+
+  # end
+
   def check_data
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
@@ -373,7 +402,7 @@ module FixtureData
 
   def metrics_data
     @metrics_data ||= {
-      :total_keys         => 0,
+      # :total_keys         => 0,  # test behaviour is inconsistent
       :processed_events   => {
         :all_events     => 0,
         :ok_events      => 0,
