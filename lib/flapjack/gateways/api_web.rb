@@ -280,7 +280,7 @@ module Flapjack
         # @contact_media = included_records(@check[:relationships], :'contacts.media',
         #   included, 'medium')
 
-        # FIXME need to retrieve contact-media linkage info
+        # FIXME need to retrieve contact-media relationships info
 
         erb 'check.html'.to_sym
       end
@@ -433,10 +433,10 @@ module Flapjack
         latest_notifications = included_records(check[:relationships], :latest_notifications,
           included, 'state')
 
-        in_scheduled_maintenance = !check[:relationships][:current_scheduled_maintenances][:linkage].nil? &&
-          !check[:relationships][:latest_notifications][:linkage].empty?
+        in_scheduled_maintenance = !check[:relationships][:current_scheduled_maintenances][:relationships].nil? &&
+          !check[:relationships][:latest_notifications][:relationships].empty?
 
-        in_unscheduled_maintenance = !check[:relationships][:current_unscheduled_maintenance][:linkage].nil?
+        in_unscheduled_maintenance = !check[:relationships][:current_unscheduled_maintenance][:relationships].nil?
 
         {
           :condition     => current_state.nil? ? '-' : current_state[:condition],
@@ -481,18 +481,18 @@ module Flapjack
       end
 
       def included_records(links, field, included, type)
-        return unless links.has_key?(field) && links[field].has_key?(:linkage) &&
-          !links[field][:linkage].nil?
+        return unless links.has_key?(field) && links[field].has_key?(:relationships) &&
+          !links[field][:relationships].nil?
 
-        if links[field][:linkage].is_a?(Array)
-          ids = links[field][:linkage].collect {|lr| lr[:id]}
+        if links[field][:relationships].is_a?(Array)
+          ids = links[field][:relationships].collect {|lr| lr[:id]}
           return [] if ids.empty?
 
           included.select do |incl|
             type.eql?(incl[:type]) && ids.include?(incl[:id])
           end
         else
-          id = links[field][:linkage][:id]
+          id = links[field][:relationships][:id]
           return if id.nil?
 
           included.detect do |incl|
