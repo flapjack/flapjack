@@ -11,6 +11,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
   let(:medium_rules)  { double('medium_rules') }
 
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
+
   it 'shows the contact for a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Contact).and_yield
@@ -90,7 +101,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Rule).and_yield
 
-    expect(medium_rules).to receive(:ids).and_return([rule.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([rule.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(medium_rules).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(medium).to receive(:rules).and_return(medium_rules)
 
     media = double('media', :all => [medium])
@@ -105,7 +121,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
       :links => {
         :self    => "http://example.org/media/#{medium.id}/relationships/rules",
         :related => "http://example.org/media/#{medium.id}/rules",
-      }
+      },
+      :meta => meta
     ))
   end
 

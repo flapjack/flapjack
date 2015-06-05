@@ -180,27 +180,66 @@ module Flapjack
 
                   halt(err(404, 'Unknown association')) if assoc.nil?
 
-                  accessor = case assoc.number
-                  when :multiple
-                    :ids
-                  when :singular
-                    :id
-                  end
-
-                  halt(err(404, 'Unknown association number type')) if accessor.nil?
-
-                  # FIXME accept include= etc
-
                   empty = false
-                  associated = nil
                   included = nil
+                  result = nil
+                  meta = nil
 
                   resource_class.lock(*assoc.lock_klasses) do
                     res = resource_class.intersect(:id => resource_id)
                     empty = res.empty?
 
                     unless empty
-                      associated = res.all.first.send(assoc_name.to_sym).send(accessor)
+                      associated = res.all.first.send(assoc_name.to_sym)
+
+                      result = case assoc.number
+                      when :multiple
+
+                        unless params[:filter].nil?
+                          unless params[:filter].is_a?(Array)
+                            halt(err(403, "Filter parameters must be passed as an Array"))
+                          end
+
+                          unless params[:filter].all? {|f| f = /^#{assocs}\.([^,]+))*$/ }
+                            halt(err(403, "Filter params must start with '#{assocs}.': '#{params[:sort]}'"))
+                          end
+
+                          filters = params[:filter].collect do |f|
+                            f.sub(/^#{assocs}\./, '')
+                          end
+
+                          filter_ops = filter_params(assoc.data_klass, filters)
+                          associated = associated.intersect(filter_ops)
+                        end
+
+                        if params[:sort].nil?
+                          associated = associated.sort(:id => :asc)
+                        elsif params[:sort] =~ /^(?:\+|\-)#{assocs}\.(?:[^,]+)(?:,(?:\+|\-)#{assocs}\.[^,]+)*$/
+                          sort_params = params[:sort].sub(/^#{assocs}\./, '').gsub(/,#{assocs}\./, ',').split(',')
+
+                          if sort_params.any? {|sp| sp !~ /^(?:\+|-)/ }
+                            halt(err(403, "Sort parameters must start with +/- '#{params[:sort]}'"))
+                          end
+
+                          sort_params.each_with_object({}) do |sort_param, memo|
+                            sort_param =~ /^(\+|\-)([a-z_]+)$/i
+                            rev  = $1
+                            term = $2
+                            memo[term.to_sym] = (rev == '-') ? :desc : :asc
+                          end
+
+                          associated = associated.sort(sort_params)
+                        else
+                          halt(err(403, "Sort params must start with '(+/-)#{assocs}.': '#{params[:sort]}'"))
+                        end
+
+                        resources, _, meta = paginate_get(associated, :page => params[:page],
+                          :per_page => params[:per_page])
+
+                        result = resources.ids
+                      when :singular
+                        result = associated.id
+                      end
 
                       unless incl.nil?
                         included = as_jsonapi_included(resource_class, resource, res,
@@ -215,17 +254,18 @@ module Flapjack
                     :related => "#{request.base_url}/#{resource}/#{resource_id}/#{assoc_name}"
                   }
 
-                  data = case associated
+                  data = case result
                   when Array
-                    associated.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
+                    result.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
                   when String
-                    {:type => assoc.type, :id => associated}
+                    {:type => assoc.type, :id => result}
                   else
                     nil
                   end
 
                   ret = {:data => data, :links => links}
                   ret[:included] = included unless included.nil?
+                  ret[:meta] = meta unless meta.nil?
 
                   Flapjack.dump_json(ret)
                 end

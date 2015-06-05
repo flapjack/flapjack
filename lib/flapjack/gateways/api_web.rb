@@ -266,10 +266,11 @@ module Flapjack
           @state = check_extra_state(@check, included, @current_time)
         end
 
-        # will only get first page of 20 records
-        @state_changes = Flapjack::Diner.checks_link_states(check_id)
+        # these two requests will only get first page of 20 records, which is what we want
+        @state_changes = Flapjack::Diner.checks_link_states(check_id, :include => 'states')
 
-        @scheduled_maintenances = Flapjack::Diner.checks_link_scheduled_maintenances(check_id)
+        @scheduled_maintenances = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
+          :include => 'scheduled_maintenances')
 
         @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check[:ack_hash]
 

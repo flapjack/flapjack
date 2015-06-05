@@ -13,6 +13,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
   let(:rule_tags)  { double('rule_tags') }
   let(:rule_media) { double('rule_media') }
 
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
+
   it 'shows the contact for a rule' do
     expect(Flapjack::Data::Rule).to receive(:lock).
       with(Flapjack::Data::Contact).and_yield
@@ -72,7 +83,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     expect(Flapjack::Data::Rule).to receive(:lock).
       with(Flapjack::Data::Medium).and_yield
 
-    expect(rule_media).to receive(:ids).and_return([medium.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([medium.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(rule_media).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(rule).to receive(:media).and_return(rule_media)
 
     rules = double('rule', :all => [rule])
@@ -87,7 +103,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
       :links => {
         :self    => "http://example.org/rules/#{rule.id}/relationships/media",
         :related => "http://example.org/rules/#{rule.id}/media",
-      }
+      },
+      :meta => meta
     ))
   end
 
@@ -146,7 +163,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
       with(Flapjack::Data::Tag, Flapjack::Data::Contact, Flapjack::Data::Check,
            Flapjack::Data::Route).and_yield
 
-    expect(rule_tags).to receive(:ids).and_return([tag.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([tag.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(rule_tags).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(rule).to receive(:tags).and_return(rule_tags)
 
     rules = double('rule', :all => [rule])
@@ -161,7 +183,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
       :links => {
         :self    => "http://example.org/rules/#{rule.id}/relationships/tags",
         :related => "http://example.org/rules/#{rule.id}/tags",
-      }
+      },
+      :meta => meta
     ))
   end
 

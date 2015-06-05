@@ -10,6 +10,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
 
   let(:check_tags)  { double('check_tags') }
 
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
+
   it 'adds tags to a check' do
     expect(Flapjack::Data::Check).to receive(:lock).
       with(Flapjack::Data::Tag, Flapjack::Data::Contact, Flapjack::Data::Rule,
@@ -32,7 +43,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       with(Flapjack::Data::Tag, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route ).and_yield
 
-    expect(check_tags).to receive(:ids).and_return([tag.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([tag.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(check_tags).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(check).to receive(:tags).and_return(check_tags)
 
     checks = double('checks', :all => [check])
@@ -47,7 +63,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       :links => {
         :self    => "http://example.org/checks/#{check.id}/relationships/tags",
         :related => "http://example.org/checks/#{check.id}/tags",
-      }
+      },
+      :meta => meta
     ))
   end
 
@@ -56,7 +73,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       with(Flapjack::Data::Tag, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route ).and_yield
 
-    expect(check_tags).to receive(:ids).and_return([tag.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([tag.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(check_tags).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(check).to receive(:tags).and_return(check_tags)
 
     full_tags = double('full_tags')
@@ -103,7 +125,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       :links => {
         :self    => "http://example.org/checks/#{check.id}/relationships/tags",
         :related => "http://example.org/checks/#{check.id}/tags",
-      }
+      },
+      :meta => meta
     ))
   end
 

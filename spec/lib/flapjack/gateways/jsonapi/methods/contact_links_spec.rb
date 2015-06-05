@@ -12,6 +12,17 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   let(:contact_media)  { double('contact_media') }
   let(:contact_rules)  { double('contact_rules') }
 
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
+
   it 'adds a medium to a contact' do
     expect(Flapjack::Data::Contact).to receive(:lock).
       with(Flapjack::Data::Medium).and_yield
@@ -32,7 +43,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(Flapjack::Data::Contact).to receive(:lock).
       with(Flapjack::Data::Medium).and_yield
 
-    expect(contact_media).to receive(:ids).and_return([medium.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([medium.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(contact_media).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(contact).to receive(:media).and_return(contact_media)
 
     contacts = double('contacts', :all => [contact])
@@ -47,7 +63,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
       :links => {
         :self    => "http://example.org/contacts/#{contact.id}/relationships/media",
         :related => "http://example.org/contacts/#{contact.id}/media",
-      }
+      },
+      :meta => meta
     ))
   end
 
@@ -106,7 +123,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
       with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
            Flapjack::Data::ScheduledMaintenance).and_yield
 
-    expect(contact_rules).to receive(:ids).and_return([rule.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([rule.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(contact_rules).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(contact).to receive(:rules).and_return(contact_rules)
 
     contacts = double('contacts', :all => [contact])
@@ -121,7 +143,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
       :links => {
         :self    => "http://example.org/contacts/#{contact.id}/relationships/rules",
         :related => "http://example.org/contacts/#{contact.id}/rules",
-      }
+      },
+      :meta => meta
     ))
   end
 

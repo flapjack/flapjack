@@ -5,13 +5,23 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
 
   include_context "jsonapi"
 
-
   let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
   let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 
   let(:tag_checks)  { double('tag_checks') }
   let(:tag_rules)  { double('tag_rules') }
+
+  let(:meta) {
+    {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+  }
 
   it 'adds a check to a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
@@ -35,7 +45,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
       with(Flapjack::Data::Check, Flapjack::Data::Contact, Flapjack::Data::Rule,
            Flapjack::Data::Route).and_yield
 
-    expect(tag_checks).to receive(:ids).and_return([check.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([check.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(tag_checks).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(tag).to receive(:checks).and_return(tag_checks)
 
     tags = double('tags', :all => [tag])
@@ -50,7 +65,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
       :links => {
         :self    => "http://example.org/tags/#{tag.id}/relationships/checks",
         :related => "http://example.org/tags/#{tag.id}/checks",
-      }
+      },
+      :meta => meta
     ))
   end
 
@@ -111,7 +127,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
       with(Flapjack::Data::Rule, Flapjack::Data::Check, Flapjack::Data::Contact,
            Flapjack::Data::Route).and_yield
 
-    expect(tag_rules).to receive(:ids).and_return([rule.id])
+    sorted = double('sorted')
+    paged  = double('paged')
+    expect(paged).to receive(:ids).and_return([rule.id])
+    expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
+    expect(sorted).to receive(:count).and_return(1)
+    expect(tag_rules).to receive(:sort).with(:id => :asc).and_return(sorted)
     expect(tag).to receive(:rules).and_return(tag_rules)
 
     tags = double('tags', :all => [tag])
@@ -126,7 +147,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::TagLinks', :sinatra => true, :lo
       :links => {
         :self    => "http://example.org/tags/#{tag.id}/relationships/rules",
         :related => "http://example.org/tags/#{tag.id}/rules",
-      }
+      },
+      :meta => meta
     ))
   end
 
