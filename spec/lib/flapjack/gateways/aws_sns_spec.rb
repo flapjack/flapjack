@@ -9,11 +9,12 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:time) { Time.new(2013, 10, 31, 13, 45) }
 
-  let(:time_str) { Time.at(time).strftime('%-d %b %H:%M') }
+  let(:time_str) { time.utc.strftime('%Y-%m-%dT%H:%M:%SZ') }
 
   let(:config) { {'region' => 'us-east-1',
                   'access_key' => 'AKIAIOSFODNN7EXAMPLE',
-                  'secret_key' => 'secret'
+                  'secret_key' => 'secret',
+                  'timestamp'  => time_str
                  }
                }
 
@@ -39,7 +40,9 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
                                      'AWSAccessKeyId'   => config['access_key'],
                                      'TopicArn'         => message['address'],
                                      'SignatureVersion' => '2',
-                                     'SignatureMethod'  => 'HmacSHA256'})).
+                                     'SignatureMethod'  => 'HmacSHA256',
+                                     'Signature'        => 'Lskca/kyn205VAY2c0OPb1/C3YwGoHsp37fQjF10NUI=',
+                                     'Timestamp'        => time_str})).
       to_return(:status => 200)
 
     EM.synchrony do
@@ -98,7 +101,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
     let(:query) { {'TopicArn' => 'HelloWorld',
                    'Action' => 'Publish',
-                   'Message' => 'Hello World'} }
+                   'Message' => 'Hello ~ World'} }
 
     let(:string_to_sign) { Flapjack::Gateways::AwsSns.string_to_sign(method, host, uri, query) }
 
@@ -117,7 +120,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     end
 
     it 'should put the encoded, sorted query-string on the fourth line' do
-      expect(lines[3]).to eq("Action=Publish&Message=Hello%20World&TopicArn=HelloWorld")
+      expect(lines[3]).to eq("Action=Publish&Message=Hello%20~%20World&TopicArn=HelloWorld")
     end
 
   end

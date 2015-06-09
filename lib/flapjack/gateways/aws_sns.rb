@@ -60,7 +60,7 @@ module Flapjack
         endpoint = "http://#{hostname}/"
         access_key = @config["access_key"]
         secret_key = @config["secret_key"]
-        timestamp = @config["timestamp"] || DateTime.now.iso8601
+        timestamp = Time.at(alert.time).utc.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         address         = alert.address
         notification_id = alert.notification_id
@@ -145,7 +145,7 @@ module Flapjack
       end
 
       def self.get_signature(secret_key, string_to_sign)
-        signature = OpenSSL::HMAC.digest('sha256', secret_key, string_to_sign)
+        signature = OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha256'), secret_key, string_to_sign)
 
         Base64.encode64(signature).strip
       end
