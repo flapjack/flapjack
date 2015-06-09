@@ -9,12 +9,11 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:time) { Time.new(2013, 10, 31, 13, 45) }
 
-  let(:time_str) { time.utc.strftime('%Y-%m-%dT%H:%M:%SZ') }
+  let(:time_str) { Time.at(time.to_i).utc.strftime('%Y-%m-%dT%H:%M:%SZ') }
 
   let(:config) { {'region' => 'us-east-1',
                   'access_key' => 'AKIAIOSFODNN7EXAMPLE',
-                  'secret_key' => 'secret',
-                  'timestamp'  => time_str
+                  'secret_key' => 'secret'
                  }
                }
 
