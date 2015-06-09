@@ -9,7 +9,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:time) { Time.new(2013, 10, 31, 13, 45) }
 
-  let(:time_str) { '2013-10-31T03:15:00Z' }
+  let(:time_str) { Time.at(time.to_i).strftime('%Y-%m-%dT%H:%M:%SZ') }
 
   let(:config) { {'region' => 'us-east-1',
                   'access_key' => 'AKIAIOSFODNN7EXAMPLE',
@@ -40,7 +40,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
                                      'TopicArn'         => message['address'],
                                      'SignatureVersion' => '2',
                                      'SignatureMethod'  => 'HmacSHA256',
-                                     'Signature'        => 'Lskca/kyn205VAY2c0OPb1/C3YwGoHsp37fQjF10NUI=',
+                                     'Signature'        => 'gxoUQ8qUYBQbqgf3XmbiSPZ8qTJZ9WyC81EKc67FY0g=',
                                      'Timestamp'        => time_str})).
       to_return(:status => 200)
 
