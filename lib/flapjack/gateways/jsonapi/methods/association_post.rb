@@ -17,18 +17,16 @@ module Flapjack
 
               jsonapi_links = resource_class.jsonapi_association_links || {}
 
-              multiple_links = jsonapi_links.select {|n, jd|
-                 jd.writable && :multiple.eql?(jd.number)
+              post_links = jsonapi_links.select {|n, jd|
+                !jd.post.is_a?(FalseClass) && :multiple.eql?(jd.number)
               }
 
-              multi_assocs = multiple_links.empty? ? nil : multiple_links.keys.map(&:to_s).join('|')
-
-              unless multi_assocs.nil?
+              unless post_links.empty?
                 app.class_eval do
 
                   single = resource.singularize
 
-                  multiple_links.each_pair do |link_name, link_data|
+                  post_links.each_pair do |link_name, link_data|
                     link_type = link_data.type
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
@@ -69,29 +67,32 @@ module Flapjack
                   end
                 end
 
-                id_patt = if Flapjack::Data::Tag.eql?(resource_class)
-                  "\\S+"
-                else
-                  Flapjack::UUID_RE
-                end
+              end
 
-                app.post %r{^/#{resource}/(#{id_patt})/relationships/(#{multi_assocs})$} do
-                  resource_id = params[:captures][0]
-                  assoc_name  = params[:captures][1]
+              id_patt = if Flapjack::Data::Tag.eql?(resource_class)
+                "\\S+"
+              else
+                Flapjack::UUID_RE
+              end
 
-                  status 204
+              app.post %r{^/#{resource}/(#{id_patt})/relationships/(.+)$} do
+                resource_id = params[:captures][0]
+                assoc_name  = params[:captures][1].to_sym
 
-                  assoc = multiple_links[assoc_name.to_sym]
+                halt(404) unless post_links.has_key?(assoc_name)
 
-                  assoc_ids, _ = wrapped_link_params(:association => assoc)
+                status 204
 
-                  halt(err(403, 'No link ids')) if assoc_ids.empty?
-                  resource_class.lock(*assoc.lock_klasses) do
-                    # Not checking for duplication on adding existing to a multiple
-                    # association, the JSONAPI spec doesn't ask for it
-                    resource_obj = resource_class.find_by_id!(resource_id)
-                    resource_obj.send(assoc_name.to_sym).add_ids(*assoc_ids)
-                  end
+                assoc = post_links[assoc_name.to_sym]
+
+                assoc_ids, _ = wrapped_link_params(:association => assoc)
+
+                halt(err(403, 'No link ids')) if assoc_ids.empty?
+                resource_class.lock(*assoc.lock_klasses) do
+                  # Not checking for duplication on adding existing to a multiple
+                  # association, the JSONAPI spec doesn't ask for it
+                  resource_obj = resource_class.find_by_id!(resource_id)
+                  resource_obj.send(assoc_name.to_sym).add_ids(*assoc_ids)
                 end
               end
             end

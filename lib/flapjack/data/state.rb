@@ -177,8 +177,8 @@ module Flapjack
       def self.jsonapi_associations
         @jsonapi_associations ||= {
           :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :singular,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true
           )
         }
       end

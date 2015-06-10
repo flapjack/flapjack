@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/flapjack-diner.git
-  revision: 17044ae1730b8d8548d740e4581057ba848beaf9
+  revision: 3914ee7f34cd324705bf13d88c05c531540ac386
   branch: v2_pre
   specs:
     flapjack-diner (2.0.0a1)
@@ -9,7 +9,7 @@ GIT
 
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: cce78ff058596cdf70cdb8bbf8b085e1becd9e21
+  revision: 909e3306ee69e0e227a2513f8562029f02a7aa2d
   branch: 16_zset_indices
   specs:
     zermelo (1.1.0)

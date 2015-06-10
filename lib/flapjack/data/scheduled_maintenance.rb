@@ -121,15 +121,18 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:start_time, :end_time, :summary]
+            :attributes => [:start_time, :end_time, :summary],
+            :associations => [:check]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:start_time, :end_time, :summary]
+            :attributes => [:start_time, :end_time, :summary],
+            :associations => [:check]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            # :lock_klasses => [Flapjack::Data::Check]
           )
         }
       end
@@ -137,8 +140,8 @@ module Flapjack
       def self.jsonapi_associations
         @jsonapi_associations ||= {
           :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :singular,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true
           )
         }
       end

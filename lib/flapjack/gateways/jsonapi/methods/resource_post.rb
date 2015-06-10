@@ -30,17 +30,28 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.include?(:post)
+
+              method_defs = if resource_class.respond_to?(:jsonapi_methods)
+                resource_class.jsonapi_methods
+              else
+                {}
+              end
+
+              method_def = method_defs[:post]
+
+              unless method_def.nil?
                 resource = resource_class.jsonapi_type.pluralize.downcase
+
+                method_assocs = method_def.associations || []
 
                 jsonapi_links = resource_class.jsonapi_association_links
 
                 singular_links = jsonapi_links.select {|n, jd|
-                  :singular.eql?(jd.number)
+                  method_assocs.include?(n) && :singular.eql?(jd.number)
                 }
 
                 multiple_links = jsonapi_links.select {|n, jd|
-                  :multiple.eql?(jd.number)
+                  method_assocs.include?(n) && :multiple.eql?(jd.number)
                 }
 
                 app.class_eval do
@@ -89,11 +100,7 @@ module Flapjack
 
                   resources_data, unwrap = wrapped_params
 
-                  attributes = if resource_class.respond_to?(:jsonapi_methods)
-                    (resource_class.jsonapi_methods[:get] || {}).attributes || []
-                  else
-                    []
-                  end
+                  attributes = method_def.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
                     :singular_links => singular_links.keys,

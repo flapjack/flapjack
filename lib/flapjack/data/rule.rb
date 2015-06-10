@@ -306,16 +306,21 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [] # [:time_restrictions]
+            :attributes => [], # [:time_restrictions]
+            :associations => [:contact, :media, :tags]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list] # [:time_restrictions]
+            :attributes => [:conditions_list], # [:time_restrictions]
+            :associations => [:contact, :media, :tags]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [] # [:time_restrictions]
+            :attributes => [], # [:time_restrictions]
+            :associations => [:media, :tags]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Route, Flapjack::Data::Check]
+            :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,
+                              Flapjack::Data::Tag, Flapjack::Data::Check,
+                              Flapjack::Data::Route]
           )
         }
       end
@@ -323,16 +328,14 @@ module Flapjack
       def self.jsonapi_associations
         @jsonapi_associations ||= {
           :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :singular,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true
           ),
           :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :multiple,
-            :link => true, :include => true
+            :number => :multiple, :link => true, :include => true
           ),
           :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :multiple,
-            :link => true, :include => true
+            :number => :multiple, :link => true, :include => true
           )
         }
       end

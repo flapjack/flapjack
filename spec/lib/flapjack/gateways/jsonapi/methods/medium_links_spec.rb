@@ -44,42 +44,24 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     ))
   end
 
-  it 'changes the contact for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact).and_yield
-
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_return(medium)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
-      and_return(contact)
-
-    expect(medium).to receive(:contact=).with(contact)
-
+  it 'cannot change the contact for a medium' do
     patch "/media/#{medium.id}/relationships/contact", Flapjack.dump_json(
       :data => {
         :type => 'contact',
         :id   => contact.id,
       }
     ), jsonapi_env
-    expect(last_response.status).to eq(204)
+    expect(last_response.status).to eq(404)
   end
 
-  it 'clears the contact for a medium' do
-    expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact).and_yield
-
-    expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
-      and_return(medium)
-
-    expect(medium).to receive(:contact=).with(nil)
-
+  it 'cannot clear the contact for a medium' do
     patch "/media/#{medium.id}/relationships/contact", Flapjack.dump_json(
       :data => {
         :type => 'contact',
         :id   => nil,
       }
     ), jsonapi_env
-    expect(last_response.status).to eq(204)
+    expect(last_response.status).to eq(404)
   end
 
   it 'adds a rule to a medium' do

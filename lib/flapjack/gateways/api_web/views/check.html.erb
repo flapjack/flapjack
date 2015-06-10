@@ -1,3 +1,9 @@
+<% unless @error.nil? %>
+<div class="alert alert-danger" role="alert">
+  <%= h @error %>
+</div>
+<% end %>
+
 <% page_title "#{h(@check[:name])}" %>
 <div class="page-header">
   <h2><%= h @check[:name] %></h2>
@@ -304,7 +310,7 @@
       </tr>
       <% @state_changes.each do |state_change| %>
       <tr>
-        <td><%= h state_change[:updated_at] %></td>
+        <td><%= h state_change[:created_at] %></td>
         <td><%= h state_change[:condition] %></td>
         <td><%= h state_change[:summary] %></td>
       </tr>
@@ -330,7 +336,7 @@
         <th>Actions</th>
       </tr>
 
-    <% @scheduled_maintenances.sort_by {|sm| sm[:start_time] }.each do |scheduled_maintenance| %>
+    <% @scheduled_maintenances.each do |scheduled_maintenance| %>
       <%
         start_time = begin
           DateTime.parse(scheduled_maintenance[:start_time])
@@ -342,13 +348,13 @@
         rescue ArgumentError
           nil
         end
-        duration = start_time.nil? || end_time.nil? ? nil : (end_time - start_time)
+        duration = (start_time.nil? || end_time.nil?) ? nil : (end_time.to_i - start_time.to_i)
         summary = scheduled_maintenance[:summary]
       %>
       <tr>
         <td><%= h start_time.to_s %></td>
         <td><%= h end_time.to_s %></td>
-        <td><%= h(ChronicDuration.output(duration.round, :keep_zero => true) || '0 secs') %></td>
+        <td><%= h(ChronicDuration.output(duration.to_i.round, :keep_zero => true) || '0 secs') %></td>
         <td><%= h summary %></td>
         <td>
         <% if end_time > @current_time %>

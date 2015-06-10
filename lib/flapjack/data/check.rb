@@ -302,62 +302,70 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled]
+            :attributes => [:name, :enabled],
+            :associations => [:tags]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled, :ack_hash, :failing, :condition]
+            :attributes => [:name, :enabled, :ack_hash, :failing, :condition],
+            :associations => [:alerting_media, :contacts, :current_state,
+              :latest_notifications, :scheduled_maintenances, :states, :tags,
+              :unscheduled_maintenances]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled]
+            :attributes => [:name, :enabled],
+            :associations => [:tags]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )
         }
       end
 
+      # FIXME should only lock those associations actually being manipulated
       def self.jsonapi_associations
         @jsonapi_associations ||= {
           :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :multiple,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => true
           ),
           :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :multiple,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => true
           ),
           :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :multiple,
-            :link => true, :include => true, :type => 'scheduled_maintenance',
+            :post => false, :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => true,
+            :type => 'scheduled_maintenance',
             :lock_klasses => [Flapjack::Data::ScheduledMaintenance]
           ),
           :current_state => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :singular,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true
           ),
           :current_unscheduled_maintenance => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :singular,
-            :link => true, :include => true, :type => 'unscheduled_maintenance',
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true,
+            :type => 'unscheduled_maintenance',
             :lock_klasses => [Flapjack::Data::UnscheduledMaintenance]
           ),
           :latest_notifications => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :multiple,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => true
           ),
           :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :multiple,
-            :link => true, :include => false
+            :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => false
           ),
           :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => false, :number => :multiple,
+            :post => false, :patch => false, :delete => false, :number => :multiple,
             :link => true, :include => false
           ),
           :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :multiple,
-            :link => true, :include => true
+            :number => :multiple, :link => true, :include => true
           ),
+          # FIXME create usm should be ack?
           :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :multiple,
-            :link => true, :include => false
+            :post => false, :patch => false, :delete => false,
+            :number => :multiple, :link => true, :include => false
           )
         }
       end

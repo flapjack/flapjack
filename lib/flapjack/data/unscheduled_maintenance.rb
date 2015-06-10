@@ -27,6 +27,8 @@ module Flapjack
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :unscheduled_maintenances
 
+      # TODO :check before_set -- should fail if already set
+
       range_index_by :start_time, :end_time
 
       before_validation :ensure_start_time
@@ -79,28 +81,28 @@ module Flapjack
         end
       end
 
-      swagger_schema :UnscheduledMaintenanceCreate do
-        key :required, [:type, :start_time, :end_time]
-        property :id do
-          key :type, :string
-          key :format, :uuid
-        end
-        property :type do
-          key :type, :string
-          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
-        end
-        property :start_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-        property :end_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
-        property :links do
-          key :"$ref", :UnscheduledMaintenanceChangeLinks
-        end
-      end
+      # swagger_schema :UnscheduledMaintenanceCreate do
+      #   key :required, [:type, :start_time, :end_time]
+      #   property :id do
+      #     key :type, :string
+      #     key :format, :uuid
+      #   end
+      #   property :type do
+      #     key :type, :string
+      #     key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
+      #   end
+      #   property :start_time do
+      #     key :type, :string
+      #     key :format, :"date-time"
+      #   end
+      #   property :end_time do
+      #     key :type, :string
+      #     key :format, :"date-time"
+      #   end
+      #   property :links do
+      #     key :"$ref", :UnscheduledMaintenanceChangeLinks
+      #   end
+      # end
 
       swagger_schema :UnscheduledMaintenanceUpdate do
         key :required, [:id, :type]
@@ -120,29 +122,28 @@ module Flapjack
           key :type, :string
           key :format, :"date-time"
         end
-        property :links do
-          key :"$ref", :UnscheduledMaintenanceChangeLinks
-        end
+        # property :links do
+        #   key :"$ref", :UnscheduledMaintenanceChangeLinks
+        # end
       end
 
-      swagger_schema :UnscheduledMaintenanceChangeLinks do
-        property :check do
-          key :"$ref", :jsonapi_CheckLinkage
-        end
-      end
+      # swagger_schema :UnscheduledMaintenanceChangeLinks do
+      #   property :check do
+      #     key :"$ref", :jsonapi_CheckLinkage
+      #   end
+      # end
 
       def self.jsonapi_methods
         @jsonapi_methods ||= {
-          :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:start_time, :end_time, :summary]
-          ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:start_time, :end_time, :summary]
+            :attributes => [:start_time, :end_time, :summary],
+            :associations => [:check]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            # :lock_klasses => [Flapjack::Data::Check]
           )
         }
       end
@@ -150,8 +151,8 @@ module Flapjack
       def self.jsonapi_associations
         @jsonapi_associations ||= {
           :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :writable => true, :number => :singular,
-            :link => true, :include => true
+            :post => false, :patch => false, :delete => false,
+            :number => :singular, :link => true, :include => true
           )
         }
       end

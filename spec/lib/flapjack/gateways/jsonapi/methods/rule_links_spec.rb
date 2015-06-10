@@ -46,21 +46,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::RuleLinks', :sinatra => true, :l
     ))
   end
 
-  it 'changes the contact for a rule' do
-    expect(Flapjack::Data::Rule).to receive(:lock).
-      with(Flapjack::Data::Contact).and_yield
-
-    expect(Flapjack::Data::Rule).to receive(:find_by_id!).with(rule.id).
-      and_return(rule)
-    expect(Flapjack::Data::Contact).to receive(:find_by_id!).with(contact.id).
-      and_return(contact)
-
-    expect(rule).to receive(:contact=).with(contact)
-
+  it 'cannot change the contact for a rule' do
     patch "/rules/#{rule.id}/relationships/contact", Flapjack.dump_json(:data => {
       :type => 'contact', :id => contact.id
     }), jsonapi_env
-    expect(last_response.status).to eq(204)
+    expect(last_response.status).to eq(404)
   end
 
   it 'adds a medium to a rule' do

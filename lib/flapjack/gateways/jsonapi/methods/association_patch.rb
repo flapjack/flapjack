@@ -18,23 +18,15 @@ module Flapjack
               jsonapi_links = resource_class.jsonapi_association_links || {}
 
               singular_links = jsonapi_links.select {|n, jd|
-                jd.writable && :singular.eql?(jd.number)
+                !jd.patch.is_a?(FalseClass) && :singular.eql?(jd.number)
               }
 
               multiple_links = jsonapi_links.select {|n, jd|
-                jd.writable && :multiple.eql?(jd.number)
+                !jd.patch.is_a?(FalseClass) && :multiple.eql?(jd.number)
               }
 
-              assocs = singular_links.empty? ? nil : singular_links.keys.map(&:to_s).join('|')
-              multi_assocs = multiple_links.empty? ? nil: multiple_links.keys.map(&:to_s).join('|')
+              unless singular_links.empty? && multiple_links.empty?
 
-              if assocs.nil?
-                assocs = multi_assocs
-              elsif !multi_assocs.nil?
-                assocs += "|#{multi_assocs}"
-              end
-
-              unless assocs.nil?
                 app.class_eval do
                   # GET and PATCH duplicate a lot of swagger code, but swagger-blocks
                   # make it difficult to DRY things due to the different contexts in use
@@ -117,40 +109,44 @@ module Flapjack
                   end
                 end
 
-                id_patt = if Flapjack::Data::Tag.eql?(resource_class)
-                  "\\S+"
-                else
-                  Flapjack::UUID_RE
-                end
+              end
 
-                app.patch %r{^/#{resource}/(#{id_patt})/relationships/(#{assocs})$} do
-                  resource_id = params[:captures][0]
-                  assoc_name  = params[:captures][1]
+              id_patt = if Flapjack::Data::Tag.eql?(resource_class)
+                "\\S+"
+              else
+                Flapjack::UUID_RE
+              end
 
-                  status 204
+              app.patch %r{^/#{resource}/(#{id_patt})/relationships/(.+)$} do
+                resource_id = params[:captures][0]
+                assoc_name  = params[:captures][1].to_sym
 
-                  assoc = jsonapi_links[assoc_name.to_sym]
+                halt(404) unless singular_links.has_key?(assoc_name) ||
+                  multiple_links.has_key?(assoc_name)
 
-                  assoc_ids, _ = wrapped_link_params(:association => assoc,
-                    :allow_nil => true)
+                status 204
 
-                  resource_class.lock(*assoc.lock_klasses) do
-                    resource = resource_class.find_by_id!(resource_id)
+                assoc = jsonapi_links[assoc_name]
 
-                    if :multiple.eql?(assoc.number)
-                      current_assoc_ids = resource.send(assoc_name.to_sym).ids
-                      to_remove = current_assoc_ids - assoc_ids
-                      to_add    = assoc_ids - current_assoc_ids
-                      resource.send(assoc_name.to_sym).remove_ids(*to_remove) unless to_remove.empty?
-                      resource.send(assoc_name.to_sym).add_ids(*to_add) unless to_add.empty?
-                    elsif :singular.eql?(assoc.number)
-                      if assoc_ids.nil?
-                        resource.send("#{assoc_name}=".to_sym, nil)
-                      else
-                        halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
-                        value = assoc_ids.first.nil? ? nil : assoc.data_klass.find_by_id!(assoc_ids.first)
-                        resource.send("#{assoc_name}=".to_sym, value)
-                      end
+                assoc_ids, _ = wrapped_link_params(:association => assoc,
+                  :allow_nil => true)
+
+                resource_class.lock(*assoc.lock_klasses) do
+                  resource = resource_class.find_by_id!(resource_id)
+
+                  if :multiple.eql?(assoc.number)
+                    current_assoc_ids = resource.send(assoc_name).ids
+                    to_remove = current_assoc_ids - assoc_ids
+                    to_add    = assoc_ids - current_assoc_ids
+                    resource.send(assoc_name).remove_ids(*to_remove) unless to_remove.empty?
+                    resource.send(assoc_name).add_ids(*to_add) unless to_add.empty?
+                  elsif :singular.eql?(assoc.number)
+                    if assoc_ids.nil?
+                      resource.send("#{assoc_name}=".to_sym, nil)
+                    else
+                      halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
+                      value = assoc_ids.first.nil? ? nil : assoc.data_klass.find_by_id!(assoc_ids.first)
+                      resource.send("#{assoc_name}=".to_sym, value)
                     end
                   end
                 end

@@ -12,8 +12,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "creates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -41,8 +44,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "does not create a contact if the data is improperly formatted" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -401,8 +407,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "updates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance).
+      and_yield
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)
@@ -420,7 +429,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Medium, Flapjack::Data::Rule, Flapjack::Data::Check,
+      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).and_yield
 
     contacts = double('contacts')

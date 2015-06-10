@@ -12,33 +12,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
-  it "creates an unscheduled maintenance period" do
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
-
-    empty_ids = double('empty_ids')
-    expect(empty_ids).to receive(:ids).and_return([])
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
-      with(:id => [unscheduled_maintenance_data[:id]]).
-      and_return(empty_ids)
-
-    expect(unscheduled_maintenance).to receive(:invalid?).and_return(false)
-    expect(unscheduled_maintenance).to receive(:save!).and_return(true)
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:new).with(unscheduled_maintenance_data).
-      and_return(unscheduled_maintenance)
-
-    expect(unscheduled_maintenance).to receive(:as_json).
-      with(:only => an_instance_of(Array)).
-      and_return(unscheduled_maintenance_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:jsonapi_type).and_return('unscheduled_maintenance')
-
+  it "cannot create an unscheduled maintenance period" do
     req_data  = maintenance_json('unscheduled', unscheduled_maintenance_data)
-    resp_data = req_data.merge(:relationships => maintenance_rel('unscheduled', unscheduled_maintenance_data))
 
     post "/unscheduled_maintenances", Flapjack.dump_json(:data => req_data), jsonapi_env
-    expect(last_response.status).to eq(201)
-    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => resp_data))
+    expect(last_response.status).to eq(404)
   end
 
   it 'returns a single unscheduled maintenance period' do
@@ -159,7 +137,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "ends an unscheduled maintenance period for a check" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).and_yield
 
     end_time = Time.now + (60 * 60)
 

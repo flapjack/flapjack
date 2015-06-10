@@ -23,6 +23,8 @@ module Flapjack
       use Flapjack::Gateways::ApiWeb::Middleware::RequestTimestamp
       use Rack::MethodOverride
 
+      set :sessions, :true
+
       set :raise_errors, false
       set :protection, except: :path_traversal
 
@@ -45,6 +47,13 @@ module Flapjack
 
             use Rack::CommonLogger, ::Logger.new(@config['access_log'])
           end
+
+          # session's only used for error message display, so
+          session_secret = @config['session_secret']
+
+          use Rack::Session::Cookie, :key => 'flapjack.session',
+                                     :path => '/',
+                                     :secret => session_secret || SecureRandom.hex(64)
 
           api_url = @config['api_url']
           if api_url.nil?
@@ -264,23 +273,28 @@ module Flapjack
 
         unless included.nil? || included.empty?
           @state = check_extra_state(@check, included, @current_time)
+
+          # FIXME need to retrieve contact-media relationships info
+
+          @contacts = some_included_records(@check[:relationships], :contacts,
+            included, 'contact')
+
+          @contact_media = some_included_records(@check[:relationships], :'contacts.media',
+            included, 'medium')
         end
 
         # these two requests will only get first page of 20 records, which is what we want
-        @state_changes = Flapjack::Diner.checks_link_states(check_id, :include => 'states')
+        state_links = Flapjack::Diner.checks_link_states(check_id,
+          :include => 'states')
+        @state_changes = all_included_records(state_links,
+          Flapjack::Diner.context[:included], 'state')
 
-        @scheduled_maintenances = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
+        sm_links = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
           :include => 'scheduled_maintenances')
+        @scheduled_maintenances = all_included_records(sm_links,
+          Flapjack::Diner.context[:included], 'scheduled_maintenance')
 
-        @acknowledgement_id = 'ok'.eql?(@check[:condition]) ? nil : @check[:ack_hash]
-
-        @contacts = included_records(@check[:relationships], :contacts,
-          included, 'contact')
-
-        # @contact_media = included_records(@check[:relationships], :'contacts.media',
-        #   included, 'medium')
-
-        # FIXME need to retrieve contact-media relationships info
+        @error = session[:error]; session.delete(:error)
 
         erb 'check.html'.to_sym
       end
@@ -289,13 +303,18 @@ module Flapjack
         summary  = params[:summary]
         check_id = params[:check_id]
 
+        t = Time.now
+
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
         Flapjack::Diner.create_unscheduled_maintenances(:summary => summary,
-          :end_time => (Time.now + duration), :check => check_id)
+          :start_time => t, :end_time => (t + duration), :check => check_id)
 
-        # FIXME error if above operation failed
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not create the acknowledgement."
+        end
 
         redirect back
       end
@@ -306,7 +325,10 @@ module Flapjack
         Flapjack::Diner.update_unscheduled_maintenances(
           unscheduled_maintenance_id, :end_time => Time.now)
 
-        # FIXME error if above operation failed
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not end unscheduled maintenance."
+        end
 
         redirect back
       end
@@ -314,36 +336,61 @@ module Flapjack
       post '/scheduled_maintenances' do
         check_id  = params[:check_id]
 
-        start_time = Chronic.parse(params[:start_time]).to_i
-        raise ArgumentError, "start time parsed to zero" unless start_time > 0
+        start_time = Chronic.parse(params[:start_time])
+        raise ArgumentError, "start time parsed to nil" if start_time.nil?
         duration   = ChronicDuration.parse(params[:duration])
         summary    = params[:summary]
 
         Flapjack::Diner.create_scheduled_maintenances(:summary => summary,
-          :start_time => start_time, :end_time => (Time.now + duration),
+          :start_time => start_time, :end_time => (start_time + duration),
           :check => check_id)
 
-        # FIXME error if above operation failed
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not create scheduled maintenance for the check."
+        end
 
         redirect back
       end
 
-      delete '/checks/:id' do
+      patch '/checks/:id' do
         check_id = params[:id]
 
         Flapjack::Diner.update_checks(:id => check_id, :enabled => false)
 
-        # FIXME error if above operation failed
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not disable the check."
+        end
 
         redirect '/'
       end
 
+      patch '/scheduled_maintenances/:id' do
+        scheduled_maintenance_id = params[:id]
+
+        Flapjack::Diner.update_scheduled_maintenances({:id => scheduled_maintenance_id,
+          :end_time => Time.now})
+
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not end scheduled maintenance."
+        end
+
+        redirect back
+      end
+
+      # FIXME should fail if its start time or end_time is in the past
+      # we'll allow the API to delete without fear or favour though
       delete '/scheduled_maintenances/:id' do
         scheduled_maintenance_id = params[:id]
 
         Flapjack::Diner.delete_scheduled_maintenances(scheduled_maintenance_id)
 
-        # FIXME error if above operation failed
+        err = Flapjack::Diner.last_error
+        unless err.nil?
+          session[:error] = "Could not delete scheduled maintenance."
+        end
 
         redirect back
       end
@@ -376,11 +423,11 @@ module Flapjack
         context = Flapjack::Diner.context
 
         unless context.nil?
-          @checks = included_records(@contact[:relationships], :checks,
+          @checks = some_included_records(@contact[:relationships], :checks,
             included, 'check')
 
-          @media = included_records(check[:relationships], :'media',
-            included, 'medium')
+          # @media = included_records(check[:relationships], :'media',
+          #   included, 'medium')
         end
 
         erb 'contact.html'.to_sym
@@ -407,7 +454,7 @@ module Flapjack
     private
 
       def check_state(check, included, time)
-        current_state = included_records(check[:relationships], :current_state,
+        current_state = some_included_records(check[:relationships], :current_state,
           included, 'state')
 
         last_changed = if current_state.nil? || current_state[:created_at].nil?
@@ -430,7 +477,7 @@ module Flapjack
           end
         end
 
-        latest_notifications = included_records(check[:relationships], :latest_notifications,
+        latest_notifications = some_included_records(check[:relationships], :latest_notifications,
           included, 'state')
 
         in_scheduled_maintenance = !check[:relationships][:current_scheduled_maintenances][:relationships].nil? &&
@@ -452,10 +499,10 @@ module Flapjack
       def check_extra_state(check, included, time)
         state = check_state(check, included, time)
 
-        current_state = included_records(check[:relationships], :current_state,
+        current_state = some_included_records(check[:relationships], :current_state,
           included, 'state')
 
-        current_scheduled_maintenances = included_records(check[:relationships],
+        current_scheduled_maintenances = some_included_records(check[:relationships],
           :current_scheduled_maintenances, included, 'scheduled_maintenance')
 
         current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
@@ -467,7 +514,7 @@ module Flapjack
           end
         end
 
-        current_unscheduled_maintenance = included_records(check[:relationships],
+        current_unscheduled_maintenance = some_included_records(check[:relationships],
           :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
 
         state.merge(
@@ -479,7 +526,27 @@ module Flapjack
         )
       end
 
-      def included_records(links, field, included, type)
+      def all_included_records(links, included, type)
+        case links
+        when Array
+          # respects the order provided by the main linkage data
+          ids = links.inject([]) do |memo, link|
+            if type.eql?(link[:type])
+              memo << link[:id]
+            end
+            memo
+          end
+          included.select {|incl|
+            type.eql?(incl[:type]) && ids.include?(incl[:id])
+          }.sort_by {|a| ids.index {|i| i == a[:id]}}
+        when Hash
+          included.detect do |incl|
+            type.eql?(incl[:type]) && links[:id].eql?(incl[:id])
+          end
+        end
+      end
+
+      def some_included_records(links, field, included, type)
         return unless links.has_key?(field) && links[field].has_key?(:data) &&
           !links[field][:data].nil?
 
@@ -487,9 +554,9 @@ module Flapjack
           ids = links[field][:data].collect {|lr| lr[:id]}
           return [] if ids.empty?
 
-          included.select do |incl|
+          included.select {|incl|
             type.eql?(incl[:type]) && ids.include?(incl[:id])
-          end
+          }.sort_by {|a| ids.index {|i| i == a[:id]}}
         else
           id = links[field][:data][:id]
           return if id.nil?

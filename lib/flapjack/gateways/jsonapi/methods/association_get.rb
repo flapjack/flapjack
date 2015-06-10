@@ -24,17 +24,9 @@ module Flapjack
                 :multiple.eql?(jd.number)
               }
 
-              assocs = singular_links.empty? ? nil : singular_links.keys.map(&:to_s).join('|')
-              multi_assocs = multiple_links.empty? ? nil: multiple_links.keys.map(&:to_s).join('|')
+              resource = resource_class.jsonapi_type.pluralize.downcase
 
-              if assocs.nil?
-                assocs = multi_assocs
-              elsif !multi_assocs.nil?
-                assocs += "|#{multi_assocs}"
-              end
-
-              unless assocs.nil?
-                resource = resource_class.jsonapi_type.pluralize.downcase
+              unless singular_links.empty? && multiple_links.empty?
 
                 app.class_eval do
                   # GET and PATCH duplicate a lot of swagger code, but swagger-blocks
@@ -161,114 +153,99 @@ module Flapjack
                   end
                 end
 
-                id_patt = if Flapjack::Data::Tag.eql?(resource_class)
-                  "\\S+"
-                else
-                  Flapjack::UUID_RE
-                end
+              end
 
-                app.get %r{^/#{resource}/(#{id_patt})/(?:links/)?(#{assocs})} do
-                  resource_id = params[:captures][0]
-                  assoc_name  = params[:captures][1]
+              id_patt = if Flapjack::Data::Tag.eql?(resource_class)
+                "\\S+"
+              else
+                Flapjack::UUID_RE
+              end
 
-                  fields = params[:fields]
-                  incl   = params[:include].nil? ? nil : params[:include].split(',')
+              app.get %r{^/#{resource}/(#{id_patt})/(?:relationships/)?(.*)} do
+                resource_id = params[:captures][0]
+                assoc_name  = params[:captures][1].to_sym
 
-                  status 200
+                halt(404) unless singular_links.has_key?(assoc_name) ||
+                  multiple_links.has_key?(assoc_name)
 
-                  assoc = jsonapi_links[assoc_name.to_sym]
+                fields = params[:fields]
+                incl   = params[:include].nil? ? nil : params[:include].split(',')
 
-                  halt(err(404, 'Unknown association')) if assoc.nil?
+                status 200
 
-                  empty = false
-                  included = nil
-                  result = nil
-                  meta = nil
+                assoc = jsonapi_links[assoc_name]
 
-                  resource_class.lock(*assoc.lock_klasses) do
-                    res = resource_class.intersect(:id => resource_id)
-                    empty = res.empty?
+                halt(err(404, 'Unknown relationship')) if assoc.nil?
 
-                    unless empty
-                      associated = res.all.first.send(assoc_name.to_sym)
+                empty = false
+                included = nil
+                result = nil
+                meta = nil
 
-                      result = case assoc.number
-                      when :multiple
+                resource_class.lock(*assoc.lock_klasses) do
+                  res = resource_class.intersect(:id => resource_id)
+                  empty = res.empty?
 
-                        unless params[:filter].nil?
-                          unless params[:filter].is_a?(Array)
-                            halt(err(403, "Filter parameters must be passed as an Array"))
-                          end
+                  unless empty
+                    associated = res.all.first.send(assoc_name)
 
-                          unless params[:filter].all? {|f| f = /^#{assocs}\.([^,]+))*$/ }
-                            halt(err(403, "Filter params must start with '#{assocs}.': '#{params[:sort]}'"))
-                          end
+                    result = case assoc.number
+                    when :multiple
 
-                          filters = params[:filter].collect do |f|
-                            f.sub(/^#{assocs}\./, '')
-                          end
-
-                          filter_ops = filter_params(assoc.data_klass, filters)
-                          associated = associated.intersect(filter_ops)
+                      unless params[:filter].nil?
+                        unless params[:filter].is_a?(Array)
+                          halt(err(403, "Filter parameters must be passed as an Array"))
                         end
 
-                        if params[:sort].nil?
-                          associated = associated.sort(:id => :asc)
-                        elsif params[:sort] =~ /^(?:\+|\-)#{assocs}\.(?:[^,]+)(?:,(?:\+|\-)#{assocs}\.[^,]+)*$/
-                          sort_params = params[:sort].sub(/^#{assocs}\./, '').gsub(/,#{assocs}\./, ',').split(',')
-
-                          if sort_params.any? {|sp| sp !~ /^(?:\+|-)/ }
-                            halt(err(403, "Sort parameters must start with +/- '#{params[:sort]}'"))
-                          end
-
-                          sort_params.each_with_object({}) do |sort_param, memo|
-                            sort_param =~ /^(\+|\-)([a-z_]+)$/i
-                            rev  = $1
-                            term = $2
-                            memo[term.to_sym] = (rev == '-') ? :desc : :asc
-                          end
-
-                          associated = associated.sort(sort_params)
-                        else
-                          halt(err(403, "Sort params must start with '(+/-)#{assocs}.': '#{params[:sort]}'"))
+                        unless params[:filter].all? {|f| f = /^#{assocs}\.([^,]+))*$/ }
+                          halt(err(403, "Filter params must start with '#{assocs}.': '#{params[:sort]}'"))
                         end
 
-                        resources, _, meta = paginate_get(associated, :page => params[:page],
-                          :per_page => params[:per_page])
+                        filters = params[:filter].collect do |f|
+                          f.sub(/^#{assocs}\./, '')
+                        end
 
-                        result = resources.eql?([]) ? [] : resources.ids
-                      when :singular
-                        result = associated.id
+                        filter_ops = filter_params(assoc.data_klass, filters)
+                        associated = associated.intersect(filter_ops)
                       end
 
-                      unless incl.nil?
-                        included = as_jsonapi_included(resource_class, resource, res,
-                          :include => incl, :fields => fields)
-                      end
+                      associated = associated.sort(:id => :asc)
+
+                      resources, _, meta = paginate_get(associated, :page => params[:page],
+                        :per_page => params[:per_page])
+
+                      result = resources.eql?([]) ? [] : resources.ids
+                    when :singular
+                      result = associated.id
+                    end
+
+                    unless incl.nil?
+                      included = as_jsonapi_included(resource_class, resource, res,
+                        :include => incl, :fields => fields)
                     end
                   end
-                  raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id) if empty
-
-                  links = {
-                    :self    => "#{request.base_url}/#{resource}/#{resource_id}/relationships/#{assoc_name}",
-                    :related => "#{request.base_url}/#{resource}/#{resource_id}/#{assoc_name}"
-                  }
-
-                  data = case result
-                  when Array
-                    result.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
-                  when String
-                    {:type => assoc.type, :id => result}
-                  else
-                    nil
-                  end
-
-                  ret = {:data => data, :links => links}
-                  ret[:included] = included unless included.nil?
-                  ret[:meta] = meta unless meta.nil?
-
-                  Flapjack.dump_json(ret)
                 end
+                raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id) if empty
+
+                links = {
+                  :self    => "#{request.base_url}/#{resource}/#{resource_id}/relationships/#{assoc_name}",
+                  :related => "#{request.base_url}/#{resource}/#{resource_id}/#{assoc_name}"
+                }
+
+                data = case result
+                when Array
+                  result.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
+                when String
+                  {:type => assoc.type, :id => result}
+                else
+                  nil
+                end
+
+                ret = {:data => data, :links => links}
+                ret[:included] = included unless included.nil?
+                ret[:meta] = meta unless meta.nil?
+
+                Flapjack.dump_json(ret)
               end
             end
           end

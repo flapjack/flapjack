@@ -14,16 +14,26 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.include?(:patch)
+
+              method_defs = if resource_class.respond_to?(:jsonapi_methods)
+                resource_class.jsonapi_methods
+              else
+                {}
+              end
+
+              method_def = method_defs[:patch]
+
+              unless method_def.nil?
 
                 jsonapi_links = resource_class.jsonapi_association_links
+                method_assocs = method_def.associations || []
 
                 singular_links = jsonapi_links.select {|n, jd|
-                  :singular.eql?(jd.number)
+                  method_assocs.include?(n) && :singular.eql?(jd.number)
                 }
 
                 multiple_links = jsonapi_links.select {|n, jd|
-                  :multiple.eql?(jd.number)
+                  method_assocs.include?(n) && :multiple.eql?(jd.number)
                 }
 
                 resource = resource_class.jsonapi_type.pluralize.downcase
@@ -101,11 +111,21 @@ module Flapjack
                 end
 
                 app.patch %r{^/#{resource}(?:/(.+))?$} do
+
+                  p request.url
+
                   resource_id = params[:captures].nil? ? nil :
                                   params[:captures].first
                   status 204
 
                   resources_data, unwrap = wrapped_params
+
+                  attributes = method_def.attributes || []
+
+                  validate_data(resources_data, :attributes => attributes,
+                    :singular_links => singular_links.keys,
+                    :multiple_links => multiple_links.keys,
+                    :klass => resource_class)
 
                   ids = resources_data.map {|d| d['id']}
 
@@ -117,19 +137,6 @@ module Flapjack
                       halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([resource_id])
                       [resource_class.find_by_id!(resource_id)]
                     end
-
-                    # FIXME can this move outside the lock?
-                    attributes = if resource_class.respond_to?(:jsonapi_methods)
-                      (resource_class.jsonapi_methods[:patch] || {}).attributes || []
-                    else
-                      []
-                    end
-
-                    validate_data(resources_data, :attributes => attributes,
-                      :singular_links => singular_links.keys,
-                      :multiple_links => multiple_links.keys,
-                      :klass => resource_class)
-                    # end query can move
 
                     resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
