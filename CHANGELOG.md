@@ -1,5 +1,10 @@
 ## Flapjack Changelog
 
+# 1.6.0rc3 - 2015-06-15
+- Chore/Bug?: SNS gateway improvements (@ali-graham)
+- Feature: add summary to rollup alerts #869 (@necula-01)
+- Bug: Fix notification rule regex matches #871 (@necula-01)
+
 # 1.6.0rc2 - 2015-05-14
 - Bug: Fix SNS query encoding and subject length #867 (@ali-graham, @xcxsxvx)
 - Chore: improve debug logging in pagerduty when looking for acks e44abd5 (@jessereynolds)
