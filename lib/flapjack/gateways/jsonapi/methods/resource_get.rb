@@ -15,12 +15,12 @@ module Flapjack
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               if resource_class.jsonapi_methods.include?(:get)
-                resource = resource_class.jsonapi_type.pluralize.downcase
+                resource = resource_class.short_model_name.plural
 
                 app.class_eval do
-                  single = resource.singularize
+                  single = resource_class.short_model_name.singular
 
-                  model_type = resource_class.name.demodulize
+                  model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
                   model_type_data = "jsonapi_data_#{model_type}".to_sym
@@ -159,8 +159,7 @@ module Flapjack
                       end
                     else
                       incl = params[:include].nil? ? nil : params[:include].split(',')
-                      d = as_jsonapi(resource_class, resource_class.jsonapi_type,
-                                     resource, resources,
+                      d = as_jsonapi(resource_class, resource, resources,
                                      (resource_id.nil? ? resources.ids : [resource_id]),
                                      :fields => params[:fields], :include => incl,
                                      :unwrap => !resource_id.nil?)

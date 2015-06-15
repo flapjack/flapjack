@@ -38,7 +38,8 @@ module Flapjack
             clause_done = opts[:clause_done]
             ids_cache = opts[:ids_cache]
 
-            klass.jsonapi_association_links.each_with_object({}) do |(jl_name, jl_data), memo|
+            klass.jsonapi_associations.each_with_object({}) do |(jl_name, jl_data), memo|
+              next if jl_data.link.is_a?(FalseClass) && jl_data.includable.is_a?(FalseClass)
 
               memo[jl_name] = if opts[:resolve].nil?
                 nil
@@ -74,7 +75,7 @@ module Flapjack
 
           # NB resources must be a Zermelo filter scope, not an array of Zermelo records
 
-          def as_jsonapi_data(klass, jsonapi_type, resources_name, resources,
+          def as_jsonapi_data(klass, resources_name, resources,
                               resource_ids, options = {})
 
             incl = options[:include]
@@ -85,7 +86,8 @@ module Flapjack
             fields = extract_fields(options[:fields], resources_name)
 
             whitelist = if klass.respond_to?(:jsonapi_methods)
-              (klass.jsonapi_methods[:get] || {}).attributes || []
+              method_def = klass.jsonapi_methods[:get] || klass.jsonapi_methods[:post]
+              method_def.nil? ? [] : method_def.attributes
             else
               []
             end
@@ -123,7 +125,7 @@ module Flapjack
                 end
               end
               data = {
-                :type => jsonapi_type,
+                :type => klass.short_model_name.singular,
                 :id => r_id
               }
               attrs = r.as_json(:only => jsonapi_fields)
@@ -158,7 +160,7 @@ module Flapjack
             end
           end
 
-          def as_jsonapi(klass, jsonapi_type, resources_name, resources,
+          def as_jsonapi(klass, resources_name, resources,
                          resource_ids, options = {})
 
             incl = options[:include]
@@ -168,7 +170,7 @@ module Flapjack
             clause_done = []
 
             ret = {
-              :data => as_jsonapi_data(klass, jsonapi_type, resources_name,
+              :data => as_jsonapi_data(klass, resources_name,
                 resources, resource_ids, :fields => fields,
                 :unwrap => options[:unwrap], :ids_cache => ids_cache,
                 :clause_done => clause_done, :include => incl)
@@ -359,8 +361,8 @@ module Flapjack
             fragment_resources = fragment_klass.intersect(:id => fragment_ids)
             fragment_name = fragment_klass.name.demodulize.underscore.pluralize
 
-            data = as_jsonapi_data(fragment_klass, fragment_klass.jsonapi_type,
-              fragment_name, fragment_resources, fragment_ids, :unwrap => false,
+            data = as_jsonapi_data(fragment_klass, fragment_name,
+              fragment_resources, fragment_ids, :unwrap => false,
               :include => clause_left, :fields => fields,
               :clause_done => clause_done, :ids_cache => ids_cache)
 

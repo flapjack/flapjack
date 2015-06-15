@@ -27,8 +27,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Medium).to receive(:jsonapi_type).and_return('medium')
-
     req_data = medium_json(email_data)
     resp_data = req_data.merge(:relationships => medium_rel(email_data))
 

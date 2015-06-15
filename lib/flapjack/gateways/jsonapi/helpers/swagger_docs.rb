@@ -69,7 +69,7 @@ module Flapjack
                     key :"$ref", :jsonapi_Reference
                   end
                 end
-                property :links do
+                property :relationships do
                   key :"$ref", :jsonapi_Links
                 end
               end
@@ -88,7 +88,7 @@ module Flapjack
                     key :"$ref", :jsonapi_Reference
                   end
                 end
-                property :links do
+                property :relationships do
                   key :"$ref", :jsonapi_Links
                 end
                 property :meta do

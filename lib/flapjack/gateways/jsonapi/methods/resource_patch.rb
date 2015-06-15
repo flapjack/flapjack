@@ -25,7 +25,7 @@ module Flapjack
 
               unless method_def.nil?
 
-                jsonapi_links = resource_class.jsonapi_association_links
+                jsonapi_links = resource_class.jsonapi_associations
                 method_assocs = method_def.associations || []
 
                 singular_links = jsonapi_links.select {|n, jd|
@@ -36,12 +36,12 @@ module Flapjack
                   method_assocs.include?(n) && :multiple.eql?(jd.number)
                 }
 
-                resource = resource_class.jsonapi_type.pluralize.downcase
+                resource = resource_class.short_model_name.plural
 
                 app.class_eval do
-                  single = resource.singularize
+                  single = resource_class.short_model_name.singular
 
-                  model_type = resource_class.name.demodulize
+                  model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
                   model_type_data = "jsonapi_data_#{model_type}".to_sym
@@ -111,9 +111,6 @@ module Flapjack
                 end
 
                 app.patch %r{^/#{resource}(?:/(.+))?$} do
-
-                  p request.url
-
                   resource_id = params[:captures].nil? ? nil :
                                   params[:captures].first
                   status 204
@@ -123,11 +120,13 @@ module Flapjack
                   attributes = method_def.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
-                    :singular_links => singular_links.keys,
-                    :multiple_links => multiple_links.keys,
+                    :singular_links => singular_links,
+                    :multiple_links => multiple_links,
                     :klass => resource_class)
 
                   ids = resources_data.map {|d| d['id']}
+
+                  jsonapi_type = resource_class.short_model_name.singular
 
                   resource_class.jsonapi_lock_method(:patch) do
 
@@ -140,8 +139,6 @@ module Flapjack
 
                     resources_by_id = resources.each_with_object({}) {|r, o| o[r.id] = r }
 
-                    jsonapi_type = resource_class.jsonapi_type
-
                     attribute_types = resource_class.attribute_types
 
                     resource_links = resources_data.each_with_object({}) do |d, memo|
@@ -150,7 +147,7 @@ module Flapjack
 
                       type = d['type']
                       halt(err(409, "Resource missing data type")) if type.nil?
-                      halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
+                      halt(err(409, "Resource data type '#{type}' does not match endpoint type '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
 
                       rd.each_pair do |att, value|
                         next unless attributes.include?(att.to_sym)

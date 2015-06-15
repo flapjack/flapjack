@@ -77,8 +77,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
     expect(unscheduled_maintenance_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(unscheduled_maintenance_2_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:jsonapi_type).and_return('unscheduled_maintenance')
-
     resp_data = [
       maintenance_json('unscheduled', unscheduled_maintenance_data).
         merge(:relationships => maintenance_rel('unscheduled', unscheduled_maintenance_data)),

@@ -40,11 +40,15 @@ module Flapjack
               method_def = method_defs[:post]
 
               unless method_def.nil?
-                resource = resource_class.jsonapi_type.pluralize.downcase
+                resource = resource_class.short_model_name.plural
 
                 method_assocs = method_def.associations || []
 
-                jsonapi_links = resource_class.jsonapi_association_links
+                jsonapi_links = if resource_class.respond_to?(:jsonapi_associations)
+                  resource_class.jsonapi_associations || {}
+                else
+                  {}
+                end
 
                 singular_links = jsonapi_links.select {|n, jd|
                   method_assocs.include?(n) && :singular.eql?(jd.number)
@@ -55,9 +59,10 @@ module Flapjack
                 }
 
                 app.class_eval do
-                  single = resource.singularize
+                  single = resource_class.short_model_name.singular
 
-                  model_type = resource_class.name.demodulize
+                  model_type = resource_class.short_model_name.name
+
                   model_type_data = "jsonapi_data_#{model_type}".to_sym
                   model_type_create_data = "jsonapi_data_#{model_type}Create".to_sym
 
@@ -103,8 +108,8 @@ module Flapjack
                   attributes = method_def.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
-                    :singular_links => singular_links.keys,
-                    :multiple_links => multiple_links.keys,
+                    :singular_links => singular_links,
+                    :multiple_links => multiple_links,
                     :klass => resource_class)
 
                   resources = nil
@@ -119,11 +124,11 @@ module Flapjack
 
                   attribute_types = resource_class.attribute_types
 
-                  jsonapi_type = resource_class.jsonapi_type
+                  jsonapi_type = resource_class.short_model_name.singular
 
                   resource_class.jsonapi_lock_method(:post) do
 
-                    unless data_ids.empty?
+                    unless data_ids.empty? || resource_class.included_modules.include?(Zermelo::Records::Stub)
                       conflicted_ids = resource_class.intersect(id_field => data_ids).ids
                       halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{id_field}s: " +
                                conflicted_ids.join(', '))) unless conflicted_ids.empty?
@@ -142,6 +147,13 @@ module Flapjack
                       end
                       record_data[:id] = r_id unless r_id.nil?
                       r = resource_class.new(record_data)
+
+                      # hacking in support for non-persisted objects
+                      case resource_class.name
+                      when Flapjack::Data::Acknowledgement.name, Flapjack::Data::TestNotification.name
+                        r.queue = config['processor_queue'] || 'events'
+                      end
+
                       halt(err(403, "Validation failed, " + r.errors.full_messages.join(', '))) if r.invalid?
                       memo[r] = rd['relationships']
                     end
@@ -183,7 +195,7 @@ module Flapjack
 
                   response.headers['Location'] = "#{request.base_url}/#{resource}/#{resource_ids.join(',')}"
 
-                  ajs = as_jsonapi(resource_class, jsonapi_type, resource,
+                  ajs = as_jsonapi(resource_class, resource,
                                    resources, resource_ids,
                                    :unwrap => unwrap)
 

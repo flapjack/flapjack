@@ -4,9 +4,10 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -17,8 +18,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
@@ -42,10 +45,6 @@ module Flapjack
         self.end_time - self.start_time
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :UnscheduledMaintenance do
         key :required, [:id, :type, :start_time, :end_time]
         property :id do
@@ -54,7 +53,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::UnscheduledMaintenance.short_model_name.singular]
         end
         property :start_time do
           key :type, :string
@@ -64,7 +63,7 @@ module Flapjack
           key :type, :string
           key :format, :"date-time"
         end
-        property :links do
+        property :relationships do
           key :"$ref", :UnscheduledMaintenanceLinks
         end
       end
@@ -81,29 +80,6 @@ module Flapjack
         end
       end
 
-      # swagger_schema :UnscheduledMaintenanceCreate do
-      #   key :required, [:type, :start_time, :end_time]
-      #   property :id do
-      #     key :type, :string
-      #     key :format, :uuid
-      #   end
-      #   property :type do
-      #     key :type, :string
-      #     key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
-      #   end
-      #   property :start_time do
-      #     key :type, :string
-      #     key :format, :"date-time"
-      #   end
-      #   property :end_time do
-      #     key :type, :string
-      #     key :format, :"date-time"
-      #   end
-      #   property :links do
-      #     key :"$ref", :UnscheduledMaintenanceChangeLinks
-      #   end
-      # end
-
       swagger_schema :UnscheduledMaintenanceUpdate do
         key :required, [:id, :type]
         property :id do
@@ -112,7 +88,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::UnscheduledMaintenance.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::UnscheduledMaintenance.short_model_name.singular]
         end
         property :start_time do
           key :type, :string
@@ -122,16 +98,7 @@ module Flapjack
           key :type, :string
           key :format, :"date-time"
         end
-        # property :links do
-        #   key :"$ref", :UnscheduledMaintenanceChangeLinks
-        # end
       end
-
-      # swagger_schema :UnscheduledMaintenanceChangeLinks do
-      #   property :check do
-      #     key :"$ref", :jsonapi_CheckLinkage
-      #   end
-      # end
 
       def self.jsonapi_methods
         @jsonapi_methods ||= {
@@ -149,12 +116,16 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations ||= {
+            :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
 
       private

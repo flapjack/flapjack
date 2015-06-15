@@ -6,9 +6,17 @@ require 'securerandom'
 
 require 'swagger/blocks'
 
+require 'flapjack/data/extensions/short_name'
+
 module Flapjack
   module Data
     class Report
+
+      extend ActiveModel::Naming
+
+      include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::ShortName
 
       class Outage
         attr_accessor :condition, :start_time, :end_time,
@@ -183,10 +191,6 @@ module Flapjack
 
         [{:downtime => outs},
          {:total_seconds => total_secs, :percentages => percentages}]
-      end
-
-      def self.jsonapi_type
-        self.name.demodulize.underscore
       end
 
       def self.jsonapi_methods

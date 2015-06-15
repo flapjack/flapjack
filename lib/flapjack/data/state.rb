@@ -11,12 +11,13 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
+require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/condition'
 require 'flapjack/data/notification'
 
-require 'flapjack/data/validators/id_validator'
-
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -27,8 +28,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :created_at        => :timestamp,
                         :updated_at        => :timestamp,
@@ -107,10 +110,6 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :State do
         key :required, [:id, :created_at, :updated_at, :condition, :action,
                         :summary, :details, :perfdata]
@@ -120,7 +119,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::State.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::State.short_model_name.singular]
         end
         property :created_at do
           key :type, :string
@@ -148,7 +147,7 @@ module Flapjack
         property :perfdata do
           key :type, :string
         end
-        property :links do
+        property :relationships do
           key :"$ref", :StateLinks
         end
       end
@@ -175,12 +174,16 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations = {
+            :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
 
       # FIXME ensure state.destroy is called when removed from:

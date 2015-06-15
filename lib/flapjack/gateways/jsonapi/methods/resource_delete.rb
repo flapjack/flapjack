@@ -37,12 +37,12 @@ module Flapjack
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               if resource_class.jsonapi_methods.include?(:delete)
-                resource = resource_class.jsonapi_type.pluralize.downcase
+                resource = resource_class.short_model_name.plural
 
                 app.class_eval do
-                  single = resource.singularize
+                  single = resource_class.short_model_name.singular
 
-                  model_type = resource_class.name.demodulize
+                  model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
                   model_type_reference_data_plural = "jsonapi_data_#{model_type_plural}Reference".to_sym
 

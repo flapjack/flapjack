@@ -67,8 +67,8 @@ module Flapjack
           def validate_data(data, options = {})
             valid_keys = ['id', 'type', 'attributes', 'relationships']
             valid_attrs = (options[:attributes] || []).map(&:to_s)
-            sl = options[:singular_links] ? options[:singular_links].map(&:to_s) : []
-            ml = options[:multiple_links] ? options[:multiple_links].map(&:to_s) : []
+            sl = options[:singular_links] ? options[:singular_links].keys.map(&:to_s) : []
+            ml = options[:multiple_links] ? options[:multiple_links].keys.map(&:to_s) : []
             all_links = sl + ml
             klass = options[:klass]
 
@@ -101,9 +101,9 @@ module Flapjack
                       v['data']['id'].is_a?(String) &&
                       v['data']['type'].is_a?(String)
 
-                    unless is_related_type?(k, v['data']['type'], :klass => klass)
-                      halt(err(403, "Related '#{k}' has wrong type #{v['data']['type']}"))
-                    end
+                      unless options[:singular_links][k.to_sym].type == v['data']['type']
+                        halt(err(403, "Related '#{k}' has wrong type #{v['data']['type']}"))
+                      end
                   else
                     halt(err(403, "Data reference for '#{k}' must be an Array of Hashes with 'id' & 'type' String values")) unless v['data'].is_a?(Array) &&
                       v['data'].all? {|l| l.has_key?('id') } &&
@@ -111,24 +111,12 @@ module Flapjack
                       v['data'].all? {|l| l['id'].is_a?(String) } &&
                       v['data'].all? {|l| l['type'].is_a?(String) }
 
-                    bad_type = v['data'].detect {|l| !is_related_type?(k, l['type'], :klass => klass)}
-                    halt(err(403, "Related '#{k}' has wrong type #{bad_type['type']}")) unless bad_type.nil?
+                      t = options[:multiple_links][k.to_sym].type
+                      bad_type = v['data'].detect {|l| !t.eql?(l['type'])}
                   end
                 end
               end
             end
-          end
-
-          def is_related_type?(link_name, type, options = {})
-            klass = options[:klass]
-            klass_type = nil
-
-            # SMELL mucking about with a zermelo protected method...
-            klass.send(:with_association_data, link_name.to_sym) do |ad|
-              klass_type = ad.data_klass.name.demodulize.underscore
-            end
-
-            type == klass_type
           end
 
           def validate_and_parsetime(value)

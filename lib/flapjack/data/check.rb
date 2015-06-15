@@ -6,6 +6,7 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/condition'
@@ -15,7 +16,7 @@ require 'flapjack/data/state'
 require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -28,8 +29,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :name                  => :string,
                         :enabled               => :boolean,
@@ -166,10 +169,6 @@ module Flapjack
 
       attr_accessor :count
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Check do
         key :required, [:id, :type, :name, :enabled, :failing]
         property :id do
@@ -178,7 +177,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Check.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -196,7 +195,7 @@ module Flapjack
           key :enum, Flapjack::Data::Condition.healthy.keys +
                        Flapjack::Data::Condition.unhealthy.keys
         end
-        property :links do
+        property :relationships do
           key :"$ref", :CheckLinks
         end
       end
@@ -251,7 +250,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Check.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -260,7 +259,7 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
-        property :links do
+        property :relationships do
           key :"$ref", :CheckChangeLinks
         end
       end
@@ -273,7 +272,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Check.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Check.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -282,7 +281,7 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
-        property :links do
+        property :relationships do
           key :"$ref", :CheckChangeLinks
         end
       end
@@ -320,54 +319,57 @@ module Flapjack
         }
       end
 
-      # FIXME should only lock those associations actually being manipulated
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true
-          ),
-          :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true
-          ),
-          :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true,
-            :type => 'scheduled_maintenance',
-            :lock_klasses => [Flapjack::Data::ScheduledMaintenance]
-          ),
-          :current_state => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true
-          ),
-          :current_unscheduled_maintenance => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true,
-            :type => 'unscheduled_maintenance',
-            :lock_klasses => [Flapjack::Data::UnscheduledMaintenance]
-          ),
-          :latest_notifications => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true
-          ),
-          :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => false
-          ),
-          :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false, :number => :multiple,
-            :link => true, :include => false
-          ),
-          :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          ),
-          # FIXME create usm should be ack?
-          :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => false
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations = {
+            :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true
+            ),
+            :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true
+            ),
+            :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true,
+              :type => 'scheduled_maintenance',
+              :lock_klasses => [Flapjack::Data::ScheduledMaintenance]
+            ),
+            :current_state => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true
+            ),
+            :current_unscheduled_maintenance => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true,
+              :type => 'unscheduled_maintenance',
+              :lock_klasses => [Flapjack::Data::UnscheduledMaintenance]
+            ),
+            :latest_notifications => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true
+            ),
+            :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :patch => false, :delete => false,
+              :number => :multiple, :link => true, :includable => false
+            ),
+            :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false, :number => :multiple,
+              :link => true, :includable => false
+            ),
+            :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            ),
+            # FIXME create usm should be ack?
+            :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :includable => false
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
 
       def in_scheduled_maintenance?(t = Time.now)

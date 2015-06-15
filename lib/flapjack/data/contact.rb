@@ -11,13 +11,14 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/medium'
 require 'flapjack/data/rule'
 require 'flapjack/data/tag'
 
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -30,8 +31,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :name     => :string,
                         :timezone => :string
@@ -75,10 +78,6 @@ module Flapjack
         ActiveSupport::TimeZone[self.timezone]
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Contact do
         key :required, [:id, :type, :name]
         property :id do
@@ -87,7 +86,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Contact.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -96,7 +95,7 @@ module Flapjack
           key :type, :string
           key :format, :tzinfo
         end
-        property :links do
+        property :relationships do
           key :"$ref", :ContactLinks
         end
       end
@@ -129,7 +128,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Contact.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -138,7 +137,7 @@ module Flapjack
           key :type, :string
           key :format, :tzinfo
         end
-        property :links do
+        property :relationships do
           key :"$ref", :ContactChangeLinks
         end
       end
@@ -151,7 +150,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Contact.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Contact.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -160,7 +159,7 @@ module Flapjack
           key :type, :string
           key :format, :tzinfo
         end
-        property :links do
+        property :relationships do
           key :"$ref", :ContactChangeLinks
         end
       end
@@ -194,18 +193,22 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true
-          ),
-          :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          ),
-          :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations = {
+            :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true
+            ),
+            :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            ),
+            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
     end
   end

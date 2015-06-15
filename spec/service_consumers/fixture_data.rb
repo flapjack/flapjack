@@ -296,28 +296,6 @@ module FixtureData
     }
   end
 
-  def notification_data
-    @notification_data ||= {
-      :id      => '8f78b421-4e89-4423-ab09-c0d76b4a698c',
-      :summary => 'testing'
-    }
-  end
-
-  def notification_2_data
-    @notification_2_data ||= {
-      :id      => 'a56c6ca5-c3c0-453d-96da-d09d459615e4',
-      :summary => 'more testing'
-    }
-  end
-
-  def notification_json(no_data, opts = {})
-    {
-      :id => no_data[:id],
-      :type => 'test_notification',
-      :attributes => no_data.reject {|k,v| :id.eql?(k) }
-    }
-  end
-
   def rule_data
     @rule_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
@@ -441,6 +419,44 @@ module FixtureData
       :id => global_statistics_data[:id],
       :type => 'statistic',
       :attributes => global_statistics_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def acknowledgement_data
+    @acknowledgement_data ||= {
+      :id => '31b9378f-ae1c-4c78-ad34-2b35407c8bbd',
+      :duration => 2 * 60 * 60,
+      :summary => 'Giraffe'
+    }
+  end
+
+  def acknowledgement_json(ack_data)
+    {
+      :id => ack_data[:id],
+      :type => 'acknowledgement',
+      :attributes => ack_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def test_notification_data
+    @test_notification_data ||= {
+      :id => '8f78b421-4e89-4423-ab09-c0d76b4a698c',
+      :summary => 'Rhinoceros'
+    }
+  end
+
+  def test_notification_2_data
+    @test_notification_2_data ||= {
+      :id => 'a56c6ca5-c3c0-453d-96da-d09d459615e4',
+      :summary => 'Tapir'
+    }
+  end
+
+  def test_notification_json(tn_data)
+    {
+      :id => tn_data[:id],
+      :type => 'test_notification',
+      :attributes => tn_data.reject {|k,v| :id.eql?(k) }
     }
   end
 

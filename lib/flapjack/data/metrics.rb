@@ -4,11 +4,17 @@ require 'securerandom'
 
 require 'swagger/blocks'
 
+require 'flapjack/data/extensions/short_name'
+
 module Flapjack
   module Data
     class Metrics
 
+      extend ActiveModel::Naming
+
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::ShortName
 
       def total_keys
         Flapjack.redis.dbsize
@@ -63,17 +69,13 @@ module Flapjack
         }
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Metrics do
         key :required, [:type, :total_keys,
           :event_queue_length, :processed_events,
           :check_freshness, :check_counts]
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Metrics.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Metrics.short_model_name.singular]
         end
         property :total_keys do
           key :type, :integer

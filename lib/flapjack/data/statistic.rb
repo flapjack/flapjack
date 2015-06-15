@@ -4,9 +4,10 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/associations'
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/gateways/jsonapi/data/associations'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
@@ -19,8 +20,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :instance_name  => :string,
                         :created_at     => :timestamp,
@@ -42,10 +45,6 @@ module Flapjack
           :numericality => {:greater_than_or_equal_to => 0, :only_integer => true}
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Statistic do
         key :required, [:id, :type, :instance_name, :created_at, :all_events,
                         :ok_events, :failure_events, :action_events]
@@ -55,7 +54,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Statistic.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Statistic.short_model_name.singular]
         end
         property :instance_name do
           key :type, :string

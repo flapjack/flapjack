@@ -31,8 +31,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
-    expect(Flapjack::Data::Rule).to receive(:jsonapi_type).and_return('rule')
-
     req_data  = rule_json(rule_data)
     resp_data = req_data.merge(:relationships => rule_rel(rule_data))
 

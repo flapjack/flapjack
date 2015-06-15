@@ -35,8 +35,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data_with_id)
 
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
-
     req_data  = tag_json(tag_data)
     resp_data = req_data.merge(:relationships => tag_rel(tag_data))
 
@@ -129,8 +127,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
 
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
-
     resp_data = [tag_json(tag_data).merge(:relationships => tag_rel(tag_data))]
 
     get '/tags?filter%5B%5D=name%3Adatabase'
@@ -204,8 +200,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_2_data)
 
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
-
     resp_data = [
       tag_json(tag_data).merge(:relationships => tag_rel(tag_data)),
       tag_json(tag_2_data).merge(:relationships => tag_rel(tag_2_data))
@@ -236,8 +230,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(tag).to receive(:checks).twice.and_return(checks)
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).with(tag.id).and_return(tag)
-
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).and_return('tag')
 
     patch "/tags/#{tag.id}",
       Flapjack.dump_json(:data => {:id => tag.id, :type => 'tag', :relationships =>

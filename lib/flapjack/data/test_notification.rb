@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'securerandom'
-
 require 'active_model'
 require 'swagger/blocks'
 
@@ -10,9 +8,11 @@ require 'zermelo/records/stub'
 require 'flapjack/data/extensions/associations'
 require 'flapjack/data/extensions/short_name'
 
+require 'flapjack/data/event'
+
 module Flapjack
   module Data
-    class Acknowledgement
+    class TestNotification
 
       include Swagger::Blocks
 
@@ -23,20 +23,18 @@ module Flapjack
       include Flapjack::Data::Extensions::Associations
       include Flapjack::Data::Extensions::ShortName
 
-      define_attributes :duration => :integer,
-                        :summary => :string
+      define_attributes :summary => :string
+
+      belongs_to :check, :class_name => 'Flapjack::Data::Check',
+        :inverse_of => :test_notifications
+
+      belongs_to :tag, :class_name => 'Flapjack::Data::Tag',
+        :inverse_of => :test_notifications
 
       attr_accessor :queue
 
-      belongs_to :check, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :acknowledgements
-
-      belongs_to :tag, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :acknowledgements
-
       def save!
         @id ||= SecureRandom.uuid
-        @duration ||= (4 * 60 * 60)
         @saved = true
       end
 
@@ -45,57 +43,52 @@ module Flapjack
       end
 
       def check=(c)
-        raise "Acknowledgement not saved" unless persisted?
-        raise "Acknowledgement queue not set" if @queue.nil? || @queue.empty?
-        raise "Acknowledgement already sent" if @sent
+        raise "Test notification not saved" unless persisted?
+        raise "Test notification queue not set" if @queue.nil? || @queue.empty?
+        raise "Test notification already sent" if @sent
 
-        if c.failing && c.enabled
-          Flapjack::Data::Event.create_acknowledgements(
-            @queue, [c], :duration => @duration, :summary  => @summary
-          )
-        end
+        Flapjack::Data::Event.test_notifications(
+          @queue, [c], :summary  => @summary
+        )
 
         @sent = true
       end
 
       def tag=(t)
-        raise "Acknowledgement not saved" unless persisted?
-        raise "Acknowledgement queue not set" if @queue.nil? || @queue.empty?
-        raise "Acknowledgement already sent" if @sent
+        raise "Test notification not saved" unless persisted?
+        raise "Test notification queue not set" if @queue.nil? || @queue.empty?
+        raise "Test notification already sent" if @sent
 
-        checks = t.checks.intersect(:failing => true, :enabled => tru)
+        checks = t.checks
 
         unless checks.empty?
-          Flapjack::Data::Event.create_acknowledgements(
-            @queue, checks.all, :duration => @duration, :summary  => @summary
+          Flapjack::Data::Event.test_notifications(
+            @queue, checks.all, :summary  => @summary
           )
         end
 
         @sent = true
       end
 
-      swagger_schema :AcknowledgementCreate do
-        key :required, [:type]
+      swagger_schema :TestNotificationCreate do
+        key :required, [:type, :summary]
         property :id do
           key :type, :string
           key :format, :uuid
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Acknowledgement.short_model_name.singular]
-        end
-        property :duration do
-          key :type, :integer
+          key :enum, [Flapjack::Data::TestNotification.short_model_name.singular]
         end
         property :summary do
           key :type, :string
         end
         property :relationships do
-          key :"$ref", :AcknowledgementCreateLinks
+          key :"$ref", :TestNotificationCreateLinks
         end
       end
 
-      swagger_schema :AcknowledgementCreateLinks do
+      swagger_schema :TestNotificationCreateLinks do
         property :check do
           key :"$ref", :jsonapi_CheckLinkage
         end
@@ -107,7 +100,7 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:duration, :summary],
+            :attributes => [:summary],
             :associations => [:check, :tag]
           )
         }
@@ -118,7 +111,7 @@ module Flapjack
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :get => false, :patch => false, :delete => false,
-              :number => :singular, :link => false, :includable => false,
+              :number => :singular, :link => false, :includable => false
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :get => false, :patch => false, :delete => false,

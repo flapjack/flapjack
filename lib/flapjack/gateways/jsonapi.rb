@@ -17,6 +17,7 @@ require 'swagger/blocks'
 require 'flapjack'
 require 'flapjack/utility'
 
+require 'flapjack/data/acknowledgement'
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
@@ -25,6 +26,7 @@ require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
 require 'flapjack/data/state'
 require 'flapjack/data/tag'
+require 'flapjack/data/test_notification'
 require 'flapjack/data/unscheduled_maintenance'
 
 require 'flapjack/gateways/jsonapi/middleware/array_param_fixer'
@@ -55,6 +57,7 @@ module Flapjack
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
       RESOURCE_CLASSES = [
+        Flapjack::Data::Acknowledgement,
         Flapjack::Data::Check,
         Flapjack::Data::Contact,
         Flapjack::Data::Medium,
@@ -63,6 +66,7 @@ module Flapjack
         Flapjack::Data::Statistic,
         Flapjack::Data::State,
         Flapjack::Data::Tag,
+        Flapjack::Data::TestNotification,
         Flapjack::Data::UnscheduledMaintenance
       ]
 
@@ -201,7 +205,7 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- association paths
       # must be before resource ones to avoid greedy path captures
-      %w[metrics reports test_notifications association_post resource_post
+      %w[metrics reports association_post resource_post
          association_get resource_get association_patch resource_patch
          association_delete resource_delete].each do |method|
 
@@ -210,7 +214,7 @@ module Flapjack
       end
 
       Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-        endpoint = resource_class.jsonapi_type.pluralize.downcase
+        endpoint = resource_class.short_model_name.plural
         swagger_wrappers(endpoint, resource_class)
       end
 

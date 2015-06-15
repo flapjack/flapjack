@@ -30,8 +30,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       with(:only => an_instance_of(Array)).
       and_return(scheduled_maintenance_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:jsonapi_type).and_return('scheduled_maintenance')
-
     req_data  = maintenance_json('scheduled', scheduled_maintenance_data)
     resp_data = req_data.merge(:relationships => maintenance_rel('scheduled', scheduled_maintenance_data))
 
@@ -124,8 +122,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     expect(scheduled_maintenance_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(scheduled_maintenance_2_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:jsonapi_type).and_return('scheduled_maintenance')
 
     resp_data = [
       maintenance_json('scheduled', scheduled_maintenance_data).

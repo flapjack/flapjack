@@ -90,8 +90,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data.merge(:id => tag.id))
 
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).twice.and_return('tag')
-
     checks = double('checks', :all => [check])
     expect(checks).to receive(:empty?).and_return(false)
     expect(checks).to receive(:associated_ids_for).with(:tags).

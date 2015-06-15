@@ -13,9 +13,13 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              resource = resource_class.jsonapi_type.pluralize.downcase
+              resource = resource_class.short_model_name.plural
 
-              jsonapi_links = resource_class.jsonapi_association_links || {}
+              jsonapi_links = if resource_class.respond_to?(:jsonapi_associations)
+                resource_class.jsonapi_associations || {}
+              else
+                {}
+              end
 
               post_links = jsonapi_links.select {|n, jd|
                 !jd.post.is_a?(FalseClass) && :multiple.eql?(jd.number)

@@ -14,7 +14,11 @@ module Flapjack
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
 
-              jsonapi_links = resource_class.jsonapi_association_links || {}
+              jsonapi_links = if resource_class.respond_to?(:jsonapi_associations)
+                resource_class.jsonapi_associations || {}
+              else
+                {}
+              end
 
               singular_links = jsonapi_links.select {|n, jd|
                 :singular.eql?(jd.number)
@@ -24,7 +28,7 @@ module Flapjack
                 :multiple.eql?(jd.number)
               }
 
-              resource = resource_class.jsonapi_type.pluralize.downcase
+              resource = resource_class.short_model_name.plural
 
               unless singular_links.empty? && multiple_links.empty?
 

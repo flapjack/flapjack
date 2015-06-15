@@ -30,8 +30,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-
     req_data  = check_json(check_data)
     resp_data = req_data.merge(:relationships => check_rel(check_data))
 
@@ -70,8 +68,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_2_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     req_data = [check_json(check_data), check_json(check_2_data)]
     resp_data = [
@@ -112,8 +108,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     req_data  = check_json(check_data).merge(
       :relationships => {
@@ -191,8 +185,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-
     resp_data = [check_json(check_data).merge(:relationships => check_rel(check_data))]
 
     get '/checks'
@@ -244,8 +236,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-
     resp_data = [check_json(check_data).merge(:relationships => check_rel(check_data))]
 
     get '/checks?filter=enabled%3At'
@@ -271,8 +261,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     resp_data = check_json(check_data).merge(:relationships => check_rel(check_data))
 
@@ -300,8 +288,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:as_json).with(:only => [:name, :enabled]).
       and_return(:name => check_data[:name], :enabled => check_data[:enabled])
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     resp_data = check_json(check_data).merge(:relationships => check_rel(check_data))
     resp_data[:attributes]
@@ -345,9 +331,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-    expect(Flapjack::Data::Tag).to receive(:jsonapi_type).twice.and_return('tag')
 
     get "/checks/#{check.id}?include=tags"
     expect(last_response).to be_ok
@@ -428,8 +411,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check_2).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(check_2_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-
     resp_data = [
       check_json(check_data).merge(:relationships => check_rel(check_data)),
       check_json(check_2_data).merge(:relationships => check_rel(check_2_data))
@@ -456,8 +437,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:invalid?).and_return(false)
     expect(check).to receive(:save!).and_return(true)
 
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
-
     patch "/checks/#{check.id}",
       Flapjack.dump_json(:data => {:id => check.id, :type => 'check', :attributes => {:enabled => false}}),
       jsonapi_env
@@ -482,8 +461,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check_2).to receive(:enabled=).with(false)
     expect(check_2).to receive(:invalid?).and_return(false)
     expect(check_2).to receive(:save!).and_return(true)
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     patch "/checks",
       Flapjack.dump_json(:data => [{:id => check.id, :type => 'check', :attributes => {:enabled => false}},
@@ -511,8 +488,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:tags).twice.and_return(tags)
 
     expect(Flapjack::Data::Tag).to receive(:find_by_ids!).with(tag.id).and_return([tag])
-
-    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
 
     patch "/checks/#{check.id}",
       Flapjack.dump_json(:data => {:id => check.id, :type => 'check', :relationships =>

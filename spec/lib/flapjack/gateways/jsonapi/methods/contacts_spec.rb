@@ -31,8 +31,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-
     req_data  = contact_json(contact_data)
     resp_data = req_data.merge(:relationships => contact_rel(contact_data))
 
@@ -101,8 +99,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-
     resp_data = [contact_json(contact_data).merge(:relationships => contact_rel(contact_data))]
 
     get '/contacts'
@@ -147,8 +143,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-
     resp_data = [contact_json(contact_data).merge(:relationships => contact_rel(contact_data))]
 
     get '/contacts?filter=name%3AJim+Smith'
@@ -192,8 +186,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
 
     resp_data = [contact_json(contact_data).merge(:relationships => contact_rel(contact_data))]
 
@@ -246,8 +238,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact_3).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_3_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-
     resp_data = [
       contact_json(contact_data).merge(:relationships => contact_rel(contact_data)),
       contact_json(contact_2_data).merge(:relationships => contact_rel(contact_2_data)),
@@ -296,8 +286,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-
     resp_data = [
       contact_json(contact_2_data).merge(:relationships => contact_rel(contact_2_data)),
       contact_json(contact_data).merge(:relationships => contact_rel(contact_data)),
@@ -331,8 +319,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
 
     resp_data = contact_json(contact_data).merge(:relationships => contact_rel(contact_data))
 
@@ -384,9 +370,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
     expect(contact).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
-
-    expect(Flapjack::Data::Contact).to receive(:jsonapi_type).and_return('contact')
-    expect(Flapjack::Data::Medium).to receive(:jsonapi_type).twice.and_return('medium')
 
     get "/contacts/#{contact.id}?fields[media]=transport,address&include=media"
     expect(last_response).to be_ok

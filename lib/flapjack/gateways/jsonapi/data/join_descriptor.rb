@@ -7,11 +7,11 @@ module Flapjack
     class JSONAPI < Sinatra::Base
       module Data
         class JoinDescriptor
-          attr_reader :post, :get, :patch, :delete, :number, :link, :include, :type
+          attr_reader :post, :get, :patch, :delete, :number, :link, :includable, :type
           attr_accessor :association_data
 
           def initialize(opts = {})
-            %w{post get patch delete number link include type lock_klasses}.each do |a|
+            %w{post get patch delete number link includable type lock_klasses}.each do |a|
               instance_variable_set("@#{a}", opts[a.to_sym])
             end
             @lock_klasses ||= []
@@ -28,7 +28,7 @@ module Flapjack
           end
 
           def type
-            @association_data.nil? ? @type : data_klass.jsonapi_type
+            @association_data.nil? ? @type : data_klass.short_model_name.singular
           end
         end
       end

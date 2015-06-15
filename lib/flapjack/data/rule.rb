@@ -7,11 +7,13 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
+
 require 'flapjack/data/route'
 require 'flapjack/data/time_restriction'
 
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -24,8 +26,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       # I've removed regex_* properties as they encourage loose binding against
       # names, which may change. Do client-side grouping and create a tag!
@@ -204,10 +208,6 @@ module Flapjack
         end
       end
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Rule do
         key :required, [:id, :type]
         property :id do
@@ -216,7 +216,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
         # property :time_restrictions do
         #   key :type, :array
@@ -224,7 +224,7 @@ module Flapjack
         #     key :"$ref", :TimeRestrictions
         #   end
         # end
-        property :links do
+        property :relationships do
           key :"$ref", :RuleLinks
         end
       end
@@ -257,7 +257,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
         # property :time_restrictions do
         #   key :type, :array
@@ -265,7 +265,7 @@ module Flapjack
         #     key :"$ref", :TimeRestrictions
         #   end
         # end
-        property :links do
+        property :relationships do
           key :"$ref", :RuleChangeLinks
         end
       end
@@ -278,7 +278,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
         # property :time_restrictions do
         #   key :type, :array
@@ -286,7 +286,7 @@ module Flapjack
         #     key :"$ref", :TimeRestrictions
         #   end
         # end
-        property :links do
+        property :relationships do
           key :"$ref", :RuleChangeLinks
         end
       end
@@ -326,18 +326,22 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true
-          ),
-          :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          ),
-          :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations = {
+            :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true
+            ),
+            :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            ),
+            :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
 
       private

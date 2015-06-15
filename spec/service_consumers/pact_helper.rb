@@ -1,6 +1,8 @@
 require 'pact/provider/rspec'
 
 require 'flapjack/configuration'
+require 'flapjack/redis_proxy'
+
 require 'flapjack/gateways/jsonapi'
 
 require './spec/support/mock_logger.rb'

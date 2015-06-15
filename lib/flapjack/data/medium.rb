@@ -4,12 +4,13 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 
-require 'flapjack/gateways/jsonapi/data/associations'
+require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -22,8 +23,10 @@ module Flapjack
       include Zermelo::Records::Redis
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
-      include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
+
+      include Flapjack::Data::Extensions::Associations
+      include Flapjack::Data::Extensions::ShortName
 
       TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
 
@@ -120,10 +123,6 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Medium do
         key :required, [:id, :type, :transport]
 
@@ -133,7 +132,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Medium.short_model_name.singular]
         end
         property :transport do
           key :type, :string
@@ -160,7 +159,7 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
-        property :links do
+        property :relationships do
           key :"$ref", :MediumLinks
         end
       end
@@ -182,8 +181,6 @@ module Flapjack
       end
 
       swagger_schema :MediumCreate do
-        # would require interval & rollup_threshold, but pagerduty :(
-        # TODO fix when userdata added
         key :required, [:type, :address, :transport]
         property :id do
           key :type, :string
@@ -191,7 +188,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Medium.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -221,7 +218,7 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
-        property :links do
+        property :relationships do
           key :"$ref", :MediumChangeLinks
         end
       end
@@ -234,7 +231,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Medium.jsonapi_type.downcase]
+          key :enum, [Flapjack::Data::Medium.short_model_name.singular]
         end
         property :transport do
           key :type, :string
@@ -261,7 +258,7 @@ module Flapjack
           key :type, :integer
           key :minimum, 1
         end
-        property :links do
+        property :relationships do
           key :"$ref", :MediumChangeLinks
         end
       end
@@ -304,19 +301,23 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        @jsonapi_associations ||= {
-          :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :multiple, :link => true, :include => true
-          ),
-          :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :post => false, :patch => false, :delete => false,
-            :number => :singular, :link => true, :include => true
-          ),
-          :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-            :number => :multiple, :link => true, :include => true
-          )
-        }
+        if @jsonapi_associations.nil?
+          @jsonapi_associations = {
+            :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :multiple, :link => true, :include => true
+            ),
+            :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => false, :patch => false, :delete => false,
+              :number => :singular, :link => true, :include => true
+            ),
+            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :number => :multiple, :link => true, :include => true
+            )
+          }
+          populate_association_data(@jsonapi_associations)
+        end
+        @jsonapi_associations
       end
     end
   end
