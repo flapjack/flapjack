@@ -121,37 +121,39 @@ module Flapjack
         Flapjack.dump_json(json_data)
       end
 
-      # entity names match?
+      # If the rule has any entities, then one of them must match the event's entity
       def match_entity?(event_id)
-        return false unless @entities
-        @entities.include?(event_id.split(':').first)
+        return true unless @entities && @entities.length > 0
+        event_entity = event_id.split(':').first
+        @entities.include?(event_entity)
       end
 
-      # entity names match regex?
+      # If the rule has any regex_entities, then all of them must match the
+      # event's entity
       def match_regex_entities?(event_id)
-        return false unless @regex_entities && @regex_entities.length > 0
-        entity = event_id.split(':').first
+        return true unless @regex_entities && @regex_entities.length > 0
+        event_entity = event_id.split(':').first
         matches = 0
         @regex_entities.each do |regex_entity|
-          matches += 1 if /#{regex_entity}/ === entity
+          matches += 1 if /#{regex_entity}/ === event_entity
         end
         matches >= @regex_entities.length
       end
 
-      # tags match?
+      # If the rule has any tags, then they must all be present in the
+      # event's tags
       def match_tags?(event_tags)
-        return false unless @tags && @tags.length > 0
+        return true unless @tags && @tags.length > 0
         @tags.subset?(event_tags)
       end
 
-      # regex_tags match?
+      # If the rule has any regex_tags, then they must all match at least
+      # one of the event's tags
       def match_regex_tags?(event_tags)
-        return false unless @regex_tags && @regex_tags.length > 0
+        return true unless @regex_tags && @regex_tags.length > 0
         matches = 0
-        event_tags.each do |event_tag|
-          @regex_tags.each do |regex_tag|
-            matches += 1 if /#{regex_tag}/ === event_tag
-          end
+        @regex_tags.each do |regex_tag|
+          matches += 1 if event_tags.any? { |event_tag| /#{regex_tag}/ === event_tag }
         end
         matches >= @regex_tags.length
       end
