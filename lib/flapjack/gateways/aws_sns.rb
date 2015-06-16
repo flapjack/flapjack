@@ -145,7 +145,7 @@ module Flapjack
       end
 
       def self.get_signature(secret_key, string_to_sign)
-        signature = OpenSSL::HMAC.digest(OpenSSL::Digest.new('sha256'), secret_key, string_to_sign)
+        signature = OpenSSL::HMAC.digest('sha256', secret_key, string_to_sign)
 
         Base64.encode64(signature).strip
       end
