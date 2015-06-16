@@ -7,9 +7,9 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:redis) { double('redis') }
 
-  let(:time) { Time.new(2013, 10, 31, 13, 45).utc }
+  let(:time_int) { 1383252300 }
 
-  let(:time_str) { time.strftime('%Y-%m-%dT%H:%M:%SZ') }
+  let(:time_str) { Time.at(time_int).utc.strftime('%Y-%m-%dT%H:%M:%SZ') }
 
   let(:config) { {'region' => 'us-east-1',
                   'access_key' => 'AKIAIOSFODNN7EXAMPLE',
@@ -24,7 +24,7 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
                    'summary'            => 'smile',
                    'last_state'         => 'problem',
                    'last_summary'       => 'frown',
-                   'time'               => time.to_i,
+                   'time'               => time_int,
                    'address'            => 'arn:aws:sns:us-east-1:698519295917:My-Topic',
                    'event_id'           => 'example.com:ping',
                    'id'                 => '123456789',
