@@ -7,9 +7,9 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
 
   let(:redis) { double('redis') }
 
-  let(:time) { Time.new(2013, 10, 31, 13, 45) }
+  let(:time) { Time.new(2013, 10, 31, 13, 45).utc }
 
-  let(:time_str) { Time.at(time.to_i).utc.strftime('%Y-%m-%dT%H:%M:%SZ') }
+  let(:time_str) { time.strftime('%Y-%m-%dT%H:%M:%SZ') }
 
   let(:config) { {'region' => 'us-east-1',
                   'access_key' => 'AKIAIOSFODNN7EXAMPLE',
