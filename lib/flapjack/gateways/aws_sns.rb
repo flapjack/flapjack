@@ -60,7 +60,7 @@ module Flapjack
         endpoint = "http://#{hostname}/"
         access_key = @config["access_key"]
         secret_key = @config["secret_key"]
-        timestamp = Time.at(alert.time).strftime('%Y-%m-%dT%H:%M:%SZ')
+        timestamp = Time.at(alert.time).utc.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         address         = alert.address
         notification_id = alert.notification_id
