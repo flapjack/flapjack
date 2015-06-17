@@ -48,7 +48,7 @@ module Flapjack
         raise "Test notification already sent" if @sent
 
         Flapjack::Data::Event.test_notifications(
-          @queue, [c], :summary  => @summary
+          @queue, [c], :summary => self.summary
         )
 
         @sent = true
@@ -63,7 +63,7 @@ module Flapjack
 
         unless checks.empty?
           Flapjack::Data::Event.test_notifications(
-            @queue, checks.all, :summary  => @summary
+            @queue, checks.all, :summary => self.summary
           )
         end
 

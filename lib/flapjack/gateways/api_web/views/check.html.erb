@@ -144,7 +144,7 @@
     <div id="add-unscheduled-maintenance" class="alert alert-warning">
       <% action = current_unscheduled_maintenance.nil? ? "Acknowledge" : "Re-acknowledge" %>
       <h4><%= action %> alert</h4>
-      <form action="<%= @base_url %>unscheduled_maintenances" method="post" class="form-horizontal">
+      <form action="<%= @base_url %>acknowledgements" method="post" class="form-horizontal">
         <input type="hidden" name="check_id" value="<%= u(@check[:id]) %>">
         <div class="form-group">
           <div class="col-sm-12 text-left">
@@ -276,7 +276,7 @@
       <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
         <tr>
           <td>Last <%= h type.to_s %> notification:</td>
-          <% notif = latest_notifications.detect {|ln| ln[:condition].eql?(type.to_s) } %>
+          <% notif = latest_notifications.detect {|ln| ln[:condition].eql?(type.to_s) || ln[:action].eql?(type.to_s) } %>
           <% if notif.nil? %>
             <td>never</td>
             <td>&nbsp;</td>

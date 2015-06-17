@@ -354,13 +354,14 @@ module Flapjack
         severity = Flapjack::Data::Condition.most_unhealthy
       else
         latest_notif = check.latest_notifications
-        notifications_to_remove = if new_state.action.nil?
-          latest_notif.intersect(:condition => new_state.condition).all
+
+        notification_ids_to_remove = if new_state.action.nil?
+          latest_notif.intersect(:condition => new_state.condition).ids
         else
-          latest_notif.intersect(:action => new_state.action).all
+          latest_notif.intersect(:action => new_state.action).ids
         end
         latest_notif.add(new_state)
-        latest_notif.remove(*notifications_to_remove) unless notifications_to_remove.empty?
+        latest_notif.remove_ids(*notification_ids_to_remove) unless notification_ids_to_remove.empty?
 
         most_severe = check.most_severe
         most_severe_cond = most_severe.nil? ? nil :

@@ -299,7 +299,7 @@ module Flapjack
         erb 'check.html'.to_sym
       end
 
-      post "/unscheduled_maintenances" do
+      post "/acknowledgements" do
         summary  = params[:summary]
         check_id = params[:check_id]
 
@@ -308,8 +308,11 @@ module Flapjack
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
-        Flapjack::Diner.create_unscheduled_maintenances(:summary => summary,
-          :start_time => t, :end_time => (t + duration), :check => check_id)
+        # FIXME create with known id, poll a few times and return
+        # success/failure in session
+
+        Flapjack::Diner.create_acknowledgements(:summary => summary,
+          :duration => duration, :check => check_id)
 
         err = Flapjack::Diner.last_error
         unless err.nil?

@@ -10,6 +10,8 @@ require 'zermelo/records/stub'
 require 'flapjack/data/extensions/associations'
 require 'flapjack/data/extensions/short_name'
 
+require 'flapjack/data/event'
+
 module Flapjack
   module Data
     class Acknowledgement
@@ -51,7 +53,7 @@ module Flapjack
 
         if c.failing && c.enabled
           Flapjack::Data::Event.create_acknowledgements(
-            @queue, [c], :duration => @duration, :summary  => @summary
+            @queue, [c], :duration => self.duration, :summary => self.summary
           )
         end
 
@@ -67,7 +69,7 @@ module Flapjack
 
         unless checks.empty?
           Flapjack::Data::Event.create_acknowledgements(
-            @queue, checks.all, :duration => @duration, :summary  => @summary
+            @queue, checks.all, :duration => self.duration, :summary => self.summary
           )
         end
 
