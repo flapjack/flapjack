@@ -15,6 +15,7 @@ require 'flapjack/utility'
 
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/slack'
 require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/aws_sns'
@@ -119,8 +120,7 @@ module Flapjack
             last_change = ec.last_change
             memo[alert] = {
               'duration' => last_change ? (Time.now.to_i - last_change) : nil,
-              'state'    => ec.state,
-              'summary'  => ec.summary
+              'state'    => ec.state
             }
             memo
           end
