@@ -13,12 +13,6 @@ module Flapjack
   module Gateways
     class Slack
 
-      # curl -X POST 'https://api.twilio.com/2010-04-01/Accounts/[AccountSid]/Messages.json' \
-      # --data-urlencode 'To=+61414123456'  \
-      # --data-urlencode 'From=+61414123456'  \
-      # --data-urlencode 'Body=Sausage' \
-      # -u [AccountSid]:[AuthToken]
-
       include Flapjack::Utility
 
       def initialize(opts = {})
@@ -60,17 +54,15 @@ module Flapjack
 
       def deliver(alert)
         account_sid = @config["account_sid"]
-        auth_token  = @config["auth_token"]
-        from        = @config["from"]
-        channel     = @config["channel"] || "alert-test"
-        #endpoint    = @config["endpoint"] || "https://hooks.slack.com/services/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"
-        endpoint    = @config["endpoint"] || "https://hooks.slack.com/services/T024GHP2K/B032NSNB2/"
+        endpoint    = @config["endpoint"]
+        icon_emoji  = @config["icon_emoji"] || ':ghost:'
 
-        address         = alert.address
+        channel         = "##{alert.address}"
+        channel         = '#general' if (channel.size == 1)
         notification_id = alert.notification_id
         message_type    = alert.rollup ? 'rollup' : 'alert'
 
-        sms_template_erb, sms_template =
+        slack_template_erb, slack_template =
           load_template(@config['templates'], message_type, 'text',
                         File.join(File.dirname(__FILE__), 'slack'))
 
@@ -78,26 +70,19 @@ module Flapjack
         bnd     = binding
 
         begin
-          message = sms_template_erb.result(bnd).chomp
+          message = slack_template_erb.result(bnd).chomp
         rescue => e
           @logger.error "Error while executing the ERB for an sms: " +
-            "ERB being executed: #{sms_template}"
+            "ERB being executed: #{slack_template}"
           raise
-        end
-
-        if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
-          @logger.error "slack config is missing"
-          return
         end
 
         errors = []
 
-        safe_message = truncate(message, 159)
-
-        [[endpoint, "Slack endpoint is missing"],
-         [account_sid, "Slack account_sid is missing"],
-         [auth_token, "Slack auth_token is missing"],
-         [channel, "Slack channel is missing"]].each do |val_err|
+        [
+         [endpoint, "Slack endpoint is missing"],
+         [account_sid, "Slack account_sid is missing"]
+        ].each do |val_err|
 
           next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
           errors << val_err.last
@@ -108,13 +93,15 @@ module Flapjack
           return
         end
 
-        #body_data = {'To'   => address, 'From' => from, 'Body' => safe_message}
-        body_data = { 'payload' => "{\"channel\": \"#{channel}\", \"username\": \"#{account_sid}\", \"text\": \"@channel #{safe_message}\", \"icon_emoji\": \":ghost:\"}" }
-        @logger.debug "body_data: #{body_data.inspect}"
-        #@logger.debug "authorization: [#{account_sid}, #{auth_token[0..2]}...#{auth_token[-3..-1]}]"
+        payload = Flapjack.dump_json(
+          'channel'    => channel,
+          'username'   => account_sid,
+          'text'       => message,
+          'icon_emoji' => icon_emoji
+        )
+        @logger.debug "payload: #{payload.inspect}"
 
-        #http = EM::HttpRequest.new(endpoint).post(:body => body_data, :head => {'authorization' => [account_sid, auth_token]})
-        http = EM::HttpRequest.new("#{endpoint}#{auth_token}").post(:body => body_data)
+        http = EM::HttpRequest.new("#{endpoint}").post(:body => {'payload' => payload})
 
         @logger.debug "server response: #{http.response}"
 
@@ -122,10 +109,10 @@ module Flapjack
         if (status >= 200) && (status <= 206)
           @sent += 1
           alert.record_send_success!
-          @logger.debug "Sent SMS via Slack, response status is #{status}, " +
+          @logger.debug "Sent message via Slack, response status is #{status}, " +
             "notification_id: #{notification_id}"
         else
-          @logger.error "Failed to send SMS via Slack, response status is #{status}, " +
+          @logger.error "Failed to send message via Slack, response status is #{status}, " +
             "notification_id: #{notification_id}"
         end
       rescue => e

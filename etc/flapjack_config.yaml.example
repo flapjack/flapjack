@@ -108,14 +108,12 @@ production:
       enabled: no
       queue: slack_notifications
       account_sid: "webhookbot"
-      channel: "#myChan"
       endpoint: "https://hooks.slack.com/services/xxx/yyy/"
       auth_token: "zzzzz"
       from: ""
       logger:
         level: INFO
         syslog_errors: yes
-      # location of custom alert templates
       # location of custom alert templates
       #templates:
       #  rollup.text: '/etc/flapjack/templates/slack/rollup.text.erb'
