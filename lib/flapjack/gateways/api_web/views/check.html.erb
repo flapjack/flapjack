@@ -358,14 +358,21 @@
         <td><%= h summary %></td>
         <td>
         <% if end_time > @current_time %>
-          <% label = (start_time > @current_time) ? 'Delete' : 'End Now' %>
+          <% if start_time > @current_time %>
             <form action="<%= @base_url %>scheduled_maintenances/<%= u(scheduled_maintenance[:id]) %>" method="post">
               <input type="hidden" name="_method" value="delete">
-              <button type="submit" class="btn btn-danger"><%= label %></button>
+              <button type="submit" class="btn btn-danger">Delete</button>
             </form>
           <% else %>
-            &nbsp;
+            <form action="<%= @base_url %>scheduled_maintenances/<%= u(scheduled_maintenance[:id]) %>" method="post">
+              <input type="hidden" name="_method" value="patch">
+              <input type="hidden" name="end_time" value="<% h end_time.iso8601 %>">
+              <button type="submit" class="btn btn-danger">End Now</button>
+            </form>
           <% end %>
+        <% else %>
+          &nbsp;
+        <% end %>
         </td>
       </tr>
     <% end %>

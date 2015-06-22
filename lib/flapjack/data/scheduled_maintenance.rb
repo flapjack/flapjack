@@ -32,12 +32,34 @@ module Flapjack
       validates :start_time, :presence => true
       validates :end_time, :presence => true
 
+      validate :positive_duration
+      def positive_duration
+        return if self.start_time.nil? || self.end_time.nil? ||
+          (self.start_time < self.end_time)
+        errors.add(:end_time, "must be greater than start time")
+      end
+
+      # # FIXME discuss whether we should let people change history
+      # validate :times_in_future_if_changed, :on => :update
+      # def times_in_future_if_changed
+      #   t =  Time.now.to_i
+      #   [:start_time, :end_time].each do |tf|
+      #     if self.send("#{tf}_changed?".to_sym)
+      #       tv = self.send(tf)
+      #       if !tv.nil? && (tv < t)
+      #         errors.add(tf, "cannot be changed to a time in the past")
+      #       end
+      #     end
+      #   end
+      # end
+
       validates_with Flapjack::Data::Validators::IdValidator
 
-      before_destroy :only_destroy_future
-      def only_destroy_future
-        (self.start_time.to_i - Time.now.to_i) > 0
-      end
+      # # FIXME discuss whether we should let people change history
+      # before_destroy :only_destroy_future
+      # def only_destroy_future
+      #   (self.start_time.to_i - Time.now.to_i) > 0
+      # end
 
       def duration
         self.end_time - self.start_time
