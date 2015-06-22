@@ -131,7 +131,6 @@ production:
         level: INFO
         syslog_errors: yes
       # location of custom alert templates
-      # location of custom alert templates
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms_twilio/alert.text.erb'
