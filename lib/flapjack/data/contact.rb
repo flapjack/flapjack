@@ -24,6 +24,7 @@ module Flapjack
       ALL_MEDIA  = [
         'email',
         'sms',
+        'slack',
         'sms_twilio',
         'sms_nexmo',
         'jabber',
@@ -160,7 +161,7 @@ module Flapjack
       def set_pagerduty_credentials(details)
         @redis.hset("contact_media:#{self.id}", 'pagerduty', details['service_key'])
         @redis.hmset("contact_pagerduty:#{self.id}",
-                     *['subdomain', 'token', 'username', 'password'].collect {|f| [f, details[f]]})
+                     *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
       end
 
       def delete_pagerduty_credentials
@@ -387,29 +388,25 @@ module Flapjack
         end
       end
 
-      def add_alerting_check_for_media(media, event_id)
-        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, event_id)
+      def add_alerting_check_for_media(media, check)
+        @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, check)
       end
 
       def remove_alerting_check_for_media(media, check)
         @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
       end
 
-      # removes any checks that are in ok, scheduled or unscheduled maintenance,
-      # or are disabled from the alerting checks set for the given media;
-      # returns whether this cleaning moved the medium from rollup to recovery
+      # removes any checks that are in ok, scheduled or unscheduled maintenance
+      # from the alerting checks set for the given media
+      # returns the number of checks removed
       def clean_alerting_checks_for_media(media)
+        key = "contact_alerting_checks:#{self.id}:media:#{media}"
         cleaned = 0
-
-        alerting_checks  = alerting_checks_for_media(media)
-        rollup_threshold = rollup_threshold_for_media(media)
-
-        alerting_checks.each do |check|
+        alerting_checks_for_media(media).each do |check|
           entity_check = Flapjack::Data::EntityCheck.for_event_id(check, :redis => @redis)
           next unless Flapjack::Data::EntityCheck.state_for_event_id?(check, :redis => @redis) == 'ok' ||
             Flapjack::Data::EntityCheck.in_unscheduled_maintenance_for_event_id?(check, :redis => @redis) ||
             Flapjack::Data::EntityCheck.in_scheduled_maintenance_for_event_id?(check, :redis => @redis) ||
-            !entity_check.enabled? ||
             !entity_check.contacts.map {|c| c.id}.include?(self.id)
 
           # FIXME: why can't i get this logging when called from notifier (notification.rb)?
@@ -417,11 +414,7 @@ module Flapjack
           remove_alerting_check_for_media(media, check)
           cleaned += 1
         end
-
-        return false if rollup_threshold.nil? || (rollup_threshold <= 0) ||
-          (alerting_checks.size < rollup_threshold)
-
-        return(cleaned > (alerting_checks.size - rollup_threshold))
+        cleaned
       end
 
       def alerting_checks_for_media(media)
@@ -506,7 +499,7 @@ module Flapjack
             when 'pagerduty'
               redis.hset("contact_media:#{contact_id}", medium, details['service_key'])
               redis.hmset("contact_pagerduty:#{contact_id}",
-                          *['subdomain', 'token', 'username', 'password'].collect {|f| [f, details[f]]})
+                          *['subdomain', 'username', 'password'].collect {|f| [f, details[f]]})
             else
               redis.hset("contact_media:#{contact_id}", medium, details['address'])
               redis.hset("contact_media_intervals:#{contact_id}", medium, details['interval']) if details['interval']
