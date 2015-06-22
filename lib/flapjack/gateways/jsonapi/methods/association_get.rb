@@ -225,7 +225,7 @@ module Flapjack
 
                     unless incl.nil?
                       included = as_jsonapi_included(resource_class, resource, res,
-                        :include => incl, :fields => fields)
+                        :include => incl, :fields => fields, :query_type => :association)
                     end
                   end
                 end

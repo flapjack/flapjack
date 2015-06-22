@@ -162,7 +162,7 @@ module Flapjack
                       d = as_jsonapi(resource_class, resource, resources,
                                      (resource_id.nil? ? resources.ids : [resource_id]),
                                      :fields => params[:fields], :include => incl,
-                                     :unwrap => !resource_id.nil?)
+                                     :unwrap => !resource_id.nil?, :query_type => :resource)
                       json_data[:data] = d[:data]
                       unless d[:included].nil? || d[:included].empty?
                         json_data[:included] = d[:included]

@@ -15,7 +15,7 @@ module Flapjack
     end
 
     # Returns relative time in words referencing the given date
-    # relative_time_ago(Time.now) => 'about a minute ago'
+    # relative_time_ago(Time.now, Time.now - 1) => 'about a minute ago'
     def relative_time_ago(from_time, to_time)
       distance_in_minutes = (((from_time.to_time - to_time.to_time).abs)/60).round
       case distance_in_minutes

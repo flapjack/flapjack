@@ -169,10 +169,10 @@ module Flapjack
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             )
           }
           populate_association_data(@jsonapi_associations)

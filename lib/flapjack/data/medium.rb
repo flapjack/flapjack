@@ -305,14 +305,14 @@ module Flapjack
           @jsonapi_associations = {
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :patch => false, :delete => false,
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             ),
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :patch => false, :delete => false,
-              :number => :singular, :link => true, :include => true
+              :number => :singular, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             )
           }
           populate_association_data(@jsonapi_associations)

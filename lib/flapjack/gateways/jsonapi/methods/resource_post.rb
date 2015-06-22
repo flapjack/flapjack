@@ -197,7 +197,7 @@ module Flapjack
 
                   ajs = as_jsonapi(resource_class, resource,
                                    resources, resource_ids,
-                                   :unwrap => unwrap)
+                                   :unwrap => unwrap, :query_type => :resource)
 
                   Flapjack.dump_json(ajs)
                 end

@@ -330,13 +330,13 @@ module Flapjack
           @jsonapi_associations = {
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :patch => false, :delete => false,
-              :number => :singular, :link => true, :include => true
+              :number => :singular, :link => true, :includable => true
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :number => :multiple, :link => true, :include => true
+              :number => :multiple, :link => true, :includable => true
             )
           }
           populate_association_data(@jsonapi_associations)

@@ -53,7 +53,15 @@ module Flapjack
                   {}
                 elsif jl_data.association_data.nil?
                   resources.all.each_with_object({}) {|r, memo|
-                    memo[r.id] = r.send(jl_name.to_sym)
+                    d = r.send(jl_name.to_sym)
+                    memo[r.id] = case d
+                    when nil
+                      nil
+                    when Array, Set
+                      d.map(&:id)
+                    else
+                      d.id
+                    end
                   }
                 else
                   ic_key = (clause_done + [jl_name.to_s]).join('.')
@@ -77,7 +85,6 @@ module Flapjack
 
           def as_jsonapi_data(klass, resources_name, resources,
                               resource_ids, options = {})
-
             incl = options[:include]
 
             ids_cache = options[:ids_cache] || {}
@@ -103,7 +110,7 @@ module Flapjack
 
             resources_as_json = resources.collect do |r|
               r_id = r.id
-              l = links.keys.each_with_object({}) do |k, memo|
+              l = links.keys.inject({}) do |memo, k|
 
                 link_data = links[k]
 
@@ -123,6 +130,7 @@ module Flapjack
                     memo[k].update(:data => {:type => link_data.type, :id => ids})
                   end
                 end
+                memo
               end
               data = {
                 :type => klass.short_model_name.singular,
@@ -155,7 +163,7 @@ module Flapjack
             included.inject([]) do |memo, incl_clause|
               memo += data_for_include_clause(klass, resources,
                 incl_clause, :fields => fields, :clause_done => clause_done,
-                :ids_cache => ids_cache)
+                :ids_cache => ids_cache, :query_type => options[:query_type])
               memo
             end
           end
@@ -179,7 +187,7 @@ module Flapjack
             unless incl.nil? || incl.empty?
               ret[:included] = as_jsonapi_included(klass, resources_name, resources,
                 :include => incl, :fields => fields, :ids_cache => ids_cache,
-                :clause_done => clause_done)
+                :clause_done => clause_done, :query_type => options[:query_type])
             end
 
             ret
@@ -332,17 +340,38 @@ module Flapjack
 
             fragment_klass = nil
 
-            # SMELL mucking about with a zermelo protected method...
-            parent_klass.send(:with_association_data, clause_fragment.to_sym) do |data|
-              fragment_klass = data.data_klass
+            parent_links = if parent_klass.respond_to?(:jsonapi_associations)
+              parent_klass.jsonapi_associations || {}
+            else
+              {}
             end
 
-            return [] if fragment_klass.nil?
+            assoc_data = parent_links[clause_fragment.to_sym]
+
+            # FIXME :includable apply to resource_*, :link apply to association_*
+            return [] if assoc_data.nil? ||
+              (:resource.eql?(options[:query_type]) && !assoc_data.includable) ||
+              (:association.eql?(options[:query_type]) && !assoc_data.link)
+
+            fragment_klass = assoc_data.data_klass
 
             ic_key = clause_done.join('.')
 
-            ids_cache[ic_key] ||=
+            ids_cache[ic_key] ||= if assoc_data.association_data.nil?
+              parent_resources.all.each_with_object({}) {|r, memo|
+                d = r.send(clause_fragment.to_sym)
+                memo[r.id] = case d
+                when nil
+                  nil
+                when Array, Set
+                  d.map(&:id)
+                else
+                  d.id
+                end
+              }
+            else
               parent_resources.associated_ids_for(clause_fragment.to_sym)
+            end
 
             # to_many associations have array values, to_one associations have string ids
             fragment_ids = ids_cache[ic_key].values.inject([]) do |memo, v|
@@ -370,7 +399,8 @@ module Flapjack
 
             linked = as_jsonapi_included(fragment_klass, fragment_name,
               fragment_resources, :include => clause_left, :fields => fields,
-              :clause_done => clause_done, :ids_cache => ids_cache)
+              :clause_done => clause_done, :ids_cache => ids_cache,
+              :query_type => options[:query_type])
 
             data + linked
           end

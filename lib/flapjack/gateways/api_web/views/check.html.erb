@@ -118,7 +118,7 @@
               <%
                 remaining = begin
                   finish = DateTime.parse(current_unscheduled_maintenance[:end_time])
-                  time_period_in_words( (finish - @current_time).ceil )
+                  time_period_in_words(finish.to_i - @current_time.to_i)
                 rescue ArgumentError
                   nil
                 end
@@ -131,7 +131,7 @@
         <div class="row">
           <div class="col-md-offset-3 col-md-9">
             <p class="form-control-static">
-              <button id="end-unscheduled-maintenance" type="submit" class="btn btn-danger">End Unscheduled Maintenance (Unacknowledge)</button>
+              <button id="end-unscheduled-maintenance" type="submit" class="btn btn-danger">End Unscheduled Maintenance</button>
             </p>
           </div>
         </div>
@@ -221,8 +221,8 @@
         <div class="col-md-9">
           <%
             remaining = begin
-              finish = DateTime.parse(current_unscheduled_maintenance[:end_time])
-              time_period_in_words( (finish - @current_time).ceil )
+              finish = DateTime.parse(current_scheduled_maintenance[:end_time])
+              time_period_in_words(finish.to_i - @current_time.to_i)
             rescue ArgumentError
               nil
             end

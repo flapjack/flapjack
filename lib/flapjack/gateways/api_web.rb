@@ -258,7 +258,7 @@ module Flapjack
       get '/checks/:id' do
         check_id  = params[:id]
 
-        @current_time = Time.now
+        @current_time = DateTime.now
 
         # contacts.media will also return contacts, per JSONAPI v1 relationships
         @check = Flapjack::Diner.checks(check_id,
@@ -291,6 +291,7 @@ module Flapjack
 
         sm_links = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
           :include => 'scheduled_maintenances')
+
         @scheduled_maintenances = all_included_records(sm_links,
           Flapjack::Diner.context[:included], 'scheduled_maintenance')
 
@@ -316,7 +317,7 @@ module Flapjack
 
         err = Flapjack::Diner.last_error
         unless err.nil?
-          session[:error] = "Could not create the acknowledgement."
+          session[:error] = "Could not create the acknowledgement: #{err}"
         end
 
         redirect back
@@ -326,11 +327,11 @@ module Flapjack
         unscheduled_maintenance_id = params[:id]
 
         Flapjack::Diner.update_unscheduled_maintenances(
-          unscheduled_maintenance_id, :end_time => Time.now)
+          :id => unscheduled_maintenance_id, :end_time => Time.now)
 
         err = Flapjack::Diner.last_error
         unless err.nil?
-          session[:error] = "Could not end unscheduled maintenance."
+          session[:error] = "Could not end unscheduled maintenance: #{err}"
         end
 
         redirect back
@@ -350,6 +351,7 @@ module Flapjack
 
         err = Flapjack::Diner.last_error
         unless err.nil?
+          Flapjack.logger.info "Could not create scheduled maintenance: #{err}"
           session[:error] = "Could not create scheduled maintenance for the check."
         end
 
@@ -363,6 +365,7 @@ module Flapjack
 
         err = Flapjack::Diner.last_error
         unless err.nil?
+          Flapjack.logger.info "Could not disable check: #{err}"
           session[:error] = "Could not disable the check."
         end
 
@@ -377,6 +380,7 @@ module Flapjack
 
         err = Flapjack::Diner.last_error
         unless err.nil?
+          Flapjack.logger.info "Could not end scheduled maintenance: #{err}"
           session[:error] = "Could not end scheduled maintenance."
         end
 
@@ -392,6 +396,7 @@ module Flapjack
 
         err = Flapjack::Diner.last_error
         unless err.nil?
+          Flapjack.logger.info "Could not delete scheduled maintenance: #{err}"
           session[:error] = "Could not delete scheduled maintenance."
         end
 
@@ -483,10 +488,24 @@ module Flapjack
         latest_notifications = some_included_records(check[:relationships], :latest_notifications,
           included, 'state')
 
-        in_scheduled_maintenance = !check[:relationships][:current_scheduled_maintenances][:relationships].nil? &&
-          !check[:relationships][:latest_notifications][:relationships].empty?
+        current_scheduled_maintenances = some_included_records(check[:relationships],
+          :current_scheduled_maintenances, included, 'scheduled_maintenance')
 
-        in_unscheduled_maintenance = !check[:relationships][:current_unscheduled_maintenance][:relationships].nil?
+        current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
+          begin
+            DateTime.parse(sm[:end_time]).to_i
+          rescue ArgumentError
+            Flapjack.logger.warn "Couldn't parse time from current_scheduled_maintenances"
+            -1
+          end
+        end
+
+        in_scheduled_maintenance = !current_scheduled_maintenance.nil?
+
+        current_unscheduled_maintenance = some_included_records(check[:relationships],
+          :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
+
+        in_unscheduled_maintenance = !current_unscheduled_maintenance.nil?
 
         {
           :condition     => current_state.nil? ? '-' : current_state[:condition],
@@ -512,7 +531,7 @@ module Flapjack
           begin
             DateTime.parse(sm[:end_time]).to_i
           rescue ArgumentError
-            Flapjack.logger.warn "Couldn't parse time from current_unscheduled_maintenances"
+            Flapjack.logger.warn "Couldn't parse time from current_scheduled_maintenances"
             -1
           end
         end

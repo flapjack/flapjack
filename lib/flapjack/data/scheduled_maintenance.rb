@@ -34,6 +34,11 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
+      before_destroy :only_destroy_future
+      def only_destroy_future
+        (self.start_time.to_i - Time.now.to_i) > 0
+      end
+
       def duration
         self.end_time - self.start_time
       end
@@ -152,7 +157,7 @@ module Flapjack
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => false, :patch => false, :delete => false,
-              :number => :singular, :link => true, :include => true
+              :number => :singular, :link => true, :includable => true
             )
           }
           populate_association_data(@jsonapi_associations)
