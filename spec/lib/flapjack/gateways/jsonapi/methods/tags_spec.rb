@@ -15,7 +15,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 
   it "creates a tag" do
-    expect(Flapjack::Data::Tag).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(Flapjack::Data::Check, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -186,7 +188,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
     patch "/tags/#{tag.id}",
       Flapjack.dump_json(:data => {:id => tag.id, :type => 'tag', :links =>
-        {:checks => {:type => 'check', :id => [check.id]}}}),
+        {:checks => {:linkage => [{:type => 'check', :id => check.id}]}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end

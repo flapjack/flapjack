@@ -239,7 +239,7 @@
         <td><%= h Time.at(@check_last_update.to_i).to_s %></td>
         <td>&nbsp;</td>
       </tr>
-      <% [:critical, :warning, :unknown, :recovery, :acknowledgement].each do |type| %>
+      <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
         <tr>
           <td>Last <%= h type.to_s %> notification:</td>
           <td><%= @last_notifications[type] ? h(@last_notifications[type][:relative]) : 'never' %></td>

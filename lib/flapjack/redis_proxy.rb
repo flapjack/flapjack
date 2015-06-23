@@ -24,13 +24,11 @@ module Flapjack
 
     # need to override Kernel.exec
     def exec
-      return if @proxied_connection.nil?
-      @proxied_connection.exec
+      proxied_connection.exec
     end
 
     def quit
-      return if @proxied_connection.nil?
-      @proxied_connection.quit
+      @proxied_connection.quit unless @connection_failed || @proxied_connection.nil?
     end
 
     def respond_to?(name, include_private = false)
@@ -53,6 +51,9 @@ module Flapjack
         ((redis_version.split('.') <=> REQUIRED_VERSION.split('.')) >= 0)
       raise("Redis too old - Flapjack requires #{REQUIRED_VERSION} but " \
             "#{redis_version} is running")
+    rescue Redis::CannotConnectError, Errno::EINVAL
+      @connection_failed = true
+      raise
     end
 
   end

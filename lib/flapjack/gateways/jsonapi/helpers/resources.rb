@@ -21,10 +21,13 @@ module Flapjack
           def resource_post(klass, resources_name, options = {})
             resources_data, unwrap = wrapped_params
 
+            singular_links, multiple_links = klass.association_klasses
             attributes = klass.respond_to?(:jsonapi_attributes) ?
               klass.jsonapi_attributes : []
-
-            validate_data(resources_data, :attributes => attributes, :klass => klass)
+            validate_data(resources_data, :attributes => attributes,
+              :singular_links => singular_links.keys,
+              :multiple_links => multiple_links.keys,
+              :klass => klass)
 
             resources = nil
 
@@ -34,11 +37,21 @@ module Flapjack
             data_ids = resources_data.reject {|d| d[idf.to_s].nil? }.
                                       map    {|i| i[idf.to_s].to_s }
 
+            assoc_klasses = singular_links.values.inject([]) {|memo, slv|
+              memo << slv[:data]
+              memo += slv[:related]
+              memo
+            } | multiple_links.values.inject([]) {|memo, mlv|
+              memo << mlv[:data]
+              memo += mlv[:related]
+              memo
+            }
+
             attribute_types = klass.attribute_types
 
             jsonapi_type = klass.jsonapi_type
 
-            klass.lock do
+            klass.lock(*assoc_klasses) do
               unless data_ids.empty?
                 conflicted_ids = klass.intersect(idf => data_ids).ids
                 halt(err(409, "#{klass.name.split('::').last.pluralize} already exist with the following #{idf}s: " +
@@ -55,8 +68,37 @@ module Flapjack
                 memo[r] = rd['links']
               end
 
+              # get linked objects, fail before save if we don't find them
+              resource_links = links_by_resource.each_with_object({}) do |(r, links), memo|
+                next if links.nil?
+
+                singular_links.each_pair do |assoc, assoc_klass|
+                  next unless links.has_key?(assoc.to_s)
+                  memo[r.object_id] ||= {}
+                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['linkage']['id'])
+                end
+
+                multiple_links.each_pair do |assoc, assoc_klass|
+                  next unless links.has_key?(assoc.to_s)
+                  memo[r.object_id] ||= {}
+                  memo[r.object_id][assoc.to_s] = assoc_klass[:data].find_by_ids!(*(links[assoc.to_s]['linkage'].map {|l| l['id']}))
+                end
+              end
+
+              links_by_resource.keys.each do |r|
+                r.save
+                rl = resource_links[r.object_id]
+                next if rl.nil?
+                rl.each_pair do |assoc, value|
+                  case value
+                  when Array
+                    r.send(assoc.to_sym).add(*value)
+                  else
+                    r.send("#{assoc}=".to_sym, value)
+                  end
+                end
+              end
               resources = links_by_resource.keys
-              resources.each {|r| r.save }
             end
 
             resource_ids = resources.map(&:id)
@@ -155,7 +197,7 @@ module Flapjack
               singular_links.each_pair do |assoc, assoc_klass|
                 next unless links.has_key?(assoc.to_s)
                 memo[r.id] ||= {}
-                memo[r.id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['id'])
+                memo[r.id][assoc.to_s] = assoc_klass[:data].find_by_id!(links[assoc.to_s]['linkage']['id'])
               end
 
               multiple_links.each_pair do |assoc, assoc_klass|
@@ -163,7 +205,7 @@ module Flapjack
                 current_assoc_ids = r.send(assoc.to_sym).ids
                 memo[r.id] ||= {}
 
-                link_ids = links[assoc.to_s]['id']
+                link_ids = links[assoc.to_s]['linkage'].map {|l| l['id']}
 
                 to_remove = current_assoc_ids - link_ids
                 to_add    = link_ids - current_assoc_ids

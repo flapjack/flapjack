@@ -101,6 +101,9 @@ module Flapjack
           key :type, :string
           key :format, :"date-time"
         end
+        property :links do
+          key :"$ref", :ScheduledMaintenanceChangeLinks
+        end
       end
 
       swagger_schema :ScheduledMaintenanceUpdate do
@@ -114,14 +117,13 @@ module Flapjack
           key :enum, [Flapjack::Data::ScheduledMaintenance.jsonapi_type.downcase]
         end
         property :links do
-          key :"$ref", :ScheduledMaintenanceUpdateLinks
+          key :"$ref", :ScheduledMaintenanceChangeLinks
         end
       end
 
-      swagger_schema :ScheduledMaintenanceUpdateLinks do
-        key :required, [:check]
+      swagger_schema :ScheduledMaintenanceChangeLinks do
         property :check do
-          key :"$ref", :CheckReference
+          key :"$ref", :jsonapi_CheckLinkage
         end
       end
 

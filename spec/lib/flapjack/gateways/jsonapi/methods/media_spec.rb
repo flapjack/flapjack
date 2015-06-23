@@ -12,7 +12,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "creates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(no_args).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -42,7 +42,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not create a medium if the data is improperly formatted" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(no_args).and_yield
+      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])

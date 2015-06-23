@@ -35,6 +35,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'gli', '= 2.13.0'
   gem.add_dependency 'terminal-table'
   gem.add_dependency 'toml-rb'
+  gem.add_dependency 'puma'
 
   gem.add_development_dependency 'rake'
 end

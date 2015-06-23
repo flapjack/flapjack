@@ -118,6 +118,7 @@ Given /^the following rules exist:$/ do |rules|
 
     rule = Flapjack::Data::Rule.new(
       :id             => rule_data['id'],
+      :is_blackhole   => ['1', 't', 'true', 'y', 'yes'].include?((rule_data['is_blackhole'] || '').strip.downcase),
       :conditions_list => conditions.empty? ? nil : conditions
     )
 

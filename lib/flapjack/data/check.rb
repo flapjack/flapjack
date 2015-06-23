@@ -37,9 +37,10 @@ module Flapjack
                         :ack_hash              => :string,
                         :initial_failure_delay => :integer,
                         :repeat_failure_delay  => :integer,
-                        :notification_count    => :integer
+                        :notification_count    => :integer,
+                        :failing               => :boolean
 
-      index_by :enabled
+      index_by :enabled, :failing
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
@@ -174,6 +175,10 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
+        property :failing do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         property :links do
           key :"$ref", :CheckLinks
         end
@@ -208,6 +213,9 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
+        property :links do
+          key :"$ref", :CheckChangeLinks
+        end
       end
 
       swagger_schema :CheckUpdate do
@@ -228,21 +236,24 @@ module Flapjack
           key :enum, [true, false]
         end
         property :links do
-          key :"$ref", :CheckUpdateLinks
+          key :"$ref", :CheckChangeLinks
         end
       end
 
-      swagger_schema :CheckUpdateLinks do
+      swagger_schema :CheckChangeLinks do
+        property :scheduled_maintenances do
+          key :"$ref", :jsonapi_UnscheduledMaintenancesLinkage
+        end
         property :tags do
-          key :type, :array
-          items do
-            key :"$ref", :TagReference
-          end
+          key :"$ref", :jsonapi_TagsLinkage
+        end
+        property :unscheduled_maintenances do
+          key :"$ref", :jsonapi_ScheduledMaintenancesLinkage
         end
       end
 
       def self.jsonapi_attributes
-        [:name, :enabled]
+        [:name, :enabled, :ack_hash, :failing]
       end
 
       def self.jsonapi_search_string_attributes
@@ -250,7 +261,7 @@ module Flapjack
       end
 
       def self.jsonapi_search_boolean_attributes
-        [:enabled]
+        [:enabled, :failing]
       end
 
       def self.jsonapi_singular_associations
@@ -259,15 +270,6 @@ module Flapjack
 
       def self.jsonapi_multiple_associations
         [:scheduled_maintenances, :tags, :unscheduled_maintenances]
-      end
-
-      def self.failing(scope = nil)
-        scope ||= self
-        scope.all.each_with_object([]) do |check, memo|
-          e = check.last_change
-          next if e.nil? || Flapjack::Data::Condition.healthy?(e.condition)
-          memo << check
-        end
       end
 
       # takes an array of ages (in seconds) to split all checks up by
@@ -341,8 +343,8 @@ module Flapjack
         end
       end
 
-      def in_scheduled_maintenance?
-        return false if scheduled_maintenance_ids_at(Time.now).empty?
+      def in_scheduled_maintenance?(time = Time.now)
+        return false if scheduled_maintenance_ids_at(time).empty?
         self.routes.intersect(:is_alerting => true).each do |route|
           route.is_alerting = false
           route.save
@@ -350,8 +352,8 @@ module Flapjack
         true
       end
 
-      def in_unscheduled_maintenance?
-        !unscheduled_maintenance_ids_at(Time.now).empty?
+      def in_unscheduled_maintenance?(time = Time.now)
+        !unscheduled_maintenance_ids_at(time).empty?
       end
 
       def add_scheduled_maintenance(sched_maint)
@@ -453,7 +455,7 @@ module Flapjack
       # this includes generic rules, i.e. ones with no tags
 
       # A generic rule in Flapjack v2 means that it applies to all checks, not
-      # just all checks the contact is separately regeistered for, as in v1.
+      # just all checks the contact is separately registered for, as in v1.
       # These are not automatically created for users any more, but can be
       # deliberately configured.
 
@@ -494,43 +496,19 @@ module Flapjack
           "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
         }
 
-        # TODO could maybe also eliminate rules with no media here?
-        rule_ids_by_contact_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
+        # if a rule has no media, it's irrelevant in any routing calculations
+        rule_ids_by_contact_id = Flapjack::Data::Rule.
+          intersect(:id => rule_ids, :has_media => true).
           associated_ids_for(:contact, :inversed => true)
 
-        [rule_ids_by_contact_id, route_ids_by_rule_id]
-      end
-
-      def self.pagerduty_credentials_for(check_ids)
-        rule_ids_by_check_id = Flapjack::Data::Check.rules_for(check_ids)
-
-        rule_ids_by_media_id = Flapjack::Data::Medium.
-          intersect(:transport => 'pagerduty').associated_ids_for(:rules)
-
-        return nil if rule_ids_by_media_id.empty? ||
-          rule_ids_by_media_id.values.all? {|r| r.empty? }
-
-        rule_ids = Set.new(rule_ids_by_media_id.values).flatten
-
-        media_ids_by_rule_id = Flapjack::Data::Rule.
-          intersect(:id => rule_ids).associated_ids_for(:media)
-
-        pagerduty_objs_by_id = Flapjack::Data::Medium.find_by_ids!(rule_ids_by_media_id.keys)
-
-        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object({}) do |check, memo|
-          memo[check] = rule_ids_by_check_id[check.id].each_with_object([]) do |rule_id, m|
-            m += media_ids_by_rule_id[rule_id].collect do |media_id|
-              medium = pagerduty_objs_by_id[media_id]
-              ud = medium.userdata || {}
-              {
-                'service_key' => medium.address,
-                'subdomain'   => ud['subdomain'],
-                'username'    => ud['username'],
-                'password'    => ud['password'],
-              }
-            end
-          end
+        # clear any route_ids for rules without media
+        active_rule_ids = rule_ids_by_contact_id.values.reduce(:|)
+        active_route_ids = route_ids_by_rule_id.inject([]) do |memo, (ru_id, ro_ids)|
+          memo |= ro_ids if active_rule_ids.include?(ru_id)
+          memo
         end
+
+        [rule_ids_by_contact_id, active_route_ids]
       end
 
       private

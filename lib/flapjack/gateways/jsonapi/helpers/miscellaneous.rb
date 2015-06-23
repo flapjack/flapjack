@@ -74,51 +74,30 @@ module Flapjack
                 halt(err(403, "Link(s) must be a Hash with String keys")) unless links.is_a?(Hash) &&
                   links.keys.all? {|k| k.is_a?(String)}
                 invalid_links = links.keys - all_links
-                halt(err(404, "Link(s) not found: #{invalid_links.join(', ')}")) unless invalid_links.empty?
+                halt(err(404, "Unknown link type(s): #{invalid_links.join(', ')}")) unless invalid_links.empty?
                 links.each_pair do |k, v|
+                  halt(err(403, "Link data for '#{k}' must be a Hash with String keys")) unless v.is_a?(Hash) && v.keys.all? {|vk| vk.is_a?(String)}
+                  halt(err(403, "Link data for '#{k}' must have linkage references")) unless links[k].has_key?('linkage')
 
                   if sl.include?(k)
-                    unless v.nil?
-                      if !v['id'].nil? && !v['type'].nil?
-                        unless is_link_type?(k, v['type'], :klass => klass)
-                          halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
-                        end
+                    halt(err(403, "Linkage reference for '#{k}' must be a Hash with 'id' & 'type' String values")) unless links[k]['linkage'].is_a?(Hash) &&
+                      v['linkage'].has_key?('id') &&
+                      v['linkage'].has_key?('type') &&
+                      v['linkage']['id'].is_a?(String) &&
+                      v['linkage']['type'].is_a?(String)
 
-                        unless v['id'].is_a?(String)
-                          halt(err(403, "Linked '#{k}' 'id' must be a String" ))
-                        end
-                      else
-                        halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields"))
-                      end
-                    end
-                  elsif !v.is_a?(Hash)
-                    halt(err(403, "Linked '#{k}' must be a Hash"))
-                  # # Flapjack does not support heterogenous to_many types
-                  # elsif !v['data'].nil?
-                  #   if v['data'].is_a?(Array) && !v['data'].empty?
-                  #     halt(err(403, "Linked '#{k}' 'data' Array objects must all have 'id' and 'type' fields")) unless v['data'].all? {|vv|
-                  #       vv.has_key?('id') && vv['id'].is_a?(String) &&
-                  #       vv.has_key?('type') && vv['type'].is_a?(String)
-                  #     }
-
-                  #     bad_type = v['data'].detect {|vv| !is_link_type?(k, vv['type'], :klass => klass)}
-
-                  #     unless bad_type.nil?
-                  #       halt(err(403, "Linked '#{k}' 'data' Array object has wrong type #{bad_type['type']}"))
-                  #     end
-                  #   else
-                  #     halt(err(403, "Linked '#{k}' 'data' must be an Array"))
-                  #   end
-                  elsif !v['id'].nil? && !v['type'].nil?
-                    unless is_link_type?(k, v['type'], :klass => klass)
-                      halt(err(403, "Linked '#{k}' has wrong type #{v['type']}"))
-                    end
-
-                    unless v['id'].is_a?(Array) && v['id'].all? {|vv| vv.is_a?(String)}
-                      halt(err(403, "Linked '#{k}' 'id' must be an Array of Strings"))
+                    unless is_link_type?(k, v['linkage']['type'], :klass => klass)
+                      halt(err(403, "Linked '#{k}' has wrong type #{v['linkage']['type']}"))
                     end
                   else
-                    halt(err(403, "Linked '#{k}' must have 'id' and 'type' fields, or a 'data' Array"))
+                    halt(err(403, "Linkage reference for '#{k}' must be an Array of Hashes with 'id' & 'type' String values")) unless v['linkage'].is_a?(Array) &&
+                      v['linkage'].all? {|l| l.has_key?('id') } &&
+                      v['linkage'].all? {|l| l.has_key?('type') } &&
+                      v['linkage'].all? {|l| l['id'].is_a?(String) } &&
+                      v['linkage'].all? {|l| l['type'].is_a?(String) }
+
+                    bad_type = v['linkage'].detect {|l| !is_link_type?(k, l['type'], :klass => klass)}
+                    halt(err(403, "Linked '#{k}' has wrong type #{bad_type['type']}")) unless bad_type.nil?
                   end
                 end
               end

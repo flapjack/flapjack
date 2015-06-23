@@ -107,7 +107,7 @@ module Flapjack
       in_sched   = alert_check.in_scheduled_maintenance?
       in_unsched = alert_check.in_unscheduled_maintenance?
 
-      rule_ids_by_contact_id, route_ids_by_rule_id =
+      rule_ids_by_contact_id, route_ids =
         alert_check.rule_ids_and_route_ids(:severity => notification.severity)
 
       notification_entry = notification.entry
@@ -132,8 +132,6 @@ module Flapjack
       # TODO pass in base time from outside (cast to zone per contact), so
       # all alerts from this notification use a consistent time
 
-      contact_ids_to_drop = []
-
       rule_ids = contacts.inject([]) do |memo, contact|
         rules = Flapjack::Data::Rule.find_by_ids(*rule_ids_by_contact_id[contact.id])
         next memo if rules.empty?
@@ -141,18 +139,11 @@ module Flapjack
         timezone = contact.time_zone || @default_contact_timezone
         rules.select! {|rule| rule.is_occurring_now?(timezone) }
 
-        contact_ids_to_drop << contact.id if rules.any? {|r| !r.has_media }
-
         memo += rules.map(&:id)
         memo
       end
 
       Flapjack.logger.debug "rule_ids after time: #{rule_ids.size}"
-      return if rule_ids.empty?
-
-      rule_ids -= contact_ids_to_drop.flat_map {|c_id| rule_ids_by_contact_id[c_id] }
-
-      Flapjack.logger.debug "rule_ids after drop: #{rule_ids.size}"
       return if rule_ids.empty?
 
       Flapjack::Data::Medium.lock(Flapjack::Data::Check,
@@ -166,12 +157,21 @@ module Flapjack
                                   Flapjack::Data::State,
                                   Flapjack::Data::Entry) do
 
-        media_ids_by_rule_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
-          associated_ids_for(:media)
+        blackhole_media_ids = Flapjack::Data::Rule.
+          intersect(:id => rule_ids, :is_blackhole => true).
+          associated_ids_for(:media).values.reduce(Set.new, :|)
 
-        media_ids = Set.new(media_ids_by_rule_id.values).flatten.to_a
+        Flapjack.logger.debug "blackhole_media_ids: #{blackhole_media_ids.inspect}"
 
-        Flapjack.logger.debug "media from rules: #{media_ids.size}"
+        media_ids = Flapjack::Data::Rule.
+          intersect(:id => rule_ids, :is_blackhole => [nil, false]).
+          associated_ids_for(:media).values.reduce(Set.new, :|)
+
+        Flapjack.logger.debug "media ids pre-blackhole: #{media_ids.inspect}"
+
+        media_ids -= blackhole_media_ids
+
+        Flapjack.logger.debug "media ids post-blackhole: #{media_ids.inspect}"
 
         alertable_media = Flapjack::Data::Medium.intersect(:id => media_ids,
           :transport => transports).all
@@ -191,7 +191,6 @@ module Flapjack
         is_a_test            = 'test_notifications'.eql?(notification_entry.action)
 
         unless is_a_test
-          route_ids = route_ids_by_rule_id.values.reduce(:|)
           Flapjack::Data::Route.intersect(:id => route_ids).each do |route|
             route.is_alerting = this_notification_failure
             route.save # no-op if the value didn't change

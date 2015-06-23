@@ -30,9 +30,10 @@ module Flapjack
       define_attributes :conditions_list => :string,
                         :has_media => :boolean,
                         :has_tags => :boolean,
+                        :is_blackhole => :boolean,
                         :time_restrictions_json => :string
 
-      index_by :conditions_list, :has_media, :has_tags
+      index_by :conditions_list, :has_media, :has_tags, :is_blackhole
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :rules
@@ -205,6 +206,10 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -246,12 +251,19 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
         #     key :"$ref", :TimeRestrictions
         #   end
         # end
+        property :links do
+          key :"$ref", :RuleChangeLinks
+        end
       end
 
       swagger_schema :RuleUpdate do
@@ -264,6 +276,10 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -271,30 +287,24 @@ module Flapjack
         #   end
         # end
         property :links do
-          key :"$ref", :RuleUpdateLinks
+          key :"$ref", :RuleChangeLinks
         end
       end
 
-      swagger_schema :RuleUpdateLinks do
+      swagger_schema :RuleChangeLinks do
         property :contact do
-          key :"$ref", :ContactReference
+          key :"$ref", :jsonapi_ContactLinkage
         end
         property :media do
-          key :type, :array
-          items do
-            key :"$ref", :MediumReference
-          end
+          key :"$ref", :jsonapi_MediaLinkage
         end
         property :tags do
-          key :type, :array
-          items do
-            key :"$ref", :TagReference
-          end
+          key :"$ref", :jsonapi_TagsLinkage
         end
       end
 
       def self.jsonapi_attributes
-        [] # [:time_restrictions]
+        [:is_blackhole] # [:time_restrictions]
       end
 
       def self.jsonapi_singular_associations

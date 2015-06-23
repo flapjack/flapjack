@@ -4,7 +4,7 @@ rvm:
 - '2.0'
 - '2.1'
 - '2.2'
-- 'jruby-9.0.0.0.pre1'
+- 'jruby-9.0.0.0.rc1'
 jdk: oraclejdk8
 script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
 env: GOPATH=$TRAVIS_BUILD_DIR

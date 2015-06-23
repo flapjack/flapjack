@@ -12,7 +12,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   let(:check_presenter) { double(Flapjack::Gateways::JSONAPI::Helpers::CheckPresenter) }
 
   it "creates a check" do
-    expect(Flapjack::Data::Check).to receive(:lock).with(no_args).and_yield
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -44,7 +46,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
   end
 
   it 'creates two checks' do
-    expect(Flapjack::Data::Check).to receive(:lock).and_yield
+    expect(Flapjack::Data::Check).to receive(:lock).
+      with(Flapjack::Data::Tag, Flapjack::Data::Rule, Flapjack::Data::Route).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -85,6 +89,48 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
                    :scheduled_maintenances => "http://example.org/checks/#{check_2.id}/scheduled_maintenances",
                    :tags => "http://example.org/checks/#{check_2.id}/tags",
                    :unscheduled_maintenances => "http://example.org/checks/#{check_2.id}/unscheduled_maintenances"})]
+    ))
+  end
+
+  it 'creates a link to a tag along with a check' do
+    expect(Flapjack::Data::Check).to receive(:lock).with(Flapjack::Data::Tag,
+      Flapjack::Data::Rule, Flapjack::Data::Route).and_yield
+
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:id => [check_data[:id]]).and_return(empty_ids)
+
+    expect(check).to receive(:invalid?).and_return(false)
+    expect(check).to receive(:save).and_return(true)
+    expect(Flapjack::Data::Check).to receive(:new).with(check_data).
+      and_return(check)
+
+    expect(Flapjack::Data::Tag).to receive(:find_by_ids!).
+      with(tag.id).and_return([tag])
+
+    tags = double('tags')
+    expect(tags).to receive(:add).with(tag)
+    expect(check).to receive(:tags).and_return(tags)
+
+    expect(check).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(check_data)
+
+    expect(Flapjack::Data::Check).to receive(:jsonapi_type).and_return('check')
+
+    post "/checks", Flapjack.dump_json(:data => check_data.merge(:type => 'check', :links => {
+      :tags => {:linkage => [:id => tag.id, :type => 'tag']}
+    })), jsonapi_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      check_data.merge(
+        :type => 'check',
+        :links => {:self => "http://example.org/checks/#{check.id}",
+                   :scheduled_maintenances => "http://example.org/checks/#{check.id}/scheduled_maintenances",
+                   :tags => "http://example.org/checks/#{check.id}/tags",
+                   :unscheduled_maintenances => "http://example.org/checks/#{check.id}/unscheduled_maintenances",
+                 }
+      )
     ))
   end
 
@@ -394,7 +440,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
 
     patch "/checks/#{check.id}",
       Flapjack.dump_json(:data => {:id => check.id, :type => 'check', :links =>
-        {:tags => {:type => 'tag', :id => ['database']}}}),
+        {:tags => {:linkage => [{:type => 'tag', :id => 'database'}]}}}),
       jsonapi_env
     expect(last_response.status).to eq(204)
   end

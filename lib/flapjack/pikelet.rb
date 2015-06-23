@@ -10,7 +10,7 @@
 
 require 'monitor'
 
-require 'webrick'
+require 'puma'
 
 require 'flapjack'
 
@@ -20,7 +20,7 @@ require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
-require 'flapjack/gateways/pagerduty'
+require 'flapjack/gateways/pager_duty'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_twilio'
@@ -174,18 +174,17 @@ module Flapjack
 
         super do
           @pikelet_class.start if @pikelet_class.respond_to?(:start)
-          @server = ::WEBrick::HTTPServer.new(:Port => port, :BindAddress => bind_address,
-            :AccessLog => [], :Logger => WEBrick::Log::new("/dev/null", 7))
-          @server.mount "/", Rack::Handler::WEBrick, @pikelet_class
+          @server = ::Puma::Server.new(@pikelet_class)
+          @server.binder.add_tcp_listener(bind_address, port)
           yield @server if block_given?
-          @server.start
+          @server.run(false) # no background run, use current thread
         end
       end
 
       # this should only reload if all changes can be applied -- will
       # return false to log warning otherwise
       def reload(cfg)
-         # TODO fail if port changes
+         # TODO handle bind_address/port changes by changing listeners?
         return false unless @pikelet_class.respond_to?(:reload)
         super(cfg) { @pikelet_class.reload(cfg) }
       end
@@ -194,7 +193,7 @@ module Flapjack
         super do |thread|
           unless @server.nil?
             Flapjack.logger.info "shutting down server"
-            @server.shutdown
+            @server.stop(true)  # no background stop, wait for requests to finish
             Flapjack.logger.info "shut down server"
           end
           @pikelet_class.stop(thread) if @pikelet_class.respond_to?(:stop)
@@ -213,8 +212,8 @@ module Flapjack
                               Flapjack::Gateways::Jabber::Interpreter],
              'oobetet'    => [Flapjack::Gateways::Oobetet::Bot,
                               Flapjack::Gateways::Oobetet::Notifier],
-             'pagerduty'  => [Flapjack::Gateways::Pagerduty::Notifier,
-                              Flapjack::Gateways::Pagerduty::AckFinder],
+             'pagerduty'  => [Flapjack::Gateways::PagerDuty::Notifier,
+                              Flapjack::Gateways::PagerDuty::AckFinder],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],
