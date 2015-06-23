@@ -40,6 +40,7 @@ production:
     email_queue: email_notifications
     sms_queue: sms_notifications
     sms_nexmo_queue: sms_nexmo_notifications
+    slack_queue: slack_notifications
     sms_twilio_queue: sms_twilio_notifications
     sns_queue: sns_notifications
     jabber_queue: jabber_notifications
@@ -102,6 +103,21 @@ production:
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms/rollup.text.erb'
       #  alert.text: '/etc/flapjack/templates/sms/alert.text.erb'
+    # Sends notifications via Slack
+    slack:
+      enabled: no
+      queue: slack_notifications
+      account_sid: "webhookbot"
+      endpoint: "https://hooks.slack.com/services/xxx/yyy/"
+      auth_token: "zzzzz"
+      from: ""
+      logger:
+        level: INFO
+        syslog_errors: yes
+      # location of custom alert templates
+      #templates:
+      #  rollup.text: '/etc/flapjack/templates/slack/rollup.text.erb'
+      #  alert.text: '/etc/flapjack/templates/slack/alert.text.erb'
     # Sends SMS notifications via Twilio
     sms_twilio:
       enabled: no
@@ -112,7 +128,6 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
-      # location of custom alert templates
       # location of custom alert templates
       #templates:
       #  rollup.text: '/etc/flapjack/templates/sms_twilio/rollup.text.erb'

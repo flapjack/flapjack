@@ -24,6 +24,7 @@ module Flapjack
       ALL_MEDIA  = [
         'email',
         'sms',
+        'slack',
         'sms_twilio',
         'sms_nexmo',
         'jabber',
@@ -391,8 +392,8 @@ module Flapjack
         @redis.zadd("contact_alerting_checks:#{self.id}:media:#{media}", Time.now.to_i, event_id)
       end
 
-      def remove_alerting_check_for_media(media, check)
-        @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", check)
+      def remove_alerting_check_for_media(media, event_id)
+        @redis.zrem("contact_alerting_checks:#{self.id}:media:#{media}", event_id)
       end
 
       # removes any checks that are in ok, scheduled or unscheduled maintenance,
