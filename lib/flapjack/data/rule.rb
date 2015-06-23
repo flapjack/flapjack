@@ -37,9 +37,10 @@ module Flapjack
       define_attributes :conditions_list => :string,
                         :has_media => :boolean,
                         :has_tags => :boolean,
+                        :is_blackhole => :boolean,
                         :time_restrictions_json => :string
 
-      index_by :conditions_list, :has_media, :has_tags
+      index_by :conditions_list, :has_media, :has_tags, :is_blackhole
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :rules
@@ -218,6 +219,13 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
+        property :conditions_list do
+          key :type, :string
+        end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -259,6 +267,13 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
+        property :conditions_list do
+          key :type, :string
+        end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -279,6 +294,13 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+        end
+        property :conditions_list do
+          key :type, :string
+        end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
         end
         # property :time_restrictions do
         #   key :type, :array
@@ -306,15 +328,15 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [], # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
             :associations => [:contact, :media, :tags]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list], # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
             :associations => [:contact, :media, :tags]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [], # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
             :associations => [:media, :tags]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(

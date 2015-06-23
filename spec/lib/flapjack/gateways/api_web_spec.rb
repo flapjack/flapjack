@@ -223,7 +223,7 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :logger => true do
         with(Flapjack::Data::Medium, Flapjack::Data::Rule,
              Flapjack::Data::Route).and_yield
 
-      expect(check).to receive(:rule_ids_and_route_ids).and_return([{}, {}])
+      expect(check).to receive(:rule_ids_and_route_ids).and_return([{}, []])
 
       get "/checks/#{check.id}"
       expect(last_response).to be_ok

@@ -5,7 +5,6 @@ require 'zermelo/records/redis'
 module Flapjack
   module Data
     class Route
-
       include Zermelo::Records::Redis
 
       define_attributes :conditions_list => :string,
@@ -18,7 +17,6 @@ module Flapjack
 
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :routes
-
     end
   end
 end
