@@ -248,8 +248,7 @@ module Flapjack
         Flapjack::Data::Contact.lock(Flapjack::Data::Medium,
           Flapjack::Data::Rule, Flapjack::Data::Route) do
 
-          rule_ids_by_contact_id, route_ids_by_rule_id =
-            @check.rule_ids_and_route_ids
+          rule_ids_by_contact_id, _ = @check.rule_ids_and_route_ids
 
           if rule_ids_by_contact_id.empty?
             @contacts = []

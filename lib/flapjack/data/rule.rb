@@ -30,9 +30,10 @@ module Flapjack
       define_attributes :conditions_list => :string,
                         :has_media => :boolean,
                         :has_tags => :boolean,
+                        :is_blackhole => :boolean,
                         :time_restrictions_json => :string
 
-      index_by :conditions_list, :has_media, :has_tags
+      index_by :conditions_list, :has_media, :has_tags, :is_blackhole
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :rules
@@ -205,6 +206,10 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -246,6 +251,10 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
         end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         # property :time_restrictions do
         #   key :type, :array
         #   items do
@@ -266,6 +275,10 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::Rule.jsonapi_type.downcase]
+        end
+        property :is_blackhole do
+          key :type, :boolean
+          key :enum, [true, false]
         end
         # property :time_restrictions do
         #   key :type, :array
@@ -291,7 +304,7 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [] # [:time_restrictions]
+        [:is_blackhole] # [:time_restrictions]
       end
 
       def self.jsonapi_singular_associations

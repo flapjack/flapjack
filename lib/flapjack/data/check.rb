@@ -455,7 +455,7 @@ module Flapjack
       # this includes generic rules, i.e. ones with no tags
 
       # A generic rule in Flapjack v2 means that it applies to all checks, not
-      # just all checks the contact is separately regeistered for, as in v1.
+      # just all checks the contact is separately registered for, as in v1.
       # These are not automatically created for users any more, but can be
       # deliberately configured.
 
@@ -496,11 +496,19 @@ module Flapjack
           "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
         }
 
-        # TODO could maybe also eliminate rules with no media here?
-        rule_ids_by_contact_id = Flapjack::Data::Rule.intersect(:id => rule_ids).
+        # if a rule has no media, it's irrelevant in any routing calculations
+        rule_ids_by_contact_id = Flapjack::Data::Rule.
+          intersect(:id => rule_ids, :has_media => true).
           associated_ids_for(:contact, :inversed => true)
 
-        [rule_ids_by_contact_id, route_ids_by_rule_id]
+        # clear any route_ids for rules without media
+        active_rule_ids = rule_ids_by_contact_id.values.reduce(:|)
+        active_route_ids = route_ids_by_rule_id.inject([]) do |memo, (ru_id, ro_ids)|
+          memo |= ro_ids if active_rule_ids.include?(ru_id)
+          memo
+        end
+
+        [rule_ids_by_contact_id, active_route_ids]
       end
 
       private
