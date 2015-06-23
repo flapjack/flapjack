@@ -130,18 +130,16 @@ describe Flapjack::Coordinator do
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('darwin12.0.0')
 
     thread = double(Thread)
-    expect(thread).to receive(:join).exactly(4).times
-    expect(Thread).to receive(:new).exactly(4).times.and_yield.and_return(thread)
+    expect(thread).to receive(:join).exactly(3).times
+    expect(Thread).to receive(:new).exactly(3).times.and_yield.and_return(thread)
 
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
-    expect(Kernel).to receive(:trap).with('QUIT').and_yield
     expect(Kernel).to receive(:trap).with('HUP').and_yield
 
     shutdown = double('shutdown')
     expect(shutdown).to receive(:call).with(2).once
     expect(shutdown).to receive(:call).with(15).once
-    expect(shutdown).to receive(:call).with(3).once
     reload = double('reload')
     expect(reload).to receive(:call).once
 
@@ -161,7 +159,6 @@ describe Flapjack::Coordinator do
 
     expect(Kernel).to receive(:trap).with('INT').and_yield
     expect(Kernel).to receive(:trap).with('TERM').and_yield
-    expect(Kernel).not_to receive(:trap).with('QUIT')
     expect(Kernel).not_to receive(:trap).with('HUP')
 
     shutdown = double('shutdown')

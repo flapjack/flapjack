@@ -18,11 +18,11 @@ Feature: flapjack-feed-events command line
     And  the output should contain "JSON receiver"
     And  the output should contain "-f, --from=arg"
 
+  @not_jruby
   Scenario: Running flapjack-feed-events with no arguments and no STDIN fails with a warning
     When I run `bundle exec bin/flapjack -c tmp/cucumber_cli/flapjack-feed-events.toml receiver json`
     And  the output should contain "No file provided, and STDIN is from terminal! Exiting..."
     Then the exit status should be 1
-
 
   Scenario: Feed a single event into the events queue
     Given a file named "single-event.json" with:
@@ -99,4 +99,4 @@ Feature: flapjack-feed-events command line
     When I run `cat tmp/cucumber_cli/invalid-json.json | bundle exec bin/flapjack -c tmp/cucumber_cli/flapjack-feed-events.toml receiver json`
     Then the exit status should be 1
     And  the output should not contain "Enqueued event data, "
-    And  the output should contain "expected comma at line 2"
+    And  the output should contain "Expected comma or object or array close: char 38"

@@ -107,7 +107,6 @@ module Flapjack
       Kernel.trap('INT')    { Thread.new { @shutdown.call(Signal.list['INT']) }.join }
       Kernel.trap('TERM')   { Thread.new { @shutdown.call(Signal.list['TERM']) }.join }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('QUIT') { Thread.new { @shutdown.call(Signal.list['QUIT']) }.join }
         Kernel.trap('HUP')  { Thread.new { @reload.call   }.join }
       end
     end

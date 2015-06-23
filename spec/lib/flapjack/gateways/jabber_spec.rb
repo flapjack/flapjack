@@ -541,7 +541,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(failing_checks).to receive(:empty?).and_return(false)
 
       expect(check).to receive(:name).and_return('example.com:ping')
-      expect(failing_checks).to receive(:map).and_yield(check).and_return(['example.com:ping'])
+      expect(failing_checks).to receive(:map) {|&arg| [arg.call(check)] }
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).
         with('events', failing_checks,
@@ -571,7 +571,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(failing_checks).to receive(:empty?).and_return(false)
 
       expect(check).to receive(:name).and_return('example.com:ping')
-      expect(failing_checks).to receive(:map).and_yield(check).and_return(['example.com:ping'])
+      expect(failing_checks).to receive(:map) {|&arg| [arg.call(check)] }
 
       expect(Flapjack::Data::Tag).to receive(:intersect).
         with(:name => 'example.com').and_return(tags)
@@ -598,8 +598,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
 
       expect(failing_checks).to receive(:empty?).and_return(false)
 
-      expect(failing_checks).to receive(:map).and_yield(check).and_return(['example.com:ping'])
-
+      expect(failing_checks).to receive(:map) {|&arg| [arg.call(check)] }
       expect(check).to receive(:name).and_return('example.com:ping')
 
       expect(checks).to receive(:count).and_return(5)

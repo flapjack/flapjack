@@ -16,75 +16,14 @@ log_dir = "tmp/cucumber_cli/"
   [processor.logger]
     level = "warn"
 """
-    And a file named "flapjack_cfg_d.toml" with:
-"""
-pid_dir = "tmp/cucumber_cli/"
-log_dir = "tmp/cucumber_cli/"
-"""
-    And a file named "flapjack_cfg_redis_d.toml" with:
-"""
-[redis]
-  db = 14
-[processor]
-  enabled = true
-  [processor.logger]
-    level = "warn"
-"""
 
   Scenario: Running with --help shows usage information
     When I run `bundle exec bin/flapjack server --help`
     Then the exit status should be 0
     And  the output should contain "Server for running components"
-    And  the output should contain " reload "
-    And  the output should contain "[-d|--daemonize]"
-
-  Scenario: Getting status when stopped
-    When I run `bundle exec bin/flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server status`
-    Then the exit status should not be 0
-    And  the output should contain "Flapjack is not running"
+    And  the output should contain "flapjack [global options] server"
 
   Scenario: Starting flapjack
-    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
+    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server`
     Then flapjack should start within 15 seconds
 
-  Scenario: Stopping flapjack via SIGINT
-    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
-    Then flapjack should start within 15 seconds
-    When I send a SIGINT to the flapjack process
-    Then flapjack should stop within 15 seconds
-
-  Scenario: Starting, status and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server start`
-    Then flapjack should start within 15 seconds
-    When I run `bundle exec bin/flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server status`
-    Then the exit status should be 0
-    And  the output should contain "Flapjack is running"
-    When I stop flapjack (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server stop`
-    Then flapjack should stop within 15 seconds
-
-  Scenario: Starting, restarting and stopping flapjack, daemonized
-    When I start flapjack (daemonised) (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server start`
-    Then flapjack should start within 15 seconds
-    When I restart flapjack (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server restart`
-    Then flapjack should restart within 15 seconds
-    When I stop flapjack (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server stop`
-    Then flapjack should stop within 15 seconds
-
-  Scenario: Reloading flapjack configuration
-    When I start flapjack (via bundle exec) with `flapjack --config tmp/cucumber_cli/flapjack_cfg.toml server start`
-    Then flapjack should start within 15 seconds
-    When I run `mv tmp/cucumber_cli/flapjack_cfg.toml tmp/cucumber_cli/flapjack_cfg.toml.bak`
-    Given a file named "flapjack_cfg.toml" with:
-"""
-test:
-  pid_dir: tmp/cucumber_cli/
-  log_dir: tmp/cucumber_cli/
-  redis:
-    db: 14
-  processor:
-    enabled: false
-"""
-    When I send a SIGHUP to the flapjack process
-    # TODO how to test for config file change?
-    When I stop flapjack (via bundle exec) with `flapjack --config 'tmp/cucumber_cli/flapjack_cfg*_d.toml' server stop`
-    Then flapjack should stop within 15 seconds

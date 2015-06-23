@@ -11,20 +11,19 @@ Given /^a fifo named "([^"]*)" exists$/ do |fifo_name|
   create_fifo(fifo_name)
 end
 
-When /^I ((?:re)?start|stop) (\S+)( \(daemonised\))?( \(via bundle exec\))? with `(.+)`$/ do |start_stop_restart, exe, daemonise, bundle_exec, cmd|
+When /^I ((?:re)?start|stop) (\S+)( \(via bundle exec\))? with `(.+)`$/ do |start_stop_restart, exe,  bundle_exec, cmd|
   @daemons_output      ||= []
   @daemons_exit_status ||= []
 
   @root = Pathname.new(File.dirname(__FILE__)).parent.parent.expand_path
   command = "#{bundle_exec ? 'bundle exec ' : ''}#{@root.join('bin')}/#{cmd}"
 
-  # enable debugging output from spawn_process etc
-  #@debug = true
+  # # enable debugging output from spawn_process etc
+  # @debug = true
 
   case start_stop_restart
   when 'start'
-    @process_h = spawn_process(command,
-                  :daemon_pidfile => (daemonise.nil? || daemonise.empty?) ? nil : "tmp/cucumber_cli/#{exe}.pid")
+    @process_h = spawn_process(command)
   when 'stop', 'restart'
     @daemons_output << `#{command}`
     @daemons_exit_status << $?

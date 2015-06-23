@@ -18,10 +18,9 @@ Gem::Specification.new do |gem|
   gem.require_paths = ['lib']
   gem.version       = Flapjack::VERSION
 
-  gem.add_dependency 'dante'
-  gem.add_dependency 'oj', '>= 2.9.0'
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
+  gem.add_dependency 'json-stream'
   # gem.add_dependency 'zermelo', '= 1.1.0'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'swagger-blocks'
@@ -34,7 +33,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
   gem.add_dependency 'gli', '= 2.13.1'
-  gem.add_dependency 'rbtrace'
   gem.add_dependency 'terminal-table'
   gem.add_dependency 'toml-rb'
   gem.add_dependency 'puma'
