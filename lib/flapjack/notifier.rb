@@ -121,7 +121,7 @@ module Flapjack
             memo[alert] = {
               'duration' => last_change ? (Time.now.to_i - last_change) : nil,
               'state'    => ec.state,
-              'summary' => ec.summary
+              'summary'  => ec.summary
             }
             memo
           end
