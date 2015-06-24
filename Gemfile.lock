@@ -8,10 +8,9 @@ GIT
 
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: 0f8fb0b46903aa3c857e1ce852523923f09bd228
-  branch: 16_zset_indices
+  revision: 2e0ff483877e1b97131ef0d652fa506ba1e91c7e
   specs:
-    zermelo (1.1.0)
+    zermelo (1.2.0)
       activemodel
 
 PATH
