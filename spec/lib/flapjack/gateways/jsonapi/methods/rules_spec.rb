@@ -31,6 +31,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     expect(Flapjack::Data::Rule).to receive(:new).with(rule_data).
       and_return(rule)
 
+    expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(rule_data.reject {|k,v| :id.eql?(k)})
+
     req_data  = rule_json(rule_data)
     resp_data = req_data.merge(:relationships => rule_rel(rule_data))
 
@@ -104,7 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id).and_return(sorted)
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return({})
+      and_return(rule_data.reject {|k,v| :id.eql?(k)})
 
     resp_data = [rule_json(rule_data).merge(:relationships => rule_rel(rule_data))]
 
@@ -127,7 +130,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       with(:id => rule.id).and_return([rule])
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return({})
+      and_return(rule_data.reject {|k,v| :id.eql?(k)})
 
     resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
 
@@ -182,7 +185,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return({})
+      and_return(rule_data.reject {|k,v| :id.eql?(k)})
 
     get "/rules/#{rule.id}?include=contact"
     expect(last_response).to be_ok
@@ -234,7 +237,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
       and_return(contact_data.reject {|k,v| :id.eql?(k)})
 
     expect(rule).to receive(:as_json).with(:only => an_instance_of(Array)).
-      and_return({})
+      and_return(rule_data.reject {|k,v| :id.eql?(k)})
 
     get "/rules/#{rule.id}?include=contact.media"
     expect(last_response).to be_ok

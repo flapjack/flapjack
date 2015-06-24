@@ -60,7 +60,7 @@ module FixtureData
     }
   end
 
-  def check_json(ch_data, opts = {})
+  def check_json(ch_data)
     id = ch_data[:id]
     {
       :id => id,
@@ -150,7 +150,7 @@ module FixtureData
     }
   end
 
-  def contact_json(co_data, opts = {})
+  def contact_json(co_data)
     id = co_data[:id]
     {
       :id => id,
@@ -265,7 +265,7 @@ module FixtureData
     }
   end
 
-  def medium_json(me_data, opts = {})
+  def medium_json(me_data)
     id = me_data[:id]
     {
       :id => id,
@@ -301,20 +301,24 @@ module FixtureData
   def rule_data
     @rule_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
+      :is_blackhole => false,
+      :conditions_list => 'critical'
     }
   end
 
   def rule_2_data
     @rule_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
+      :is_blackhole => false,
+      :conditions_list => 'warning'
     }
   end
 
   def rule_json(ru_data)
     {
       :id => ru_data[:id],
-      :type => 'rule' #,
-      # :attributes => ru_data.reject {|k,v| :id.eql?(k) }
+      :type => 'rule',
+      :attributes => ru_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
@@ -342,6 +346,45 @@ module FixtureData
     }
   end
 
+  def state_data
+    @state_data ||= {
+      :id => '142acf62-31e7-4074-ada9-a30ae73d880d',
+      :created_at => (fixture_time - 30).iso8601,
+      :updated_at => (fixture_time - 30).iso8601,
+      :condition => 'critical',
+    }
+  end
+
+  def state_2_data
+    @state_2_data ||= {
+      :id => '008d78fc-1c72-4c2a-8057-0d44b64c6f3d',
+      :created_at => (fixture_time - 10).iso8601,
+      :updated_at => (fixture_time - 10).iso8601,
+      :condition => 'ok',
+    }
+  end
+
+  def state_json(st_data)
+    id = st_data[:id]
+    {
+      :id => id,
+      :type => 'state',
+      :attributes => st_data.reject {|k,v| :id.eql?(k) }
+    }
+  end
+
+  def state_rel(st_data)
+    id = st_data[:id]
+    {
+      :check => {
+        :links => {
+          :self => "http://example.org/states/#{id}/relationships/check",
+          :related => "http://example.org/states/#{id}/check"
+        }
+      }
+    }
+  end
+
   def tag_data
     @tag_data ||= {
      :name => 'database',
@@ -354,7 +397,7 @@ module FixtureData
     }
   end
 
-  def tag_json(ta_data, opts = {})
+  def tag_json(ta_data)
     id = ta_data[:name]
     {
       :type => 'tag',

@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
 
+require 'active_support/time'
 require 'active_support/json/encoding'
 
-ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
-ActiveSupport::JSON::Encoding.time_precision = 0
+ActiveSupport.use_standard_json_time_format = true
+ActiveSupport.time_precision = 0
 
-require 'active_support/time'
 require 'json'
 
 require 'flapjack/logger'
@@ -18,11 +18,11 @@ module Flapjack
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 
   def self.load_json(data)
-    JSON.parse(data)
+    ActiveSupport::JSON.decode(data)
   end
 
   def self.dump_json(data)
-    JSON.generate(data)
+    ActiveSupport::JSON.encode(data)
   end
 
   def self.sanitize(str)

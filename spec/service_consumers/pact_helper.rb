@@ -1,5 +1,6 @@
 require 'pact/provider/rspec'
 
+require 'flapjack'
 require 'flapjack/configuration'
 require 'flapjack/redis_proxy'
 
@@ -20,8 +21,8 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 require 'bundler'
 Bundler.require(:default, :test)
 
-ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
-ActiveSupport::JSON::Encoding.time_precision = 0
+ActiveSupport.use_standard_json_time_format = true
+ActiveSupport.time_precision = 0
 
 MockLogger.configure_log('flapjack-jsonapi')
 Zermelo.logger = Flapjack.logger = MockLogger.new

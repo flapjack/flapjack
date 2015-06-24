@@ -1,9 +1,8 @@
 GIT
   remote: git://github.com/flapjack/flapjack-diner.git
-  revision: e6e6ff20c7a9101f51e9ba8e5638000f924c1635
-  branch: v2_pre
+  revision: 7ead725d3bb66f5e0a136f4d5e52582a7c4a519a
   specs:
-    flapjack-diner (2.0.0a1)
+    flapjack-diner (2.0.0alpha1)
       httparty (>= 0.10)
       json (>= 1.7.7)
 
@@ -18,7 +17,7 @@ GIT
 PATH
   remote: .
   specs:
-    flapjack (2.0.0a1)
+    flapjack (2.0.0alpha1)
       activesupport
       chronic
       chronic_duration

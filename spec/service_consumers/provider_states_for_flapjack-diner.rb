@@ -110,6 +110,18 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
+  provider_state "a state exists" do
+    set_up do
+      sd = state_data.dup
+      [:created_at, :updated_at].each {|t| sd[t] = Time.parse(sd[t]) }
+
+      state = Flapjack::Data::State.new(sd)
+      state.save!
+    end
+
+    tear_down { default_tear_down }
+  end
+
   provider_state "two rules exist" do
     set_up do
       rule = Flapjack::Data::Rule.new(rule_data)

@@ -200,11 +200,10 @@ module Flapjack
             ret
           end
 
-          def parse_range_or_value(name, pattern, v, &block)
+          def parse_range_or_value(name, pattern, v, opts = {}, &block)
+            rangeable = opts[:rangeable]
 
-            # FIXME only allow range queries if range_index exists for attribute
-
-            if v =~ /\A(?:(#{pattern})\.\.(#{pattern})|(#{pattern})\.\.|\.\.(#{pattern}))\z/
+            if rangeable && (v =~ /\A(?:(#{pattern})\.\.(#{pattern})|(#{pattern})\.\.|\.\.(#{pattern}))\z/)
               start = nil
               start_s = $1 || $3
               unless start_s.nil?
@@ -220,8 +219,7 @@ module Flapjack
               end
 
               if !start.nil? && !finish.nil? && (start > finish)
-                # FIXME set order => desc
-                Zermelo::Filters::IndexRange.new(finish, start, :by_score => true)
+                halt(err(403, "Range order cannot be inversed"))
               else
                 Zermelo::Filters::IndexRange.new(start, finish, :by_score => true)
               end
@@ -244,11 +242,20 @@ module Flapjack
 
             attribute_types = klass.attribute_types
 
-            attrs_by_type = Zermelo::ATTRIBUTE_TYPES.keys.inject({}) do |memo, at|
-              memo[at] = attributes.select do |a|
+            rangeable_attrs = []
+            attrs_by_type = {}
+
+            klass.send(:with_index_data) do |idx_data|
+              idx_data.each do |k, d|
+                next unless d.index_klass == ::Zermelo::Associations::RangeIndex
+                rangeable_attrs << k
+              end
+            end
+
+            Zermelo::ATTRIBUTE_TYPES.keys.each do |at|
+              attrs_by_type[at] = attributes.select do |a|
                 at.eql?(attribute_types[a])
               end
-              memo
             end
 
             r = filter.each_with_object({}) do |filter_str, memo|
@@ -272,15 +279,15 @@ module Flapjack
                 end
 
               elsif attrs_by_type[:timestamp].include?(k.to_sym)
-                parse_range_or_value('timestamp', ISO8601_PAT, v) {|s|
+                parse_range_or_value('timestamp', ISO8601_PAT, v, :rangeable => rangeable_attrs.include?(k.to_sym)) {|s|
                   begin; DateTime.parse(s); rescue ArgumentError; nil; end
                 }
               elsif attrs_by_type[:integer].include?(k.to_sym)
-                parse_range_or_value('integer', '\d+', v) {|s|
+                parse_range_or_value('integer', '\d+', v, :rangeable => rangeable_attrs.include?(k.to_sym)) {|s|
                   s.to_i
                 }
               elsif attrs_by_type[:float].include?(k.to_sym)
-                parse_range_or_value('float', '\d+(\.\d+)?', v) {|s|
+                parse_range_or_value('float', '\d+(\.\d+)?', v, :rangeable => rangeable_attrs.include?(k.to_sym)) {|s|
                   s.to_f
                 }
               end

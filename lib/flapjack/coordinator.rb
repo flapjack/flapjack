@@ -23,8 +23,8 @@ module Flapjack
     def initialize(config)
       Thread.abort_on_exception = true
 
-      ActiveSupport::JSON::Encoding.use_standard_json_time_format = true
-      ActiveSupport::JSON::Encoding.time_precision = 0
+      ActiveSupport.use_standard_json_time_format = true
+      ActiveSupport.time_precision = 0
 
       @config   = config
       @pikelets = []
