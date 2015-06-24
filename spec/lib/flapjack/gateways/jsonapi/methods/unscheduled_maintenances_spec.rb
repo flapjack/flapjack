@@ -133,6 +133,178 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       :data => resp_data, :links => links, :meta => meta))
   end
 
+  it "queries unscheduled maintenance periods by a closed date range" do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    st_t = fixture_time - 1_000
+    ft_t = fixture_time + 4_000
+    st = CGI::escape(st_t.iso8601)
+    ft = CGI::escape(ft_t.iso8601)
+
+    links = {
+       :first => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}..#{ft}&page=1",
+       :last  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}..#{ft}&page=1",
+       :self  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}..#{ft}"
+    }
+
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([unscheduled_maintenance.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(unscheduled_maintenance)] }
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+
+    time_filter = double(Zermelo::Filters::IndexRange)
+    expect(Zermelo::Filters::IndexRange).to receive(:new).
+      with(st_t.to_datetime, ft_t.to_datetime, :by_score => true).and_return(time_filter)
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:start_time => time_filter).and_return(filtered)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_data.reject {|k,v| :id.eql?(k)})
+
+    resp_data = [maintenance_json('unscheduled', unscheduled_maintenance_data).
+      merge(:relationships => maintenance_rel('unscheduled', unscheduled_maintenance_data))]
+
+    get "/unscheduled_maintenances?filter=start_time%3A#{st}..#{ft}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => resp_data, :links => links, :meta => meta))
+  end
+
+  it "queries unscheduled maintenance periods by an open date range" do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    st_t = fixture_time - 1_000
+    st = CGI::escape(st_t.iso8601)
+
+    links = {
+       :first => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}..&page=1",
+       :last  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}..&page=1",
+       :self  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}.."
+    }
+
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([unscheduled_maintenance.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(unscheduled_maintenance)] }
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+
+    time_filter = double(Zermelo::Filters::IndexRange)
+    expect(Zermelo::Filters::IndexRange).to receive(:new).
+      with(st_t.to_datetime, nil, :by_score => true).and_return(time_filter)
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:start_time => time_filter).and_return(filtered)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_data.reject {|k,v| :id.eql?(k)})
+
+    resp_data = [maintenance_json('unscheduled', unscheduled_maintenance_data).
+      merge(:relationships => maintenance_rel('unscheduled', unscheduled_maintenance_data))]
+
+    get "/unscheduled_maintenances?filter=start_time%3A#{st}.."
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => resp_data, :links => links, :meta => meta))
+  end
+
+  it "queries unscheduled maintenance periods by exact date" do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
+    meta = {
+      :pagination => {
+        :page        => 1,
+        :per_page    => 20,
+        :total_pages => 1,
+        :total_count => 1
+      }
+    }
+
+    st_t = fixture_time
+    st = CGI::escape(st_t.iso8601)
+
+    links = {
+       :first => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}&page=1",
+       :last  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}&page=1",
+       :self  => "http://example.org/unscheduled_maintenances?filter%5B%5D=start_time%3A#{st}"
+    }
+
+    page = double('page')
+    expect(page).to receive(:empty?).and_return(false)
+    expect(page).to receive(:ids).and_return([unscheduled_maintenance.id])
+    expect(page).to receive(:collect) {|&arg| [arg.call(unscheduled_maintenance)] }
+    sorted = double('sorted')
+    expect(sorted).to receive(:page).with(1, :per_page => 20).
+      and_return(page)
+    expect(sorted).to receive(:count).and_return(1)
+
+    filtered = double('filtered')
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
+      with(:start_time => st.to_datetime).and_return(filtered)
+    expect(filtered).to receive(:sort).with(:id).and_return(sorted)
+
+    expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(unscheduled_maintenance_data.reject {|k,v| :id.eql?(k)})
+
+    resp_data = [maintenance_json('unscheduled', unscheduled_maintenance_data).
+      merge(:relationships => maintenance_rel('unscheduled', unscheduled_maintenance_data))]
+
+    get "/unscheduled_maintenances?filter=start_time%3A#{st}"
+    expect(last_response).to be_ok
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(
+      :data => resp_data, :links => links, :meta => meta))
+  end
+
+  it "fails when an invalid date string is passed as part of a date range" do
+    expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
+      with(Flapjack::Data::Check).and_yield
+
+    st_t = fixture_time - 1_000
+    ft_t = fixture_time + 4_000
+    st = CGI::escape(st_t.iso8601)[0..-3]
+    ft = CGI::escape(ft_t.iso8601)
+
+    get "/unscheduled_maintenances?filter=start_time%3A#{st}..#{ft}"
+    expect(last_response.status).to eq(403)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:errors => [{
+       :detail => "Invalid timestamp parameter '#{CGI::unescape(st)}..#{CGI::unescape(ft)}'",
+       :status => '403'
+      }]
+    ))
+  end
+
   it "ends an unscheduled maintenance period for a check" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
       with(no_args).and_yield

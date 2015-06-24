@@ -11,8 +11,8 @@ module FixtureData
     'example.org'
   end
 
-  def time
-    @time ||= Time.now
+  def fixture_time
+    @fixture_time ||= Time.now
   end
 
   def resultify(data)
@@ -186,8 +186,8 @@ module FixtureData
   def scheduled_maintenance_data
     @scheduled_maintenance_data ||= {
      :id         => '9b7a7af4-8251-4216-8e86-2d4068447ae4',
-     :start_time => time.iso8601,
-     :end_time   => (time + 3_600).iso8601,
+     :start_time => fixture_time.iso8601,
+     :end_time   => (fixture_time + 3_600).iso8601,
      :summary    => 'working'
     }
   end
@@ -195,8 +195,8 @@ module FixtureData
   def scheduled_maintenance_2_data
     @scheduled_maintenance_2_data ||= {
      :id         => '5a84c82b-0acb-4703-a27e-0b0db50b298a',
-     :start_time => (time +  7_200).iso8601,
-     :end_time   => (time + 10_800).iso8601,
+     :start_time => (fixture_time +  7_200).iso8601,
+     :end_time   => (fixture_time + 10_800).iso8601,
      :summary    => 'working'
     }
   end
@@ -204,7 +204,8 @@ module FixtureData
   def unscheduled_maintenance_data
     @unscheduled_maintenance_data ||= {
      :id         => '9b7a7af4-8251-4216-8e86-2d4068447ae4',
-     :end_time   => (time + 3_600).iso8601,
+     :start_time => fixture_time.iso8601,
+     :end_time   => (fixture_time + 3_600).iso8601,
      :summary    => 'working'
     }
   end
@@ -212,7 +213,8 @@ module FixtureData
   def unscheduled_maintenance_2_data
     @unscheduled_maintenance_2_data ||= {
      :id         => '41895714-9b77-48a9-a373-5f6005b1ce95',
-     :end_time   => (time + 5_400).iso8601,
+     :start_time => (fixture_time + 4_700).iso8601,
+     :end_time   => (fixture_time + 5_400).iso8601,
      :summary    => 'partly working'
     }
   end
@@ -405,7 +407,7 @@ module FixtureData
     @global_statistics_data ||= {
       :id => 'c63f8029-7c2b-4a33-b9f9-fbb2228c8037',
       :instance_name  => 'global',
-      :created_at     => time.iso8601,
+      :created_at     => fixture_time.iso8601,
       :all_events     => 0,
       :ok_events      => 0,
       :failure_events => 0,

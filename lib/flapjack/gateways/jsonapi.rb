@@ -205,7 +205,7 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- association paths
       # must be before resource ones to avoid greedy path captures
-      %w[metrics reports association_post resource_post
+      %w[metrics association_post resource_post
          association_get resource_get association_patch resource_patch
          association_delete resource_delete].each do |method|
 

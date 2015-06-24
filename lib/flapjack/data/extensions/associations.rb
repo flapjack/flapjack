@@ -33,7 +33,7 @@ module Flapjack
               l = (method_def.lock_klasses || [])
               case http_method
               when :delete
-                l|= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
+                l |= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
               else
                 method_assocs = method_def.associations || []
                 jsonapi_associations.each_pair do |n, jal|

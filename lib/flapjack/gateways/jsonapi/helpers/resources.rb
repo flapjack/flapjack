@@ -8,6 +8,13 @@ module Flapjack
       module Helpers
         module Resources
 
+          ISO8601_PAT = "(?:[1-9][0-9]*)?[0-9]{4}-" \
+                        "(?:1[0-2]|0[1-9])-" \
+                        "(?:3[0-1]|0[1-9]|[1-2][0-9])T" \
+                        "(?:2[0-3]|[0-1][0-9]):" \
+                        "[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?" \
+                        "(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?"
+
           class LinkedData
             attr_accessor :name, :type, :data
 
@@ -193,6 +200,41 @@ module Flapjack
             ret
           end
 
+          def parse_range_or_value(name, pattern, v, &block)
+
+            # FIXME only allow range queries if range_index exists for attribute
+
+            if v =~ /\A(?:(#{pattern})\.\.(#{pattern})|(#{pattern})\.\.|\.\.(#{pattern}))\z/
+              start = nil
+              start_s = $1 || $3
+              unless start_s.nil?
+                start = yield(start_s)
+                halt(err(403, "Couldn't parse #{name} '#{start_s}'")) if start.nil?
+              end
+
+              finish = nil
+              finish_s = $2 || $4
+              unless finish_s.nil?
+                finish = yield(finish_s)
+                halt(err(403, "Couldn't parse #{name} '#{finish_s}'")) if finish.nil?
+              end
+
+              if !start.nil? && !finish.nil? && (start > finish)
+                # FIXME set order => desc
+                Zermelo::Filters::IndexRange.new(finish, start, :by_score => true)
+              else
+                Zermelo::Filters::IndexRange.new(start, finish, :by_score => true)
+              end
+
+            elsif v =~ /\A#{pattern}\z/
+              t = yield(v)
+              halt(err(403, "Couldn't parse #{name} '#{v}'")) if t.nil?
+              t
+            else
+              halt(err(403, "Invalid #{name} parameter '#{v}'"))
+            end
+          end
+
           def filter_params(klass, filter)
             attributes = if klass.respond_to?(:jsonapi_methods)
               (klass.jsonapi_methods[:get] || {}).attributes || []
@@ -202,19 +244,18 @@ module Flapjack
 
             attribute_types = klass.attribute_types
 
-            string_attrs = [:id] + (attributes.select {|a|
-              :string.eql?(attribute_types[a])
-            })
-
-            boolean_attrs = attributes.select {|a|
-              :boolean.eql?(attribute_types[a])
-            }
+            attrs_by_type = Zermelo::ATTRIBUTE_TYPES.keys.inject({}) do |memo, at|
+              memo[at] = attributes.select do |a|
+                at.eql?(attribute_types[a])
+              end
+              memo
+            end
 
             r = filter.each_with_object({}) do |filter_str, memo|
               k, v = filter_str.split(':', 2)
               halt(err(403, "Single filter parameters must be 'key:value'")) if k.nil? || v.nil?
 
-              value = if string_attrs.include?(k.to_sym)
+              value = if attrs_by_type[:string].include?(k.to_sym) || :id.eql?(k.to_sym)
                 if v =~ %r{^/(.+)/$}
                   Regexp.new($1)
                 elsif v =~ /\|/
@@ -222,13 +263,26 @@ module Flapjack
                 else
                   v
                 end
-              elsif boolean_attrs.include?(k.to_sym)
+              elsif attrs_by_type[:boolean].include?(k.to_sym)
                 case v.downcase
                 when '0', 'f', 'false', 'n', 'no'
                   false
                 when '1', 't', 'true', 'y', 'yes'
                   true
                 end
+
+              elsif attrs_by_type[:timestamp].include?(k.to_sym)
+                parse_range_or_value('timestamp', ISO8601_PAT, v) {|s|
+                  begin; DateTime.parse(s); rescue ArgumentError; nil; end
+                }
+              elsif attrs_by_type[:integer].include?(k.to_sym)
+                parse_range_or_value('integer', '\d+', v) {|s|
+                  s.to_i
+                }
+              elsif attrs_by_type[:float].include?(k.to_sym)
+                parse_range_or_value('float', '\d+(\.\d+)?', v) {|s|
+                  s.to_f
+                }
               end
 
               halt(err(403, "Invalid filter key '#{k}'")) if value.nil?

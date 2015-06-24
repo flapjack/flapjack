@@ -175,7 +175,7 @@ Pact.provider_states_for "flapjack-diner" do
   provider_state "an unscheduled maintenance period exists" do
     set_up do
       usmd = unscheduled_maintenance_data.dup
-      usmd[:end_time] = Time.parse(usmd[:end_time])
+      [:start_time, :end_time].each {|t| usmd[t] = Time.parse(usmd[t]) }
       unscheduled_maintenance = Flapjack::Data::UnscheduledMaintenance.new(usmd)
       unscheduled_maintenance.save!
     end
@@ -186,12 +186,12 @@ Pact.provider_states_for "flapjack-diner" do
   provider_state "two unscheduled maintenance periods exist" do
     set_up do
       usmd = unscheduled_maintenance_data.dup
-      usmd[:end_time] = Time.parse(usmd[:end_time])
+      [:start_time, :end_time].each {|t| usmd[t] = Time.parse(usmd[t]) }
       unscheduled_maintenance = Flapjack::Data::UnscheduledMaintenance.new(usmd)
       unscheduled_maintenance.save!
 
       usmd_2 = unscheduled_maintenance_2_data.dup
-      usmd_2[:end_time] = Time.parse(usmd_2[:end_time])
+      [:start_time, :end_time].each {|t| usmd_2[t] = Time.parse(usmd_2[t]) }
       unscheduled_maintenance_2 = Flapjack::Data::UnscheduledMaintenance.new(usmd_2)
       unscheduled_maintenance_2.save!
     end
