@@ -3,7 +3,6 @@ source 'https://rubygems.org'
 gemspec :name => 'flapjack'
 
 gem 'flapjack-diner', :github => 'flapjack/flapjack-diner'
-gem 'zermelo', :github => 'flapjack/zermelo'
 
 group :test do
   gem 'rspec'

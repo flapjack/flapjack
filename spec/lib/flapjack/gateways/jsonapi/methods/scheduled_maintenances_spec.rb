@@ -21,9 +21,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       with(:id => [scheduled_maintenance_data[:id]]).
       and_return(empty_ids)
 
+    smd = scheduled_maintenance_data.dup
+    [:start_time, :end_time].each {|t| smd[t] = Time.parse(smd[t]) }
+
     expect(scheduled_maintenance).to receive(:invalid?).and_return(false)
     expect(scheduled_maintenance).to receive(:save!).and_return(true)
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(smd).
       and_return(scheduled_maintenance)
 
     expect(scheduled_maintenance).to receive(:as_json).
@@ -53,9 +56,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
     req_data  = maintenance_json('scheduled', scheduled_maintenance_data)
 
+    smd = scheduled_maintenance_data.dup
+    [:start_time, :end_time].each {|t| smd[t] = Time.parse(smd[t]) }
+
     expect(scheduled_maintenance).to receive(:invalid?).and_return(true)
     expect(scheduled_maintenance).not_to receive(:save!)
-    expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(scheduled_maintenance_data).
+    expect(Flapjack::Data::ScheduledMaintenance).to receive(:new).with(smd).
       and_return(scheduled_maintenance)
 
     post "/scheduled_maintenances", Flapjack.dump_json(:data => req_data),

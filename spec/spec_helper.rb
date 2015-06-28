@@ -21,6 +21,9 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 require 'bundler'
 Bundler.require(:default, :test)
 
+ActiveSupport.use_standard_json_time_format = true
+ActiveSupport.time_precision = 0
+
 require 'webmock/rspec'
 WebMock.disable_net_connect!
 
