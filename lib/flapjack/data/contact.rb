@@ -176,16 +176,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone],
-            :associations => [:media, :rules]
+            :attributes => [:name, :timezone]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone],
-            :associations => [:checks, :media, :rules]
+            :attributes => [:name, :timezone]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone],
-            :associations => [:media, :rules]
+            :attributes => [:name, :timezone]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           ),
@@ -196,13 +193,15 @@ module Flapjack
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )
           }

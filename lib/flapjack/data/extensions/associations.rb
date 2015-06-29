@@ -35,9 +35,8 @@ module Flapjack
               when :delete
                 l |= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
               else
-                method_assocs = method_def.associations || []
                 jsonapi_associations.each_pair do |n, jal|
-                  next unless method_assocs.include?(n)
+                  next unless jal.send(http_method.to_sym).is_a?(TrueClass)
                   l |= jal.lock_klasses
                 end
               end

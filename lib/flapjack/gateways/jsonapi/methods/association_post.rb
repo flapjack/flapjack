@@ -22,7 +22,7 @@ module Flapjack
               end
 
               post_links = jsonapi_links.select {|n, jd|
-                !jd.post.is_a?(FalseClass) && :multiple.eql?(jd.number)
+                jd.post.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless post_links.empty?

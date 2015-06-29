@@ -42,8 +42,6 @@ module Flapjack
               unless method_def.nil?
                 resource = resource_class.short_model_name.plural
 
-                method_assocs = method_def.associations || []
-
                 jsonapi_links = if resource_class.respond_to?(:jsonapi_associations)
                   resource_class.jsonapi_associations || {}
                 else
@@ -51,11 +49,11 @@ module Flapjack
                 end
 
                 singular_links = jsonapi_links.select {|n, jd|
-                  method_assocs.include?(n) && :singular.eql?(jd.number)
+                  jd.send(:post).is_a?(TrueClass) && :singular.eql?(jd.number)
                 }
 
                 multiple_links = jsonapi_links.select {|n, jd|
-                  method_assocs.include?(n) && :multiple.eql?(jd.number)
+                  jd.send(:post).is_a?(TrueClass) && :multiple.eql?(jd.number)
                 }
 
                 app.class_eval do

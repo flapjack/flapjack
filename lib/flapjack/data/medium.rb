@@ -277,20 +277,17 @@ module Flapjack
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
-                            :pagerduty_ack_duration],
-            :associations => [:contact, :rules]
+                            :pagerduty_ack_duration]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
-                            :pagerduty_ack_duration],
-            :associations => [:alerting_checks, :contact, :rules]
+                            :pagerduty_ack_duration]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
-                            :pagerduty_ack_duration],
-            :associations => [:rules]
+                            :pagerduty_ack_duration]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :lock_klasses => [Flapjack::Data::Alert, Flapjack::Data::State,
@@ -304,14 +301,15 @@ module Flapjack
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )
           }

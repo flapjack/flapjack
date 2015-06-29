@@ -21,11 +21,11 @@ module Flapjack
               end
 
               singular_links = jsonapi_links.select {|n, jd|
-                :singular.eql?(jd.number)
+                jd.get.is_a?(TrueClass) && :singular.eql?(jd.number)
               }
 
               multiple_links = jsonapi_links.select {|n, jd|
-                :multiple.eql?(jd.number)
+                jd.get.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               resource = resource_class.short_model_name.plural

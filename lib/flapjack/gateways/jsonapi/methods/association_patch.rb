@@ -22,11 +22,11 @@ module Flapjack
               end
 
               singular_links = jsonapi_links.select {|n, jd|
-                !jd.patch.is_a?(FalseClass) && :singular.eql?(jd.number)
+                jd.patch.is_a?(TrueClass) && :singular.eql?(jd.number)
               }
 
               multiple_links = jsonapi_links.select {|n, jd|
-                !jd.patch.is_a?(FalseClass) && :multiple.eql?(jd.number)
+                jd.patch.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless singular_links.empty? && multiple_links.empty?

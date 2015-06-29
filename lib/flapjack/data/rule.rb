@@ -328,16 +328,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
-            :associations => [:contact, :media, :tags]
+            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
-            :associations => [:contact, :media, :tags]
+            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list], # [:time_restrictions]
-            :associations => [:media, :tags]
+            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,
@@ -351,13 +348,15 @@ module Flapjack
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )
           }

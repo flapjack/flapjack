@@ -22,7 +22,7 @@ module Flapjack
               end
 
               delete_links = jsonapi_links.select {|n, jd|
-                !jd.delete.is_a?(FalseClass) && :multiple.eql?(jd.number)
+                jd.delete.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless delete_links.empty?

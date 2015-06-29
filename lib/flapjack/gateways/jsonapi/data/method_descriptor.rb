@@ -10,7 +10,7 @@ module Flapjack
           attr_reader :attributes, :associations, :lock_klasses
 
           def initialize(opts = {})
-            %w{attributes associations lock_klasses}.each do |a|
+            %w{attributes lock_klasses}.each do |a|
               instance_variable_set("@#{a}", opts[a.to_sym])
             end
           end

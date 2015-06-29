@@ -301,18 +301,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled],
-            :associations => [:tags]
+            :attributes => [:name, :enabled]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled, :ack_hash, :failing, :condition],
-            :associations => [:alerting_media, :contacts, :current_state,
-              :latest_notifications, :scheduled_maintenances, :states, :tags,
-              :unscheduled_maintenances]
+            :attributes => [:name, :enabled, :ack_hash, :failing, :condition]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled],
-            :associations => [:tags]
+            :attributes => [:name, :enabled]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )
@@ -323,46 +318,47 @@ module Flapjack
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
             :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true,
               :type => 'scheduled_maintenance',
               :klass => Flapjack::Data::ScheduledMaintenance
             ),
             :current_state => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :singular, :link => true, :includable => true
             ),
             :current_unscheduled_maintenance => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :singular, :link => true, :includable => true,
               :type => 'unscheduled_maintenance',
               :klass => Flapjack::Data::UnscheduledMaintenance
             ),
             :latest_notifications => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => false
             ),
             :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false, :number => :multiple,
-              :link => true, :includable => false
+              :get => true,
+              :number => :multiple, :link => true, :includable => false
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => false, :patch => false, :delete => false,
+              :get => true,
               :number => :multiple, :link => true, :includable => false
             )
           }
