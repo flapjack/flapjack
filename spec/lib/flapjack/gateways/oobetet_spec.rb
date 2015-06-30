@@ -24,7 +24,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     it "raises an error if a required config setting is not set" do
       expect {
         Flapjack::Gateways::Oobetet::Notifier.new(:config => config.delete('watched_check'))
-      }.to raise_error
+      }.to raise_error("Flapjack::Oobetet: watched_check must be defined in the config")
     end
 
     it "starts and is stopped by an exception" do
@@ -147,7 +147,7 @@ describe Flapjack::Gateways::Oobetet, :logger => true do
     it "raises an error if a required config setting is not set" do
       expect {
         Flapjack::Gateways::Oobetet::Bot.new(:config => config.delete('watched_check'))
-      }.to raise_error
+      }.to raise_error("Flapjack::Oobetet: watched_check must be defined in the config")
     end
 
     it "starts and is stopped by a signal" do
