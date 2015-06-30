@@ -12,10 +12,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "creates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -42,10 +39,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "does not create a contact if the data is improperly formatted" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -390,10 +384,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "updates a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+      with(no_args).
       and_yield
 
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).

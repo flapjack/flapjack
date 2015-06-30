@@ -197,11 +197,11 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => true, :get => true, :patch => true, :delete => true,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => true, :get => true, :patch => true, :delete => true,
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             )
           }
