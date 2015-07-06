@@ -151,15 +151,16 @@ module Flapjack
         end
       end
 
-      def conditions
-        return if self.conditions_list.nil?
-        @conditions ||= self.conditions_list.
-          sub(/^\|/, '').sub(/\|$/, '').split('|').each_with_object  do |c, memo|
+      # # Not used?
+      # def conditions
+      #   return if self.conditions_list.nil?
+      #   @conditions ||= self.conditions_list.
+      #     sub(/^\|/, '').sub(/\|$/, '').split('|').each_with_object  do |c, memo|
 
-          cond = Flapjack::Data::Condition.for_name(c)
-          memo << cond unless cond.nil?
-        end
-      end
+      #     cond = Flapjack::Data::Condition.for_name(c)
+      #     memo << cond unless cond.nil?
+      #   end
+      # end
 
       # TODO handle JSON exception
       def time_restrictions
