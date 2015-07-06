@@ -30,12 +30,6 @@ module Flapjack
 
       attr_accessor :queue
 
-      belongs_to :check, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :acknowledgements
-
-      belongs_to :tag, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :acknowledgements
-
       def save!
         @id ||= SecureRandom.uuid
         @duration ||= (4 * 60 * 60)
@@ -52,8 +46,9 @@ module Flapjack
         raise "Acknowledgement already sent" if @sent
 
         if c.failing && c.enabled
+          @checks = [c]
           Flapjack::Data::Event.create_acknowledgements(
-            @queue, [c], :duration => self.duration, :summary => self.summary
+            @queue, @checks, :duration => self.duration, :summary => self.summary
           )
         end
 
@@ -68,8 +63,9 @@ module Flapjack
         checks = t.checks.intersect(:failing => true, :enabled => true)
 
         unless checks.empty?
+          @checks = checks.all
           Flapjack::Data::Event.create_acknowledgements(
-            @queue, checks.all, :duration => self.duration, :summary => self.summary
+            @queue, @checks, :duration => self.duration, :summary => self.summary
           )
         end
 
@@ -119,11 +115,15 @@ module Flapjack
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,
-              :number => :singular, :link => false, :includable => false
+              :number => :singular, :link => false, :includable => false,
+              :type => 'check',
+              :klass => Flapjack::Data::Check
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,
-              :number => :singular, :link => false, :includable => false
+              :number => :singular, :link => false, :includable => false,
+              :type => 'tag',
+              :klass => Flapjack::Data::Tag
             )
           }
           populate_association_data(@jsonapi_associations)

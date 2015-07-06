@@ -338,4 +338,22 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
+  provider_state "a check with a tag and a rule exists" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save!
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save!
+
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
+
+      check.tags << tag
+      rule.tags << tag
+    end
+
+    tear_down { default_tear_down }
+  end
+
 end

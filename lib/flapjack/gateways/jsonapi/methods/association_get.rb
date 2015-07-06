@@ -201,8 +201,8 @@ module Flapjack
                           halt(err(403, "Filter parameters must be passed as an Array"))
                         end
 
-                        unless params[:filter].all? {|f| f = /^#{assocs}\.([^,]+))*$/ }
-                          halt(err(403, "Filter params must start with '#{assocs}.': '#{params[:sort]}'"))
+                        if bad = params[:filter].detect? {|f| f !~ /^#{assocs}\.([^,]+))*$/ }
+                          halt(err(403, "Filter params must start with '#{assocs}.', not contain comma: '#{bad}'"))
                         end
 
                         filters = params[:filter].collect do |f|
