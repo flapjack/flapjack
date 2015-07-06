@@ -2,8 +2,6 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'flapjack-diner', :github => 'flapjack/flapjack-diner'
-
 group :test do
   gem 'rspec'
   gem 'cucumber', '>= 2.0.0.rc.4'

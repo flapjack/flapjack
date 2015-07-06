@@ -1,11 +1,3 @@
-GIT
-  remote: git://github.com/flapjack/flapjack-diner.git
-  revision: 922bba3b12ee7bc6793a968a88c929aef834a314
-  specs:
-    flapjack-diner (2.0.0alpha1)
-      httparty (>= 0.10)
-      json (>= 1.7.7)
-
 PATH
   remote: .
   specs:
@@ -13,6 +5,7 @@ PATH
       activesupport
       chronic
       chronic_duration
+      flapjack-diner (>= 2.0.0.pre.alpha.1)
       gli (= 2.13.1)
       hiredis
       ice_cube
@@ -64,6 +57,9 @@ GEM
     diff-lcs (1.2.5)
     docile (1.1.5)
     find_a_port (1.0.1)
+    flapjack-diner (2.0.0.pre.alpha.1)
+      httparty (>= 0.10)
+      json (>= 1.7.7)
     gherkin (2.12.2)
       multi_json (~> 1.3)
     gherkin (2.12.2-java)
@@ -86,7 +82,7 @@ GEM
       mime-types (>= 1.16, < 3)
     mime-types (2.6.1)
     minitest (5.7.0)
-    multi_json (1.11.1)
+    multi_json (1.11.2)
     multi_test (0.1.2)
     multi_xml (0.5.5)
     numerizer (0.1.1)
@@ -159,7 +155,7 @@ GEM
     swagger-blocks (1.1.3)
     term-ansicolor (1.3.2)
       tins (~> 1.0)
-    terminal-table (1.5.1)
+    terminal-table (1.5.2)
     thor (0.19.1)
     thread_safe (0.3.5)
     thread_safe (0.3.5-java)
@@ -187,7 +183,6 @@ DEPENDENCIES
   cucumber (>= 2.0.0.rc.4)
   delorean
   flapjack!
-  flapjack-diner!
   json_spec
   pact
   rack-test
