@@ -33,11 +33,11 @@ module Flapjack
               l = (method_def.lock_klasses || [])
               case http_method
               when :delete
-                l |= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
+               l |= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
               else
                 jsonapi_associations.each_pair do |n, jal|
                   next unless jal.send(http_method.to_sym).is_a?(TrueClass)
-                  l |= jal.lock_klasses
+                  l |= (jal.lock_klasses || [])
                 end
               end
               l.sort_by(&:name)

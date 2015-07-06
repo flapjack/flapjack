@@ -27,6 +27,25 @@ module Flapjack
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :scheduled_maintenances
 
+      def tag=(t)
+        raise "Scheduled maintenance not saved" unless persisted?
+        raise "Scheduled maintenance already associated" unless check.nil?
+
+        checks = t.checks.intersect
+
+        unless checks.empty?
+          tag_checks = checks.all
+          self.check = tag_checks.shift
+
+          tag_checks.each do |ch|
+            sm = Flapjack::Data::ScheduledMaintenance.new(:start_time => self.start_time,
+              :end_time => end_time, :summary => summary)
+            sm.save
+            sm.check = ch
+          end
+        end
+      end
+
       range_index_by :start_time, :end_time
 
       validates :start_time, :presence => true
@@ -177,6 +196,12 @@ module Flapjack
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
+            ),
+            :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true,
+              :number => :singular, :link => false, :includable => false,
+              :type => 'tag',
+              :klass => Flapjack::Data::Tag
             )
           }
           populate_association_data(@jsonapi_associations)

@@ -13,7 +13,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "creates a scheduled maintenance period" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Tag).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -44,7 +46,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Tag).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -187,7 +191,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "deletes a scheduled maintenance period" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Tag).
+      and_yield
 
     expect(scheduled_maintenance).to receive(:destroy)
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
@@ -199,7 +205,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "deletes multiple scheduled maintenance periods" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Tag).
+      and_yield
 
     scheduled_maintenances = double('scheduled_maintenances')
     expect(scheduled_maintenances).to receive(:count).and_return(2)
@@ -219,7 +227,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "does not delete a scheduled maintenance period that's not found" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(Flapjack::Data::Check,
+           Flapjack::Data::Tag).
+      and_yield
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:find_by_id!).
       with(scheduled_maintenance.id).and_raise(Zermelo::Records::Errors::RecordNotFound.new(Flapjack::Data::ScheduledMaintenance, scheduled_maintenance.id))

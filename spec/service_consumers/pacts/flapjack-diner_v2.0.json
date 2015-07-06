@@ -7,1154 +7,8 @@
   },
   "interactions": [
     {
-      "description": "a POST request adding two tags to a check",
-      "provider_state": "a check and two tags exist",
-      "request": {
-        "method": "post",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            },
-            {
-              "id": "physical",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request adding a tag to a check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "post",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for all tags on a check",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request updating tags for a check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request deleting two tags from a check",
-      "provider_state": "a check with two tags exists",
-      "request": {
-        "method": "delete",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            },
-            {
-              "id": "physical",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request deleting a tag from a check",
-      "provider_state": "a check with a tag exists",
-      "request": {
-        "method": "delete",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "database",
-              "type": "tag"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for a medium's contact",
-      "provider_state": "a contact with a medium exists",
-      "request": {
-        "method": "get",
-        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact"
-          }
-        }
-      }
-    },
-    {
-      "description": "a PATCH request clearing tags for a check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with one scheduled maintenance period",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "scheduled_maintenance",
-            "attributes": {
-              "start_time": "2015-06-29T22:03:20-07:00",
-              "end_time": "2015-06-29T23:03:20-07:00",
-              "summary": "working"
-            },
-            "relationships": {
-              "check": {
-                "data": {
-                  "type": "check",
-                  "id": "1ed80833-6d28-4aba-8603-d81c249b8c23"
-                }
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "scheduled_maintenance",
-            "attributes": {
-              "start_time": "2015-06-29T22:03:20-07:00",
-              "end_time": "2015-06-29T23:03:20-07:00",
-              "summary": "working"
-            },
-            "relationships": {
-              "check": {
-                "links": {
-                  "self": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/relationships/check",
-                  "related": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/check"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two scheduled maintenance periods",
+      "description": "a POST request with one test notification for a check",
       "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "type": "scheduled_maintenance",
-              "attributes": {
-                "start_time": "2015-06-29T22:03:20-07:00",
-                "end_time": "2015-06-29T23:03:20-07:00",
-                "summary": "working"
-              }
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "type": "scheduled_maintenance",
-              "attributes": {
-                "start_time": "2015-06-30T00:03:20-07:00",
-                "end_time": "2015-06-30T01:03:20-07:00",
-                "summary": "working"
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "type": "scheduled_maintenance",
-              "attributes": {
-                "start_time": "2015-06-29T22:03:20-07:00",
-                "end_time": "2015-06-29T23:03:20-07:00",
-                "summary": "working"
-              },
-              "relationships": {
-                "check": {
-                  "links": {
-                    "self": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/relationships/check",
-                    "related": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/check"
-                  }
-                }
-              }
-            },
-            {
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
-              "type": "scheduled_maintenance",
-              "attributes": {
-                "start_time": "2015-06-30T00:03:20-07:00",
-                "end_time": "2015-06-30T01:03:20-07:00",
-                "summary": "working"
-              },
-              "relationships": {
-                "check": {
-                  "links": {
-                    "self": "http://example.org/scheduled_maintenances/5a84c82b-0acb-4703-a27e-0b0db50b298a/relationships/check",
-                    "related": "http://example.org/scheduled_maintenances/5a84c82b-0acb-4703-a27e-0b0db50b298a/check"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for two scheduled maintenance periods",
-      "provider_state": "two scheduled maintenance periods exist",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "scheduled_maintenance",
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
-            },
-            {
-              "type": "scheduled_maintenance",
-              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for a scheduled maintenance period",
-      "provider_state": "a scheduled maintenance period exists",
-      "request": {
-        "method": "delete",
-        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "an unscheduled maintenance period exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "attributes": {
-              "end_time": "2015-06-29T22:03:20-07:00"
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single unscheduled maintenance period",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-            "type": "unscheduled_maintenance",
-            "attributes": {
-              "end_time": "2015-06-29T22:03:20-07:00"
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for two unscheduled maintenance periods",
-      "provider_state": "two unscheduled maintenance periods exist",
-      "request": {
-        "method": "patch",
-        "path": "/unscheduled_maintenances",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
-              "type": "unscheduled_maintenance",
-              "attributes": {
-                "end_time": "2015-06-29T22:03:20-07:00"
-              }
-            },
-            {
-              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
-              "type": "unscheduled_maintenance",
-              "attributes": {
-                "end_time": "2015-06-29T23:03:20-07:00"
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for all media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "get",
-        "path": "/media"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "attributes": {
-                "transport": "email",
-                "address": "ablated@example.org",
-                "interval": 180,
-                "rollup_threshold": 3,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
-                  }
-                }
-              }
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "attributes": {
-                "transport": "sms",
-                "address": "0123456789",
-                "interval": 300,
-                "rollup_threshold": 5,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for two media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "get",
-        "path": "/media",
-        "query": "filter%5B%5D=id%3A9156de3c-ddc6-4637-b1cc-bd035fd61dd3%7Ce2e09943-ed6c-476a-a8a5-ec165426f298"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "attributes": {
-                "transport": "email",
-                "address": "ablated@example.org",
-                "interval": 180,
-                "rollup_threshold": 3,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
-                  }
-                }
-              }
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "attributes": {
-                "transport": "sms",
-                "address": "0123456789",
-                "interval": 300,
-                "rollup_threshold": 5,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for one medium",
-      "provider_state": "a medium exists",
-      "request": {
-        "method": "get",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "type": "medium",
-            "attributes": {
-              "transport": "sms",
-              "address": "0123456789",
-              "interval": 300,
-              "rollup_threshold": 5,
-              "pagerduty_subdomain": null,
-              "pagerduty_token": null,
-              "pagerduty_ack_duration": null
-            },
-            "relationships": {
-              "alerting_checks": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
-                }
-              },
-              "contact": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
-                }
-              },
-              "rules": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with one medium",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "post",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "type": "medium",
-            "attributes": {
-              "transport": "sms",
-              "address": "0123456789",
-              "interval": 300,
-              "rollup_threshold": 5,
-              "pagerduty_subdomain": null,
-              "pagerduty_token": null,
-              "pagerduty_ack_duration": null
-            },
-            "relationships": {
-              "contact": {
-                "data": {
-                  "type": "contact",
-                  "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-                }
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "type": "medium",
-            "attributes": {
-              "transport": "sms",
-              "address": "0123456789",
-              "interval": 300,
-              "rollup_threshold": 5,
-              "pagerduty_subdomain": null,
-              "pagerduty_token": null,
-              "pagerduty_ack_duration": null
-            },
-            "relationships": {
-              "alerting_checks": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
-                }
-              },
-              "contact": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
-                }
-              },
-              "rules": {
-                "links": {
-                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
-                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with two media",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "post",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "attributes": {
-                "transport": "email",
-                "address": "ablated@example.org",
-                "interval": 180,
-                "rollup_threshold": 3,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "contact": {
-                  "data": {
-                    "type": "contact",
-                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-                  }
-                }
-              }
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "attributes": {
-                "transport": "sms",
-                "address": "0123456789",
-                "interval": 300,
-                "rollup_threshold": 5,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "contact": {
-                  "data": {
-                    "type": "contact",
-                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "attributes": {
-                "transport": "email",
-                "address": "ablated@example.org",
-                "interval": 180,
-                "rollup_threshold": 3,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
-                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
-                  }
-                }
-              }
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "attributes": {
-                "transport": "sms",
-                "address": "0123456789",
-                "interval": 300,
-                "rollup_threshold": 5,
-                "pagerduty_subdomain": null,
-                "pagerduty_token": null,
-                "pagerduty_ack_duration": null
-              },
-              "relationships": {
-                "alerting_checks": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
-                  }
-                },
-                "contact": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
-                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for two media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "delete",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "medium",
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
-            },
-            {
-              "type": "medium",
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for one medium",
-      "provider_state": "a medium exists",
-      "request": {
-        "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "body": null
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for one medium",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "delete",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single medium",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-            "type": "medium",
-            "attributes": {
-              "interval": 50
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single medium",
-      "provider_state": "a medium exists",
-      "request": {
-        "method": "patch",
-        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-            "type": "medium",
-            "attributes": {
-              "interval": 50
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for two media",
-      "provider_state": "two media exist",
-      "request": {
-        "method": "patch",
-        "path": "/media",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
-              "type": "medium",
-              "attributes": {
-                "interval": 50
-              }
-            },
-            {
-              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
-              "type": "medium",
-              "attributes": {
-                "rollup_threshold": 5
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a POST request with two test notifications",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "type": "test_notification",
-              "attributes": {
-                "summary": "Rhinoceros"
-              },
-              "relationships": {
-                "tag": {
-                  "data": {
-                    "type": "tag",
-                    "id": "database"
-                  }
-                }
-              }
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "type": "test_notification",
-              "attributes": {
-                "summary": "Tapir"
-              },
-              "relationships": {
-                "tag": {
-                  "data": {
-                    "type": "tag",
-                    "id": "database"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-              "type": "test_notification",
-              "attributes": {
-                "summary": "Rhinoceros"
-              }
-            },
-            {
-              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
-              "type": "test_notification",
-              "attributes": {
-                "summary": "Tapir"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one test notification",
-      "provider_state": "a check exists",
       "request": {
         "method": "post",
         "path": "/test_notifications",
@@ -1180,18 +34,17 @@
         }
       },
       "response": {
-        "status": 201,
+        "status": 404,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "type": "test_notification",
-            "attributes": {
-              "summary": "Rhinoceros"
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
             }
-          }
+          ]
         }
       }
     },
@@ -1238,49 +91,6 @@
       }
     },
     {
-      "description": "a POST request with one test notification",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "post",
-        "path": "/test_notifications",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "type": "test_notification",
-            "attributes": {
-              "summary": "Rhinoceros"
-            },
-            "relationships": {
-              "tag": {
-                "data": {
-                  "type": "tag",
-                  "id": "database"
-                }
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
-            "type": "test_notification",
-            "attributes": {
-              "summary": "Rhinoceros"
-            }
-          }
-        }
-      }
-    },
-    {
       "description": "a POST request with two test notifications",
       "provider_state": "a check exists",
       "request": {
@@ -1350,8 +160,120 @@
       }
     },
     {
-      "description": "a POST request with one test notification for a check",
-      "provider_state": "no data exists",
+      "description": "a POST request with two test notifications",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "type": "test_notification",
+              "attributes": {
+                "summary": "Rhinoceros"
+              },
+              "relationships": {
+                "tag": {
+                  "data": {
+                    "type": "tag",
+                    "id": "database"
+                  }
+                }
+              }
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "type": "test_notification",
+              "attributes": {
+                "summary": "Tapir"
+              },
+              "relationships": {
+                "tag": {
+                  "data": {
+                    "type": "tag",
+                    "id": "database"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+              "type": "test_notification",
+              "attributes": {
+                "summary": "Rhinoceros"
+              }
+            },
+            {
+              "id": "a56c6ca5-c3c0-453d-96da-d09d459615e4",
+              "type": "test_notification",
+              "attributes": {
+                "summary": "Tapir"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "post",
+        "path": "/test_notifications",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "type": "test_notification",
+            "attributes": {
+              "summary": "Rhinoceros"
+            },
+            "relationships": {
+              "tag": {
+                "data": {
+                  "type": "tag",
+                  "id": "database"
+                }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "type": "test_notification",
+            "attributes": {
+              "summary": "Rhinoceros"
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with one test notification",
+      "provider_state": "a check exists",
       "request": {
         "method": "post",
         "path": "/test_notifications",
@@ -1377,452 +299,19 @@
         }
       },
       "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with two tags",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "tag",
-              "attributes": {
-                "name": "database"
-              }
-            },
-            {
-              "type": "tag",
-              "attributes": {
-                "name": "physical"
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "tag",
-              "attributes": {
-                "name": "database"
-              },
-              "relationships": {
-                "checks": {
-                  "links": {
-                    "self": "http://example.org/tags/database/relationships/checks",
-                    "related": "http://example.org/tags/database/checks"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/tags/database/relationships/rules",
-                    "related": "http://example.org/tags/database/rules"
-                  }
-                }
-              }
-            },
-            {
-              "type": "tag",
-              "attributes": {
-                "name": "physical"
-              },
-              "relationships": {
-                "checks": {
-                  "links": {
-                    "self": "http://example.org/tags/physical/relationships/checks",
-                    "related": "http://example.org/tags/physical/checks"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/tags/physical/relationships/rules",
-                    "related": "http://example.org/tags/physical/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one tag",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "type": "tag",
-            "attributes": {
-              "name": "database"
-            }
-          }
-        }
-      },
-      "response": {
         "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": {
-            "type": "tag",
+            "id": "8f78b421-4e89-4423-ab09-c0d76b4a698c",
+            "type": "test_notification",
             "attributes": {
-              "name": "database"
-            },
-            "relationships": {
-              "checks": {
-                "links": {
-                  "self": "http://example.org/tags/database/relationships/checks",
-                  "related": "http://example.org/tags/database/checks"
-                }
-              },
-              "rules": {
-                "links": {
-                  "self": "http://example.org/tags/database/relationships/rules",
-                  "related": "http://example.org/tags/database/rules"
-                }
-              }
+              "summary": "Rhinoceros"
             }
           }
         }
-      }
-    },
-    {
-      "description": "a DELETE request for a single tag",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "delete",
-        "path": "/tags/database",
-        "body": null
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Tag record, id: 'database'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a DELETE request for a single tag",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "delete",
-        "path": "/tags/database",
-        "body": null
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a DELETE request for two tags",
-      "provider_state": "two tags exist",
-      "request": {
-        "method": "delete",
-        "path": "/tags",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "tag",
-              "id": "database"
-            },
-            {
-              "type": "tag",
-              "id": "physical"
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a GET request for all tags",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "type": "tag",
-              "attributes": {
-                "name": "database"
-              },
-              "relationships": {
-                "checks": {
-                  "links": {
-                    "self": "http://example.org/tags/database/relationships/checks",
-                    "related": "http://example.org/tags/database/checks"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/tags/database/relationships/rules",
-                    "related": "http://example.org/tags/database/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all tags",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/tags"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for tag 'www.example.com:SSH'",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/tags/database"
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Tag record, id: 'database'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for tag 'www.example.com:SSH'",
-      "provider_state": "a tag exists",
-      "request": {
-        "method": "get",
-        "path": "/tags/database"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "tag",
-            "attributes": {
-              "name": "database"
-            },
-            "relationships": {
-              "checks": {
-                "links": {
-                  "self": "http://example.org/tags/database/relationships/checks",
-                  "related": "http://example.org/tags/database/checks"
-                }
-              },
-              "rules": {
-                "links": {
-                  "self": "http://example.org/tags/database/relationships/rules",
-                  "related": "http://example.org/tags/database/rules"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for a single check",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "attributes": {
-              "enabled": false
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single check",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "attributes": {
-              "enabled": false
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a PATCH request for two checks",
-      "provider_state": "two checks exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "type": "check",
-              "attributes": {
-                "enabled": false
-              }
-            },
-            {
-              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
-              "type": "check",
-              "attributes": {
-                "enabled": true
-              }
-            }
-          ]
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for a single check",
-      "provider_state": "a check and a tag exist",
-      "request": {
-        "method": "patch",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-            "type": "check",
-            "relationships": {
-              "tags": {
-                "data": [
-                  {
-                    "type": "tag",
-                    "id": "database"
-                  }
-                ]
-              }
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
       }
     },
     {
@@ -2216,7 +705,7 @@
     },
     {
       "description": "a GET request for checks by name",
-      "provider_state": "no data exists",
+      "provider_state": "a check exists",
       "request": {
         "method": "get",
         "path": "/checks",
@@ -2229,14 +718,83 @@
         },
         "body": {
           "data": [
-
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "type": "check",
+              "attributes": {
+                "name": "www.example.com:SSH",
+                "enabled": true
+              },
+              "relationships": {
+                "alerting_media": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/alerting_media",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/alerting_media"
+                  }
+                },
+                "contacts": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/contacts",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/contacts"
+                  }
+                },
+                "current_scheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_scheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_scheduled_maintenances"
+                  }
+                },
+                "current_state": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_state",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_state"
+                  }
+                },
+                "current_unscheduled_maintenance": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_unscheduled_maintenance",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_unscheduled_maintenance"
+                  }
+                },
+                "latest_notifications": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/latest_notifications",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/latest_notifications"
+                  }
+                },
+                "scheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/scheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/scheduled_maintenances"
+                  }
+                },
+                "states": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/states",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/states"
+                  }
+                },
+                "tags": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
+                  }
+                },
+                "unscheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/unscheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/unscheduled_maintenances"
+                  }
+                }
+              }
+            }
           ]
         }
       }
     },
     {
       "description": "a GET request for checks by name",
-      "provider_state": "a check exists",
+      "provider_state": "no data exists",
       "request": {
         "method": "get",
         "path": "/checks",
@@ -2249,183 +807,7 @@
         },
         "body": {
           "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "type": "check",
-              "attributes": {
-                "name": "www.example.com:SSH",
-                "enabled": true
-              },
-              "relationships": {
-                "alerting_media": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/alerting_media",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/alerting_media"
-                  }
-                },
-                "contacts": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/contacts",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/contacts"
-                  }
-                },
-                "current_scheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_scheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_scheduled_maintenances"
-                  }
-                },
-                "current_state": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_state",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_state"
-                  }
-                },
-                "current_unscheduled_maintenance": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_unscheduled_maintenance",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_unscheduled_maintenance"
-                  }
-                },
-                "latest_notifications": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/latest_notifications",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/latest_notifications"
-                  }
-                },
-                "scheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/scheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/scheduled_maintenances"
-                  }
-                },
-                "states": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/states",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/states"
-                  }
-                },
-                "tags": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
-                  }
-                },
-                "unscheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/unscheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/unscheduled_maintenances"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
 
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all checks",
-      "provider_state": "a check exists",
-      "request": {
-        "method": "get",
-        "path": "/checks"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
-              "type": "check",
-              "attributes": {
-                "name": "www.example.com:SSH",
-                "enabled": true
-              },
-              "relationships": {
-                "alerting_media": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/alerting_media",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/alerting_media"
-                  }
-                },
-                "contacts": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/contacts",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/contacts"
-                  }
-                },
-                "current_scheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_scheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_scheduled_maintenances"
-                  }
-                },
-                "current_state": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_state",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_state"
-                  }
-                },
-                "current_unscheduled_maintenance": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_unscheduled_maintenance",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_unscheduled_maintenance"
-                  }
-                },
-                "latest_notifications": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/latest_notifications",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/latest_notifications"
-                  }
-                },
-                "scheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/scheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/scheduled_maintenances"
-                  }
-                },
-                "states": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/states",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/states"
-                  }
-                },
-                "tags": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
-                  }
-                },
-                "unscheduled_maintenances": {
-                  "links": {
-                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/unscheduled_maintenances",
-                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/unscheduled_maintenances"
-                  }
-                }
-              }
-            }
           ]
         }
       }
@@ -2610,23 +992,108 @@
       }
     },
     {
-      "description": "a GET request for a check",
-      "provider_state": "no data exists",
+      "description": "a GET request for all checks",
+      "provider_state": "a check exists",
       "request": {
         "method": "get",
-        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+        "path": "/checks"
       },
       "response": {
-        "status": 404,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
-          "errors": [
+          "data": [
             {
-              "status": "404",
-              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "type": "check",
+              "attributes": {
+                "name": "www.example.com:SSH",
+                "enabled": true
+              },
+              "relationships": {
+                "alerting_media": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/alerting_media",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/alerting_media"
+                  }
+                },
+                "contacts": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/contacts",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/contacts"
+                  }
+                },
+                "current_scheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_scheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_scheduled_maintenances"
+                  }
+                },
+                "current_state": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_state",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_state"
+                  }
+                },
+                "current_unscheduled_maintenance": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/current_unscheduled_maintenance",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/current_unscheduled_maintenance"
+                  }
+                },
+                "latest_notifications": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/latest_notifications",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/latest_notifications"
+                  }
+                },
+                "scheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/scheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/scheduled_maintenances"
+                  }
+                },
+                "states": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/states",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/states"
+                  }
+                },
+                "tags": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
+                  }
+                },
+                "unscheduled_maintenances": {
+                  "links": {
+                    "self": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/unscheduled_maintenances",
+                    "related": "http://example.org/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/unscheduled_maintenances"
+                  }
+                }
+              }
             }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all checks",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/checks"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
           ]
         }
       }
@@ -2718,27 +1185,178 @@
       }
     },
     {
-      "description": "a POST request with one rule",
-      "provider_state": "a contact exists",
+      "description": "a GET request for a check",
+      "provider_state": "no data exists",
       "request": {
-        "method": "post",
-        "path": "/rules",
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
         "headers": {
           "Content-Type": "application/vnd.api+json"
         },
         "body": {
           "data": {
-            "id": "05983623-fcef-42da-af44-ed6990b500fa",
-            "type": "rule",
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "relationships": {
+              "tags": {
+                "data": [
+                  {
+                    "type": "tag",
+                    "id": "database"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for two checks",
+      "provider_state": "two checks exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+              "type": "check",
+              "attributes": {
+                "enabled": false
+              }
+            },
+            {
+              "id": "29e913cf-29ea-4ae5-94f6-7069cf4a1514",
+              "type": "check",
+              "attributes": {
+                "enabled": true
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
             "attributes": {
-              "is_blackhole": false,
-              "conditions_list": "critical"
+              "enabled": false
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Check record, id: '1ed80833-6d28-4aba-8603-d81c249b8c23'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for a single check",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "1ed80833-6d28-4aba-8603-d81c249b8c23",
+            "type": "check",
+            "attributes": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a POST request with one scheduled maintenance period",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "post",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "scheduled_maintenance",
+            "attributes": {
+              "start_time": "2015-07-05T18:09:27-06:00",
+              "end_time": "2015-07-05T19:09:27-06:00",
+              "summary": "working"
             },
             "relationships": {
-              "contact": {
+              "check": {
                 "data": {
-                  "type": "contact",
-                  "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                  "type": "check",
+                  "id": "1ed80833-6d28-4aba-8603-d81c249b8c23"
                 }
               }
             }
@@ -2747,6 +1365,1016 @@
       },
       "response": {
         "status": 201,
+        "headers": {
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "scheduled_maintenance",
+            "attributes": {
+              "start_time": "2015-07-05T18:09:27-06:00",
+              "end_time": "2015-07-05T19:09:27-06:00",
+              "summary": "working"
+            },
+            "relationships": {
+              "check": {
+                "links": {
+                  "self": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/relationships/check",
+                  "related": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/check"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with two scheduled maintenance periods",
+      "provider_state": "a check exists",
+      "request": {
+        "method": "post",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "type": "scheduled_maintenance",
+              "attributes": {
+                "start_time": "2015-07-05T18:09:27-06:00",
+                "end_time": "2015-07-05T19:09:27-06:00",
+                "summary": "working"
+              },
+              "relationships": {
+                "check": {
+                  "data": {
+                    "type": "check",
+                    "id": "1ed80833-6d28-4aba-8603-d81c249b8c23"
+                  }
+                }
+              }
+            },
+            {
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "type": "scheduled_maintenance",
+              "attributes": {
+                "start_time": "2015-07-05T20:09:27-06:00",
+                "end_time": "2015-07-05T21:09:27-06:00",
+                "summary": "working"
+              },
+              "relationships": {
+                "check": {
+                  "data": {
+                    "type": "check",
+                    "id": "1ed80833-6d28-4aba-8603-d81c249b8c23"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "type": "scheduled_maintenance",
+              "attributes": {
+                "start_time": "2015-07-05T18:09:27-06:00",
+                "end_time": "2015-07-05T19:09:27-06:00",
+                "summary": "working"
+              },
+              "relationships": {
+                "check": {
+                  "links": {
+                    "self": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/relationships/check",
+                    "related": "http://example.org/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4/check"
+                  }
+                }
+              }
+            },
+            {
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a",
+              "type": "scheduled_maintenance",
+              "attributes": {
+                "start_time": "2015-07-05T20:09:27-06:00",
+                "end_time": "2015-07-05T21:09:27-06:00",
+                "summary": "working"
+              },
+              "relationships": {
+                "check": {
+                  "links": {
+                    "self": "http://example.org/scheduled_maintenances/5a84c82b-0acb-4703-a27e-0b0db50b298a/relationships/check",
+                    "related": "http://example.org/scheduled_maintenances/5a84c82b-0acb-4703-a27e-0b0db50b298a/check"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for a scheduled maintenance period",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find ScheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for a scheduled maintenance period",
+      "provider_state": "a scheduled maintenance period exists",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4"
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for two scheduled maintenance periods",
+      "provider_state": "two scheduled maintenance periods exist",
+      "request": {
+        "method": "delete",
+        "path": "/scheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "scheduled_maintenance",
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4"
+            },
+            {
+              "type": "scheduled_maintenance",
+              "id": "5a84c82b-0acb-4703-a27e-0b0db50b298a"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single unscheduled maintenance period",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "patch",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "attributes": {
+              "end_time": "2015-07-05T18:09:27-06:00"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find UnscheduledMaintenance record, id: '9b7a7af4-8251-4216-8e86-2d4068447ae4'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a PATCH request for a single unscheduled maintenance period",
+      "provider_state": "an unscheduled maintenance period exists",
+      "request": {
+        "method": "patch",
+        "path": "/unscheduled_maintenances/9b7a7af4-8251-4216-8e86-2d4068447ae4",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+            "type": "unscheduled_maintenance",
+            "attributes": {
+              "end_time": "2015-07-05T18:09:27-06:00"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for two unscheduled maintenance periods",
+      "provider_state": "two unscheduled maintenance periods exist",
+      "request": {
+        "method": "patch",
+        "path": "/unscheduled_maintenances",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9b7a7af4-8251-4216-8e86-2d4068447ae4",
+              "type": "unscheduled_maintenance",
+              "attributes": {
+                "end_time": "2015-07-05T18:09:27-06:00"
+              }
+            },
+            {
+              "id": "41895714-9b77-48a9-a373-5f6005b1ce95",
+              "type": "unscheduled_maintenance",
+              "attributes": {
+                "end_time": "2015-07-05T19:09:27-06:00"
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for a medium's contact",
+      "provider_state": "a contact with a medium exists",
+      "request": {
+        "method": "get",
+        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact"
+          }
+        }
+      }
+    },
+    {
+      "description": "a DELETE request deleting two tags from a check",
+      "provider_state": "a check with two tags exists",
+      "request": {
+        "method": "delete",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            },
+            {
+              "id": "physical",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a POST request adding a tag to a check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "post",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for all tags on a check",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request deleting a tag from a check",
+      "provider_state": "a check with a tag exists",
+      "request": {
+        "method": "delete",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a POST request adding two tags to a check",
+      "provider_state": "a check and two tags exist",
+      "request": {
+        "method": "post",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            },
+            {
+              "id": "physical",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request updating tags for a check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "database",
+              "type": "tag"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request clearing tags for a check",
+      "provider_state": "a check and a tag exist",
+      "request": {
+        "method": "patch",
+        "path": "/checks/1ed80833-6d28-4aba-8603-d81c249b8c23/relationships/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for some statistics",
+      "provider_state": "a global statistics object exists",
+      "request": {
+        "method": "get",
+        "path": "/statistics",
+        "query": "filter%5B%5D=instance_name%3Aglobal"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c63f8029-7c2b-4a33-b9f9-fbb2228c8037",
+              "type": "statistic",
+              "attributes": {
+                "instance_name": "global",
+                "created_at": {
+                  "json_class": "Pact::Term",
+                  "data": {
+                    "generate": "2015-07-05T18:09:27-06:00",
+                    "matcher": {
+                      "json_class": "Regexp",
+                      "o": 0,
+                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                    }
+                  }
+                },
+                "all_events": 0,
+                "ok_events": 0,
+                "failure_events": 0,
+                "action_events": 0,
+                "invalid_events": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all statistics",
+      "provider_state": "a global statistics object exists",
+      "request": {
+        "method": "get",
+        "path": "/statistics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c63f8029-7c2b-4a33-b9f9-fbb2228c8037",
+              "type": "statistic",
+              "attributes": {
+                "instance_name": "global",
+                "created_at": {
+                  "json_class": "Pact::Term",
+                  "data": {
+                    "generate": "2015-07-05T18:09:27-06:00",
+                    "matcher": {
+                      "json_class": "Regexp",
+                      "o": 0,
+                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                    }
+                  }
+                },
+                "all_events": 0,
+                "ok_events": 0,
+                "failure_events": 0,
+                "action_events": 0,
+                "invalid_events": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for some metrics",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/metrics",
+        "query": "fields%5B%5D=total_keys&fields%5B%5D=processed_events"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "metrics",
+            "attributes": {
+              "processed_events": {
+                "all_events": 0,
+                "ok_events": 0,
+                "failure_events": 0,
+                "action_events": 0,
+                "invalid_events": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all metrics",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/metrics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "metrics",
+            "attributes": {
+              "processed_events": {
+                "all_events": 0,
+                "ok_events": 0,
+                "failure_events": 0,
+                "action_events": 0,
+                "invalid_events": 0
+              },
+              "event_queue_length": 0,
+              "check_freshness": {
+                "0": 0,
+                "60": 0,
+                "300": 0,
+                "900": 0,
+                "3600": 0
+              },
+              "check_counts": {
+                "all": 0,
+                "enabled": 0,
+                "failing": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all tags",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "tag",
+              "attributes": {
+                "name": "database"
+              },
+              "relationships": {
+                "checks": {
+                  "links": {
+                    "self": "http://example.org/tags/database/relationships/checks",
+                    "related": "http://example.org/tags/database/checks"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/tags/database/relationships/rules",
+                    "related": "http://example.org/tags/database/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for tag 'www.example.com:SSH'",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "get",
+        "path": "/tags/database"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "tag",
+            "attributes": {
+              "name": "database"
+            },
+            "relationships": {
+              "checks": {
+                "links": {
+                  "self": "http://example.org/tags/database/relationships/checks",
+                  "related": "http://example.org/tags/database/checks"
+                }
+              },
+              "rules": {
+                "links": {
+                  "self": "http://example.org/tags/database/relationships/rules",
+                  "related": "http://example.org/tags/database/rules"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for tag 'www.example.com:SSH'",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/tags/database"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Tag record, id: 'database'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with two tags",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "tag",
+              "attributes": {
+                "name": "database"
+              }
+            },
+            {
+              "type": "tag",
+              "attributes": {
+                "name": "physical"
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "tag",
+              "attributes": {
+                "name": "database"
+              },
+              "relationships": {
+                "checks": {
+                  "links": {
+                    "self": "http://example.org/tags/database/relationships/checks",
+                    "related": "http://example.org/tags/database/checks"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/tags/database/relationships/rules",
+                    "related": "http://example.org/tags/database/rules"
+                  }
+                }
+              }
+            },
+            {
+              "type": "tag",
+              "attributes": {
+                "name": "physical"
+              },
+              "relationships": {
+                "checks": {
+                  "links": {
+                    "self": "http://example.org/tags/physical/relationships/checks",
+                    "related": "http://example.org/tags/physical/checks"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/tags/physical/relationships/rules",
+                    "related": "http://example.org/tags/physical/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one tag",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "type": "tag",
+            "attributes": {
+              "name": "database"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "type": "tag",
+            "attributes": {
+              "name": "database"
+            },
+            "relationships": {
+              "checks": {
+                "links": {
+                  "self": "http://example.org/tags/database/relationships/checks",
+                  "related": "http://example.org/tags/database/checks"
+                }
+              },
+              "rules": {
+                "links": {
+                  "self": "http://example.org/tags/database/relationships/rules",
+                  "related": "http://example.org/tags/database/rules"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for a single tag",
+      "provider_state": "a tag exists",
+      "request": {
+        "method": "delete",
+        "path": "/tags/database",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for a single tag",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "delete",
+        "path": "/tags/database",
+        "body": null
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Tag record, id: 'database'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for two tags",
+      "provider_state": "two tags exist",
+      "request": {
+        "method": "delete",
+        "path": "/tags",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "tag",
+              "id": "database"
+            },
+            {
+              "type": "tag",
+              "id": "physical"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a GET request for a single rule",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all rules",
+      "provider_state": "a rule exists",
+      "request": {
+        "method": "get",
+        "path": "/rules"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule",
+              "attributes": {
+                "is_blackhole": false,
+                "conditions_list": "critical"
+              },
+              "relationships": {
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/contact",
+                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/contact"
+                  }
+                },
+                "media": {
+                  "links": {
+                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/media",
+                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/media"
+                  }
+                },
+                "tags": {
+                  "links": {
+                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/tags",
+                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/tags"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for a single rule",
+      "provider_state": "a rule exists",
+      "request": {
+        "method": "get",
+        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+      },
+      "response": {
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -2783,53 +2411,15 @@
       }
     },
     {
-      "description": "a POST request with two rules",
-      "provider_state": "a contact exists",
+      "description": "a GET request for two rules",
+      "provider_state": "two rules exist",
       "request": {
-        "method": "post",
+        "method": "get",
         "path": "/rules",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule",
-              "attributes": {
-                "is_blackhole": false,
-                "conditions_list": "critical"
-              },
-              "relationships": {
-                "contact": {
-                  "data": {
-                    "type": "contact",
-                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-                  }
-                }
-              }
-            },
-            {
-              "id": "20f182fc-6e32-4794-9007-97366d162c51",
-              "type": "rule",
-              "attributes": {
-                "is_blackhole": false,
-                "conditions_list": "warning"
-              },
-              "relationships": {
-                "contact": {
-                  "data": {
-                    "type": "contact",
-                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
-                  }
-                }
-              }
-            }
-          ]
-        }
+        "query": "filter%5B%5D=id%3A05983623-fcef-42da-af44-ed6990b500fa%7C20f182fc-6e32-4794-9007-97366d162c51"
       },
       "response": {
-        "status": 201,
+        "status": 200,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -2963,15 +2553,53 @@
       }
     },
     {
-      "description": "a GET request for two rules",
-      "provider_state": "two rules exist",
+      "description": "a POST request with two rules",
+      "provider_state": "a contact exists",
       "request": {
-        "method": "get",
+        "method": "post",
         "path": "/rules",
-        "query": "filter%5B%5D=id%3A05983623-fcef-42da-af44-ed6990b500fa%7C20f182fc-6e32-4794-9007-97366d162c51"
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "05983623-fcef-42da-af44-ed6990b500fa",
+              "type": "rule",
+              "attributes": {
+                "is_blackhole": false,
+                "conditions_list": "critical"
+              },
+              "relationships": {
+                "contact": {
+                  "data": {
+                    "type": "contact",
+                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                  }
+                }
+              }
+            },
+            {
+              "id": "20f182fc-6e32-4794-9007-97366d162c51",
+              "type": "rule",
+              "attributes": {
+                "is_blackhole": false,
+                "conditions_list": "warning"
+              },
+              "relationships": {
+                "contact": {
+                  "data": {
+                    "type": "contact",
+                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                  }
+                }
+              }
+            }
+          ]
+        }
       },
       "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -3038,14 +2666,35 @@
       }
     },
     {
-      "description": "a GET request for a single rule",
-      "provider_state": "a rule exists",
+      "description": "a POST request with one rule",
+      "provider_state": "a contact exists",
       "request": {
-        "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
+        "method": "post",
+        "path": "/rules",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "05983623-fcef-42da-af44-ed6990b500fa",
+            "type": "rule",
+            "attributes": {
+              "is_blackhole": false,
+              "conditions_list": "critical"
+            },
+            "relationships": {
+              "contact": {
+                "data": {
+                  "type": "contact",
+                  "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                }
+              }
+            }
+          }
+        }
       },
       "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
@@ -3082,65 +2731,51 @@
       }
     },
     {
-      "description": "a GET request for a single rule",
-      "provider_state": "no data exists",
+      "description": "a GET request for all states",
+      "provider_state": "a state exists",
       "request": {
         "method": "get",
-        "path": "/rules/05983623-fcef-42da-af44-ed6990b500fa"
-      },
-      "response": {
-        "status": 404,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "errors": [
-            {
-              "status": "404",
-              "detail": "could not find Rule record, id: '05983623-fcef-42da-af44-ed6990b500fa'"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all rules",
-      "provider_state": "a rule exists",
-      "request": {
-        "method": "get",
-        "path": "/rules"
+        "path": "/states"
       },
       "response": {
         "status": 200,
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": [
             {
-              "id": "05983623-fcef-42da-af44-ed6990b500fa",
-              "type": "rule",
+              "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
+              "type": "state",
               "attributes": {
-                "is_blackhole": false,
-                "conditions_list": "critical"
+                "created_at": {
+                  "json_class": "Pact::Term",
+                  "data": {
+                    "generate": "2015-07-05T18:08:57-06:00",
+                    "matcher": {
+                      "json_class": "Regexp",
+                      "o": 0,
+                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                    }
+                  }
+                },
+                "updated_at": {
+                  "json_class": "Pact::Term",
+                  "data": {
+                    "generate": "2015-07-05T18:08:57-06:00",
+                    "matcher": {
+                      "json_class": "Regexp",
+                      "o": 0,
+                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                    }
+                  }
+                },
+                "condition": "critical"
               },
               "relationships": {
-                "contact": {
+                "check": {
                   "links": {
-                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/contact",
-                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/contact"
-                  }
-                },
-                "media": {
-                  "links": {
-                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/media",
-                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/media"
-                  }
-                },
-                "tags": {
-                  "links": {
-                    "self": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/relationships/tags",
-                    "related": "http://example.org/rules/05983623-fcef-42da-af44-ed6990b500fa/tags"
+                    "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
+                    "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
                   }
                 }
               }
@@ -3150,29 +2785,79 @@
       }
     },
     {
-      "description": "a GET request for some statistics",
-      "provider_state": "a global statistics object exists",
+      "description": "a GET request for a single state",
+      "provider_state": "a state exists",
       "request": {
         "method": "get",
-        "path": "/statistics",
-        "query": "filter%5B%5D=instance_name%3Aglobal"
+        "path": "/states/142acf62-31e7-4074-ada9-a30ae73d880d"
       },
       "response": {
         "status": 200,
         "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
+            "type": "state",
+            "attributes": {
+              "created_at": {
+                "json_class": "Pact::Term",
+                "data": {
+                  "generate": "2015-07-05T18:08:57-06:00",
+                  "matcher": {
+                    "json_class": "Regexp",
+                    "o": 0,
+                    "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                  }
+                }
+              },
+              "updated_at": {
+                "json_class": "Pact::Term",
+                "data": {
+                  "generate": "2015-07-05T18:08:57-06:00",
+                  "matcher": {
+                    "json_class": "Regexp",
+                    "o": 0,
+                    "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                  }
+                }
+              },
+              "condition": "critical"
+            },
+            "relationships": {
+              "check": {
+                "links": {
+                  "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
+                  "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a GET request for all states within a date range",
+      "provider_state": "a state exists",
+      "request": {
+        "method": "get",
+        "path": "/states",
+        "query": "filter%5B%5D=created_at%3A2015-07-05T18%3A08%3A27-06%3A00.."
+      },
+      "response": {
+        "status": 200,
+        "headers": {
         },
         "body": {
           "data": [
             {
-              "id": "c63f8029-7c2b-4a33-b9f9-fbb2228c8037",
-              "type": "statistic",
+              "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
+              "type": "state",
               "attributes": {
-                "instance_name": "global",
                 "created_at": {
                   "json_class": "Pact::Term",
                   "data": {
-                    "generate": "2015-06-29T22:03:21-07:00",
+                    "generate": "2015-07-05T18:08:57-06:00",
                     "matcher": {
                       "json_class": "Regexp",
                       "o": 0,
@@ -3180,11 +2865,26 @@
                     }
                   }
                 },
-                "all_events": 0,
-                "ok_events": 0,
-                "failure_events": 0,
-                "action_events": 0,
-                "invalid_events": 0
+                "updated_at": {
+                  "json_class": "Pact::Term",
+                  "data": {
+                    "generate": "2015-07-05T18:08:57-06:00",
+                    "matcher": {
+                      "json_class": "Regexp",
+                      "o": 0,
+                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
+                    }
+                  }
+                },
+                "condition": "critical"
+              },
+              "relationships": {
+                "check": {
+                  "links": {
+                    "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
+                    "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
+                  }
+                }
               }
             }
           ]
@@ -3192,41 +2892,187 @@
       }
     },
     {
-      "description": "a GET request for all statistics",
-      "provider_state": "a global statistics object exists",
+      "description": "a POST request with two contacts",
+      "provider_state": "no data exists",
       "request": {
-        "method": "get",
-        "path": "/statistics"
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "type": "contact",
+              "attributes": {
+                "name": "Jim Smith",
+                "timezone": "UTC"
+              }
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "type": "contact",
+              "attributes": {
+                "name": "Joan Smith"
+              }
+            }
+          ]
+        }
       },
       "response": {
-        "status": 200,
+        "status": 201,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "data": [
             {
-              "id": "c63f8029-7c2b-4a33-b9f9-fbb2228c8037",
-              "type": "statistic",
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "type": "contact",
               "attributes": {
-                "instance_name": "global",
-                "created_at": {
-                  "json_class": "Pact::Term",
-                  "data": {
-                    "generate": "2015-06-29T22:03:21-07:00",
-                    "matcher": {
-                      "json_class": "Regexp",
-                      "o": 0,
-                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                    }
+                "name": "Jim Smith",
+                "timezone": "UTC"
+              },
+              "relationships": {
+                "checks": {
+                  "links": {
+                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/checks",
+                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/checks"
                   }
                 },
-                "all_events": 0,
-                "ok_events": 0,
-                "failure_events": 0,
-                "action_events": 0,
-                "invalid_events": 0
+                "media": {
+                  "links": {
+                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/media",
+                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/media"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/rules",
+                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/rules"
+                  }
+                }
               }
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "type": "contact",
+              "attributes": {
+                "name": "Joan Smith"
+              },
+              "relationships": {
+                "checks": {
+                  "links": {
+                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/checks",
+                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/checks"
+                  }
+                },
+                "media": {
+                  "links": {
+                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/media",
+                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/media"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/rules",
+                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a POST request with one contact",
+      "provider_state": "no data exists",
+      "request": {
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "attributes": {
+              "name": "Jim Smith",
+              "timezone": "UTC"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "attributes": {
+              "name": "Jim Smith",
+              "timezone": "UTC"
+            },
+            "relationships": {
+              "checks": {
+                "links": {
+                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/checks",
+                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/checks"
+                }
+              },
+              "media": {
+                "links": {
+                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/media",
+                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/media"
+                }
+              },
+              "rules": {
+                "links": {
+                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/rules",
+                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/rules"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with one contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "post",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+            "type": "contact",
+            "attributes": {
+              "name": "Jim Smith",
+              "timezone": "UTC"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 409,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "409",
+              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
             }
           ]
         }
@@ -3249,41 +3095,6 @@
               "name": "Hello There"
             }
           }
-        }
-      },
-      "response": {
-        "status": 204,
-        "headers": {
-        },
-        "body": ""
-      }
-    },
-    {
-      "description": "a PATCH request for two contacts",
-      "provider_state": "two contacts exist",
-      "request": {
-        "method": "patch",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "type": "contact",
-              "attributes": {
-                "name": "Hello There"
-              }
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "type": "contact",
-              "attributes": {
-                "name": "Goodbye Now"
-              }
-            }
-          ]
         }
       },
       "response": {
@@ -3325,6 +3136,41 @@
             }
           ]
         }
+      }
+    },
+    {
+      "description": "a PATCH request for two contacts",
+      "provider_state": "two contacts exist",
+      "request": {
+        "method": "patch",
+        "path": "/contacts",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+              "type": "contact",
+              "attributes": {
+                "name": "Hello There"
+              }
+            },
+            {
+              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
+              "type": "contact",
+              "attributes": {
+                "name": "Goodbye Now"
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
       }
     },
     {
@@ -3665,190 +3511,41 @@
       }
     },
     {
-      "description": "a POST request with two contacts",
+      "description": "a DELETE request for a single contact",
       "provider_state": "no data exists",
       "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json; ext=bulk"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "type": "contact",
-              "attributes": {
-                "name": "Jim Smith",
-                "timezone": "UTC"
-              }
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "type": "contact",
-              "attributes": {
-                "name": "Joan Smith"
-              }
-            }
-          ]
-        }
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "body": null
       },
       "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": [
-            {
-              "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-              "type": "contact",
-              "attributes": {
-                "name": "Jim Smith",
-                "timezone": "UTC"
-              },
-              "relationships": {
-                "checks": {
-                  "links": {
-                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/checks",
-                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/checks"
-                  }
-                },
-                "media": {
-                  "links": {
-                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/media",
-                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/media"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/rules",
-                    "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/rules"
-                  }
-                }
-              }
-            },
-            {
-              "id": "ff41bfbb-0d04-45e3-a4d2-579ed1655fb8",
-              "type": "contact",
-              "attributes": {
-                "name": "Joan Smith"
-              },
-              "relationships": {
-                "checks": {
-                  "links": {
-                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/checks",
-                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/checks"
-                  }
-                },
-                "media": {
-                  "links": {
-                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/media",
-                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/media"
-                  }
-                },
-                "rules": {
-                  "links": {
-                    "self": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/relationships/rules",
-                    "related": "http://example.org/contacts/ff41bfbb-0d04-45e3-a4d2-579ed1655fb8/rules"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a POST request with one contact",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "attributes": {
-              "name": "Jim Smith",
-              "timezone": "UTC"
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 201,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "attributes": {
-              "name": "Jim Smith",
-              "timezone": "UTC"
-            },
-            "relationships": {
-              "checks": {
-                "links": {
-                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/checks",
-                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/checks"
-                }
-              },
-              "media": {
-                "links": {
-                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/media",
-                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/media"
-                }
-              },
-              "rules": {
-                "links": {
-                  "self": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/relationships/rules",
-                  "related": "http://example.org/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e/rules"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a POST request with one contact",
-      "provider_state": "a contact exists",
-      "request": {
-        "method": "post",
-        "path": "/contacts",
-        "headers": {
-          "Content-Type": "application/vnd.api+json"
-        },
-        "body": {
-          "data": {
-            "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
-            "type": "contact",
-            "attributes": {
-              "name": "Jim Smith",
-              "timezone": "UTC"
-            }
-          }
-        }
-      },
-      "response": {
-        "status": 409,
+        "status": 404,
         "headers": {
           "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
         },
         "body": {
           "errors": [
             {
-              "status": "409",
-              "detail": "Contacts already exist with the following ids: c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+              "status": "404",
+              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
             }
           ]
         }
+      }
+    },
+    {
+      "description": "a DELETE request for a single contact",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "delete",
+        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "body": null
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
       }
     },
     {
@@ -3881,11 +3578,219 @@
       }
     },
     {
-      "description": "a DELETE request for a single contact",
+      "description": "a POST request with one medium",
       "provider_state": "a contact exists",
       "request": {
+        "method": "post",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "type": "medium",
+            "attributes": {
+              "transport": "sms",
+              "address": "0123456789",
+              "interval": 300,
+              "rollup_threshold": 5,
+              "pagerduty_subdomain": null,
+              "pagerduty_token": null,
+              "pagerduty_ack_duration": null
+            },
+            "relationships": {
+              "contact": {
+                "data": {
+                  "type": "contact",
+                  "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                }
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "type": "medium",
+            "attributes": {
+              "transport": "sms",
+              "address": "0123456789",
+              "interval": 300,
+              "rollup_threshold": 5,
+              "pagerduty_subdomain": null,
+              "pagerduty_token": null,
+              "pagerduty_ack_duration": null
+            },
+            "relationships": {
+              "alerting_checks": {
+                "links": {
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
+                }
+              },
+              "contact": {
+                "links": {
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
+                }
+              },
+              "rules": {
+                "links": {
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "a POST request with two media",
+      "provider_state": "a contact exists",
+      "request": {
+        "method": "post",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "attributes": {
+                "transport": "email",
+                "address": "ablated@example.org",
+                "interval": 180,
+                "rollup_threshold": 3,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "contact": {
+                  "data": {
+                    "type": "contact",
+                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                  }
+                }
+              }
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "attributes": {
+                "transport": "sms",
+                "address": "0123456789",
+                "interval": 300,
+                "rollup_threshold": 5,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "contact": {
+                  "data": {
+                    "type": "contact",
+                    "id": "c248da6f-ab16-4ce3-9b32-afd4e5f5270e"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "attributes": {
+                "transport": "email",
+                "address": "ablated@example.org",
+                "interval": 180,
+                "rollup_threshold": 3,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
+                  }
+                }
+              }
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "attributes": {
+                "transport": "sms",
+                "address": "0123456789",
+                "interval": 300,
+                "rollup_threshold": 5,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a DELETE request for one medium",
+      "provider_state": "a medium exists",
+      "request": {
         "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
         "body": null
       },
       "response": {
@@ -3896,11 +3801,40 @@
       }
     },
     {
-      "description": "a DELETE request for a single contact",
+      "description": "a DELETE request for two media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "delete",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "type": "medium",
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298"
+            },
+            {
+              "type": "medium",
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a DELETE request for one medium",
       "provider_state": "no data exists",
       "request": {
         "method": "delete",
-        "path": "/contacts/c248da6f-ab16-4ce3-9b32-afd4e5f5270e",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
         "body": null
       },
       "response": {
@@ -3912,18 +3846,282 @@
           "errors": [
             {
               "status": "404",
-              "detail": "could not find Contact record, id: 'c248da6f-ab16-4ce3-9b32-afd4e5f5270e'"
+              "detail": "could not find Medium record, id: 'e2e09943-ed6c-476a-a8a5-ec165426f298'"
             }
           ]
         }
       }
     },
     {
-      "description": "a GET request for all metrics",
+      "description": "a PATCH request for a single medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "patch",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "type": "medium",
+            "attributes": {
+              "interval": 50
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for two media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "patch",
+        "path": "/media",
+        "headers": {
+          "Content-Type": "application/vnd.api+json; ext=bulk"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "attributes": {
+                "interval": 50
+              }
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "attributes": {
+                "rollup_threshold": 5
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+        },
+        "body": ""
+      }
+    },
+    {
+      "description": "a PATCH request for a single medium",
       "provider_state": "no data exists",
       "request": {
+        "method": "patch",
+        "path": "/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+        "headers": {
+          "Content-Type": "application/vnd.api+json"
+        },
+        "body": {
+          "data": {
+            "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+            "type": "medium",
+            "attributes": {
+              "interval": 50
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 404,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "errors": [
+            {
+              "status": "404",
+              "detail": "could not find Medium record, id: '9156de3c-ddc6-4637-b1cc-bd035fd61dd3'"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for two media",
+      "provider_state": "two media exist",
+      "request": {
         "method": "get",
-        "path": "/metrics"
+        "path": "/media",
+        "query": "filter%5B%5D=id%3A9156de3c-ddc6-4637-b1cc-bd035fd61dd3%7Ce2e09943-ed6c-476a-a8a5-ec165426f298"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "attributes": {
+                "transport": "email",
+                "address": "ablated@example.org",
+                "interval": 180,
+                "rollup_threshold": 3,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
+                  }
+                }
+              }
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "attributes": {
+                "transport": "sms",
+                "address": "0123456789",
+                "interval": 300,
+                "rollup_threshold": 5,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for all media",
+      "provider_state": "two media exist",
+      "request": {
+        "method": "get",
+        "path": "/media"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
+        },
+        "body": {
+          "data": [
+            {
+              "id": "9156de3c-ddc6-4637-b1cc-bd035fd61dd3",
+              "type": "medium",
+              "attributes": {
+                "transport": "email",
+                "address": "ablated@example.org",
+                "interval": 180,
+                "rollup_threshold": 3,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/alerting_checks",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/contact",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/relationships/rules",
+                    "related": "http://example.org/media/9156de3c-ddc6-4637-b1cc-bd035fd61dd3/rules"
+                  }
+                }
+              }
+            },
+            {
+              "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+              "type": "medium",
+              "attributes": {
+                "transport": "sms",
+                "address": "0123456789",
+                "interval": 300,
+                "rollup_threshold": 5,
+                "pagerduty_subdomain": null,
+                "pagerduty_token": null,
+                "pagerduty_ack_duration": null
+              },
+              "relationships": {
+                "alerting_checks": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
+                  }
+                },
+                "contact": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
+                  }
+                },
+                "rules": {
+                  "links": {
+                    "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
+                    "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "description": "a GET request for one medium",
+      "provider_state": "a medium exists",
+      "request": {
+        "method": "get",
+        "path": "/media/e2e09943-ed6c-476a-a8a5-ec165426f298"
       },
       "response": {
         "status": 200,
@@ -3932,216 +4130,34 @@
         },
         "body": {
           "data": {
-            "type": "metrics",
+            "id": "e2e09943-ed6c-476a-a8a5-ec165426f298",
+            "type": "medium",
             "attributes": {
-              "processed_events": {
-                "all_events": 0,
-                "ok_events": 0,
-                "failure_events": 0,
-                "action_events": 0,
-                "invalid_events": 0
-              },
-              "event_queue_length": 0,
-              "check_freshness": {
-                "0": 0,
-                "60": 0,
-                "300": 0,
-                "900": 0,
-                "3600": 0
-              },
-              "check_counts": {
-                "all": 0,
-                "enabled": 0,
-                "failing": 0
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for some metrics",
-      "provider_state": "no data exists",
-      "request": {
-        "method": "get",
-        "path": "/metrics",
-        "query": "fields%5B%5D=total_keys&fields%5B%5D=processed_events"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-          "Content-Type": "application/vnd.api+json; supported-ext=bulk; charset=utf-8"
-        },
-        "body": {
-          "data": {
-            "type": "metrics",
-            "attributes": {
-              "processed_events": {
-                "all_events": 0,
-                "ok_events": 0,
-                "failure_events": 0,
-                "action_events": 0,
-                "invalid_events": 0
-              }
-            }
-          }
-        }
-      }
-    },
-    {
-      "description": "a GET request for all states within a date range",
-      "provider_state": "a state exists",
-      "request": {
-        "method": "get",
-        "path": "/states",
-        "query": "filter%5B%5D=created_at%3A2015-06-29T22%3A02%3A22-07%3A00.."
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-        },
-        "body": {
-          "data": [
-            {
-              "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
-              "type": "state",
-              "attributes": {
-                "created_at": {
-                  "json_class": "Pact::Term",
-                  "data": {
-                    "generate": "2015-06-29T22:02:52-07:00",
-                    "matcher": {
-                      "json_class": "Regexp",
-                      "o": 0,
-                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                    }
-                  }
-                },
-                "updated_at": {
-                  "json_class": "Pact::Term",
-                  "data": {
-                    "generate": "2015-06-29T22:02:52-07:00",
-                    "matcher": {
-                      "json_class": "Regexp",
-                      "o": 0,
-                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                    }
-                  }
-                },
-                "condition": "critical"
-              },
-              "relationships": {
-                "check": {
-                  "links": {
-                    "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
-                    "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for all states",
-      "provider_state": "a state exists",
-      "request": {
-        "method": "get",
-        "path": "/states"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-        },
-        "body": {
-          "data": [
-            {
-              "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
-              "type": "state",
-              "attributes": {
-                "created_at": {
-                  "json_class": "Pact::Term",
-                  "data": {
-                    "generate": "2015-06-29T22:02:52-07:00",
-                    "matcher": {
-                      "json_class": "Regexp",
-                      "o": 0,
-                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                    }
-                  }
-                },
-                "updated_at": {
-                  "json_class": "Pact::Term",
-                  "data": {
-                    "generate": "2015-06-29T22:02:52-07:00",
-                    "matcher": {
-                      "json_class": "Regexp",
-                      "o": 0,
-                      "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                    }
-                  }
-                },
-                "condition": "critical"
-              },
-              "relationships": {
-                "check": {
-                  "links": {
-                    "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
-                    "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "description": "a GET request for a single state",
-      "provider_state": "a state exists",
-      "request": {
-        "method": "get",
-        "path": "/states/142acf62-31e7-4074-ada9-a30ae73d880d"
-      },
-      "response": {
-        "status": 200,
-        "headers": {
-        },
-        "body": {
-          "data": {
-            "id": "142acf62-31e7-4074-ada9-a30ae73d880d",
-            "type": "state",
-            "attributes": {
-              "created_at": {
-                "json_class": "Pact::Term",
-                "data": {
-                  "generate": "2015-06-29T22:02:52-07:00",
-                  "matcher": {
-                    "json_class": "Regexp",
-                    "o": 0,
-                    "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                  }
-                }
-              },
-              "updated_at": {
-                "json_class": "Pact::Term",
-                "data": {
-                  "generate": "2015-06-29T22:02:52-07:00",
-                  "matcher": {
-                    "json_class": "Regexp",
-                    "o": 0,
-                    "s": "\\A(?:[1-9][0-9]*)?[0-9]{4}-(?:1[0-2]|0[1-9])-(?:3[0-1]|0[1-9]|[1-2][0-9])T(?:2[0-3]|[0-1][0-9]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?(?:Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?\\z"
-                  }
-                }
-              },
-              "condition": "critical"
+              "transport": "sms",
+              "address": "0123456789",
+              "interval": 300,
+              "rollup_threshold": 5,
+              "pagerduty_subdomain": null,
+              "pagerduty_token": null,
+              "pagerduty_ack_duration": null
             },
             "relationships": {
-              "check": {
+              "alerting_checks": {
                 "links": {
-                  "self": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/relationships/check",
-                  "related": "http://example.org/states/142acf62-31e7-4074-ada9-a30ae73d880d/check"
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/alerting_checks",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/alerting_checks"
+                }
+              },
+              "contact": {
+                "links": {
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/contact",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/contact"
+                }
+              },
+              "rules": {
+                "links": {
+                  "self": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/relationships/rules",
+                  "related": "http://example.org/media/e2e09943-ed6c-476a-a8a5-ec165426f298/rules"
                 }
               }
             }
