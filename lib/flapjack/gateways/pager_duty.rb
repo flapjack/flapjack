@@ -162,7 +162,6 @@ module Flapjack
       end
 
       class AckFinder
-
         SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
         SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
 
@@ -241,7 +240,10 @@ module Flapjack
             checks = unacked_failing_checks.select {|c| check_ids.include?(c.id)}
             next if checks.empty?
 
-            pagerduty_acknowledgements(time, medium.pagerduty_subdomain, medium.pagerduty_token,
+            pagerduty_acknowledgements(time, medium.pagerduty_subdomain,
+                                       medium.pagerduty_user_name,
+                                       medium.pagerduty_password,
+                                       medium.pagerduty_token,
                                        checks.map(&:name)).each do |incident|
 
               inc_key = incident['incident_key']
@@ -316,10 +318,11 @@ module Flapjack
         end
 
         # returns any PagerDuty acknowledgements for the named checks
-        def pagerduty_acknowledgements(time, subdomain, token, check_names)
-          if token.blank? || subdomain.blank?
-            Flapjack.logger.warn("pagerduty_acknowledgements?: Unable to look for acknowledgements on PagerDuty" +
-                         " as the following options are required: subdomain (#{subdomain}), token (#{token})")
+        def pagerduty_acknowledgements(time, subdomain, user_name, password, token, check_names)
+          if subdomain.blank? || (token.blank? && (user_name.blank? || password.blank?))
+            Flapjack.logger.warn("pagerduty_acknowledgements?: Unable to look for acknowledgements on PagerDuty" \
+             " as the following options are required: subdomain (#{subdomain}), token (#{token}) or" \
+             " user_name (#{user_name}) and password (#{password})")
             return
           end
 
@@ -332,7 +335,7 @@ module Flapjack
           requesting = true
 
           while requesting do
-            response = pagerduty_acknowledgements_request(t, subdomain, token, 100, offset)
+            response = pagerduty_acknowledgements_request(t, subdomain, user_name, password, token, 100, offset)
 
             if response.nil?
               cumulative_incidents = []
@@ -353,7 +356,7 @@ module Flapjack
           cumulative_incidents
         end
 
-        def pagerduty_acknowledgements_request(base_time, subdomain, token, limit, offset)
+        def pagerduty_acknowledgements_request(base_time, subdomain, user_name, password, token, limit, offset)
           since_offset, until_offset = if @initial
             # the last week -> one hour in the future
             [(60 * 60 * 24 * 7), (60 * 60)]
@@ -376,9 +379,16 @@ module Flapjack
                                  :port => 443,
                                  :query => URI.encode_www_form(query))
 
-          request = Net::HTTP::Get.new(uri.request_uri,
-            {'Content-type'  => 'application/json',
-             'Authorization' => "Token token=#{token}"})
+          request = nil
+          if token.blank?
+            request = Net::HTTP::Get.new(uri.request_uri,
+              {'Content-type'  => 'application/json'})
+            request.basic_auth(user_name, password)
+          else
+            request = Net::HTTP::Get.new(uri.request_uri,
+              {'Content-type'  => 'application/json',
+               'Authorization' => "Token token=#{token}"})
+          end
 
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true

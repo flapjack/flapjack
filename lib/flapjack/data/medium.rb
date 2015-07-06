@@ -21,13 +21,24 @@ module Flapjack
       include Flapjack::Gateways::JSONAPI::Data::Associations
       include Swagger::Blocks
 
-      TRANSPORTS = ['email', 'sms', 'jabber', 'pagerduty', 'sns', 'sms_twilio']
+      TRANSPORTS = [
+        'email',
+        'jabber',
+        'pagerduty',
+        'sms',
+        'slack',
+        'sms_twilio',
+        'sms_nexmo',
+        'sns'
+      ]
 
       define_attributes :transport              => :string,
                         :address                => :string,
                         :interval               => :integer,
                         :rollup_threshold       => :integer,
                         :pagerduty_subdomain    => :string,
+                        :pagerduty_user_name    => :string,
+                        :pagerduty_password     => :string,
                         :pagerduty_token        => :string,
                         :pagerduty_ack_duration => :integer,
                         :last_rollup_type       => :string
@@ -67,14 +78,22 @@ module Flapjack
       validates :pagerduty_subdomain, :presence => true,
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
+      validates :pagerduty_user_name, :presence => true,
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) && m.pagerduty_token.blank? }
+
+      validates :pagerduty_password, :presence => true,
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) && m.pagerduty_token.blank? }
+
       validates :pagerduty_token, :presence => true,
-        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) &&
+          (m.pagerduty_user_name.blank? || m.pagerduty_password.blank?) }
 
       validates :pagerduty_ack_duration, :allow_nil => true,
         :numericality => {:greater_than => 0, :only_integer => true},
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
-      validates_each :pagerduty_subdomain, :pagerduty_token, :pagerduty_ack_duration,
+      validates_each :pagerduty_subdomain, :pagerduty_user_name,
+        :pagerduty_password, :pagerduty_token, :pagerduty_ack_duration,
         :unless =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
         record.errors.add(att, 'must be nil') unless value.nil?
       end
@@ -89,7 +108,7 @@ module Flapjack
           :is_alerting => true).associated_ids_for(:checks).values.reduce(:|)
 
         # scheduled maintenance may have occurred without the routes being updated
-        Flapjack::Data::Check.intersect(:id => check_ids).all.each_with_object([]) do |check, memo|
+        Flapjack::Data::Check.intersect(:enabled => true, :id => check_ids).all.each_with_object([]) do |check, memo|
           memo << check unless check.in_scheduled_maintenance?
         end
       end
@@ -125,6 +144,12 @@ module Flapjack
           key :minimum, 1
         end
         property :pagerduty_subdomain do
+          key :type, :string
+        end
+        property :pagerduty_user_name do
+          key :type, :string
+        end
+        property :pagerduty_password do
           key :type, :string
         end
         property :pagerduty_token do
@@ -188,6 +213,12 @@ module Flapjack
         property :pagerduty_subdomain do
           key :type, :string
         end
+        property :pagerduty_user_name do
+          key :type, :string
+        end
+        property :pagerduty_password do
+          key :type, :string
+        end
         property :pagerduty_token do
           key :type, :string
         end
@@ -228,6 +259,12 @@ module Flapjack
         property :pagerduty_subdomain do
           key :type, :string
         end
+        property :pagerduty_user_name do
+          key :type, :string
+        end
+        property :pagerduty_password do
+          key :type, :string
+        end
         property :pagerduty_token do
           key :type, :string
         end
@@ -250,8 +287,9 @@ module Flapjack
       end
 
       def self.jsonapi_attributes
-        [:transport, :address, :interval, :rollup_threshold, :pagerduty_token,
-         :pagerduty_ack_duration]
+        [:transport, :address, :interval, :rollup_threshold,
+         :pagerduty_subdomain, :pagerduty_user_name, :pagerduty_password,
+         :pagerduty_token, :pagerduty_ack_duration]
       end
 
       def self.jsonapi_singular_associations

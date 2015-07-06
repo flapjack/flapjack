@@ -17,12 +17,14 @@ require 'flapjack'
 require 'flapjack/notifier'
 require 'flapjack/processor'
 require 'flapjack/gateways/aws_sns'
+require 'flapjack/gateways/email'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pager_duty'
-require 'flapjack/gateways/email'
+require 'flapjack/gateways/slack'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
@@ -214,7 +216,9 @@ module Flapjack
                               Flapjack::Gateways::Oobetet::Notifier],
              'pagerduty'  => [Flapjack::Gateways::PagerDuty::Notifier,
                               Flapjack::Gateways::PagerDuty::AckFinder],
+             'slack'      => [Flapjack::Gateways::Slack],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
+             'sms_nexmo'  => [Flapjack::Gateways::SmsNexmo],
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],
              'web'        => [Flapjack::Gateways::Web],

@@ -157,6 +157,51 @@ Feature: Rollup on a per contact, per media basis
     And   2 sms alerts should be queued for +61400000001
 
   @time
+  Scenario: Disabling a failing check suppresses rollup
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    When  a critical event is received for check 'ping' on entity 'foo'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  1 sms alert should be queued for +61400000001
+    Then  1 sms alerts of type problem and rollup none should be queued for +61400000001
+    When  5 minutes passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  1 sms alert of type problem and rollup problem should be queued for +61400000001
+    And   2 sms alerts should be queued for +61400000001
+    When  check 'ping' on entity 'foo' is disabled
+    And   30 minutes passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  1 sms alert of rollup recovery should be queued for +61400000001
+
+  @time
+  Scenario: Enabling a failing check promotes rollup
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    When  a critical event is received for check 'ping' on entity 'foo'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  1 sms alert should be queued for +61400000001
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
+    When  check 'ping' for entity 'foo' is disabled
+    And   5 minutes passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    And   1 minute passes
+    And   a critical event is received for check 'ping' on entity 'baz'
+    Then  show me the amazing log
+    Then  1 sms alerts should be queued for +61400000001
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
+    When  1 hour passes
+    And   check 'ping' on entity 'foo' is enabled
+    And   5 minutes passes
+    And   a critical event is received for check 'ping' on entity 'foo'
+    Then  2 sms alerts should be queued for +61400000001
+    Then  1 sms alert of type problem and rollup none should be queued for +61400000001
+    And   1 sms alert of type problem and rollup problem should be queued for +61400000001
+
+  @time
   Scenario: Scheduled maintenance ending promotes rollup
     Given check 'ping' for entity 'foo' is in an ok state
     Given check 'ping' for entity 'foo' is in scheduled maintenance for 4 hours

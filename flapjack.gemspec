@@ -26,6 +26,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'swagger-blocks'
   gem.add_dependency 'mail'
   gem.add_dependency 'xmpp4r', '>= 0.5.5'
+  gem.add_dependency 'nexmo', '= 2.0.0'
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'activesupport'

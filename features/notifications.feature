@@ -11,6 +11,13 @@ Feature: notifications
     Then an SMS alert for check 'example.com:PING' should be queued
     And an email alert for check 'example.com:PING' should not be queued
 
+  Scenario: Queue a Nexmo alert
+    Given the user wants to receive Nexmo alerts for check 'example.com:PING'
+    When an event notification is generated for check 'example.com:PING'
+    Then a Nexmo alert for check 'example.com:PING' should be queued
+    And an email alert for check 'example.com:PING' should not be queued
+    And an SMS alert for check 'example.com:PING' should not be queued
+
   Scenario: Queue an SNS alert
     Given the user wants to receive SNS alerts for check 'example.com:PING'
     When an event notification is generated for check 'example.com:PING'
@@ -38,6 +45,12 @@ Feature: notifications
     And an SMS alert has been queued for check 'example.com:PING'
     When the SMS alert handler runs successfully
     Then the user should receive an SMS alert
+
+  Scenario: Send a queued Nexmo alert
+    Given a user wants to receive Nexmo alerts for check 'example.com:PING'
+    And a Nexmo alert has been queued for check 'example.com:PING'
+    When the Nexmo alert handler runs successfully
+    Then the user should receive a Nexmo alert
 
   Scenario: Send a queued SNS alert
     Given a user wants to receive SNS alerts for check 'example.com:PING'

@@ -41,8 +41,39 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     allow(Flapjack).to receive(:redis).and_return(redis)
   end
 
-  it "sends an SMS message" do
+ # it "sends an SMS message" do
+ #   # bad, bad, bad...
+ #   t = double('time')
+ #   ut  = double('utc_time')
+ #   expect(ut).to receive(:strftime).with('%Y-%m-%dT%H:%M:%SZ').and_return(time_str)
+ #   expect(t).to receive(:utc).and_return(ut)
+ #   expect(t).to receive(:strftime).with('%-d %b %H:%M').and_return('31 Oct 20:45')
+ #   expect(Time).to receive(:at).with(time_int).twice.and_return(t)
 
+ #   req = stub_request(:post, "http://sns.us-east-1.amazonaws.com/").
+ #     with(:query => hash_including({'Action'           => 'Publish',
+ #                                    'AWSAccessKeyId'   => config['access_key'],
+ #                                    'TopicArn'         => message['address'],
+ #                                    'SignatureVersion' => '2',
+ #                                    'SignatureMethod'  => 'HmacSHA256',
+ #                                    'Signature'        => '5fWqhmDrZQkQfP7wsxWDdQjzV0BLwm6cZNrNqZ+W/ok=',
+ #                                    'Timestamp'        => time_str})).
+ #     to_return(:status => 200)
+
+ #   EM.synchrony do
+ #     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
+
+ #     alert = Flapjack::Data::Alert.new(message, :logger => @logger)
+ #     aws_sns = Flapjack::Gateways::AwsSns.new(:config => config, :logger => @logger)
+ #     aws_sns.deliver(alert)
+ #     EM.stop
+ #   end
+ #   expect(req).to have_been_requested
+ # end
+
+ it 'truncates an overly long subject when sending' # FIXME port from maint/1.x
+
+  it "sends an SMS message" do
     req = stub_request(:post, "http://sns.us-east-1.amazonaws.com/").
       with(:body => hash_including({'Action'           => 'Publish',
                                     'AWSAccessKeyId'   => config['access_key'],
@@ -66,14 +97,15 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(alert).to receive(:rollup).and_return(nil)
 
     expect(alert).to receive(:type).and_return('recovery')
-    expect(alert).to receive(:type_sentence_case).and_return('Recovery')
+    expect(alert).to receive(:notification_type).and_return('recovery')
+    expect(alert).to receive(:type_sentence_case).twice.and_return('Recovery')
     expect(alert).to receive(:summary).and_return('smile')
 
-    expect(check).to receive(:name).and_return('example.com:ping')
+    expect(check).to receive(:name).twice.and_return('example.com:ping')
     expect(alert).to receive(:check).and_return(check)
 
-    expect(alert).to receive(:state_title_case).and_return('OK')
-    expect(alert).to receive(:time).and_return(time.to_i)
+    expect(alert).to receive(:state_title_case).twice.and_return('OK')
+    expect(alert).to receive(:time).twice.and_return(time)
 
     expect(redis).to receive(:quit)
 
@@ -99,14 +131,15 @@ describe Flapjack::Gateways::AwsSns, :logger => true do
     expect(alert).to receive(:rollup).and_return(nil)
 
     expect(alert).to receive(:type).and_return('recovery')
-    expect(alert).to receive(:type_sentence_case).and_return('Recovery')
+    expect(alert).to receive(:notification_type).and_return('recovery')
+    expect(alert).to receive(:type_sentence_case).twice.and_return('Recovery')
     expect(alert).to receive(:summary).and_return('smile')
 
-    expect(check).to receive(:name).and_return('example.com:ping')
+    expect(check).to receive(:name).twice.and_return('example.com:ping')
     expect(alert).to receive(:check).and_return(check)
 
-    expect(alert).to receive(:state_title_case).and_return('OK')
-    expect(alert).to receive(:time).and_return(time.to_i)
+    expect(alert).to receive(:state_title_case).twice.and_return('OK')
+    expect(alert).to receive(:time).twice.and_return(time)
 
     expect(redis).to receive(:quit)
 
