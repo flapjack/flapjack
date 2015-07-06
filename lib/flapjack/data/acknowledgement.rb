@@ -65,7 +65,7 @@ module Flapjack
         raise "Acknowledgement queue not set" if @queue.nil? || @queue.empty?
         raise "Acknowledgement already sent" if @sent
 
-        checks = t.checks.intersect(:failing => true, :enabled => tru)
+        checks = t.checks.intersect(:failing => true, :enabled => true)
 
         unless checks.empty?
           Flapjack::Data::Event.create_acknowledgements(
