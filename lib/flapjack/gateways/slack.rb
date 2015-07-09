@@ -46,7 +46,7 @@ module Flapjack
             alert = Flapjack::Data::Alert.next(queue, :redis => @redis, :logger => @logger)
             deliver(alert) unless alert.nil?
           rescue => e
-            @logger.error "Error generating or dispatching Slack Twilio message: #{e.class}: #{e.message}\n" +
+            @logger.error "Error generating or dispatching Slack message: #{e.class}: #{e.message}\n" +
               e.backtrace.join("\n")
           end
         end
