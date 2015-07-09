@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 1.6.0 - 2015-07-09
+- No changes
+
 # 1.6.0rc4 - 2015-07-09
 - Feature: slack webhook gateway #881 (@mcqueenorama, @ali-graham)
 - Bug: sns gateway debugging and improvements (but still broken) #879 (@ali-graham, @jessereynolds)
