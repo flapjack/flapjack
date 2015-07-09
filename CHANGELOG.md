@@ -1,5 +1,12 @@
 ## Flapjack Changelog
 
+# 1.6.0rc4 - 2015-07-09
+- Feature: slack webhook gateway #881 (@mcqueenorama, @ali-graham)
+- Bug: sns gateway debugging and improvements (but still broken) #879 (@ali-graham, @jessereynolds)
+
+## Notes:
+- the SNS gateway signature calculation has been broken since v1.5.0 or earlier. See [#829](https://github.com/flapjack/flapjack/issues/829)
+
 # 1.6.0rc3 - 2015-06-15
 - Chore/Bug?: SNS gateway improvements (@ali-graham)
 - Feature: add summary to rollup alerts #869 (@necula-01)
