@@ -73,13 +73,13 @@ module Flapjack
         begin
           message = sms_template_erb.result(bnd).chomp
         rescue => e
-          @logger.error "Error while executing the ERB for an sms: " +
+          @logger.error "Error while executing the ERB for a Nexmo SMS: " +
             "ERB being executed: #{sms_template}"
           raise
         end
 
         if @config.nil? || (@config.respond_to?(:empty?) && @config.empty?)
-          @logger.error "Messagenet config is missing"
+          @logger.error "Nexmo config is missing"
           return
         end
 
@@ -88,7 +88,7 @@ module Flapjack
         safe_message = truncate(message, 159)
 
         [[api_key, "Nexmo api_key is missing"],
-         [secret, "Twilio auth_token is missing"],
+         [secret, "Nexmo auth_token is missing"],
          [from,  "SMS from address is missing"],
          [address,  "SMS address is missing"],
          [notification_id, "Notification id is missing"]].each do |val_err|
@@ -110,7 +110,7 @@ module Flapjack
           @logger.error "Error sending SMS via Nexmo: #{e.message}"
         end
       rescue => e
-        @logger.error "Error generating or delivering sms to #{alert.address}: #{e.class}: #{e.message}"
+        @logger.error "Error generating or delivering Nexmo SMS to #{alert.address}: #{e.class}: #{e.message}"
         @logger.error e.backtrace.join("\n")
         raise
       end
