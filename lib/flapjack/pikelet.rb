@@ -27,6 +27,7 @@ require 'flapjack/gateways/slack'
 require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/aws_sns'
+require 'flapjack/gateways/webhook'
 require 'flapjack/gateways/web'
 require 'flapjack/logger'
 require 'thin/version'
@@ -108,7 +109,8 @@ module Flapjack
                       'slack'      => Flapjack::Gateways::Slack,
                       'sms_twilio' => Flapjack::Gateways::SmsTwilio,
                       'sms_nexmo'  => Flapjack::Gateways::SmsNexmo,
-                      'sns'        => Flapjack::Gateways::AwsSns}
+                      'sns'        => Flapjack::Gateways::AwsSns,
+                      'webhook'    => Flapjack::Gateways::Webhook}
 
       def self.create(type, opts = {})
         self.new(type, PIKELET_TYPES[type], :config => opts[:config],
