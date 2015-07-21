@@ -46,7 +46,7 @@ module Flapjack
         purge_range = Zermelo::Filters::IndexRange.new(nil, purge_before, :by_score => true)
 
         purged = checks.inject(0) do |memo, check|
-          purgees = check.states.intersect(:timestamp => purge_range)
+          purgees = check.states.intersect(:created_at => purge_range)
           num = purgees.count
           if num > 0
             purgees.destroy_all

@@ -104,20 +104,10 @@ SHIFT_TTLS
   def self.time_travel_to(dest_time)
     old_maybe_fake_time = Time.now.in_time_zone
     Delorean.time_travel_to(dest_time)
-    # puts "real time is #{Time.now_without_delorean.in_time_zone}"
-    # puts "old assumed time is #{old_maybe_fake_time}"
-    # puts "new assumed time is #{Time.now.in_time_zone}"
 
-    # keys_prior = @redis.keys('*')
-
-    del = Flapjack.redis.evalsha(@shift_ttls_sha, ['*'],
-            [(dest_time - old_maybe_fake_time).to_i])
-
-    # keys_after = @redis.keys('*')
-
-    # puts "Expired #{del} key#{(del == 1) ? '' : 's'}, #{(keys_prior - keys_after).inspect}"
+    Flapjack.redis.evalsha(@shift_ttls_sha, ['*'],
+      [(dest_time - old_maybe_fake_time).to_i])
   end
-
 end
 
 config = Flapjack::Configuration.new
@@ -171,6 +161,7 @@ Before('@notifier') do
   @notifier  = Flapjack::Notifier.new(
     :config => {'email_queue' => 'email_notifications',
                 'sms_queue' => 'sms_notifications',
+                'sms_nexmo_queue' => 'sms_nexmo_notifications',
                 'sns_queue' => 'sns_notifications',
                 'default_contact_timezone' => 'America/New_York'})
 end

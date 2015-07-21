@@ -258,3 +258,11 @@ When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
 
   rule.destroy
 end
+
+When /^check '([\w\.\-]+)' (?:for|on) entity '([\w\.\-]+)' is (dis|en)abled$/ do |check_name, entity_name, dis_en|
+  check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
+  expect(check).not_to be_nil
+
+  check.enabled = 'en'.eql?(dis_en)
+  check.save!
+end

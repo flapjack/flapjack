@@ -1,0 +1,4 @@
+<%= @alert.type_sentence_case %>: '<%= @check.name %>' -%>
+<% unless ['acknowledgement', 'test'].include?(@alert.notification_type) -%>
+ is <%= @alert.state_title_case -%>
+<% end -%>

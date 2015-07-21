@@ -208,8 +208,10 @@ module Flapjack
             medium.alerting_checks.remove(check)
           end
 
+          alerting_check_ids = medium.alerting_checks.intersect(:enabled => true).ids
+
           Flapjack.logger.debug {
-            " alerting_checks: #{medium.alerting_checks.ids.inspect}"
+            " alerting_checks: #{alerting_check_ids.inspect}"
           }
 
           last_state = medium.last_state
@@ -219,7 +221,7 @@ module Flapjack
             'acknowledgement'.eql?(last_state.action))
 
           alert_rollup = if !medium.rollup_threshold.nil? &&
-            (medium.alerting_checks.count >= medium.rollup_threshold)
+            (alerting_check_ids.size >= medium.rollup_threshold)
 
             'problem'
           elsif 'problem'.eql?(medium.last_rollup_type)
@@ -255,8 +257,8 @@ module Flapjack
             :acknowledgement_duration => notification.duration,
             :rollup => alert_rollup)
 
-          unless alert_rollup.nil?
-            alert.rollup_states = medium.alerting_checks.all.each_with_object({}) do |check, memo|
+          unless alert_rollup.nil? || alerting_check_ids.empty?
+            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, memo|
               cond = check.condition
               memo[cond] ||= []
               memo[cond] << check.name

@@ -1,5 +1,40 @@
 ## Flapjack Changelog
 
+# 1.6.0rc3 - 2015-06-15
+- Chore/Bug?: SNS gateway improvements (@ali-graham)
+- Feature: add summary to rollup alerts #869 (@necula-01)
+- Bug: Fix notification rule regex matches #871 (@necula-01)
+
+# 1.6.0rc2 - 2015-05-14
+- Bug: Fix SNS query encoding and subject length #867 (@ali-graham, @xcxsxvx)
+- Chore: improve debug logging in pagerduty when looking for acks e44abd5 (@jessereynolds)
+
+# 1.6.0rc1 - 2015-05-13
+- Feature: use token authentication for pagerduty gateway #831 (@alperkokmen)
+- Feature: expose failure delays in web UI #849 (@jessereynolds)
+- Bug: performance improvement - fix usage of KEYS command for entity check names c57d3a5 (@ali-graham)
+- Bug: remove disabled checks from rollup calculations #843 (@ali-graham)
+- Bug: fall back to basic auth for pagerduty incidents api #853 (@jessereynolds)
+- Chore: pagerduty ack retrieval improvements #858 (@jessereynolds)
+
+# 1.5.0 - 2015-03-31
+- No changes
+
+# 1.5.0rc1 - 2015-03-30
+- Feature: Expose failure delay (#748) in JSONAPI check report status #827 (@Hobbsee)
+- Feature: Split up internal metrics api endpoints #828 (@jessereynolds)
+- Bug: fail on rule with invalid regex (fixes #819) #820 (@ali-graham)
+- Bug: Checks array missing from entities endpoint on API in Flapjack 1.4.0 #823 (@Hobbsee)
+
+# 1.4.0 - 2015-03-13
+- No changes
+
+# 1.4.0rc1 - 2015-03-12
+- Bug: API : Wrong Timezone doesn't cause 422 status and makes GET /contacts crash #791 (@ali-graham)
+- Bug: uncaught exception in Event#initialize: invalid byte sequence in UTF-8 #801 (@ali-graham)
+- Bug: uncaught exception in Web UI: invalid byte sequence in US-ASCII #802 (@ali-graham)
+- Feature: Add bind_address config option for http server pikelets #807 (@mrichar1)
+
 # 1.3.0 - 2015-02-17
 - No changes
 

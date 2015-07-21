@@ -1,6 +1,7 @@
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'
+require 'flapjack/gateways/sms_nexmo'
 
 def find_or_create_contact(contact_data)
   contact = Flapjack::Data::Contact.intersect(:name => contact_data[:name]).all.first
@@ -177,8 +178,44 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
-    Flapjack::Data::Tag.lock do
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
+    Flapjack::Data::Route, Flapjack::Data::Rule) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      Flapjack::Data::Tag.lock do
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          expect(tag.save).to be true
+        end
+        tag
+      end
+    end
+    rule.tags.add(*tags) unless tags.empty?
+    check.tags.add(*tags) unless tags.empty?
+  end
+
+  rule.media << sms
+  contact.rules << rule
+end
+
+Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |check_name|
+  contact = find_or_create_contact(:name => 'John Smith')
+
+  nexmo = Flapjack::Data::Medium.new(:transport => 'sms_nexmo',
+    :address => '+61888888888', :interval => 600)
+  expect(nexmo.save).to be true
+  contact.media << nexmo
+
+  check = find_or_create_check(:name => check_name)
+
+  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
+  expect(rule.save).to be true
+
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
+    Flapjack::Data::Route, Flapjack::Data::Rule) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
       tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
       if tag.nil?
         tag = Flapjack::Data::Tag.new(:name => tag_name)
@@ -186,11 +223,11 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
       end
       tag
     end
+    rule.tags.add(*tags)
+    check.tags.add(*tags)
   end
-  rule.tags.add(*tags) unless tags.empty?
-  check.tags.add(*tags) unless tags.empty?
 
-  rule.media << sms
+  rule.media << nexmo
   contact.rules << rule
 end
 
@@ -207,18 +244,22 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
-    Flapjack::Data::Tag.lock do
-      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-      if tag.nil?
-        tag = Flapjack::Data::Tag.new(:name => tag_name)
-        expect(tag.save).to be true
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
+    Flapjack::Data::Route, Flapjack::Data::Rule) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      Flapjack::Data::Tag.lock do
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          expect(tag.save).to be true
+        end
+        tag
       end
-      tag
     end
+    rule.tags.add(*tags) unless tags.empty?
+    check.tags.add(*tags) unless tags.empty?
   end
-  rule.tags.add(*tags) unless tags.empty?
-  check.tags.add(*tags) unless tags.empty?
 
   rule.media << email
   contact.rules << rule
@@ -237,18 +278,22 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
   rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
   expect(rule.save).to be true
 
-  tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
-    Flapjack::Data::Tag.lock do
-      tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
-      if tag.nil?
-        tag = Flapjack::Data::Tag.new(:name => tag_name)
-        expect(tag.save).to be true
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
+    Flapjack::Data::Route, Flapjack::Data::Rule) do
+
+    tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
+      Flapjack::Data::Tag.lock do
+        tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
+        if tag.nil?
+          tag = Flapjack::Data::Tag.new(:name => tag_name)
+          expect(tag.save).to be true
+        end
+        tag
       end
-      tag
     end
+    rule.tags.add(*tags) unless tags.empty?
+    check.tags.add(*tags) unless tags.empty?
   end
-  rule.tags.add(*tags) unless tags.empty?
-  check.tags.add(*tags) unless tags.empty?
 
   rule.media << sns
   contact.rules << rule
@@ -292,13 +337,19 @@ When /^an event notification is generated for check '(.+)'$/ do |check_name|
   drain_notifications
 end
 
-Then /^an (SMS|SNS|email) alert for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
-  queue = redis_peek("#{medium.downcase}_notifications", Flapjack::Data::Alert)
+Then /^an? (SMS|Nexmo|SNS|email) alert for check '(.+)' should( not)? be queued$/ do |medium, check_name, neg|
+  med = case medium
+  when 'Nexmo'
+    'sms_nexmo'
+  else
+    medium.downcase
+  end
+  queue = redis_peek("#{med}_notifications", Flapjack::Data::Alert)
   expect(queue.select {|n| n.check.name == check_name }).
         send((neg ? :to : :not_to), be_empty)
 end
 
-Given /^an (SMS|SNS|email) alert has been queued for check '(.+)'$/ do |media_transport, check_name|
+Given /^an? (SMS|Nexmo|SNS|email) alert has been queued for check '(.+)'$/ do |media_transport, check_name|
   check = Flapjack::Data::Check.intersect(:name => check_name).all.first
   expect(check).not_to be_nil
 
@@ -311,7 +362,14 @@ Given /^an (SMS|SNS|email) alert has been queued for check '(.+)'$/ do |media_tr
     raise "Couldn't save alert: #{@alert.errors.full_messages.inspect}"
   end
 
-  medium = Flapjack::Data::Medium.intersect(:transport => media_transport.downcase).all.first
+  med = case media_transport
+  when 'Nexmo'
+    'sms_nexmo'
+  else
+    media_transport.downcase
+  end
+
+  medium = Flapjack::Data::Medium.intersect(:transport => med).all.first
   expect(medium).not_to be_nil
 
   medium.alerts << @alert
@@ -329,6 +387,14 @@ When /^the SMS alert handler fails to send an SMS$/ do
   @request = stub_request(:get, /^#{Regexp.escape('https://www.messagenet.com.au/dotnet/Lodge.asmx/LodgeSMSMessage')}/).to_return(:status => [500, "Internal Server Error"])
   @sms = Flapjack::Gateways::SmsMessagenet.new(:config => {'username' => 'abcd', 'password' => 'efgh'})
   @sms.send(:handle_alert, @alert)
+end
+
+When /^the Nexmo alert handler runs successfully$/ do
+  @request = stub_request(:post, /^#{Regexp.escape('https://rest.nexmo.com/sms/json')}/).
+    to_return(:headers => {'Content-type' => 'application/json'},
+              :body => Flapjack.dump_json(:messages => [{:status => '0', :'message-id' => 'abc'}]))
+  @sms_nexmo = Flapjack::Gateways::SmsNexmo.new(:config => {'api_key' => 'THEAPIKEY', 'secret' => 'secret', 'from' => 'someone'})
+  @sms_nexmo.send(:handle_alert, @alert)
 end
 
 When /^the email alert handler runs successfully$/ do
@@ -381,6 +447,11 @@ end
 Then /^the user should receive an SNS alert$/ do
   expect(@request).to have_been_requested
   expect(@sns.sent).to eq(1)
+end
+
+Then /^the user should receive a Nexmo alert$/ do
+  expect(@request).to have_been_requested
+  expect(@sms_nexmo.sent).to eq(1)
 end
 
 Then /^the user should receive an email alert$/ do

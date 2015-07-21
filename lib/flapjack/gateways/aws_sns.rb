@@ -68,24 +68,33 @@ module Flapjack
         endpoint = "http://#{hostname}/"
         access_key = @config["access_key"]
         secret_key = @config["secret_key"]
-        timestamp = @config["timestamp"] || DateTime.now.iso8601
+        timestamp = Time.at(alert.time).utc.strftime('%Y-%m-%dT%H:%M:%SZ')
 
         address         = alert.medium.address
         notification_id = alert.id
         message_type    = alert.rollup ? 'rollup' : 'alert'
 
-        sms_template_erb, sms_template =
+        aws_sns_subject_template_erb, aws_sns_subject_template =
+          load_template(@config['templates'], "#{message_type}_subject",
+                        'text', File.join(File.dirname(__FILE__), 'aws_sns'))
+
+        aws_sns_template_erb, aws_sns_template =
           load_template(@config['templates'], message_type, 'text',
                         File.join(File.dirname(__FILE__), 'aws_sns'))
 
         @alert  = alert
+        @check  = alert.check
         bnd     = binding
 
         begin
-          message = sms_template_erb.result(bnd).chomp
+          erb_to_be_executed = aws_sns_subject_template
+          subject = aws_sns_subject_template_erb.result(bnd).chomp
+
+          erb_to_be_executed = aws_sns_template
+          message = aws_sns_template_erb.result(bnd).chomp
         rescue => e
-          Flapjack.logger.error "Error while executing the ERB for an sms: " +
-            "ERB being executed: #{sms_template}"
+          Flapjack.logger.error "Error while executing the ERB for an AWS SNS message: " +
+            "ERB being executed: #{erb_to_be_executed}"
           raise
         end
 
@@ -110,15 +119,15 @@ module Flapjack
           return
         end
 
-
-        query = {'Subject'          => message,
+        query = {'Subject'          => (subject.length > 100) ?
+                                       subject[0..99].gsub(/...$/, '...') : subject,
                  'TopicArn'         => address,
                  'Message'          => message,
                  'Action'           => 'Publish',
                  'SignatureVersion' => 2,
                  'SignatureMethod'  => 'HmacSHA256',
                  'Timestamp'        => timestamp,
-                 'AWSAccessKeyId'   => access_key}
+                 'AWSAccessKeyId'   => access_key.upcase}
 
         # TODO ensure we're not getting a cached response from a proxy or similar,
         # use appropriate headers etc.
@@ -152,19 +161,23 @@ module Flapjack
         raise
       end
 
-      def self.get_signature(secret_key, string)
-        signature = OpenSSL::HMAC.digest('sha256', secret_key, string)
+      def self.get_signature(secret_key, string_to_sign)
+        signature = OpenSSL::HMAC.digest('sha256', secret_key, string_to_sign)
 
         Base64.encode64(signature).strip
       end
 
       def self.string_to_sign(method, host, uri, query)
-        query = query.sort_by { |key, value| key }
+        @safe_re ||= Regexp.new("[^#{URI::PATTERN::UNRESERVED}]")
+
+        encoded_query = query.keys.sort.collect {|key|
+          "#{URI.escape(key, @safe_re)}=#{URI.escape(query[key].to_s, @safe_re)}"
+        }.join("&")
 
         [method.upcase,
          host.downcase,
          uri,
-         URI.encode_www_form(query)
+         encoded_query
         ].join("\n")
       end
 

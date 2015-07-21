@@ -22,16 +22,19 @@
       <th>Check</th>
       <th>State</th>
       <th>Duration</th>
+      <th>Summary</th>
     </tr>
 
 <%  @alert.rollup_alerts.all.sort_by(&:duration).each do |rollup_alert|
       check    = rollup_alert.check
       state    = rollup_alert.state
       duration = (ChronicDuration.output(rollup_alert.duration, :keep_zero => true) || '0 secs') -%>
+      summary  = rollup_alert.summary
       <tr>
         <td><%= check.name %></td>
         <td><%= ['ok'].include?(state) ? state.upcase : state.titleize %></td>
         <td><%= duration %></td>
+        <td><%= summary %></td>
       </tr>
 <%    end %>
   </tbody>

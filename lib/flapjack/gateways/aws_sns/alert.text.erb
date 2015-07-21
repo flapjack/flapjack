@@ -1,6 +1,5 @@
-<% check = @alert.check -%>
 <% summary = @alert.summary -%>
-<%= @alert.type_sentence_case %>: <%= "'#{check.name}'" -%>
+<%= @alert.type_sentence_case %>: <%= "'#{@check.name}'" -%>
 <% unless ['acknowledgement', 'test'].include?(@alert.type) -%>
  is <%= @alert.state_title_case -%>
 <% end -%>

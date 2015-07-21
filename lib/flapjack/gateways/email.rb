@@ -40,9 +40,9 @@ module Flapjack
           if @smtp_config['authentication'] && @smtp_config['username'] &&
             @smtp_config['password']
 
-            @auth = {:authentication => smtp_config['authentication'],
-                     :username => smtp_config['username'],
-                     :password => smtp_config['password'],
+            @auth = {:authentication => @smtp_config['authentication'],
+                     :username => @smtp_config['username'],
+                     :password => @smtp_config['password'],
                      :enable_starttls_auto => true
                     }
           end
@@ -80,14 +80,26 @@ module Flapjack
 
       private
 
+      def safe_address(addr)
+        return "flapjack@#{@fqdn}" if addr.nil? || addr.empty?
+        safe_addr = addr.clone
+        while safe_addr =~ /(<|>)/
+          safe_addr.sub!(/^.*</, '').sub!(/>.*$/, '')
+        end
+
+        safe_addr
+      end
+
       def handle_alert(alert)
         Flapjack.logger.debug "Woo, got an alert to send out: #{alert.inspect}"
         if @smtp_config
           host = @smtp_config['host']
           port = @smtp_config['port']
           starttls = !!@smtp_config['starttls']
-          m_from = @smtp_config['from']
-          m_reply_to = (@smtp_config['reply_to'] || m_from || "flapjack@#{@fqdn}")
+
+          m_from = safe_address(@smtp_config['from'])
+          m_reply_to = @smtp_config['reply_to'] || @smtp_config['from']
+
           if auth_config = @smtp_config['auth']
             auth = {}
             auth[:type] = auth_config['type'].to_sym || :plain

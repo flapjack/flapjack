@@ -11,7 +11,6 @@ require 'json'
 require 'flapjack/logger'
 
 module Flapjack
-
   UUID_RE = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 
   DEFAULT_INITIAL_FAILURE_DELAY = 30
@@ -30,5 +29,4 @@ module Flapjack
     return str.scrub('?') if str.respond_to(:scrub)
     str.chars.collect {|c| c.valid_encoding? ? c : '_' }.join
   end
-
 end
