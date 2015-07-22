@@ -93,10 +93,17 @@ Given /^the following media exist:$/ do |media|
       :id               => medium_data['id'],
       :transport        => medium_data['transport'],
       :address          => medium_data['address'],
-      :interval         => medium_data['interval'].to_i * 60,
-      :rollup_threshold => medium_data['rollup_threshold'].to_i
+      :interval         => medium_data['interval'].to_i * 60
     )
     expect(medium.save).to be true
+
+    if medium_data.has_key?('rollup_threshold') && !medium_data['rollup_threshold'].nil?
+      rollup = Flapjack::Data::Rollup.new(:threshold => medium_data['rollup_threshold'].to_i)
+      expect(rollup.save).to be true
+
+      medium.rollups << rollup
+    end
+
     contact.media << medium
   end
 end

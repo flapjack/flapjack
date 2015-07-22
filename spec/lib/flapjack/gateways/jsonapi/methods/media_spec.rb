@@ -64,6 +64,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).
       and_yield
@@ -86,6 +87,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).
       and_yield
@@ -131,6 +133,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance).
       and_yield
@@ -207,6 +210,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).
@@ -226,6 +230,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).
@@ -251,6 +256,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       with(Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).

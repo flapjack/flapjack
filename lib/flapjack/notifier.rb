@@ -148,6 +148,8 @@ module Flapjack
                                   Flapjack::Data::UnscheduledMaintenance,
                                   Flapjack::Data::Rule,
                                   Flapjack::Data::Alert,
+                                  Flapjack::Data::Rollup,
+                                  Flapjack::Data::Tag,
                                   Flapjack::Data::Route,
                                   Flapjack::Data::Notification,
                                   Flapjack::Data::Contact,
@@ -220,11 +222,32 @@ module Flapjack
             (Flapjack::Data::Condition.healthy?(last_state.condition) ||
             'acknowledgement'.eql?(last_state.action))
 
-          alert_rollup = if !medium.rollup_threshold.nil? &&
-            (alerting_check_ids.size >= medium.rollup_threshold)
+          active_rollups   = []
+          inactive_rollups = []
+          unless medium.rollups.empty?
+            rollups = medium.rollups.all.sort_by(&:threshold)
 
+            active_rollups, inactive_rollups = rollups.partition do |ru|
+              t = ru.tag
+              if t.nil?
+                alerting_check_ids.size >= ru.threshold
+              else
+                t.checks.intersect(:id => alerting_check_ids).count >= ru.threshold
+              end
+            end
+          end
+
+          inactive_rollups.each do |ru|
+            ru.last_type = 'problem'.eql?(ru.last_type) ? 'recovery' : nil
+          end
+
+          active_rollups.each do |ru|
+            ru.last_type = 'problem'
+          end
+
+          alert_rollup = if active_rollups.size > 0
             'problem'
-          elsif 'problem'.eql?(medium.last_rollup_type)
+          elsif inactive_rollups.any? {|ru| 'recovery'.eql?(ru.last_type) }
             'recovery'
           else
             nil
@@ -238,13 +261,13 @@ module Flapjack
 
           Flapjack.logger.debug "  last_state_ok = #{last_state_ok}\n" \
             "  interval_allows  = #{interval_allows}\n" \
-            "  alert_rollup , last_rollup_type = #{alert_rollup} , #{medium.last_rollup_type}\n" \
+            "  alert_rollup = #{alert_rollup}\n" \
             "  condition , last_notification_condition  = #{notification_state.condition} , #{last_state.nil? ? '-' : last_state.condition}\n" \
             "  no_previous_notification  = #{last_state.nil?}\n"
 
           next unless is_a_test || last_state.nil? ||
               (!last_state_ok && this_notification_ok) ||
-            (alert_rollup != medium.last_rollup_type) ||
+            (inactive_rollups + active_rollups).any? {|ru| ru.changed? } ||
             ('acknowledgement'.eql?(last_state.action) && this_notification_failure) ||
             (notification_state.condition != last_state.condition) ||
             interval_allows
@@ -257,12 +280,13 @@ module Flapjack
             :acknowledgement_duration => notification.duration,
             :rollup => alert_rollup)
 
+          # FIXME need to do this for each active rollup / indicate which tags are problematic/recovered
           unless alert_rollup.nil? || alerting_check_ids.empty?
-            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, memo|
-              cond = check.condition
-              memo[cond] ||= []
-              memo[cond] << check.name
-            end
+            # alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, memo|
+            #   cond = check.condition
+            #   memo[cond] ||= []
+            #   memo[cond] << check.name
+            # end
           end
 
           unless alert.save
@@ -276,8 +300,10 @@ module Flapjack
 
           unless 'test_notifications'.eql?(notification_state.action)
             notification_state.latest_media << medium
-            medium.last_rollup_type = alert.rollup
-            medium.save
+
+            (inactive_rollups + active_rollups).each do |ru|
+              ru.save! if ru.changed?
+            end
           end
 
           memo << alert

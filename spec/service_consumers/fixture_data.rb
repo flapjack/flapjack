@@ -244,11 +244,7 @@ module FixtureData
       :id               => 'e2e09943-ed6c-476a-a8a5-ec165426f298',
       :transport        => 'sms',
       :address          => '0123456789',
-      :interval         => 300,
-      :rollup_threshold => 5,
-      :pagerduty_subdomain => nil,
-      :pagerduty_token => nil,
-      :pagerduty_ack_duration => nil
+      :interval         => 300
     }
   end
 
@@ -257,11 +253,7 @@ module FixtureData
       :id               => '9156de3c-ddc6-4637-b1cc-bd035fd61dd3',
       :transport        => 'email',
       :address          => 'ablated@example.org',
-      :interval         => 180,
-      :rollup_threshold => 3,
-      :pagerduty_subdomain => nil,
-      :pagerduty_token => nil,
-      :pagerduty_ack_duration => nil
+      :interval         => 180
     }
   end
 
@@ -287,6 +279,12 @@ module FixtureData
         :links => {
           :self => "http://#{api_host}/media/#{id}/relationships/contact",
           :related => "http://#{api_host}/media/#{id}/contact"
+        }
+      },
+      :rollups => {
+        :links => {
+          :self => "http://#{api_host}/media/#{id}/relationships/rollups",
+          :related => "http://#{api_host}/media/#{id}/rollups"
         }
       },
       :rules => {
@@ -412,6 +410,12 @@ module FixtureData
         :links => {
           :self => "http://#{api_host}/tags/#{id}/relationships/checks",
           :related => "http://#{api_host}/tags/#{id}/checks"
+        }
+      },
+      :rollups => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/rollups",
+          :related => "http://#{api_host}/tags/#{id}/rollups"
         }
       },
       :rules => {

@@ -8,6 +8,7 @@ require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/check'
+require 'flapjack/data/rollup'
 require 'flapjack/data/rule'
 
 require 'flapjack/data/extensions/associations'
@@ -49,6 +50,9 @@ module Flapjack
           rule.recalculate_routes
         end
       end
+
+      has_many :rollups, :class_name => 'Flapjack::Data::Rollup',
+        :inverse_of => :tag
 
       unique_index_by :name
 
@@ -167,6 +171,10 @@ module Flapjack
           @jsonapi_associations = {
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
+              :number => :multiple, :link => true, :includable => true
+            ),
+            :rollups => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(

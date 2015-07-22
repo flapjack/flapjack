@@ -9,6 +9,7 @@ require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
+require 'flapjack/data/rollup'
 
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
@@ -42,7 +43,6 @@ module Flapjack
       define_attributes :transport              => :string,
                         :address                => :string,
                         :interval               => :integer,
-                        :rollup_threshold       => :integer,
                         :pagerduty_subdomain    => :string,
                         :pagerduty_user_name    => :string,
                         :pagerduty_password     => :string,
@@ -55,6 +55,9 @@ module Flapjack
 
       has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
+
+      has_many :rollups, :class_name => 'Flapjack::Data::Rollup',
+        :inverse_of => :medium
 
       # TODO minimise number of reads of this association
       has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
@@ -107,11 +110,7 @@ module Flapjack
         :numericality => {:greater_than_or_equal_to => 0, :only_integer => true},
         :unless => proc {|m| 'pagerduty'.eql?(m.transport) }
 
-      validates :rollup_threshold, :allow_nil => true,
-        :numericality => {:greater_than => 0, :only_integer => true},
-        :unless => proc {|m| 'pagerduty'.eql?(m.transport) }
-
-      validates_each :interval, :rollup_threshold,
+      validates_each :interval,
         :if =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
 
         record.errors.add(att, 'must be nil') unless value.nil?
@@ -167,10 +166,6 @@ module Flapjack
         property :interval do
           key :type, :integer
           key :minimum, 0
-        end
-        property :rollup_threshold do
-          key :type, :integer
-          key :minimum, 1
         end
         property :pagerduty_subdomain do
           key :type, :string
@@ -233,10 +228,6 @@ module Flapjack
           key :type, :integer
           key :minimum, 0
         end
-        property :rollup_threshold do
-          key :type, :integer
-          key :minimum, 1
-        end
         property :pagerduty_subdomain do
           key :type, :string
         end
@@ -279,10 +270,6 @@ module Flapjack
           key :type, :integer
           key :minimum, 0
         end
-        property :rollup_threshold do
-          key :type, :integer
-          key :minimum, 1
-        end
         property :pagerduty_subdomain do
           key :type, :string
         end
@@ -316,19 +303,19 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:transport, :address, :interval, :rollup_threshold,
+            :attributes => [:transport, :address, :interval,
                             :pagerduty_subdomain, :pagerduty_user_name,
                             :pagerduty_password, :pagerduty_token,
                             :pagerduty_ack_duration]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:transport, :address, :interval, :rollup_threshold,
+            :attributes => [:transport, :address, :interval,
                             :pagerduty_subdomain, :pagerduty_user_name,
                             :pagerduty_password, :pagerduty_token,
                             :pagerduty_ack_duration]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:transport, :address, :interval, :rollup_threshold,
+            :attributes => [:transport, :address, :interval,
                             :pagerduty_subdomain, :pagerduty_user_name,
                             :pagerduty_password, :pagerduty_token,
                             :pagerduty_ack_duration]
@@ -351,6 +338,10 @@ module Flapjack
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
+            ),
+            :rollups => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => true
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,

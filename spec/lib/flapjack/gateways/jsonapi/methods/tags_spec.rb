@@ -48,6 +48,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -92,6 +93,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -139,6 +141,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -161,6 +164,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -242,6 +246,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -258,6 +263,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
@@ -282,6 +288,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
+           Flapjack::Data::Rollup,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
       and_yield
