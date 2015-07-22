@@ -36,6 +36,7 @@ module Flapjack
         'slack',
         'sms_twilio',
         'sms_nexmo',
+	'sms_aspsms',
         'sns'
       ]
 
