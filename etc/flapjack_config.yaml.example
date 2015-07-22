@@ -45,6 +45,7 @@ production:
     sns_queue: sns_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
+    webhook_queue: webhook_notifications
     notification_log_file: /var/log/flapjack/notification.log
     default_contact_timezone: UTC
     logger:
@@ -247,6 +248,15 @@ production:
       logger:
         level: INFO
         syslog_errors: yes
+    webhook:
+      enabled: no
+      queue: webhook_notifications
+      hooks:
+        - url: "http://127.0.0.1/flapjack_notification"
+          timeout: 30
+      logger:
+        level: INFO
+        syslog_errors: yes
 
 development:
   pid_dir: tmp/pids/
@@ -291,6 +301,7 @@ development:
     sms_twilio_queue: sms_twilio_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
+    webhook_queue: webhook_notifications
     notification_log_file: log/notification.log
     default_contact_timezone: UTC
     logger:
@@ -465,6 +476,15 @@ development:
         - "flapjacktest@conference.jabber.example.com"
         - "gimp@conference.jabber.example.com"
         - "log@conference.jabber.example.com"
+      logger:
+        level: DEBUG
+        syslog_errors: yes
+    webhook:
+      enabled: no
+      queue: webhook_notifications
+      hooks:
+        - url: "http://127.0.0.1/flapjack_notification"
+          timeout: 30
       logger:
         level: DEBUG
         syslog_errors: yes
