@@ -2,11 +2,12 @@
 
 # Migration script, from v1 to v2 data
 #
-# Assumes no Flapjack instances running on source or destination DB.
-# Currently assumes an empty event queue (although could maybe copy data over?).
-# Currently assumes empty notification queues (although could maybe convert?).
-#
-# to see the state of the redis databases before and after, e.g. (using nodejs
+# Assumes no Flapjack instances running on source or destination DB. Also
+# assumes an empty event queue and empty notification queues; best to run an
+# instance of Flapjack with the processor disabled to drain out notifications
+# prior to running this.
+
+# To see the state of the redis databases before and after, e.g. (using nodejs
 # 'npm install redis-dump -g')
 #
 #  be ruby bin/flapjack-migration migrate --source-db=7 --destination-db=8 --force
@@ -51,6 +52,10 @@ module Flapjack
       def initialize(global_options, options)
         @global_options = global_options
         @options = options
+
+        unless options[:'yes-i-know-its-not-finished']
+          exit_now! "Until Flapjack v2 is released, the migrate command requires the '--yes-i-know-its-not-finished' switch"
+        end
 
         config = Flapjack::Configuration.new
 
@@ -616,17 +621,20 @@ desc 'Flapjack mass data migration'
 command :migrate do |migrate|
 
   # NB: will always assume latest released 1.x version
-  migrate.desc 'Migrate Flapjack data from v1.2.1 to 2.0'
+  migrate.desc 'Migrate Flapjack data from v1.6.0 to 2.0'
   migrate.command :to_v2 do |to_v2|
 
-    to_v2.flag [:s, 'source'], :desc => 'Source Redis server URL e.g. ' \
+    to_v2.flag [:s, :source], :desc => 'Source Redis server URL e.g. ' \
       'redis://localhost:6379/0 (defaults to value from Flapjack configuration)'
 
-    to_v2.flag [:d, 'destination'], :desc => 'Destination Redis server URL ' \
+    to_v2.flag [:d, :destination], :desc => 'Destination Redis server URL ' \
       'e.g. redis://localhost:6379/1', :required => true
 
-    to_v2.switch [:f, 'force'], :desc => 'Clears the destination database on start',
+    to_v2.switch [:f, :force], :desc => 'Clears the destination database on start',
       :default_value => false
+
+    to_v2.switch 'yes-i-know-its-not-finished', :desc => 'Required switch until final v2 release',
+      :default_value => false, :negatable => false
 
     to_v2.action do |global_options,options,args|
       migrator = Flapjack::CLI::Migrate.new(global_options, options)
