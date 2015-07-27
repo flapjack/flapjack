@@ -39,6 +39,7 @@ daemonize = true
   sms_nexmo_queue = "sms_nexmo_notifications"
   slack_queue = "slack_notifications"
   sms_twilio_queue = "sms_twilio_notifications"
+  sms_aspsms_queue = "sms_aspsms_notifications"
   sns_queue = "sns_notifications"
   jabber_queue = "jabber_notifications"
   pagerduty_queue = "pagerduty_notifications"
@@ -143,6 +144,23 @@ daemonize = true
     #[gateways.sms_twilio.templates]
     #  rollup_text = "/etc/flapjack/templates/sms_twilio/rollup.text.erb"
     #  alert_text = "/etc/flapjack/templates/sms_twilio/alert.text.erb"
+  # Sends SMS notifications via ASPSMS ( https://www.aspsms.com/ )
+  [gateways.sms_aspsms]
+    enabled = false
+    # the redis queue this pikelet will look for notifications on
+    queue = "sms_aspsms_notifications"
+    endpoint_host = "webservice.aspsms.com"
+    endpoint_path = "/aspsmsx.asmx/SimpleTextSMS"
+    originator = "Flapjack"
+    username = "xxxx"
+    password = "xxxx"
+    [gateways.sms_aspsms.logger]
+      level = "INFO"
+      syslog_errors = true
+    # location of custom alert templates
+    #templates:
+    #  rollup_text = "/etc/flapjack/templates/sms_aspsms/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/sms_aspsms/alert.text.erb"
   # Generates SNS notifications
   [gateways.sns]
     enabled = false
