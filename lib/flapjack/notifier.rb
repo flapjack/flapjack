@@ -126,9 +126,6 @@ module Flapjack
         Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
       return if contacts.empty?
 
-      # TODO pass in base time from outside (cast to zone per contact), so
-      # all alerts from this notification use a consistent time
-
       rule_ids = contacts.inject([]) do |memo, contact|
         rules = Flapjack::Data::Rule.find_by_ids(*rule_ids_by_contact_id[contact.id])
         next memo if rules.empty?
@@ -210,7 +207,9 @@ module Flapjack
             medium.alerting_checks.remove(check)
           end
 
-          alerting_check_ids = medium.alerting_checks.intersect(:enabled => true).ids
+          alert_checks = medium.alerting_checks.intersect(:enabled => true).all
+
+          alerting_check_ids = alert_checks.map(&:id)
 
           Flapjack.logger.debug {
             " alerting_checks: #{alerting_check_ids.inspect}"
@@ -280,13 +279,14 @@ module Flapjack
             :acknowledgement_duration => notification.duration,
             :rollup => alert_rollup)
 
-          # FIXME need to do this for each active rollup / indicate which tags are problematic/recovered
-          unless alert_rollup.nil? || alerting_check_ids.empty?
-            # alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, memo|
-            #   cond = check.condition
-            #   memo[cond] ||= []
-            #   memo[cond] << check.name
-            # end
+          # FIXME need to indicate which tags are problematic/recovered
+
+          unless alert_rollup.nil? || alert_checks.empty?
+            alert.rollup_states = alert_checks.each_with_object({}) do |check, memo|
+              cond = check.condition
+              memo[cond] ||= []
+              memo[cond] << check.name
+            end
           end
 
           unless alert.save

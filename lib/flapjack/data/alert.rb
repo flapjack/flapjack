@@ -50,12 +50,10 @@ module Flapjack
       validates_each :rollup_states_json do |record, att, value|
         unless value.nil?
           states = Flapjack.load_json(value)
-          case states
-          when Hash
-            record.errors.add(att, 'must contain a serialized Hash (String => Array[String])') unless states.all? {|k,v|
-              k.is_a?(String) && v.is_a?(Array) && v.all?{|vs| vs.is_a?(String)}
-            }
-          else
+          unless states.is_a?(Hash) && states.all? {|k,v|
+            k.is_a?(String) && v.is_a?(Array) && v.all?{|vs| vs.is_a?(String)}
+          }
+
             record.errors.add(att, 'must contain a serialized Hash (String => Array[String])')
           end
         end
