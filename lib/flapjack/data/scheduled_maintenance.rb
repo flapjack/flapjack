@@ -59,6 +59,7 @@ module Flapjack
       end
 
       # # FIXME discuss whether we should let people change history
+      # # I'm in favour of leaving things as flexible as possible (@ali-graham)
       # validate :times_in_future_if_changed, :on => :update
       # def times_in_future_if_changed
       #   t =  Time.now.to_i
@@ -75,6 +76,7 @@ module Flapjack
       validates_with Flapjack::Data::Validators::IdValidator
 
       # # FIXME discuss whether we should let people change history
+      # # I'm in favour of leaving things as flexible as possible (@ali-graham)
       # before_destroy :only_destroy_future
       # def only_destroy_future
       #   (self.start_time.to_i - Time.now.to_i) > 0

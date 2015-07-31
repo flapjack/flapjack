@@ -520,6 +520,17 @@ module Flapjack
         [rule_ids_by_contact_id, active_route_ids]
       end
 
+      def no_longer_alerting
+        self.routes.intersect(:is_alerting => true).each do |route|
+          route.is_alerting = false
+          route.save
+        end
+
+        unless self.alerting_media.empty?
+          self.alerting_media.remove(*self.alerting_media.all)
+        end
+      end
+
       private
 
       # would need to be "#{entity.name}:#{name}" to be compatible with v1, but
@@ -528,17 +539,6 @@ module Flapjack
         return unless self.ack_hash.nil? # :on => :create isn't working
         self.id = self.class.generate_id if self.id.nil?
         self.ack_hash = Digest.hexencode(Digest::SHA1.new.digest(self.id))[0..7].downcase
-      end
-
-      def no_longer_alerting
-        self.routes.intersect(:is_alerting => true).each do |route|
-          route.is_alerting = false
-          route.save
-        end
-
-        unless self.alerting_media.empty?
-          self.alerting_media.remove(*self.alerting_media)
-        end
       end
 
       def scheduled_maintenances_at(t)

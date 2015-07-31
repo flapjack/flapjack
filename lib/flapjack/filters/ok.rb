@@ -29,10 +29,8 @@ module Flapjack
         check.clear_unscheduled_maintenance(timestamp)
 
         Flapjack.logger.debug { "Filter: Ok: clearing alerting routes for #{check.id}" }
-        check.routes.intersect(:is_alerting => true).each do |route|
-          route.is_alerting = false
-          route.save
-        end
+
+        check.no_longer_alerting
 
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
           Flapjack.logger.debug("Filter: Ok: block - previous state was ok, so blocking")

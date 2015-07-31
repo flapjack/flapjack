@@ -35,12 +35,17 @@ module Flapjack
       # names, which may change. Do client-side grouping and create a tag!
 
       define_attributes :conditions_list => :string,
-                        :has_media => :boolean,
-                        :has_tags => :boolean,
                         :is_blackhole => :boolean,
-                        :time_restrictions_json => :string
+                        :time_restrictions_json => :string,
+                        :has_media => :boolean,
+                        :has_tags => :boolean
 
       index_by :conditions_list, :has_media, :has_tags, :is_blackhole
+
+      before_destroy :remove_routes
+      def remove_routes
+        self.routes.destroy_all
+      end
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :rules
@@ -48,12 +53,6 @@ module Flapjack
       has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :rules, :after_add => :has_some_media,
         :after_remove => :has_no_media
-
-      before_destroy :remove_routes
-
-      def remove_routes
-        self.routes.destroy_all
-      end
 
       def self.has_some_media(rule_id, *m)
         rule = Flapjack::Data::Rule.find_by_id!(rule_id)
@@ -329,13 +328,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list, :time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list, :time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:is_blackhole, :conditions_list] # [:time_restrictions]
+            :attributes => [:is_blackhole, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,

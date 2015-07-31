@@ -14,6 +14,10 @@
 #  redis-dump -d 7 >~/Desktop/dump7.txt
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
+#   Not migrated:
+#      which checks are currently alerting for a medium (FIXME)
+#      current rollup status (if alerting_checks is sorted, this should resolve on next relevant event)
+#      notifications/alerts (see note above)
 
 require 'pp'
 
@@ -80,6 +84,8 @@ module Flapjack
           exit_now! "could not understand source Redis config"
         end
 
+        @source_redis_version = @source_redis.info['redis_version']
+
         dest_addr = @options[:destination]
         dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
 
@@ -109,6 +115,8 @@ module Flapjack
         # rule construction
         @check_ids_by_contact_id_cache = {}
 
+        @current_entity_names = @source_redis.zrange('current_entities', 0, -1)
+        @current_check_names = source_keys_matching('current_checks:?*')
 
         migrate_contacts_and_media
         migrate_checks
@@ -121,11 +129,7 @@ module Flapjack
         migrate_actions
 
         migrate_scheduled_maintenances
-        migrate_unscheduled_maintenances # TODO notification data into entries?
-
-        # NB 'alerting checks' data isn't migrated, as it's not always possible to
-        # know which routes (in the new schema) would have caused the alert.
-        # TODO output a warning if any of these are set
+        migrate_unscheduled_maintenances
 
       rescue Exception => e
         puts e.message
@@ -139,16 +143,11 @@ module Flapjack
 
       # no dependencies
       def migrate_contacts_and_media
-        contact_keys = @source_redis.keys('contact:*')
-
-        contact_keys.each do |contact_key|
-
-          # TODO fix regex, check current code
-          unless contact_key =~ /\Acontact:(#{ID_PATTERN_FRAGMENT})\z/
-            raise "Bad regex for '#{contact_key}'"
-          end
-
+        source_keys_matching('contact:?*').each do |contact_key|
+          contact_key =~ /\Acontact:(#{ID_PATTERN_FRAGMENT})\z/
           contact_id = $1
+          raise "Bad regex for '#{contact_key}'" if contact_id.nil?
+
           contact_data = @source_redis.hgetall(contact_key).merge(:id => contact_id)
 
           timezone = @source_redis.get("contact_tz:#{contact_id}")
@@ -157,9 +156,6 @@ module Flapjack
           media_intervals = @source_redis.hgetall("contact_media_intervals:#{contact_id}")
           media_rollup_thresholds = @source_redis.hgetall("contact_media_rollup_thresholds:#{contact_id}")
 
-          # skipped pagerduty media (moved to gateway config)
-          # TODO output warning if pagerduty media is found
-
           contact = Flapjack::Data::Contact.new(:name =>
               "#{contact_data['first_name']} #{contact_data['last_name']}",
             :timezone => timezone)
@@ -167,9 +163,29 @@ module Flapjack
           raise contact.errors.full_messages.join(", ") unless contact.persisted?
 
           media_addresses.each_pair do |media_type, address|
-            medium = Flapjack::Data::Medium.new(:transport => media_type,
-              :address => address, :interval => media_intervals[media_type].to_i,
-              :rollup_threshold => media_rollup_thresholds[media_type].to_i)
+            medium_data = if 'pagerduty'.eql?(media_type)
+              pagerduty_credentials =
+                @source_redis.hgetall("contact_pagerduty:#{contact_id}")
+
+              {
+                :transport => 'pagerduty',
+                :address => address,
+                :pagerduty_subdomain => pagerduty_credentials['subdomain'],
+                :pagerduty_user_name => pagerduty_credentials['username'],
+                :pagerduty_password => pagerduty_credentials['password'],
+                :pagerduty_token => pagerduty_credentials['token'],
+                :pagerduty_ack_duration => nil
+              }
+            else
+              {
+                :transport => media_type,
+                :address => address,
+                :interval => media_intervals[media_type].to_i,
+                :rollup_threshold => media_rollup_thresholds[media_type].to_i
+              }
+            end
+
+            medium = Flapjack::Data::Medium.new(medium_data)
             medium.save
             raise medium.errors.full_messages.join(", ") unless medium.persisted?
 
@@ -181,20 +197,15 @@ module Flapjack
       end
 
       def migrate_checks
-        entity_tag_keys = @source_redis.keys('entity_tag:*')
-
         all_entity_names_by_id = @source_redis.hgetall('all_entity_names_by_id')
 
         entity_tags_by_entity_name = {}
 
-        entity_tag_keys.each do |entity_tag_key|
-
-          # TODO fix regex, check current code
-          unless entity_tag_key =~ /\Aentity_tag:(#{TAG_PATTERN_FRAGMENT})\z/
-            raise "Bad regex for '#{entity_tag_key}'"
-          end
-
+        source_keys_matching('entity_tag:?*').each do |entity_tag_key|
+          entity_tag_key =~ /\Aentity_tag:(#{TAG_PATTERN_FRAGMENT})\z/
           entity_tag = $1
+          raise "Bad regex for '#{entity_tag_key}'" if entity_tag.nil?
+
           entity_ids = @source_redis.smembers(entity_tag_key)
 
           entity_ids.each do |entity_id|
@@ -206,14 +217,12 @@ module Flapjack
           end
         end
 
-        all_checks_keys     = @source_redis.keys('all_checks:*')
+        all_checks_keys = source_keys_matching('all_checks:?*')
 
         all_checks_keys.each do |all_checks_key|
-          unless all_checks_key =~ /\Aall_checks:(#{ENTITY_PATTERN_FRAGMENT})\z/
-            raise "Bad regex"
-          end
-
+          all_checks_key =~ /\Aall_checks:(#{ENTITY_PATTERN_FRAGMENT})\z/
           entity_name = $1
+          raise "Bad regex for '#{all_checks_key}'" if entity_name.nil?
 
           entity_tags = entity_tags_by_entity_name[entity_name]
 
@@ -224,10 +233,11 @@ module Flapjack
             check = find_check(entity_name, check_name, :create => true)
             check.enabled = current_check_names.include?(check_name)
             check.save
+            raise check.errors.full_messages.join(", ") unless check.persisted?
 
             check.tags << find_tag("entity_#{entity_name}", :create => true)
 
-            if !entity_tags.nil? && !entity_tags.empty?
+            unless entity_tags.nil? || entity_tags.empty?
               tags = entity_tags.collect do |entity_tag|
                 find_tag("entitytag_#{entity_tag}", :create => true)
               end
@@ -240,18 +250,17 @@ module Flapjack
 
       # depends on contacts & checks
       def migrate_contact_entity_linkages
-        contacts_for_keys = @source_redis.keys('contacts_for:*')
-
         all_entity_names_by_id = @source_redis.hgetall('all_entity_names_by_id')
 
-        contacts_for_keys.each do |contacts_for_key|
+        source_keys_matching('contacts_for:?*').each do |contacts_for_key|
 
-          unless contacts_for_key =~ /\Acontacts_for:(#{ID_PATTERN_FRAGMENT})(?::(#{CHECK_PATTERN_FRAGMENT}))?\z/
+          contacts_for_key =~ /\Acontacts_for:(#{ID_PATTERN_FRAGMENT})(?::(#{CHECK_PATTERN_FRAGMENT}))?\z/
+          entity_id   = $1
+          check_name  = $2
+          if entity_id.nil? || check_name.nil?
             raise "Bad regex for '#{contacts_for_key}'"
           end
 
-          entity_id   = $1
-          check_name  = $2
           entity_name = all_entity_names_by_id[entity_id]
 
           contact_ids = @source_redis.smembers(contacts_for_key)
@@ -290,62 +299,69 @@ module Flapjack
 
       # depends on checks
       def migrate_states
-        timestamp_keys = @source_redis.keys('*:*:states')
-        timestamp_keys.each do |timestamp_key|
-          # TODO fix regex, check current code
-          unless timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):states\z/
+        source_keys_matching('?*:?*:states').each do |timestamp_key|
+          timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):states\z/
+          entity_name = $1
+          check_name  = $2
+          if entity_name.nil? || check_name.nil?
             raise "Bad regex for #{timestamp_key}"
           end
 
-          entity_name = $1
-          check_name  = $2
-
           check = find_check(entity_name, check_name)
 
-          # TODO pagination
-          timestamps = @source_redis.lrange(timestamp_key, 0, -1)
+          state_count_for_check = @source_redis.llen(timestamp_key)
+          next unless state_count_for_check > 0
 
           last_notifications = [:warning, :critical, :unknown, :recovery,
-                    :acknowledgement].each_with_object({}) do |state, memo|
+                                :acknowledgement].each_with_object({}) do |state, memo|
             ln = @source_redis.get("#{entity_name}:#{check_name}:last_#{state}_notification")
-            unless ln.nil? && ln =~ /^\d+$/
-              memo[state] = ln
-            end
-            memo
+            memo[state] = ln unless ln.nil? || ln !~ /^\d+$/
           end
 
           most_severe = nil
 
-          timestamps.each do |timestamp|
-            condition = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:state")
-            summary   = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:summary")
-            details   = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:details")
-            count     = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:count")
+          timestamps_processed = 0
 
-            state = Flapjack::Data::State.new(:condition => condition,
-              :created_at => timestamp, :updated_at => timestamp,
-              :summary => summary, :details => details)
-            # TODO perfdata ?
-            state.save
-            raise state.errors.full_messages.join(", ") unless state.persisted?
+          loop do
+            window_end = [timestamps_processed + 50, state_count_for_check].min - 1
+            timestamps = @source_redis.lrange(timestamp_key, timestamps_processed, window_end)
 
-            if Flapjack::Data::Condition.healthy?(condition)
-              most_severe = nil
-            elsif Flapjack::Data::Condition.unhealthy.has_key?(condition) &&
-              (most_severe.nil? ||
-               (Flapjack::Data::Condition.unhealthy[condition] <
-                  Flapjack::Data::Condition.unhealthy[most_severe.condition]))
+            timestamps.each do |timestamp|
+              ect = "#{entity_name}:#{check_name}:#{timestamp}"
+              condition     = @source_redis.get("#{ect}:state")
+              summary       = @source_redis.get("#{ect}:summary")
+              details       = @source_redis.get("#{ect}:details")
+              count         = @source_redis.get("#{ect}:count")
+              perfdata_json = @source_redis.get("#{ect}:perfdata")
 
-              most_severe = state
+              state = Flapjack::Data::State.new(:condition => condition,
+                :created_at => timestamp, :updated_at => timestamp,
+                :summary => summary, :details => details,
+                :perfdata_json => perfdata_json)
+              state.save
+              raise state.errors.full_messages.join(", ") unless state.persisted?
+
+              if Flapjack::Data::Condition.healthy?(condition)
+                most_severe = nil
+              elsif Flapjack::Data::Condition.unhealthy.has_key?(condition) &&
+                (most_severe.nil? ||
+                 (Flapjack::Data::Condition.unhealthy[condition] <
+                    Flapjack::Data::Condition.unhealthy[most_severe.condition]))
+
+                most_severe = state
+              end
+
+              notif_state = 'ok'.eql?(condition) ? :recovery : condition.to_sym
+
+              if timestamp.to_i == last_notifications[notif_state]
+                check.latest_notifications << state
+              end
+
+              check.states << state
             end
 
-            notif_state = 'ok'.eql?(condition) ? :recovery : condition.to_sym
-
-            if timestamp.to_i == last_notifications[notif_state]
-              check.last_notifications << state
-            end
-
-            check.states << state
+            timestamps_processed += timestamps.size
+            break if timestamps_processed >= state_count_for_check
           end
 
           unless most_severe.nil?
@@ -354,121 +370,131 @@ module Flapjack
         end
       end
 
-      # depends on checks
+      # depends on checks, states
       def migrate_actions
-        timestamp_keys = @source_redis.keys('*:*:actions')
-        timestamp_keys.each do |timestamp_key|
-          # TODO fix regex, check current code
-          raise "Bad regex" unless timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):actions\z/
-
+        source_keys_matching('?*:?*:actions').each do |timestamp_key|
+          timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):actions\z/
           entity_name = $1
           check_name  = $2
+          if entity_name.nil? || check_name.nil?
+            raise "Bad regex for #{timestamp_key}"
+          end
 
           check = find_check(entity_name, check_name)
 
-          # TODO pagination
           timestamps = @source_redis.hgetall(timestamp_key)
-
           timestamps.each_pair do |timestamp, action|
-            # action = Flapjack::Data::Action.new(:action => action,
-            #   :timestamp => timestamp)
-            # action.save
-            # raise action.errors.full_messages.join(", ") unless action.persisted?
 
-            # check.actions << action
+            # FIXME set condition for this state from state just prior...
+            state = Flapjack::Data::State.new(:action => action,
+              :created_at => timestamp, :updated_at => timestamp)
+
+            state.save
+            raise state.errors.full_messages.join(", ") unless state.persisted?
+
+            check.states << states
           end
         end
       end
 
       # depends on checks
       def migrate_scheduled_maintenances
-
-        sm_keys = @source_redis.keys('*:*:scheduled_maintenances')
-
-        sm_keys.each do |sm_key|
-          # TODO fix regex, check current code
-          unless sm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):scheduled_maintenances\z/
-            raise "Bad regex"
-          end
-
+        source_keys_matching('?*:?*:scheduled_maintenances').each do |sm_key|
+          sm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):scheduled_maintenances\z/
           entity_name = $1
           check_name  = $2
+          if entity_name.nil? || check_name.nil?
+            raise "Bad regex for #{sm_key}"
+          end
 
           check = find_check(entity_name, check_name)
 
-          # TODO pagination
-          sched_maints = @source_redis.zrange(sm_key, 0, -1, :with_scores => true)
+          sched_maint_count_for_check = @source_redis.zcard(sm_key)
+          next unless sched_maint_count_for_check > 0
 
-          sched_maints.each do |duration_timestamp|
-            duration  = duration_timestamp[0].to_i
-            timestamp = duration_timestamp[1].to_i
+          sched_maints_processed = 0
 
-            summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:scheduled_maintenance:summary")
+          loop do
+            window_end = [sched_maints_processed + 50, sched_maint_count_for_check].min - 1
+            sched_maints = @source_redis.zrange(sm_key, sched_maints_processed, window_end, :with_scores => true)
 
-            sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
-              :end_time => (timestamp + duration), :summary => summary)
-            sched_maint.save
-            raise sched_maint.errors.full_messages.join(", ") unless sched_maint.persisted?
+            sched_maints.each do |duration_timestamp|
+              duration  = duration_timestamp[0].to_i
+              timestamp = duration_timestamp[1].to_i
 
-            check.scheduled_maintenances_by_start << sched_maint
-            check.scheduled_maintenances_by_end << sched_maint
+              summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:scheduled_maintenance:summary")
+
+              sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
+                :end_time => (timestamp + duration), :summary => summary)
+              sched_maint.save
+              raise sched_maint.errors.full_messages.join(", ") unless sched_maint.persisted?
+
+              check.scheduled_maintenances << sched_maint
+            end
+
+            sched_maints_processed += sched_maints.size
+            break if sched_maints_processed >= sched_maint_count_for_check
           end
         end
       end
 
       # depends on checks
       def migrate_unscheduled_maintenances
-        usm_keys = @source_redis.keys('*:*:unscheduled_maintenances')
-
-        usm_keys.each do |usm_key|
-          # TODO fix regex, check current code
-          unless usm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):unscheduled_maintenances\z/
-            raise "Bad regex"
-          end
-
+        source_keys_matching('?*:?*:unscheduled_maintenances').each do |usm_key|
+          usm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):unscheduled_maintenances\z/
           entity_name = $1
           check_name  = $2
+          if entity_name.nil? || check_name.nil?
+            raise "Bad regex for #{usm_key}"
+          end
 
           check = find_check(entity_name, check_name)
 
+          # # FIXME is this still needed?
           # # have to get them all upfront, as they're in a Redis list -- can't detect
           # # presence of single member
           # check_ack_notifications = @source_redis.
           #   lrange("#{entity_name}:#{check_name}:acknowledgement_notifications", 0, -1)
 
-          # TODO pagination
-          unsched_maints = @source_redis.zrange(usm_key, 0, -1, :with_scores => true)
+          unsched_maint_count_for_check = @source_redis.zcard(usm_key)
+          next unless unsched_maint_count_for_check > 0
 
-          unsched_maints.each do |duration_timestamp|
-            duration  = duration_timestamp[0].to_i
-            timestamp = duration_timestamp[1].to_i
+          unsched_maints_processed = 0
 
-            summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:unscheduled_maintenance:summary")
+          loop do
+            window_end = [unsched_maints_processed + 50, unsched_maint_count_for_check].min - 1
+            unsched_maints = @source_redis.zrange(usm_key, unsched_maints_processed, window_end, :with_scores => true)
 
-            unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => timestamp,
-              :end_time => (timestamp + duration), :summary => summary)
-            unsched_maint.save
-            raise unsched_maint.errors.full_messages.join(", ") unless unsched_maint.persisted?
+            unsched_maints.each do |duration_timestamp|
+              duration  = duration_timestamp[0].to_i
+              timestamp = duration_timestamp[1].to_i
 
-            check.unscheduled_maintenances_by_start << unsched_maint
-            check.unscheduled_maintenances_by_end << unsched_maint
+              summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:unscheduled_maintenance:summary")
+
+              unsched_maint = Flapjack::Data::UnscheduledMaintenance.new(:start_time => timestamp,
+                :end_time => (timestamp + duration), :summary => summary)
+              unsched_maint.save
+              raise unsched_maint.errors.full_messages.join(", ") unless unsched_maint.persisted?
+
+              check.unscheduled_maintenances << unsched_maint
+            end
+
+            unsched_maints_processed += unsched_maints.size
+            break if unsched_maints_processed >= unsched_maint_count_for_check
           end
         end
       end
 
       # depends on contacts, media, checks
       def migrate_rules
-        notification_rules_keys = @source_redis.keys('contact_notification_rules:*')
-
         contact_counts_by_id = {}
         check_counts_by_id = {}
 
-        notification_rules_keys.each do |notification_rules_key|
+        source_keys_matching('contact_notification_rules:?*').each do |rules_key|
 
-          raise "Bad regex for '#{notification_rules_key}'" unless
-            notification_rules_key =~ /\Acontact_notification_rules:(#{ID_PATTERN_FRAGMENT})\z/
-
+          rules_key =~ /\Acontact_notification_rules:(#{ID_PATTERN_FRAGMENT})\z/
           contact_id = $1
+          raise "Bad regex for '#{rules_key}'" if contact_id.nil?
 
           contact = find_contact(contact_id)
 
@@ -482,19 +508,17 @@ module Flapjack
 
           rules = []
 
-          notification_rule_ids = @source_redis.smembers(notification_rules_key)
+          rule_ids = @source_redis.smembers(rules_key)
+          rule_ids.each do |rule_id|
+            rule_data = @source_redis.hgetall("notification_rule:#{rule_id}")
 
-          notification_rule_ids.each do |notification_rule_id|
+            time_restrictions = Flapjack.load_json(rule_data['time_restrictions'])
 
-            notification_rule_data = @source_redis.hgetall("notification_rule:#{notification_rule_id}")
+            entities       = Set.new( Flapjack.load_json(rule_data['entities']))
+            regex_entities = Set.new( Flapjack.load_json(rule_data['regex_entities']))
 
-            time_restrictions = Flapjack.load_json(notification_rule_data['time_restrictions'])
-
-            entities = Set.new( Flapjack.load_json(notification_rule_data['entities']))
-            regex_entities = Set.new( Flapjack.load_json(notification_rule_data['regex_entities']))
-
-            tags       = Set.new( Flapjack.load_json(notification_rule_data['tags']))
-            regex_tags = Set.new( Flapjack.load_json(notification_rule_data['regex_tags']))
+            tags       = Set.new( Flapjack.load_json(rule_data['tags']))
+            regex_tags = Set.new( Flapjack.load_json(rule_data['regex_tags']))
 
             # collect specific matches together with regexes
             regex_entities = regex_entities.collect {|re| Regexp.new(re) } +
@@ -502,11 +526,18 @@ module Flapjack
             regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
               tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
 
-            media_states = {}
+            media_states     = {}
+            blackhole_states = []
 
             Flapjack::Data::Condition.unhealthy.keys.each do |fail_state|
-              next if !!Flapjack.load_json(notification_rule_data["#{fail_state}_blackhole"])
-              media_types = Flapjack.load_json(notification_rule_data["#{fail_state}_media"])
+              blackhole = !!Flapjack.load_json(rule_data["#{fail_state}_blackhole"])
+              if blackhole
+                blackhole_states << fail_state
+                next
+              end
+
+              media_types = Flapjack.load_json(rule_data["#{fail_state}_media"])
+
               unless media_types.nil? || media_types.empty?
                 media_types_str = media_types.sort.join("|")
                 media_states[media_types_str] ||= []
@@ -514,19 +545,7 @@ module Flapjack
               end
             end
 
-            media_states.each_pair do |media_types_str, fail_states|
-
-              rule = Flapjack::Data::Rule.new
-              rule.time_restrictions = time_restrictions
-              rule.conditions_list   = fail_states.sort.join("|")
-              rule.save
-
-              media = media_types_str.split('|').each_with_object([]) do |media_type, memo|
-                medium = contact.media.intersect(:transport => media_type).all.first
-                memo << medium unless medium.nil?
-              end
-
-              rule.media.add(*media) unless media.empty?
+            checks_and_tags_for_rule = proc do |rule|
 
               checks_for_rule = Flapjack::Data::Check.intersect(:id => check_ids)
 
@@ -551,7 +570,6 @@ module Flapjack
               end
 
               tags = checks.collect do |check|
-
                 check_num = check_counts_by_id[check.id]
                 if check_num.nil?
                   check_num = check_counts_by_id.size + 1
@@ -565,6 +583,31 @@ module Flapjack
               end
 
               rule.tags.add(*tags) unless tags.empty?
+            end
+
+            unless blackhole_states.empty?
+              rule = Flapjack::Data::Rule.new
+              rule.time_restrictions = time_restrictions
+              rule.conditions_list   = blackhole_states.sort.join("|")
+              rule.save
+              raise rule.errors.full_messages.join(", ") unless rule.persisted?
+
+              checks_and_tags_for_rule(rule)
+              rules << rule
+            end
+
+            media_states.each_pair do |media_types_str, fail_states|
+              rule = Flapjack::Data::Rule.new
+              rule.time_restrictions = time_restrictions
+              rule.conditions_list   = fail_states.sort.join("|")
+              rule.save
+              raise rule.errors.full_messages.join(", ") unless rule.persisted?
+
+              media_transports = media_types_str.split('|')
+              media = contact.media.intersect(:transport => media_transports)
+              rule.media.add_ids(*media.ids) unless media.empty?
+
+              checks_and_tags_for_rule(rule)
               rules << rule
             end
           end
@@ -574,6 +617,14 @@ module Flapjack
       end
 
       # ###########################################################################
+
+      def source_keys_matching(key_pat)
+        if (@source_redis_version.split('.') <=> ['2', '8', '0']) == 1
+          @source_redis.scan_each(key_pat).to_a
+        else
+          @source_redis.keys(key_pat)
+        end
+      end
 
       def find_contact(old_contact_id)
         new_contact_id = @contact_id_cache[old_contact_id]
@@ -591,7 +642,10 @@ module Flapjack
 
         if check.nil? && opts[:create]
           # check doesn't already exist
-          check = Flapjack::Data::Check.new(:name => check_name)
+          enabled = @current_entity_names.include?(entity_name) &&
+            @current_check_names.include?(check_name)
+          check = Flapjack::Data::Check.new(:name => check_name,
+            :enabled => enabled)
           check.save
           raise check.errors.full_messages.join(", ") unless check.persisted?
           @check_name_cache[new_check_name] = check
