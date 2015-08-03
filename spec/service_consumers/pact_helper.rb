@@ -21,21 +21,6 @@ ENV['RACK_ENV'] = ENV["FLAPJACK_ENV"]
 require 'bundler'
 Bundler.require(:default, :test)
 
-if 'java'.eql?(RUBY_PLATFORM)
-  module Pact
-    module MatchingRules
-      class Merge
-        def initialize expected, matching_rules, root_path
-          @expected = expected
-          @matching_rules = standardise_paths(matching_rules)
-          # @root_path = JsonPath.new(root_path).to_s  # problematic line in jruby
-          @root_path = JsonPath.new(root_path).path.join
-        end
-      end
-    end
-  end
-end
-
 ActiveSupport.use_standard_json_time_format = true
 ActiveSupport.time_precision = 0
 
