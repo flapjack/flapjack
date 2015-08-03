@@ -187,9 +187,11 @@ module Flapjack
         is_a_test            = 'test_notifications'.eql?(notification_state.action)
 
         unless is_a_test
-          Flapjack::Data::Route.intersect(:id => route_ids).each do |route|
-            route.is_alerting = this_notification_failure
-            route.save # no-op if the value didn't change
+          # NB: marks any routes for the check (not matching route_ids)
+          # as not alerting any more: e.g. ok -> warning -> critical
+          check.routes.each do |route|
+            route.is_alerting = this_notification_failure && route_ids.include?(route.id)
+            route.save! # no-op if the value didn't change
           end
         end
 
