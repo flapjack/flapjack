@@ -15,8 +15,7 @@
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
 #   Not migrated:
-#      which checks are currently alerting for a medium (FIXME)
-#      current rollup status (if alerting_checks is sorted, this should resolve on next relevant event)
+#      current rollup status (if alerting_checks is done, this should resolve on next relevant event)
 #      notifications/alerts (see note above)
 
 require 'pp'
@@ -118,6 +117,8 @@ module Flapjack
         @current_entity_names = @source_redis.zrange('current_entities', 0, -1)
         @current_check_names = source_keys_matching('current_checks:?*')
 
+        @time = Time.now
+
         migrate_contacts_and_media
         migrate_checks
 
@@ -131,6 +132,7 @@ module Flapjack
         migrate_scheduled_maintenances
         migrate_unscheduled_maintenances
 
+        migrate_alerting_routes
       rescue Exception => e
         puts e.message
         trace = e.backtrace.join("\n")
@@ -363,6 +365,11 @@ module Flapjack
             timestamps_processed += timestamps.size
             break if timestamps_processed >= state_count_for_check
           end
+
+          cond = check.states.last.condition
+          check.condition = cond
+          check.failing = !Flapjack::Data::Condition.healthy?(cond)
+          check.save!
 
           unless most_severe.nil?
             check.most_severe = most_severe
@@ -616,6 +623,25 @@ module Flapjack
         end
       end
 
+      def migrate_alerting_routes
+        Flapjack::Data::Check.each do |check|
+          cond = check.condition
+
+          _, route_ids = if cond.nil? || Flapjack::Data::Condition.healthy?(cond) ||
+            check.in_scheduled_maintenance?(@time) || check.in_unscheduled_maintenance?(@time)
+
+            [nil, []]
+          else
+            check.rule_ids_and_route_ids(:severity => cond)
+          end
+
+          check.routes.each do |route|
+            route.is_alerting = route_ids.include?(route.id)
+            route.save!
+          end
+        end
+      end
+
       # ###########################################################################
 
       def source_keys_matching(key_pat)
@@ -643,8 +669,8 @@ module Flapjack
         if check.nil? && opts[:create]
           # check doesn't already exist
           enabled = @current_entity_names.include?(entity_name) &&
-            @current_check_names.include?(check_name)
-          check = Flapjack::Data::Check.new(:name => check_name,
+                    @source_redis.zrange("current_checks:#{entity_name}", 0, -1).include?(check_name)
+          check = Flapjack::Data::Check.new(:name => new_check_name,
             :enabled => enabled)
           check.save
           raise check.errors.full_messages.join(", ") unless check.persisted?
