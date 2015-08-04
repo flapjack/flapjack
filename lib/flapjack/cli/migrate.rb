@@ -10,7 +10,7 @@
 # To see the state of the redis databases before and after, e.g. (using nodejs
 # 'npm install redis-dump -g')
 #
-#  be ruby bin/flapjack-migration migrate --source-db=7 --destination-db=8 --force
+#  be ruby bin/flapjack migrate --source=localhost --destination=8 --force
 #  redis-dump -d 7 >~/Desktop/dump7.txt
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
@@ -259,7 +259,7 @@ module Flapjack
           contacts_for_key =~ /\Acontacts_for:(#{ID_PATTERN_FRAGMENT})(?::(#{CHECK_PATTERN_FRAGMENT}))?\z/
           entity_id   = $1
           check_name  = $2
-          if entity_id.nil? || check_name.nil?
+          if entity_id.nil?
             raise "Bad regex for '#{contacts_for_key}'"
           end
 
@@ -337,7 +337,7 @@ module Flapjack
               perfdata_json = @source_redis.get("#{ect}:perfdata")
 
               state = Flapjack::Data::State.new(:condition => condition,
-                :created_at => timestamp, :updated_at => timestamp,
+                :created_at => timestamp.to_i, :updated_at => timestamp.to_i,
                 :summary => summary, :details => details,
                 :perfdata_json => perfdata_json)
               state.save
@@ -425,9 +425,9 @@ module Flapjack
             window_end = [sched_maints_processed + 50, sched_maint_count_for_check].min - 1
             sched_maints = @source_redis.zrange(sm_key, sched_maints_processed, window_end, :with_scores => true)
 
-            sched_maints.each do |duration_timestamp|
-              duration  = duration_timestamp[0].to_i
-              timestamp = duration_timestamp[1].to_i
+            sched_maints.each do |timestamp_duration|
+              timestamp = timestamp_duration[0].to_i
+              duration  = timestamp_duration[1].to_i
 
               summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:scheduled_maintenance:summary")
 
@@ -472,9 +472,9 @@ module Flapjack
             window_end = [unsched_maints_processed + 50, unsched_maint_count_for_check].min - 1
             unsched_maints = @source_redis.zrange(usm_key, unsched_maints_processed, window_end, :with_scores => true)
 
-            unsched_maints.each do |duration_timestamp|
-              duration  = duration_timestamp[0].to_i
-              timestamp = duration_timestamp[1].to_i
+            unsched_maints.each do |timestamp_duration|
+              timestamp = timestamp_duration[0].to_i
+              duration  = timestamp_duration[1].to_i
 
               summary = @source_redis.get("#{entity_name}:#{check_name}:#{timestamp}:unscheduled_maintenance:summary")
 
@@ -554,42 +554,47 @@ module Flapjack
 
             checks_and_tags_for_rule = proc do |rule|
 
-              checks_for_rule = Flapjack::Data::Check.intersect(:id => check_ids)
+              Flapjack::Data::Check.lock(Flapjack::Data::Rule, Flapjack::Data::Tag,
+                Flapjack::Data::Contact, Flapjack::Data::Route) do
 
-              checks = if regex_entities.empty? && regex_tags.empty?
-                checks_for_rule.all
-              else
-                # apply the entities/tag regexes as a filter
-                checks_for_rule.select do |check|
-                  entity_name = check.name.split(':', 2).first
-                  if regex_entities.all? {|re| re === entity_name }
-                    # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
-                    # not sure if this does what we want, but it's how it currently works
-                    matching_re = []
-                    check_tags.each do |check_tags|
-                      matching_re += regex_tags.select {|re| re === check_tag }
+                checks_for_rule = Flapjack::Data::Check.intersect(:id => check_ids)
+
+                checks = if regex_entities.empty? && regex_tags.empty?
+                  checks_for_rule.all
+                else
+                  # apply the entities/tag regexes as a filter
+                  checks_for_rule.select do |check|
+                    entity_name = check.name.split(':', 2).first
+                    if regex_entities.all? {|re| re === entity_name }
+                      # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
+                      # not sure if this does what we want, but it's how it currently works
+                      matching_re = []
+                      check.tags.each do |tag|
+                        matching_re += regex_tags.select {|re| re === tag.name }
+                      end
+                      matching_re.size >= regex_tags.size
+                    else
+                      false
                     end
-                    matching_re.size >= regex_tags.size
-                  else
-                    false
                   end
                 end
-              end
 
-              tags = checks.collect do |check|
-                check_num = check_counts_by_id[check.id]
-                if check_num.nil?
-                  check_num = check_counts_by_id.size + 1
-                  check_counts_by_id[check.id] = check_num
+                tags = checks.collect do |check|
+                  check_num = check_counts_by_id[check.id]
+                  if check_num.nil?
+                    check_num = check_counts_by_id.size + 1
+                    check_counts_by_id[check.id] = check_num
+                  end
+
+                  tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
+                  tag.save
+                  check.tags << tag
+                  tag
                 end
 
-                tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}|")
-                tag.save
-                check.tags << tag
-                tag
-              end
+                rule.tags.add(*tags) unless tags.empty?
 
-              rule.tags.add(*tags) unless tags.empty?
+              end
             end
 
             unless blackhole_states.empty?
@@ -599,7 +604,7 @@ module Flapjack
               rule.save
               raise rule.errors.full_messages.join(", ") unless rule.persisted?
 
-              checks_and_tags_for_rule(rule)
+              checks_and_tags_for_rule.call(rule)
               rules << rule
             end
 
@@ -614,7 +619,7 @@ module Flapjack
               media = contact.media.intersect(:transport => media_transports)
               rule.media.add_ids(*media.ids) unless media.empty?
 
-              checks_and_tags_for_rule(rule)
+              checks_and_tags_for_rule.call(rule)
               rules << rule
             end
           end
@@ -624,20 +629,24 @@ module Flapjack
       end
 
       def migrate_alerting_routes
-        Flapjack::Data::Check.each do |check|
-          cond = check.condition
+        Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::UnscheduledMaintenance, Flapjack::Data::Route) do
 
-          _, route_ids = if cond.nil? || Flapjack::Data::Condition.healthy?(cond) ||
-            check.in_scheduled_maintenance?(@time) || check.in_unscheduled_maintenance?(@time)
+          Flapjack::Data::Check.each do |check|
+            cond = check.condition
 
-            [nil, []]
-          else
-            check.rule_ids_and_route_ids(:severity => cond)
-          end
+            _, route_ids = if cond.nil? || Flapjack::Data::Condition.healthy?(cond) ||
+              check.in_scheduled_maintenance?(@time) || check.in_unscheduled_maintenance?(@time)
 
-          check.routes.each do |route|
-            route.is_alerting = route_ids.include?(route.id)
-            route.save!
+              [nil, []]
+            else
+              check.rule_ids_and_route_ids(:severity => cond)
+            end
+
+            check.routes.each do |route|
+              route.is_alerting = route_ids.include?(route.id)
+              route.save!
+            end
           end
         end
       end
@@ -646,7 +655,7 @@ module Flapjack
 
       def source_keys_matching(key_pat)
         if (@source_redis_version.split('.') <=> ['2', '8', '0']) == 1
-          @source_redis.scan_each(key_pat).to_a
+          @source_redis.scan_each(:match => key_pat).to_a
         else
           @source_redis.keys(key_pat)
         end
