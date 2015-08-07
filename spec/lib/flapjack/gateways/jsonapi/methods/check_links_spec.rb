@@ -105,20 +105,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
         :id => tag.id,
         :type => 'tag',
         :attributes => tag_data,
-        :relationships => {
-          :checks => {
-            :links => {
-              :self => "http://example.org/tags/#{tag.id}/relationships/checks",
-              :related => "http://example.org/tags/#{tag.id}/checks"
-            }
-          },
-          :rules => {
-            :links => {
-              :self => "http://example.org/tags/#{tag.id}/relationships/rules",
-              :related => "http://example.org/tags/#{tag.id}/rules"
-            }
-          }
-        }
+        :relationships => tag_rel(tag_data)
       }],
       :links => {
         :self    => "http://example.org/checks/#{check.id}/relationships/tags",

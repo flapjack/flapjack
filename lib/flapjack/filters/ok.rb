@@ -30,8 +30,6 @@ module Flapjack
 
         Flapjack.logger.debug { "Filter: Ok: clearing alerting routes for #{check.id}" }
 
-        check.no_longer_alerting
-
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
           Flapjack.logger.debug("Filter: Ok: block - previous state was ok, so blocking")
           Flapjack.logger.debug(old_state.inspect)

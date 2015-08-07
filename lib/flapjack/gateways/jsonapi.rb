@@ -18,6 +18,7 @@ require 'flapjack'
 require 'flapjack/utility'
 
 require 'flapjack/data/acknowledgement'
+require 'flapjack/data/blackhole'
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
@@ -58,6 +59,7 @@ module Flapjack
 
       RESOURCE_CLASSES = [
         Flapjack::Data::Acknowledgement,
+        Flapjack::Data::Blackhole,
         Flapjack::Data::Check,
         Flapjack::Data::Contact,
         Flapjack::Data::Medium,

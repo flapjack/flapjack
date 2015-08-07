@@ -9,6 +9,7 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
+require 'flapjack/data/blackhole'
 require 'flapjack/data/condition'
 require 'flapjack/data/medium'
 require 'flapjack/data/scheduled_maintenance'
@@ -70,12 +71,8 @@ module Flapjack
 
         tag_ids = self.tags.ids
 
-        tag_rules_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
-          associated_ids_for(:rules)
-
-        return if tag_rules_ids.empty?
-
-        all_rules_for_tags_ids = Set.new(tag_rules_ids.values).flatten
+        all_rules_for_tags_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
+          associated_ids_for(:rules).values.reduce(Set.new, :|)
 
         return if all_rules_for_tags_ids.empty?
 
@@ -89,12 +86,12 @@ module Flapjack
         return if rule_ids.empty?
 
         contact_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-          associated_ids_for(:contact).values.reduce(:|) || []
+          associated_ids_for(:contact).values
 
         self.contacts.add_ids(*contact_ids) unless contact_ids.empty?
 
         Flapjack::Data::Rule.intersect(:id => rule_ids).each do |r|
-          route = Flapjack::Data::Route.new(:is_alerting => false,
+          route = Flapjack::Data::Route.new(:alertable => false,
             :conditions_list => r.conditions_list)
           route.save
 
@@ -145,8 +142,77 @@ module Flapjack
       has_and_belongs_to_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :checks
 
-      has_and_belongs_to_many :alerting_media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :alerting_checks
+      def alerting_media(time = nil, alert_routes = nil)
+        time ||= Time.now
+
+        # not sure what to do with scheduled maintenance, ack, enabled ??
+
+        # start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
+        # end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
+
+        # unless self.scheduled_maintenances.
+        #   intersect(:start_time => start_range, :end_time => end_range).empty?
+
+        #   return Flapjack::Data::Medium.empty
+        # end
+
+        alert_routes ||= self.routes.intersect(:alertable => true)
+        route_rule_ids = alert_routes.associated_ids_for(:rule).values.uniq
+
+        return Flapjack::Data::Medium.empty if route_rule_ids.empty?
+
+        # if a rule has no media, it's irrelevant here
+        rule_ids_by_contact_id = Flapjack::Data::Rule.
+          intersect(:id => route_rule_ids, :has_media => true).
+          associated_ids_for(:contact, :inversed => true)
+
+        contacts = rule_ids_by_contact_id.empty? ? [] :
+          Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
+
+        matching_rule_ids = contacts.inject([]) do |memo, contact|
+          timezone = contact.time_zone || @default_contact_timezone
+          rule_ids = rule_ids_by_contact_id[contact.id]
+
+          unless rule_ids.empty?
+             memo += Flapjack::Data::Rule.intersect(:id => rule_ids).select {|rule|
+              rule.is_occurring_at?(time, timezone)
+            }.map(&:id)
+          end
+          memo
+        end
+
+        return Flapjack::Data::Medium.empty if matching_rule_ids.empty?
+
+        media_ids = Flapjack::Data::Rule.intersect(:id => matching_rule_ids).
+          associated_ids_for(:media).values.reduce(:|)
+
+        return Flapjack::Data::Medium.empty if media_ids.empty?
+
+        # remove any media for which any medium.blackhole.tags - self.tags is empty
+        blackhole_ids_by_media_id = Flapjack::Data::Medium.
+          intersect(:id => media_ids).associated_ids_for(:blackholes)
+
+        blackhole_ids = blackhole_ids_by_media_id.values.reduce(:|)
+
+        unless blackhole_ids.empty?
+          tag_ids = self.tags.ids
+
+          tag_ids_by_blackhole_id = Flapjack::Data::Blackhole.
+            intersect(:id => blackhole_ids).associated_ids_for(:tags)
+
+          media_ids -= blackhole_ids_by_media_id.each_with_object([]) do |(media_id, media_blackhole_ids), memo|
+            memo << media_id if media_blackhole_ids.any? {|mb_id|
+              bh_tag_ids = tag_ids_by_blackhole_id[mb_id]
+              (bh_tag_ids - tag_ids).empty?
+            }
+          end
+
+          return Flapjack::Data::Medium.empty if media_ids.empty?
+        end
+
+        Flapjack::Data::Medium.intersect(:id => media_ids)
+      end
+
       # end internal associations
 
       validates :name, :presence => true
@@ -319,7 +385,16 @@ module Flapjack
           @jsonapi_associations = {
             :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :type => 'medium',
+              :klass => Flapjack::Data::Medium,
+              :related_klasses => [
+                Flapjack::Data::Blackhole,
+                Flapjack::Data::Contact,
+                Flapjack::Data::Route,
+                Flapjack::Data::Rule,
+                Flapjack::Data::ScheduledMaintenance
+              ]
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
@@ -368,16 +443,11 @@ module Flapjack
       end
 
       def in_scheduled_maintenance?(t = Time.now)
-        return false if scheduled_maintenances_at(t).empty?
-        no_longer_alerting
-        true
+        scheduled_maintenances_at(t).empty?
       end
 
       def current_scheduled_maintenances
-        csm = scheduled_maintenances_at(Time.now).all
-        return [] if csm.empty?
-        no_longer_alerting
-        csm
+        scheduled_maintenances_at(Time.now)
       end
 
       def in_unscheduled_maintenance?(t = Time.now)
@@ -401,10 +471,6 @@ module Flapjack
           # it spans the current time, so we'll stop it at that point
           sched_maint.end_time = at_time
           sched_maint.save
-          self.routes.intersect(:is_alerting => true).each do |route|
-            route.is_alerting = false
-            route.save
-          end
           return true
         end
 
@@ -423,21 +489,6 @@ module Flapjack
           end
 
           self.unscheduled_maintenances << unsched_maint
-
-          # # TODO maybe add an ack action to the event state directly, uless this is the
-          # # result of one
-          # if options[:create_state].is_a?(TrueClass)
-          #   last_state = self.states.last
-          #   ack_state = Flapjack::Data::State.new
-          #   # TODO set state data
-          #   ack_state.save
-          #   self.states << ack_state
-          # end
-
-          self.routes.intersect(:is_alerting => true).each do |route|
-            route.is_alerting = false
-            route.save
-          end
         end
       end
 
@@ -521,14 +572,14 @@ module Flapjack
       end
 
       def no_longer_alerting
-        self.routes.intersect(:is_alerting => true).each do |route|
-          route.is_alerting = false
-          route.save
-        end
+        # self.routes.intersect(:alertable => true).each do |route|
+        #   route.alertable = false
+        #   route.save
+        # end
 
-        unless self.alerting_media.empty?
-          self.alerting_media.remove(*self.alerting_media.all)
-        end
+        # unless self.alerting_media.empty?
+        #   self.alerting_media.remove(*self.alerting_media.all)
+        # end
       end
 
       private

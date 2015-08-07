@@ -16,7 +16,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -46,7 +47,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -90,7 +92,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags matching a filter" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -137,7 +140,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -159,7 +163,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves several tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -213,7 +218,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it 'sets a linked check for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -240,7 +246,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -256,7 +263,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes multiple tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).
@@ -280,7 +288,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "does not delete a tag that does not exist" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
            Flapjack::Data::Rule).

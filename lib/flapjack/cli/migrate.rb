@@ -10,19 +10,13 @@
 # To see the state of the redis databases before and after, e.g. (using nodejs
 # 'npm install redis-dump -g')
 #
-#  be ruby bin/flapjack migrate --source=localhost --destination=8 --force
+#  be ruby bin/flapjack migrate to_v2 --source=redis://127.0.0.1/7 --destination=redis://127.0.0.1/8
 #  redis-dump -d 7 >~/Desktop/dump7.txt
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
 #   Not migrated:
 #      current rollup status (if alerting_checks is done, this should resolve on next relevant event)
 #      notifications/alerts (see note above)
-
-require 'pp'
-
-require 'optparse'
-require 'ostruct'
-require 'redis'
 
 ENTITY_PATTERN_FRAGMENT = '[a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9]'
 CHECK_PATTERN_FRAGMENT  = '.+'
@@ -33,6 +27,7 @@ TAG_PATTERN_FRAGMENT    = '.+'
 require 'i18n'
 I18n.config.enforce_available_locales = true
 
+require 'redis'
 require 'hiredis'
 require 'zermelo'
 
@@ -87,6 +82,8 @@ module Flapjack
 
         dest_addr = @options[:destination]
         dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
+
+        Zermelo.logger = ::Logger.new('/Users/ali/Desktop/zermelo_migrate.log')
 
         Zermelo.redis = dest_redis
 

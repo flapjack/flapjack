@@ -100,156 +100,108 @@ module Flapjack
     end
 
     def alerts_for(notification, check, opts = {})
-      time = opts[:time]
-
-      in_sched   = check.in_scheduled_maintenance?(time)
-      in_unsched = check.in_unscheduled_maintenance?(time)
-
-      rule_ids_by_contact_id, route_ids =
-        check.rule_ids_and_route_ids(:severity => notification.severity)
-
-      notification_state = notification.state
-
-      if rule_ids_by_contact_id.empty?
-        alert_type = Flapjack::Data::Alert.notification_type(notification_state.action,
-          notification_state.condition)
-
-        Flapjack.logger.info { "#{check.name} | #{alert_type} | NO RULES" }
-        return
-      end
-
+      time       = opts[:time]
       transports = opts[:transports]
-
-      Flapjack.logger.debug { "contact_ids: #{rule_ids_by_contact_id.keys.size}" }
-
-      contacts = rule_ids_by_contact_id.empty? ? [] :
-        Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
-      return if contacts.empty?
-
-      # TODO pass in base time from outside (cast to zone per contact), so
-      # all alerts from this notification use a consistent time
-
-      rule_ids = contacts.inject([]) do |memo, contact|
-        rules = Flapjack::Data::Rule.find_by_ids(*rule_ids_by_contact_id[contact.id])
-        next memo if rules.empty?
-
-        timezone = contact.time_zone || @default_contact_timezone
-        rules.select! {|rule| rule.is_occurring_at?(time, timezone) }
-
-        memo += rules.map(&:id)
-        memo
-      end
-
-      Flapjack.logger.debug "rule_ids after time: #{rule_ids.size}"
-      return if rule_ids.empty?
 
       Flapjack::Data::Medium.lock(Flapjack::Data::Check,
                                   Flapjack::Data::ScheduledMaintenance,
                                   Flapjack::Data::UnscheduledMaintenance,
                                   Flapjack::Data::Rule,
                                   Flapjack::Data::Alert,
+                                  Flapjack::Data::Blackhole,
                                   Flapjack::Data::Route,
                                   Flapjack::Data::Notification,
                                   Flapjack::Data::Contact,
                                   Flapjack::Data::State) do
 
-        blackhole_media_ids = Flapjack::Data::Rule.
-          intersect(:id => rule_ids, :is_blackhole => true).
-          associated_ids_for(:media).values.reduce(Set.new, :|)
-
-        Flapjack.logger.debug "blackhole_media_ids: #{blackhole_media_ids.inspect}"
-
-        media_ids = Flapjack::Data::Rule.
-          intersect(:id => rule_ids, :is_blackhole => [nil, false]).
-          associated_ids_for(:media).values.reduce(Set.new, :|)
-
-        Flapjack.logger.debug "media ids pre-blackhole: #{media_ids.inspect}"
-
-        media_ids -= blackhole_media_ids
-
-        Flapjack.logger.debug "media ids post-blackhole: #{media_ids.inspect}"
-
-        alertable_media = Flapjack::Data::Medium.intersect(:id => media_ids,
-          :transport => transports).all
-
-        # we want to consider this as 'alerting' for the purpose of rollup
-        # calculations, if it's failing, even if we won't notify on this media
-
-        Flapjack.logger.debug "healthy #{Flapjack::Data::Condition.healthy?(notification_state.condition)}"
-        Flapjack.logger.debug "sched #{in_sched}"
-        Flapjack.logger.debug "unsched #{in_unsched}"
-
-        this_notification_failure = !(Flapjack::Data::Condition.healthy?(notification_state.condition) ||
-          in_sched || in_unsched)
+        notification_state = notification.state
 
         this_notification_ok = 'acknowledgement'.eql?(notification_state.action) ||
           Flapjack::Data::Condition.healthy?(notification_state.condition)
+
+        # checks in sched/unsched maint will not be notified -- time should be taken
+        # from the processor's created notification, maint period check done there only
+        this_notification_failure = !Flapjack::Data::Condition.healthy?(notification.severity)
         is_a_test            = 'test_notifications'.eql?(notification_state.action)
 
-        unless is_a_test
-          # NB: marks any routes for the check (not matching route_ids)
-          # as not alerting any more: e.g. ok -> warning -> critical
-          check.routes.each do |route|
-            route.is_alerting = this_notification_failure && route_ids.include?(route.id)
+        alert_routes = nil
+
+        if is_a_test
+          alert_routes = check.routes.intersect(:conditions_list => [nil, /(?:^|,)critical(?:,|$)/])
+        elsif !this_notification_ok
+          alert_routes = check.routes.intersect(:conditions_list => [nil, /(?:^|,)#{notification.severity}(?:,|$)/])
+          alert_routes.each do |route|
+            route.alertable = this_notification_failure
             route.save! # no-op if the value didn't change
           end
         end
 
-        Flapjack.logger.debug "pre-media test: \n" \
-          "  this_notification_failure = #{this_notification_failure}\n" \
-          "  this_notification_ok      = #{this_notification_ok}\n" \
-          "  is_a_test                 = #{is_a_test}"
+        media = check.alerting_media(time, alert_routes).all
 
-        alertable_media.each_with_object([]) do |medium, memo|
+        Flapjack.logger.debug {
+          "Alerting media for check #{check.name}:\n" +
+            media.collect {|m| "#{m.transport} #{m.address}"}.join("\n")
+        }
 
-          Flapjack.logger.debug "media test: #{medium.transport}, #{medium.id}"
-
-          if this_notification_failure
-            medium.alerting_checks << check
-          elsif this_notification_ok
-            medium.alerting_checks.remove(check)
+        # clear routes if OK, to get accurate rollup counts
+        if !is_a_test && this_notification_ok
+          check.routes.each do |route|
+            route.alertable = false
+            route.save! # no-op if the value didn't change
           end
+        end
 
-          alerting_check_ids = medium.alerting_checks.intersect(:enabled => true).ids
+        media.inject([]) do |memo, alerting_medium|
 
-          Flapjack.logger.debug {
-            " alerting_checks: #{alerting_check_ids.inspect}"
-          }
+          alert_rollup = nil
+          alerting_check_ids = []
 
-          last_state = medium.last_state
+          unless is_a_test
+            # should the relevant data here be cached in the association -- only
+            # refreshed by the above? what would the impact be on API queries?
+            # maybe split the 'alerting_checks' method and the association inverse?
 
-          last_state_ok = last_state.nil? ? nil :
-            (Flapjack::Data::Condition.healthy?(last_state.condition) ||
-            'acknowledgement'.eql?(last_state.action))
+            alert_rollup = if 'problem'.eql?(alerting_medium.last_rollup_type) ||
+              !alerting_medium.rollup_threshold.nil?
 
-          alert_rollup = if !medium.rollup_threshold.nil? &&
-            (alerting_check_ids.size >= medium.rollup_threshold)
+              alerting_check_ids = alerting_medium.alerting_checks.ids
 
-            'problem'
-          elsif 'problem'.eql?(medium.last_rollup_type)
-            'recovery'
-          else
-            nil
-          end
+              if alerting_medium.rollup_threshold.nil? || (alerting_medium.rollup_threshold <= 0) ||
+                (alerting_check_ids.size < alerting_medium.rollup_threshold)
 
-          Flapjack.logger.debug "last_state #{last_state.inspect}"
+                'problem'.eql?(alerting_medium.last_rollup_type) ? 'recovery' : nil
+              else
+                'problem'
+              end
+            else
+              nil
+            end
 
-          interval_allows = last_state.nil? ||
-            ((!last_state_ok && this_notification_failure) &&
-             ((last_state.created_at + (medium.interval || 0)) < notification_state.created_at))
+            last_state = alerting_medium.last_state
 
-          Flapjack.logger.debug "  last_state_ok = #{last_state_ok}\n" \
-            "  interval_allows  = #{interval_allows}\n" \
-            "  alert_rollup , last_rollup_type = #{alert_rollup} , #{medium.last_rollup_type}\n" \
-            "  condition , last_notification_condition  = #{notification_state.condition} , #{last_state.nil? ? '-' : last_state.condition}\n" \
-            "  no_previous_notification  = #{last_state.nil?}\n"
+            Flapjack.logger.debug "last_state #{last_state.inspect}"
 
-          next unless is_a_test || last_state.nil? ||
+            last_state_ok = last_state.nil? ? nil :
+              (Flapjack::Data::Condition.healthy?(last_state.condition) ||
+               'acknowledgement'.eql?(last_state.action))
+
+            interval_allows = last_state.nil? ||
+              ((!last_state_ok && this_notification_failure) &&
+               ((last_state.created_at + (alerting_medium.interval || 0)) < notification_state.created_at))
+
+            Flapjack.logger.debug "  last_state_ok = #{last_state_ok}\n" \
+              "  interval_allows  = #{interval_allows}\n" \
+              "  alert_rollup , last_rollup_type = #{alert_rollup} , #{alerting_medium.last_rollup_type}\n" \
+              "  condition , last_notification_condition  = #{notification_state.condition} , #{last_state.nil? ? '-' : last_state.condition}\n" \
+              "  no_previous_notification  = #{last_state.nil?}\n"
+
+            next memo unless last_state.nil? ||
               (!last_state_ok && this_notification_ok) ||
-            (alert_rollup != medium.last_rollup_type) ||
-            ('acknowledgement'.eql?(last_state.action) && this_notification_failure) ||
-            (notification_state.condition != last_state.condition) ||
-            interval_allows
+              (alert_rollup != alerting_medium.last_rollup_type) ||
+              ('acknowledgement'.eql?(last_state.action) && this_notification_failure) ||
+              (notification_state.condition != last_state.condition) ||
+              interval_allows
+          end
 
           alert = Flapjack::Data::Alert.new(:condition => notification_state.condition,
             :action => notification_state.action,
@@ -260,10 +212,10 @@ module Flapjack
             :rollup => alert_rollup)
 
           unless alert_rollup.nil? || alerting_check_ids.empty?
-            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, memo|
+            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, m|
               cond = check.condition
-              memo[cond] ||= []
-              memo[cond] << check.name
+              m[cond] ||= []
+              m[cond] << check.name
             end
           end
 
@@ -271,18 +223,19 @@ module Flapjack
             raise "Couldn't save alert: #{alert.errors.full_messages.inspect}"
           end
 
-          medium.alerts << alert
+          alerting_medium.alerts << alert
           check.alerts  << alert
 
-          Flapjack.logger.info "alerting for #{medium.transport}, #{medium.address}"
+          Flapjack.logger.info "alerting for #{alerting_medium.transport}, #{alerting_medium.address}"
 
-          unless 'test_notifications'.eql?(notification_state.action)
-            notification_state.latest_media << medium
-            medium.last_rollup_type = alert.rollup
-            medium.save
+          unless is_a_test
+            notification_state.latest_media << alerting_medium
+            alerting_medium.last_rollup_type = alert.rollup
+            alerting_medium.save
           end
 
           memo << alert
+          memo
         end
       end
     end

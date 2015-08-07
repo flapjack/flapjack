@@ -100,7 +100,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {
@@ -2464,7 +2463,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {
@@ -2511,7 +2509,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {
@@ -2539,7 +2536,6 @@
               "id": "20f182fc-6e32-4794-9007-97366d162c51",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "warning"
               },
               "relationships": {
@@ -2584,7 +2580,6 @@
             "id": "05983623-fcef-42da-af44-ed6990b500fa",
             "type": "rule",
             "attributes": {
-              "is_blackhole": false,
               "conditions_list": "critical"
             },
             "relationships": {
@@ -2692,7 +2687,6 @@
             "id": "05983623-fcef-42da-af44-ed6990b500fa",
             "type": "rule",
             "attributes": {
-              "is_blackhole": false,
               "conditions_list": "critical"
             },
             "relationships": {
@@ -2716,7 +2710,6 @@
             "id": "05983623-fcef-42da-af44-ed6990b500fa",
             "type": "rule",
             "attributes": {
-              "is_blackhole": false,
               "conditions_list": "critical"
             },
             "relationships": {
@@ -2758,7 +2751,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {
@@ -2774,7 +2766,6 @@
               "id": "20f182fc-6e32-4794-9007-97366d162c51",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "warning"
               },
               "relationships": {
@@ -2800,7 +2791,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {
@@ -2828,7 +2818,6 @@
               "id": "20f182fc-6e32-4794-9007-97366d162c51",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "warning"
               },
               "relationships": {
@@ -3847,7 +3836,6 @@
               "id": "05983623-fcef-42da-af44-ed6990b500fa",
               "type": "rule",
               "attributes": {
-                "is_blackhole": false,
                 "conditions_list": "critical"
               },
               "relationships": {

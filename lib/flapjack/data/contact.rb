@@ -44,22 +44,14 @@ module Flapjack
       has_and_belongs_to_many :checks, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :contacts
 
+      has_many :blackholes, :class_name => 'Flapjack::Data::Blackhole',
+        :inverse_of => :contact
+
       has_many :media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :contact
 
       has_many :rules, :class_name => 'Flapjack::Data::Rule',
-        :inverse_of => :contact, :after_remove => :clear_rule_alerting_media,
-        :related_class_names => ['Flapjack::Data::Medium',
-          'Flapjack::Data::Check', 'Flapjack::Data::ScheduledMaintenance']
-
-      def self.clear_rule_alerting_media(contact_id, *r_ids)
-        media_ids = Flapjack::Data::Rule.intersect(:id => r_ids).
-          associated_ids_for(:media).values.reduce(:|)
-
-        Flapjack::Data::Medium.intersect(:id => media_ids).each do |medium|
-          medium.alerting_checks.clear
-        end
-      end
+        :inverse_of => :contact
 
       validates_with Flapjack::Data::Validators::IdValidator
 
@@ -103,6 +95,10 @@ module Flapjack
       swagger_schema :ContactLinks do
         key :required, [:self, :checks, :media, :rules]
         property :self do
+          key :type, :string
+          key :format, :url
+        end
+        property :blackholes do
           key :type, :string
           key :format, :url
         end
@@ -165,6 +161,9 @@ module Flapjack
       end
 
       swagger_schema :ContactChangeLinks do
+        property :blackholes do
+          key :"$ref", :jsonapi_BlackholeLinkage
+        end
         property :media do
           key :"$ref", :jsonapi_MediaLinkage
         end
@@ -192,6 +191,10 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
+            :blackholes => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => true
+            ),
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true

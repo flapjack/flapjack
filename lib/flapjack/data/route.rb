@@ -8,9 +8,9 @@ module Flapjack
       include Zermelo::Records::Redis
 
       define_attributes :conditions_list => :string,
-                        :is_alerting => :boolean
+                        :alertable => :boolean
 
-      index_by :conditions_list, :is_alerting
+      index_by :conditions_list, :alertable
 
       belongs_to :rule, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :routes

@@ -63,8 +63,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "returns paginated contacts" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     meta = {:pagination => {
       :page        => 1,
@@ -103,8 +106,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "retrieves paginated contacts matching a filter" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
+
 
     meta = {
       :pagination => {
@@ -147,8 +154,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "retrieves paginated contacts matching two filter values" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     meta = {
       :pagination => {
@@ -191,8 +201,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "returns the second page of a multi-page contact list" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     meta = {:pagination => {
       :page        => 2,
@@ -246,8 +259,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "returns paginated sorted contacts" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     meta = {:pagination => {
       :page        => 1,
@@ -294,8 +310,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "does not return contacts if sort parameter is incorrectly specified" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
+
     expect(Flapjack::Data::Contact).not_to receive(:sort)
 
     get '/contacts?sort=enabled'
@@ -305,8 +325,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "returns a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     expect(Flapjack::Data::Contact).to receive(:intersect).
       with(:id => contact.id).and_return([contact])
@@ -326,8 +349,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "does not return a contact that does not exist" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     no_contacts = double('no_contacts')
     expect(no_contacts).to receive(:empty?).and_return(true)
@@ -341,8 +367,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it 'returns a contact and the transport and address of its media records' do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     contacts = double('contacts')
     expect(contacts).to receive(:empty?).and_return(false)
@@ -403,8 +432,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Check, Flapjack::Data::Medium, Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Blackhole,
+           Flapjack::Data::Check,
+           Flapjack::Data::Medium,
+           Flapjack::Data::Rule).
+      and_yield
 
     contacts = double('contacts')
     expect(contact).to receive(:destroy)

@@ -54,8 +54,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
   it 'lists rules for a contact' do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Rule, Flapjack::Data::Medium, Flapjack::Data::Check,
-           Flapjack::Data::ScheduledMaintenance).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     sorted = double('sorted')
     paged  = double('paged')

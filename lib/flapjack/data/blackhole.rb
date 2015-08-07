@@ -5,12 +5,13 @@ require 'set'
 require 'ice_cube'
 require 'swagger/blocks'
 
+require 'flapjack/utility'
+
 require 'zermelo/records/redis'
 
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/route'
 require 'flapjack/data/time_restriction'
 
 require 'flapjack/data/extensions/associations'
@@ -20,7 +21,7 @@ require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
-    class Rule
+    class Blackhole
 
       extend Flapjack::Utility
 
@@ -34,79 +35,41 @@ module Flapjack
       include Flapjack::Data::Extensions::ShortName
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :rules
+        :inverse_of => :blackholes
 
       has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :rules, :after_add => :has_some_media,
-        :after_remove => :has_no_media
+        :inverse_of => :blackholes, :after_add => :media_added,
+        :after_remove => :media_removed
+
+      def self.media_added(blackhole_id, *t_ids)
+        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
+        blackhole.has_tags = true
+        blackhole.save!
+      end
+
+      def self.media_removed(blackhole_id, *t_ids)
+        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
+        blackhole.has_media = blackhole.media.empty?
+        blackhole.save!
+      end
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :rules, :after_add => :tags_added,
-        :after_remove => :tags_removed,
-        :related_class_names => ['Flapjack::Data::Contact',
-          'Flapjack::Data::Check', 'Flapjack::Data::Route']
+        :inverse_of => :blackholes, :after_add => :tags_added,
+        :after_remove => :tags_removed
 
-      def self.tags_added(rule_id, *t_ids)
-        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
-        rule.has_tags = true
-        rule.recalculate_routes
-        rule.save!
+      def self.tags_added(blackhole_id, *t_ids)
+        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
+        blackhole.has_tags = true
+        blackhole.save!
       end
 
-      def self.tags_removed(rule_id, *t_ids)
-        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
-        rule.has_tags = rule.tags.empty?
-        rule.recalculate_routes
-        rule.save!
+      def self.tags_removed(blackhole_id, *t_ids)
+        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
+        blackhole.has_tags = blackhole.tags.empty?
+        blackhole.save!
       end
 
-      has_many :routes, :class_name => 'Flapjack::Data::Route',
-        :inverse_of => :rule
-
-      before_destroy :remove_routes
-      def remove_routes
-        self.routes.destroy_all
-      end
-
-      # NB when a rule is created, recalculate_routes should be called
-      # by the creating code if no tags are being added. FIXME -- maybe do
-      # from an after_create hook just to be safe?
-      #
-      # TODO on change to conditions_list, update value for all routes
-      def recalculate_routes
-        self.routes.destroy_all
-
-        co = self.contact
-        contact_id = co.nil? ? nil : co.id
-
-        route_for_check = proc {|c|
-          route = Flapjack::Data::Route.new(:alertable => false,
-            :conditions_list => self.conditions_list)
-          route.save
-
-          self.routes << route
-          c.routes << route
-          c.contacts.add_ids(contact_id) unless contact_id.nil?
-        }
-
-        if self.has_tags
-          # find all checks matching these tags -- FIXME there may be a more
-          # Zermelo-idiomatic way to do this
-
-          check_ids = self.tags.associated_ids_for(:checks).values.reduce(:&)
-
-          unless check_ids.empty?
-            Flapjack::Data::Check.intersect(:id => check_ids).each do |check|
-              route_for_check.call(check)
-            end
-          end
-        else
-          # create routes between this rule and all checks
-          Flapjack::Data::Check.each {|check| route_for_check.call(check) }
-        end
-      end
-
-      swagger_schema :Rule do
+      swagger_schema :Blackhole do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -114,7 +77,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
         end
         property :conditions_list do
           key :type, :string
@@ -126,11 +89,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleLinks
+          key :"$ref", :BlackholeLinks
         end
       end
 
-      swagger_schema :RuleLinks do
+      swagger_schema :BlackholeLinks do
         key :required, [:self, :contact, :media, :tags]
         property :self do
           key :type, :string
@@ -150,7 +113,7 @@ module Flapjack
         end
       end
 
-      swagger_schema :RuleCreate do
+      swagger_schema :BlackholeCreate do
         key :required, [:type]
         property :id do
           key :type, :string
@@ -158,7 +121,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
         end
         property :conditions_list do
           key :type, :string
@@ -170,11 +133,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleChangeLinks
+          key :"$ref", :BlackholeChangeLinks
         end
       end
 
-      swagger_schema :RuleUpdate do
+      swagger_schema :BlackholeUpdate do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -182,7 +145,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
         end
         property :conditions_list do
           key :type, :string
@@ -194,11 +157,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleChangeLinks
+          key :"$ref", :BlackholeChangeLinks
         end
       end
 
-      swagger_schema :RuleChangeLinks do
+      swagger_schema :BlackholeChangeLinks do
         property :contact do
           key :"$ref", :jsonapi_ContactLinkage
         end
@@ -222,9 +185,6 @@ module Flapjack
             :attributes => [:conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,
-                              Flapjack::Data::Tag, Flapjack::Data::Check,
-                              Flapjack::Data::Route]
           )
         }
       end

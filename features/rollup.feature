@@ -9,7 +9,7 @@ Feature: Rollup on a per contact, per media basis
     And the following media exist:
       | id                                   | contact_id                           | transport | address           | interval | rollup_threshold |
       | 28032dbf-388d-4f52-91b2-dc5e5be2becc | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | email     | malak@example.com | 15       | 1                |
-      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms       | +61400000001       | 15       | 2                |
+      | 73e2803f-948e-467a-a707-37b9f53ee21a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | sms       | +61400000001      | 15       | 2                |
 
     And the following checks exist:
       | id                                   | name     | tags     |
@@ -190,7 +190,6 @@ Feature: Rollup on a per contact, per media basis
     And   a critical event is received for check 'ping' on entity 'baz'
     And   1 minute passes
     And   a critical event is received for check 'ping' on entity 'baz'
-    Then  show me the amazing log
     Then  1 sms alerts should be queued for +61400000001
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     When  1 hour passes

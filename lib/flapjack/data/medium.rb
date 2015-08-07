@@ -36,7 +36,7 @@ module Flapjack
         'slack',
         'sms_twilio',
         'sms_nexmo',
-	'sms_aspsms',
+      	'sms_aspsms',
         'sns'
       ]
 
@@ -54,36 +54,65 @@ module Flapjack
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :media
 
+      has_and_belongs_to_many :blackholes, :class_name => 'Flapjack::Data::Blackhole',
+        :inverse_of => :media
+
       has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
 
-      # TODO minimise number of reads of this association
-      has_and_belongs_to_many :alerting_checks, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :alerting_media, :before_read => :remove_checks_in_sched_maint,
-        :related_class_names => ['Flapjack::Data::ScheduledMaintenance']
-
-      # acked checks remove themselves from alerting at the time of ack, not
-      # as easy to do when scheduled maintenance ticks over
-      def self.remove_checks_in_sched_maint(medium_id)
+      def alerting_checks
         time = Time.now
+        timezone = self.contact.timezone
+
+        rule_ids = self.rules.select {|rule|
+          rule.is_occurring_at?(time, timezone)
+        }.map(&:id)
+
+        return Flapjack::Data::Check.empty if rule_ids.empty?
+
+        route_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
+          associated_ids_for(:routes).values.reduce(Set.new, :|)
+
+        return Flapjack::Data::Check.empty if route_ids.empty?
+
+        check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
+          :alertable => true).associated_ids_for(:checks).values.reduce(Set.new, :|)
+
+        return Flapjack::Data::Check.empty if check_ids.empty?
+
+        # exclude any blackholes for checks with matching tags
+        blackhole_ids = self.blackholes.select {|blackhole|
+          blackhole.is_occurring_at?(time, timezone)
+        }.map(&:id)
+
+        unless blackhole_ids.empty?
+          grouped_blackhole_tag_ids = Flapjack::Data::Blackhole.
+            intersect(:id => blackhole_ids).associated_ids_for(:tags).values.reduce(Set.new, :|)
+
+          tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
+            associated_ids_for(:tags)
+
+          check_ids -= tag_ids_by_check_id.each_with_object([]) do |(check_id, tag_ids), memo|
+            memo << check_id if grouped_blackhole_tag_ids.any? {|bt_ids| (bt_ids - tag_ids).empty? }
+          end
+
+          return Flapjack::Data::Check.empty if check_ids.empty?
+        end
 
         start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
         end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
 
-        check_ids_by_sched_maint_ids = Flapjack::Data::ScheduledMaintenance.
+        sched_maint_check_ids = Flapjack::Data::ScheduledMaintenance.
           intersect(:start_time => start_range, :end_time => end_range).
-          associated_ids_for(:check)
+          associated_ids_for(:check).values
 
-        sched_maint_check_ids = Set.new(check_ids_by_sched_maint_ids.values.flatten(1))
+        unless sched_maint_check_ids.empty?
+          check_ids -= sched_maint_check_ids
 
-        return if sched_maint_check_ids.empty?
+          return Flapjack::Data::Check.empty if check_ids.empty?
+        end
 
-        sched_maint_checks = Flapjack::Data::Check.intersect(:id => sched_maint_check_ids)
-        return if sched_maint_checks.empty?
-
-        medium = Flapjack::Data::Medium.find_by_id!(medium_id)
-        # remove_ids here (in before_read) leads to infinite callback recursion :(
-        medium.alerting_checks.remove(*sched_maint_checks.all)
+        Flapjack::Data::Check.intersect(:id => check_ids, :enabled => true)
       end
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
@@ -335,9 +364,12 @@ module Flapjack
                             :pagerduty_ack_duration]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Alert, Flapjack::Data::State,
+            :lock_klasses => [Flapjack::Data::Alert,
+                              Flapjack::Data::Blackhole,
                               Flapjack::Data::Check,
-                              Flapjack::Data::ScheduledMaintenance]
+                              Flapjack::Data::ScheduledMaintenance,
+                              Flapjack::Data::State
+                             ]
           )
         }
       end
@@ -347,7 +379,16 @@ module Flapjack
           @jsonapi_associations = {
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :type => 'check',
+              :klass => Flapjack::Data::Check,
+              :related_klasses => [
+                Flapjack::Data::Blackhole,
+                Flapjack::Data::Contact,
+                Flapjack::Data::Route,
+                Flapjack::Data::Rule,
+                Flapjack::Data::ScheduledMaintenance
+              ]
             ),
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,

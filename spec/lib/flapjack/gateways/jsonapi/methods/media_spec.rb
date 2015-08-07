@@ -64,8 +64,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Rule).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:intersect).
@@ -86,8 +85,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Rule).
       and_yield
 
     meta = {
@@ -131,8 +129,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
-           Flapjack::Data::ScheduledMaintenance).
+           Flapjack::Data::Rule).
       and_yield
 
     no_media = double('no_media')
@@ -205,6 +202,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "deletes a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Alert,
+           Flapjack::Data::Blackhole,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Rule,
@@ -224,6 +222,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "deletes multiple media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Alert,
+           Flapjack::Data::Blackhole,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Rule,
@@ -249,6 +248,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
   it "does not delete a medium that's not found" do
     expect(Flapjack::Data::Medium).to receive(:lock).
       with(Flapjack::Data::Alert,
+           Flapjack::Data::Blackhole,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Rule,

@@ -1,3 +1,10 @@
+GIT
+  remote: git://github.com/flapjack/zermelo.git
+  revision: 637d0c9c8d16ba854127482d88affae4a2b3d224
+  specs:
+    zermelo (1.2.0)
+      activemodel
+
 PATH
   remote: .
   specs:
@@ -21,7 +28,6 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
-      zermelo (= 1.2.0)
 
 GEM
   remote: https://rubygems.org/
@@ -82,7 +88,7 @@ GEM
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
     mime-types (2.6.1)
-    minitest (5.7.0)
+    minitest (5.8.0)
     multi_json (1.11.2)
     multi_test (0.1.2)
     multi_xml (0.5.5)
@@ -172,8 +178,6 @@ GEM
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
-    zermelo (1.2.0)
-      activemodel
 
 PLATFORMS
   java
@@ -190,6 +194,7 @@ DEPENDENCIES
   rspec
   simplecov
   webmock
+  zermelo!
 
 BUNDLED WITH
    1.10.4
