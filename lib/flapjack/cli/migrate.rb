@@ -389,9 +389,13 @@ module Flapjack
           timestamps = @source_redis.hgetall(timestamp_key)
           timestamps.each_pair do |timestamp, action|
 
-            # FIXME set condition for this state from state just prior...
+          start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
+            previous_state = check.states.intersect(:created_at => start_range).last
+            previous_cond = previous_state.nil? ? nil : previous_state.condition
+
             state = Flapjack::Data::State.new(:action => action,
-              :created_at => timestamp, :updated_at => timestamp)
+              :condition  => previous_cond, :created_at => timestamp,
+              :updated_at => timestamp)
 
             state.save
             raise state.errors.full_messages.join(", ") unless state.persisted?
@@ -453,12 +457,6 @@ module Flapjack
           end
 
           check = find_check(entity_name, check_name)
-
-          # # FIXME is this still needed?
-          # # have to get them all upfront, as they're in a Redis list -- can't detect
-          # # presence of single member
-          # check_ack_notifications = @source_redis.
-          #   lrange("#{entity_name}:#{check_name}:acknowledgement_notifications", 0, -1)
 
           unsched_maint_count_for_check = @source_redis.zcard(usm_key)
           next unless unsched_maint_count_for_check > 0
