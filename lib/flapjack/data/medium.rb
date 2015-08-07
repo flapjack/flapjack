@@ -60,8 +60,10 @@ module Flapjack
       has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
 
-      def alerting_checks
-        time = Time.now
+      # this can be called from the API (with no args) or from notifier.rb
+      # (which will pass an effective time)
+      def alerting_checks(opts = {})
+        time = opts[:time] || Time.now
         timezone = self.contact.timezone
 
         rule_ids = self.rules.select {|rule|

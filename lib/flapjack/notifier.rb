@@ -136,7 +136,7 @@ module Flapjack
           end
         end
 
-        media = check.alerting_media(time, alert_routes).all
+        media = check.alerting_media(:time => time, :routes => alert_routes).all
 
         Flapjack.logger.debug {
           "Alerting media for check #{check.name}:\n" +
@@ -152,29 +152,23 @@ module Flapjack
         end
 
         media.inject([]) do |memo, alerting_medium|
-
           alert_rollup = nil
           alerting_check_ids = []
 
           unless is_a_test
-            # should the relevant data here be cached in the association -- only
-            # refreshed by the above? what would the impact be on API queries?
-            # maybe split the 'alerting_checks' method and the association inverse?
+            rollup_count_needed = !(alerting_medium.rollup_threshold.nil? ||
+              (alerting_medium.rollup_threshold <= 0))
 
-            alert_rollup = if 'problem'.eql?(alerting_medium.last_rollup_type) ||
-              !alerting_medium.rollup_threshold.nil?
+            if rollup_count_needed
+              alerting_check_ids = alerting_medium.alerting_checks(:time => time).ids
+            end
 
-              alerting_check_ids = alerting_medium.alerting_checks.ids
+            alert_rollup = if rollup_count_needed &&
+              (alerting_check_ids.size >= alerting_medium.rollup_threshold)
 
-              if alerting_medium.rollup_threshold.nil? || (alerting_medium.rollup_threshold <= 0) ||
-                (alerting_check_ids.size < alerting_medium.rollup_threshold)
-
-                'problem'.eql?(alerting_medium.last_rollup_type) ? 'recovery' : nil
-              else
-                'problem'
-              end
+              'problem'
             else
-              nil
+              'problem'.eql?(alerting_medium.last_rollup_type) ? 'recovery' : nil
             end
 
             last_state = alerting_medium.last_state

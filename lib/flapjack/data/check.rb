@@ -142,21 +142,33 @@ module Flapjack
       has_and_belongs_to_many :routes, :class_name => 'Flapjack::Data::Route',
         :inverse_of => :checks
 
-      def alerting_media(time = nil, alert_routes = nil)
-        time ||= Time.now
+      # this can be called from the API (with no args) or from notifier.rb
+      # (which will pass routes to use, and an effective time)
+      def alerting_media(opts = {})
+        time = opts[:time] || Time.now
 
-        # not sure what to do with scheduled maintenance, ack, enabled ??
+        # return empty set if disabled, or in a maintenance period (for API only,
+        # these will have been checked already in processor if called by notifier)
+        if opts.empty?
+          unless self.enabled
+            return Flapjack::Data::Medium.empty
+          end
 
-        # start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
-        # end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
+          unless self.current_unscheduled_maintenance.nil?
+            return Flapjack::Data::Medium.empty
+          end
 
-        # unless self.scheduled_maintenances.
-        #   intersect(:start_time => start_range, :end_time => end_range).empty?
+          start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
+          end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
 
-        #   return Flapjack::Data::Medium.empty
-        # end
+          unless self.scheduled_maintenances.
+            intersect(:start_time => start_range, :end_time => end_range).empty?
 
-        alert_routes ||= self.routes.intersect(:alertable => true)
+            return Flapjack::Data::Medium.empty
+          end
+        end
+
+        alert_routes = opts[:routes] || self.routes.intersect(:alertable => true)
         route_rule_ids = alert_routes.associated_ids_for(:rule).values.uniq
 
         return Flapjack::Data::Medium.empty if route_rule_ids.empty?
