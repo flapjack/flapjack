@@ -637,7 +637,7 @@ module Flapjack
 
               [nil, []]
             else
-              check.rule_ids_and_route_ids(:severity => cond)
+              check_rule_ids_and_route_ids(check, :severity => cond)
             end
 
             check.routes.each do |route|
@@ -697,6 +697,65 @@ module Flapjack
         end
 
         tag
+      end
+
+     # candidate rules are all rules for which
+      #   (rule.tags.ids - check.tags.ids).empty?
+      # this includes generic rules, i.e. ones with no tags
+
+      # A generic rule in Flapjack v2 means that it applies to all checks, not
+      # just all checks the contact is separately registered for, as in v1.
+      # These are not automatically created for users any more, but can be
+      # deliberately configured.
+
+      # returns array with two hashes [{contact_id => Set<rule_ids>},
+      #   {rule_id => Set<route_ids>}]
+      def check_rule_ids_and_route_ids(check, opts = {})
+        severity = opts[:severity]
+
+        check_routes = check.routes
+        route_ids = check_routes.ids
+
+        Flapjack.logger.debug {
+          "severity: #{severity}\n" \
+          "Matching routes before severity (#{route_ids.size}): #{route_ids.inspect}"
+        }
+        return [{}, {}] if r_ids.empty?
+
+        unless severity.nil? || Flapjack::Data::Condition.healthy.include?(severity)
+          check_routes = check_routes.
+            intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+        end
+
+        route_ids = check_routes.ids
+        return [{}, {}] if route_ids.empty?
+
+        Flapjack.logger.debug {
+          "Matching routes after severity (#{route_ids.size}): #{route_ids.inspect}"
+        }
+
+        route_ids_by_rule_id = Flapjack::Data::Route.intersect(:id => route_ids).
+          associated_ids_for(:rule, :inversed => true)
+
+        rule_ids = route_ids_by_rule_id.keys
+
+        Flapjack.logger.debug {
+          "Matching rules for routes (#{rule_ids.size}): #{rule_ids.inspect}"
+        }
+
+        # if a rule has no media, it's irrelevant in any routing calculations
+        rule_ids_by_contact_id = Flapjack::Data::Rule.
+          intersect(:id => rule_ids, :has_media => true).
+          associated_ids_for(:contact, :inversed => true)
+
+        # clear any route_ids for rules without media
+        active_rule_ids = rule_ids_by_contact_id.values.reduce(:|)
+        active_route_ids = route_ids_by_rule_id.inject([]) do |memo, (ru_id, ro_ids)|
+          memo |= ro_ids if active_rule_ids.include?(ru_id)
+          memo
+        end
+
+        [rule_ids_by_contact_id, active_route_ids]
       end
 
     end
