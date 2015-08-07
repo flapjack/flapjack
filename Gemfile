@@ -2,8 +2,6 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'zermelo', :github => 'flapjack/zermelo'
-
 group :test do
   gem 'rspec'
   gem 'cucumber', '>= 2.0.0.rc.4'
