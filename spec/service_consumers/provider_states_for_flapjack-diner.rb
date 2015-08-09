@@ -110,6 +110,15 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
+  provider_state "a blackhole exists" do
+    set_up do
+      blackhole = Flapjack::Data::Blackhole.new(blackhole_data)
+      blackhole.save!
+    end
+
+    tear_down { default_tear_down }
+  end
+
   provider_state "a state exists" do
     set_up do
       sd = state_data.dup
@@ -131,6 +140,18 @@ Pact.provider_states_for "flapjack-diner" do
       rule_2 = Flapjack::Data::Rule.new(rule_2_data)
       rule_2.save!
       rule_2.recalculate_routes
+    end
+
+    tear_down { default_tear_down }
+  end
+
+  provider_state "two blackholes exist" do
+    set_up do
+      blackhole = Flapjack::Data::Blackhole.new(blackhole_data)
+      blackhole.save!
+
+      blackhole_2 = Flapjack::Data::Blackhole.new(blackhole_2_data)
+      blackhole_2.save!
     end
 
     tear_down { default_tear_down }
