@@ -5,7 +5,7 @@ PATH
       activesupport
       chronic
       chronic_duration
-      flapjack-diner (>= 2.0.0.pre.alpha.1)
+      flapjack-diner (= 2.0.0.pre.alpha.2)
       gli (= 2.13.1)
       hiredis
       ice_cube
@@ -58,7 +58,7 @@ GEM
     diff-lcs (1.2.5)
     docile (1.1.5)
     find_a_port (1.0.1)
-    flapjack-diner (2.0.0.pre.alpha.1)
+    flapjack-diner (2.0.0.pre.alpha.2)
       httparty (>= 0.10)
       json (>= 1.7.7)
     gherkin (2.12.2)
