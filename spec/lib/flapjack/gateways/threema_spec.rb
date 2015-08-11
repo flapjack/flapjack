@@ -6,9 +6,8 @@ describe Flapjack::Gateways::Threema, :logger => true do
   let(:lock)  { double(Monitor) }
   let(:redis) { double(Redis)}
 
-  let(:config) { {'username'  => 'user',
-                  'password'  => 'password',
-                  'originator' => 'FlapjackT'
+  let(:config) { {'from'  => 'user',
+                  'secret'  => 'password'
                  }
                }
 
@@ -26,7 +25,7 @@ describe Flapjack::Gateways::Threema, :logger => true do
 
   it "sends a threema message" do
     req = stub_request(:post, "https://msgapi.threema.ch/send_simple").
-      with(:query => {'phone' => '555-555555',
+      with(:body => {'phone' => '555-555555',
                       'from' => 'user',
                       'secret' => 'password',
                       'text' => "Recovery: 'example.com:ping' is OK at #{time_str}, smile"}).
