@@ -28,6 +28,7 @@ require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/sms_twilio'
 require 'flapjack/gateways/sms_aspsms'
+require 'flapjack/gateways/threema'
 require 'flapjack/logger'
 
 module Flapjack
@@ -143,7 +144,7 @@ module Flapjack
     class Generic < Flapjack::Pikelet::Base
 
      TYPES = ['notifier', 'processor', 'jabber', 'pagerduty', 'oobetet',
-              'email', 'sms', 'aws_sns', 'sms_twilio', 'sms_aspsms']
+              'email', 'sms', 'aws_sns', 'sms_twilio', 'sms_aspsms', 'threema']
 
       def start
         super do
@@ -225,6 +226,7 @@ module Flapjack
              'sms_aspsms' => [Flapjack::Gateways::SmsAspsms],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],
              'api_web'    => [Flapjack::Gateways::ApiWeb],
+			 'threema'	  => [Flapjack::Gateways::Threema],
             }
 
     def self.is_pikelet?(type)

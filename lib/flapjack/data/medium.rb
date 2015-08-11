@@ -37,7 +37,8 @@ module Flapjack
         'sms_twilio',
         'sms_nexmo',
       	'sms_aspsms',
-        'sns'
+        'sns',
+		'threema'
       ]
 
       define_attributes :transport              => :string,
