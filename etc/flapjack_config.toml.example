@@ -43,6 +43,7 @@ daemonize = true
   sns_queue = "sns_notifications"
   jabber_queue = "jabber_notifications"
   pagerduty_queue = "pagerduty_notifications"
+  threema_queue = "threema_notifications"
   notification_log_file = "/var/log/flapjack/notification.log"
   default_contact_timezone = "UTC"
   [notifier.logger]
@@ -213,6 +214,22 @@ daemonize = true
     # location of custom alert templates
     #[gateways.pagerduty.templates]
     #  alert_text = "/etc/flapjack/templates/pagerduty/alert.text.erb"
+  # Sends SMS notifications via Threma Gateway ( https://gateway.threema.ch )
+  [gateways.threema]
+    enabled = false
+    # the redis queue this pikelet will look for notifications on
+    queue = "threema_notifications"
+    endpoint_host = "msgapi.threema.ch"
+    endpoint_path = "/send_simple"
+    from = "xxxx"
+    secret = "xxxx"
+    [gateways.threema.logger]
+      level = "INFO"
+      syslog_errors = true
+    # location of custom alert templates
+    #templates:
+    #  rollup_text = "/etc/flapjack/templates/threema/rollup.text.erb"
+    #  alert_text = "/etc/flapjack/templates/threema/alert.text.erb"
   # Browsable web interface
   [gateways.web]
     enabled = true
