@@ -21,7 +21,7 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'hiredis'
   gem.add_dependency 'redis', '>= 3.0.7'
   gem.add_dependency 'json-stream'
-  gem.add_dependency 'zermelo', '= 1.2.1'
+  # gem.add_dependency 'zermelo', '= 1.2.2'
   gem.add_dependency 'sinatra'
   gem.add_dependency 'swagger-blocks'
   gem.add_dependency 'mail'

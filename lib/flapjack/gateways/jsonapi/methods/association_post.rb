@@ -79,7 +79,9 @@ module Flapjack
                 Flapjack::UUID_RE
               end
 
-              app.post %r{^/#{resource}/(#{id_patt})/relationships/(.+)$} do
+              assoc_patt = jsonapi_links.keys.map(&:to_s).join("|")
+
+              app.post %r{^/#{resource}/(#{id_patt})/relationships/(#{assoc_patt})$} do
                 resource_id = params[:captures][0]
                 assoc_name  = params[:captures][1].to_sym
 

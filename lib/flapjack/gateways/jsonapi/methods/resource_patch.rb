@@ -165,7 +165,7 @@ module Flapjack
 
                       multiple_links.each_pair do |assoc, assoc_klass|
                         next unless links.has_key?(assoc.to_s)
-                        current_assoc_ids = r.send(assoc.to_sym).ids
+                        current_assoc_ids = r.send(assoc.to_sym).ids.to_a
                         memo[r.id] ||= {}
 
                         link_ids = links[assoc.to_s]['data'].map {|l| l['id']}

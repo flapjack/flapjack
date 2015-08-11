@@ -121,7 +121,9 @@ module Flapjack
                 Flapjack::UUID_RE
               end
 
-              app.patch %r{^/#{resource}/(#{id_patt})/relationships/(.+)$} do
+              assoc_patt = jsonapi_links.keys.map(&:to_s).join("|")
+
+              app.patch %r{^/#{resource}/(#{id_patt})/relationships/(#{assoc_patt})$} do
                 resource_id = params[:captures][0]
                 assoc_name  = params[:captures][1].to_sym
 
@@ -139,7 +141,7 @@ module Flapjack
                   resource = resource_class.find_by_id!(resource_id)
 
                   if :multiple.eql?(assoc.number)
-                    current_assoc_ids = resource.send(assoc_name).ids
+                    current_assoc_ids = resource.send(assoc_name).ids.to_a
                     to_remove = current_assoc_ids - assoc_ids
                     to_add    = assoc_ids - current_assoc_ids
                     resource.send(assoc_name).remove_ids(*to_remove) unless to_remove.empty?

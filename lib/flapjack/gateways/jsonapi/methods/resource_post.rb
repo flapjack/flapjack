@@ -129,7 +129,7 @@ module Flapjack
                     unless data_ids.empty? || resource_class.included_modules.include?(Zermelo::Records::Stub)
                       conflicted_ids = resource_class.intersect(id_field => data_ids).ids
                       halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{id_field}s: " +
-                               conflicted_ids.join(', '))) unless conflicted_ids.empty?
+                               conflicted_ids.to_a.join(', '))) unless conflicted_ids.empty?
                     end
                     links_by_resource = resources_data.each_with_object({}) do |rd, memo|
                       record_data = rd['attributes'].nil? ? {} :

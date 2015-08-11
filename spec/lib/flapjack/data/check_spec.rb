@@ -65,7 +65,7 @@ describe Flapjack::Data::Check, :redis => true do
       expect(check).to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances.all
-      expect(usms).to be_an(Array)
+      expect(usms).to be_a(Set)
       expect(usms.size).to eq(2)
       expect(usms.map(&:summary)).to match_array(['scooby', 'shaggy'])
 
@@ -94,7 +94,7 @@ describe Flapjack::Data::Check, :redis => true do
       expect(check).not_to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances.all
-      expect(usms).to be_an(Array)
+      expect(usms).to be_a(Set)
       expect(usms.size).to eq(1)
       expect(usms.first.end_time.to_i).to eq(later_t.to_i)
     end
@@ -112,13 +112,13 @@ describe Flapjack::Data::Check, :redis => true do
       check.scheduled_maintenances << sm
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.summary).to eq('2 hours')
 
       check.end_scheduled_maintenance(sm, t)
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms).to be_empty
     end
 
@@ -142,7 +142,7 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.end_time.to_i).to eq(future.to_i)
     end
@@ -165,7 +165,7 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.end_time.to_i).to eq(t.to_i + (3 * 60 * 60))
     end
