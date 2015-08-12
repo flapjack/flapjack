@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'zermelo', :github => 'flapjack/zermelo', :ref => '26e9b921ac'
+gem 'zermelo', :github => 'flapjack/zermelo', :ref => 'e817e9d'
 
 group :test do
   gem 'rspec'

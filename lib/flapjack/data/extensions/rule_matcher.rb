@@ -120,12 +120,13 @@ module Flapjack
           # names, which may change. Do client-side grouping and create a tag!
 
           define_attributes :name => :string,
+                            :all => :boolean,
                             :conditions_list => :string,
                             :time_restrictions_json => :string,
                             :has_media => :boolean,
                             :has_tags => :boolean
 
-          index_by :conditions_list, :has_media, :has_tags
+          index_by :name, :all, :conditions_list, :has_media, :has_tags
 
           validates_with Flapjack::Data::Validators::IdValidator
 

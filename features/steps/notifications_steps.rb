@@ -115,8 +115,9 @@ Given /^the following rules exist:$/ do |rules|
     conditions = rule_data['condition'].split(',').map(&:strip).join(',')
 
     rule = Flapjack::Data::Rule.new(
-      :id             => rule_data['id'],
-      :is_blackhole   => ['1', 't', 'true', 'y', 'yes'].include?((rule_data['is_blackhole'] || '').strip.downcase),
+      :id              => rule_data['id'],
+      :name            => rule_data['name'],
+      :all             => ['1', 't', 'true', 'y', 'yes'].include?((rule_data['all'] || '').strip.downcase),
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
@@ -179,7 +180,9 @@ Given /^the following blackholes exist:$/ do |blackholes|
     conditions = blackhole_data['condition'].split(',').map(&:strip).join(',')
 
     blackhole = Flapjack::Data::Blackhole.new(
-      :id             => blackhole_data['id'],
+      :id              => blackhole_data['id'],
+      :name            => blackhole_data['name'],
+      :all             => ['1', 't', 'true', 'y', 'yes'].include?((blackhole_data['all'] || '').strip.downcase),
       :conditions_list => conditions.empty? ? nil : conditions
     )
 

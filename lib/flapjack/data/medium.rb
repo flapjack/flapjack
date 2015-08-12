@@ -89,7 +89,7 @@ module Flapjack
 
         unless blackhole_ids.empty?
           grouped_blackhole_tag_ids = Flapjack::Data::Blackhole.
-            intersect(:id => blackhole_ids).associated_ids_for(:tags).values.reduce(Set.new, :|)
+            intersect(:id => blackhole_ids).associated_ids_for(:tags).values
 
           tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
             associated_ids_for(:tags)

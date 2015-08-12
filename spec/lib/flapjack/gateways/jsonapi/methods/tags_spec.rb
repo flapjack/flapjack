@@ -51,7 +51,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -96,7 +99,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -144,7 +150,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -167,7 +176,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -250,7 +262,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(tag).to receive(:destroy)
@@ -267,7 +282,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     tags = double('tags')
@@ -292,7 +310,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
            Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rule,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).

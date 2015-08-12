@@ -66,9 +66,6 @@ module Flapjack
         self.contacts.clear
         return if self.tags.empty?
 
-        # find all rules matching these tags
-        generic_rule_ids = Flapjack::Data::Rule.intersect(:has_tags => false).ids
-
         tag_ids = self.tags.ids
 
         all_rules_for_tags_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
@@ -81,7 +78,7 @@ module Flapjack
 
         rule_tags_ids.delete_if {|rid, tids| (tids - tag_ids).size > 0 }
 
-        rule_ids = rule_tags_ids.keys | generic_rule_ids.to_a
+        rule_ids = rule_tags_ids.keys
 
         return if rule_ids.empty?
 
@@ -169,20 +166,20 @@ module Flapjack
         end
 
         alert_routes = opts[:routes] || self.routes.intersect(:alertable => true)
-        route_rule_ids = alert_routes.associated_ids_for(:rule).values.uniq
+        route_rule_ids = alert_routes.associated_ids_for(:rule).values
 
-        return Flapjack::Data::Medium.empty if route_rule_ids.empty?
+        rule_ids = route_rule_ids << Flapjack::Data::Rule.intersect(:all => true)
 
         # if a rule has no media, it's irrelevant here
         rule_ids_by_contact_id = Flapjack::Data::Rule.
-          intersect(:id => route_rule_ids, :has_media => true).
+          intersect(:id => rule_ids, :has_media => true).
           associated_ids_for(:contact, :inversed => true)
 
         contacts = rule_ids_by_contact_id.empty? ? [] :
           Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
 
         matching_rule_ids = contacts.inject([]) do |memo, contact|
-          timezone = contact.time_zone || @default_contact_timezone
+          timezone = contact.time_zone # || @default_contact_timezone
           rule_ids = rule_ids_by_contact_id[contact.id]
 
           unless rule_ids.empty?

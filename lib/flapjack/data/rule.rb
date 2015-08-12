@@ -72,37 +72,30 @@ module Flapjack
       # by the creating code if no tags are being added. FIXME -- maybe do
       # from an after_create hook just to be safe?
       #
-      # TODO on change to conditions_list, update value for all routes
+      # FIXME on change to conditions_list, update value for all routes
       def recalculate_routes
         self.routes.destroy_all
+        return unless self.has_tags
 
         co = self.contact
         contact_id = co.nil? ? nil : co.id
 
-        route_for_check = proc {|c|
+        check_assocs = self.tags.associations_for(:checks).values
+        return if check_assocs.empty?
+
+        checks = check_assocs.inject(Flapjack::Data::Check) do |memo, ca|
+          memo = memo.intersect(:id => ca)
+          memo
+        end
+
+        checks.each do |check|
           route = Flapjack::Data::Route.new(:alertable => false,
             :conditions_list => self.conditions_list)
           route.save
 
           self.routes << route
-          c.routes << route
-          c.contacts.add_ids(contact_id) unless contact_id.nil?
-        }
-
-        if self.has_tags
-          # find all checks matching these tags -- FIXME there may be a more
-          # Zermelo-idiomatic way to do this
-
-          check_ids = self.tags.associated_ids_for(:checks).values.reduce(:&)
-
-          unless check_ids.empty?
-            Flapjack::Data::Check.intersect(:id => check_ids).each do |check|
-              route_for_check.call(check)
-            end
-          end
-        else
-          # create routes between this rule and all checks
-          Flapjack::Data::Check.each {|check| route_for_check.call(check) }
+          check.routes << route
+          check.contacts.add_ids(contact_id) unless contact_id.nil?
         end
       end
 
@@ -115,6 +108,12 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -160,6 +159,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
         end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
+        end
         property :conditions_list do
           key :type, :string
         end
@@ -183,6 +188,12 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -213,13 +224,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,

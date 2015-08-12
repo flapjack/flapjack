@@ -1,7 +1,7 @@
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: 26e9b921aca9bf6ce144d790dc15d8c32077c317
-  ref: 26e9b921ac
+  revision: e817e9ddde325e52b25b23daf2bbe519c707fa2b
+  ref: e817e9d
   specs:
     zermelo (1.2.1)
       activemodel

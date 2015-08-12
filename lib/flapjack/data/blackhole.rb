@@ -79,6 +79,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
         end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
+        end
         property :conditions_list do
           key :type, :string
         end
@@ -123,6 +129,12 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
         end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
+        end
         property :conditions_list do
           key :type, :string
         end
@@ -146,6 +158,12 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -176,13 +194,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )

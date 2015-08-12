@@ -72,6 +72,27 @@ module Flapjack
         !self.changed.include?('name')
       end
 
+      def scheduled_maintenances
+        sm_assocs = self.checks.associations_for(:scheduled_maintenances).
+          values
+
+        Flapjack::Data::ScheduledMaintenance.intersect(:id => sm_assocs)
+      end
+
+      def states
+        st_assocs = self.checks.associations_for(:states).
+          values
+
+        Flapjack::Data::State.intersect(:id => st_assocs)
+      end
+
+      def unscheduled_maintenances
+        usm_assocs = self.checks.associations_for(:unscheduled_maintenances).
+          values
+
+        Flapjack::Data::UnscheduledMaintenance.intersect(:id => usm_assocs)
+      end
+
       swagger_schema :Tag do
         key :required, [:id, :type, :name]
         property :id do
@@ -104,6 +125,18 @@ module Flapjack
           key :format, :url
         end
         property :rules do
+          key :type, :string
+          key :format, :url
+        end
+        property :scheduled_maintenances do
+          key :type, :string
+          key :format, :url
+        end
+        property :states do
+          key :type, :string
+          key :format, :url
+        end
+        property :unscheduled_maintenances do
           key :type, :string
           key :format, :url
         end
@@ -185,7 +218,26 @@ module Flapjack
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
+            ),
+            :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'scheduled_maintenance',
+              :klass => Flapjack::Data::ScheduledMaintenance
+            ),
+            :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'state',
+              :klass => Flapjack::Data::State
+            ),
+            :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'unscheduled_maintenance',
+              :klass => Flapjack::Data::UnscheduledMaintenance
             )
+
           }
           populate_association_data(@jsonapi_associations)
         end
