@@ -18,17 +18,84 @@ module Flapjack
 
         module ClassMethods
 
-          def has_some_media(rule_id, *m)
-            rule = Flapjack::Data::Rule.find_by_id!(rule_id)
+          def media_added(rule_id, *m_ids)
+            rule = self.find_by_id!(rule_id)
             rule.has_media = true
             rule.save!
           end
 
-          def has_no_media(rule_id, *m)
-            rule = Flapjack::Data::Rule.find_by_id!(rule_id)
-            return unless rule.media.empty?
-            rule.has_media = false
+          def media_removed(rule_id, *m_ids)
+            rule = self.find_by_id!(rejector_id)
+            rule.has_media = rule.media.empty?
             rule.save!
+          end
+
+          def tags_added(rule_id, *t_ids)
+            rule = self.find_by_id!(rule_id)
+            rule.has_tags = true
+            rule.save!
+          end
+
+          def tags_removed(rule_id, *t_ids)
+            rule = self.find_by_id!(rule_id)
+            rule.has_tags = rule.tags.empty?
+            rule.save!
+          end
+
+          # called by medium.checks
+          # no global rules in the passed rule data
+          def matching_checks(rule_ids)
+            rule_tags_ids = self.intersect(:id => rule_ids).
+              associated_ids_for(:tags)
+
+            started = false
+
+            m_checks = rule_tags_ids.keys.inject(nil) do |r_memo, rule_id|
+
+              assocs = Flapjack::Data::Tag.intersect(:id => rule_tags_ids[rule_id]).associations_for(:checks).values
+              next if assocs.empty?
+
+              r_checks = assocs.inject(Flapjack::Data::Check) do |c_memo, ca|
+                c_memo = c_memo.intersect(:id => ca)
+                c_memo
+              end
+
+              r_memo = if r_memo.nil?
+                Flapjack::Data::Check.intersect(:id => r_checks)
+              else
+                r_memo.union(:id => r_checks)
+              end
+              r_memo
+            end
+
+            return Flapjack::Data::Check.empty if m_checks.nil?
+            m_checks
+          end
+
+          # called by check.contacts
+          def matching_contact_ids(rule_ids, opts = {})
+            time = opts[:time] || Time.now
+            contact_rules = self.intersect(:id => rule_ids)
+
+            matching_rule_ids = self.apply_time_restrictions(contact_rules, time).
+              map(&:id)
+
+            self.intersect(:id => matching_rule_ids).
+              associated_ids_for(:contact, :inversed => true).keys
+          end
+
+          # called by check.alerting_media
+          def matching_media_ids(rule_ids, opts = {})
+            time = opts[:time] || Time.now
+
+            # if a rule has no media, it's irrelevant here
+            media_rules = self.intersect(:id => rule_ids, :has_media => true)
+
+            matching_rule_ids = apply_time_restrictions(media_rules, time).
+              map(&:id)
+
+            self.intersect(:id => matching_rule_ids).
+              associated_ids_for(:media).values.reduce(Set.new, :|)
           end
 
           # NB: ice_cube doesn't have much rule data validation, and has
@@ -111,6 +178,24 @@ module Flapjack
             # "week_start": 0
 
             tr
+          end
+
+          def apply_time_restrictions(rules, time)
+            # filter the rules by time restrictions
+            rule_ids_by_contact_id = rules.associated_ids_for(:contact, :inversed => true)
+
+            rule_contacts = rule_ids_by_contact_id.empty? ? [] :
+              Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
+
+            time_zones_by_rule_id = rule_contacts.each_with_object({}) do |c, memo|
+              rule_ids_by_contact_id[c.id].each do |r_id|
+                memo[r_id] = c.time_zone
+              end
+            end
+
+            rules.select do |rule|
+              rule.is_occurring_at?(time, time_zones_by_rule_id[rule.id])
+            end
           end
 
         end

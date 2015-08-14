@@ -220,7 +220,7 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :logger => true do
         and_return(check)
 
       expect(Flapjack::Data::Contact).to receive(:lock).
-        with(Flapjack::Data::Medium, Flapjack::Data::Rule,
+        with(Flapjack::Data::Medium, Flapjack::Data::Acceptor,
              Flapjack::Data::Route).and_yield
 
       expect(check).to receive(:rule_ids_and_route_ids).and_return([{}, []])

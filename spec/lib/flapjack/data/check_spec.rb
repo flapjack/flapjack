@@ -29,21 +29,21 @@ describe Flapjack::Data::Check, :redis => true do
   context "maintenance" do
 
     it "returns that it is not in unscheduled maintenance" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
       expect(check).not_to be_in_unscheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
       expect(check).not_to be_in_scheduled_maintenance
     end
 
     it "adds an unscheduled maintenance period and ends the current one early", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -74,7 +74,7 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "ends an unscheduled maintenance period", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -100,7 +100,7 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "ends a scheduled maintenance period for a future time" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -125,7 +125,7 @@ describe Flapjack::Data::Check, :redis => true do
     # maint period starts an hour from now, goes for two hours -- at 30 minutes into
     # it we stop it, and its duration should be 30 minutes
     it "shortens a scheduled maintenance period covering a current time", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -148,7 +148,7 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 

@@ -238,7 +238,7 @@ module Flapjack
           Flapjack.logger.debug "found unacknowledged failing checks as follows: " +
             unacked_failing_checks.map(&:name).join(', ')
 
-          check_ids_by_medium(unacked_failing_checks.map(&:id)).each_pair do |medium, check_ids|
+          check_ids_by_medium(unacked_failing_checks.map(&:id), :time => time).each_pair do |medium, check_ids|
             next if check_ids.empty?
             checks = unacked_failing_checks.select {|c| check_ids.include?(c.id)}
             next if checks.empty?
@@ -272,52 +272,25 @@ module Flapjack
           end
         end
 
-        def check_ids_by_medium(filter_check_ids)
-          media = Flapjack::Data::Medium.
-            intersect(:transport => 'pagerduty').all
+        def check_ids_by_medium(filter_check_ids, opts = {})
+          time = opts[:time]
 
-          rule_ids_by_media_id = Flapjack::Data::Medium.
-            intersect(:id => media.map(&:id)).associated_ids_for(:rules)
+          Flapjack::Data::Medium.lock(Flapjack::Data::Acceptor,
+            Flapjack::Data::Check, Flapjack::Data::Rejector) do
 
-          return {} if rule_ids_by_media_id.empty? ||
-            rule_ids_by_media_id.values.all? {|r| r.empty? }
+            media = Flapjack::Data::Medium.intersect(:transport => 'pagerduty')
 
-          rule_ids = Set.new(rule_ids_by_media_id.values.flatten(1))
+            already_acking_ids = []
 
-          route_ids_by_rule_ids = Flapjack::Data::Rule.
-            intersect(:id => rule_ids).associated_ids_for(:routes)
+            media.all.each_with_object({}) do |medium, memo|
+              init_scope = Flapjack::Data::Check.intersect(:id => filter_check_ids)
+              ch_ids = medium.checks(:initial_scope => init_scope, :time => time).ids
 
-          return {} if route_ids_by_rule_ids.empty? ||
-            route_ids_by_rule_ids.values.all? {|r| r.empty? }
-
-          route_ids = Set.new(route_ids_by_rule_ids.values.flatten(1))
-
-          check_ids_by_route_ids = Flapjack::Data::Route.
-            intersect(:id => route_ids).associated_ids_for(:checks)
-
-          return {} if check_ids_by_route_ids.empty? ||
-            check_ids_by_route_ids.values.all? {|r| r.empty? }
-
-          already_acking_ids = []
-
-          ret = media.each_with_object({}) do |medium, memo|
-
-            ru_ids = rule_ids_by_media_id[medium.id]
-
-            ro_ids = ru_ids.each_with_object([]) do |rule_id, ro_memo|
-              ro_memo.push(*route_ids_by_rule_ids[rule_id])
+              to_ack_ids = (ch_ids & filter_check_ids) - already_acking_ids
+              already_acking_ids.push(*to_ack_ids)
+              memo[medium] = to_ack_ids
             end
-
-            ch_ids = ro_ids.each_with_object([]) do |route_id, ch_memo|
-              ch_memo.push(*check_ids_by_route_ids[route_id])
-            end
-
-            to_ack_ids = (ch_ids & filter_check_ids) - already_acking_ids
-            already_acking_ids.push(*to_ack_ids)
-            memo[medium] = to_ack_ids
           end
-
-          ret
         end
 
         # returns any PagerDuty acknowledgements for the named checks

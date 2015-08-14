@@ -177,6 +177,8 @@ module Flapjack
                 fields = params[:fields]
                 incl   = params[:include].nil? ? nil : params[:include].split(',')
 
+                # FIXME extra lock classes for include
+
                 status 200
 
                 assoc = jsonapi_links[assoc_name]

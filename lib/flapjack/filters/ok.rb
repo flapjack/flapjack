@@ -25,10 +25,7 @@ module Flapjack
           return false
         end
 
-        check.most_severe = nil
         check.clear_unscheduled_maintenance(timestamp)
-
-        Flapjack.logger.debug { "Filter: Ok: clearing alerting routes for #{check.id}" }
 
         if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
           Flapjack.logger.debug("Filter: Ok: block - previous state was ok, so blocking")

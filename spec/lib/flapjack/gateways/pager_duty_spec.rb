@@ -135,14 +135,26 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
         with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
         and_yield
 
+      check_scope = double('check_scope')
+      expect(check_scope).to receive(:reject).
+        and_yield(check).
+        and_return([check])
+
       expect(Flapjack::Data::Check).to receive(:intersect).
-        with(:failing => true).and_return([check])
+        with(:failing => true).and_return(check_scope)
+
+      expect(Flapjack::Data::Check).to receive(:intersect).
+        with(:id => [check.id]).and_return(check_scope)
 
       expect(check).to receive(:in_unscheduled_maintenance?).
         with(an_instance_of(Time)).and_return(false)
 
       expect(check).to receive(:in_scheduled_maintenance?).
         with(an_instance_of(Time)).and_return(false)
+
+      expect(Flapjack::Data::Medium).to receive(:lock).
+        with(Flapjack::Data::Acceptor, Flapjack::Data::Check, Flapjack::Data::Rejector).
+        and_yield
 
       medium = double(Flapjack::Data::Medium, :id => SecureRandom.uuid)
       expect(medium).to receive(:pagerduty_subdomain).and_return('mydomain')
@@ -151,29 +163,15 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(medium).to receive(:pagerduty_token).and_return('abc')
       expect(medium).to receive(:pagerduty_ack_duration).and_return(nil)
 
-      rule  = double(Flapjack::Data::Rule, :id => SecureRandom.uuid)
-      route = double(Flapjack::Data::Route, :id => SecureRandom.uuid)
+      expect(medium).to receive(:checks).with(:initial_scope => check_scope,
+        :time => an_instance_of(Time)).and_return(check_scope)
+
+      expect(check_scope).to receive(:ids).and_return([check.id])
 
       media_scope = double('media_scope', :all => [medium])
-      rule_scope  = double('rule_scope')
-      route_scope = double('route_scope')
 
-      expect(media_scope).to receive(:associated_ids_for).
-        with(:rules).and_return(medium.id => [rule.id])
       expect(Flapjack::Data::Medium).to receive(:intersect).
         with(:transport => 'pagerduty').and_return(media_scope)
-      expect(Flapjack::Data::Medium).to receive(:intersect).
-        with(:id => [medium.id]).and_return(media_scope)
-
-      expect(rule_scope).to receive(:associated_ids_for).
-        with(:routes).and_return(rule.id => [route.id])
-      expect(Flapjack::Data::Rule).to receive(:intersect).
-        with(:id => Set.new([rule.id])).and_return(rule_scope)
-
-      expect(route_scope).to receive(:associated_ids_for).
-        with(:checks).and_return(route.id => [check.id])
-      expect(Flapjack::Data::Route).to receive(:intersect).
-        with(:id => Set.new([route.id])).and_return(route_scope)
 
       expect(Flapjack::Data::Event).to receive(:create_acknowledgements).with('events',
         [check],

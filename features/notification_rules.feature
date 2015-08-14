@@ -30,21 +30,21 @@ Feature: Notification rules on a per contact basis
       | 2ae8327c-ecf3-4544-ac3e-9c7779503a4a | baz:ping | baz,ping  |
       | 982fc9fb-fbf8-44cd-b6de-6ccbab8e7230 | buf:ping | buf,ping  |
 
-    And the following rules exist:
-      | id                                   | contact_id                           | all   | tags     | condition        | time_restrictions | media_ids                                                                 |
-      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false | foo,ping | critical         | 8-18 weekdays     | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
-      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | false | bar,ping | critical,unknown |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb                                      |
-      | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | false | foo,ping | critical         |                   | 65d32027-1942-43b3-93c5-52f4b12d36b0                                      |
-      | 7c123a29-1a67-4a32-b38e-2658e63834d8 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | false | foo,ping |                  |                   | 55d3778e-e4b2-4dcc-8337-03fcbd2e5f80                                      |
-      | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | false | baz,ping | critical         | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb,ad25c952-c300-4285-9301-ef4408c9d645 |
-      | 0a3c66f2-6245-49cf-a02c-28d586b2f55a | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | false | baz,ping | warning          | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb                                      |
-      | 9b437f3e-4b48-4516-8067-a57935684777 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false | buf,ping | critical         |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
-      | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 | true  |          |                  |                   | f15078cf-3643-4cf1-b701-ac9fe2836365                                      |
-      | 1c501800-6b20-458d-bb99-a78d17397c00 | 5da490ec-72a0-42b0-834f-4049867dfce7 | true  |          |                  |                   | 862228f8-fc80-4887-bc4c-e133fcda4107                                      |
+    And the following acceptors exist:
+      | name               | id                                   | contact_id                           | all   | tags     | condition        | time_restrictions | media_ids                                                                 |
+      | malak email t      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false | foo,ping | critical         | 8-18 weekdays     | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+      | imani email        | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | false | bar,ping | critical,unknown |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb                                      |
+      | vera email         | fc2d1b1f-1480-45dd-814b-4655bc5b1474 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | false | foo,ping | critical         |                   | 65d32027-1942-43b3-93c5-52f4b12d36b0                                      |
+      | vera sms           | 7c123a29-1a67-4a32-b38e-2658e63834d8 | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | false | foo,ping |                  |                   | 55d3778e-e4b2-4dcc-8337-03fcbd2e5f80                                      |
+      | lucia email, sms t | e8a67e7c-4f3d-4d9b-afe4-ef276bbeb0df | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | false | baz,ping | critical         | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb,ad25c952-c300-4285-9301-ef4408c9d645 |
+      | lucia email t      | 0a3c66f2-6245-49cf-a02c-28d586b2f55a | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | false | baz,ping | warning          | 8-18 weekdays     | 19ef48b1-9a42-488b-9734-00314c79e5eb                                      |
+      | malak email        | 9b437f3e-4b48-4516-8067-a57935684777 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false | buf,ping | critical         |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+      | fang email         | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 | true  |          |                  |                   | f15078cf-3643-4cf1-b701-ac9fe2836365                                      |
+      | fang sms           | 1c501800-6b20-458d-bb99-a78d17397c00 | 5da490ec-72a0-42b0-834f-4049867dfce7 | true  |          |                  |                   | 862228f8-fc80-4887-bc4c-e133fcda4107                                      |
 
-    And the following blackholes exist:
-      | id                                   | contact_id                           | tags     | condition        | time_restrictions | media_ids                                                                 |
-      | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | buf,ping |                  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+    And the following rejectors exist:
+      | name               | id                                   | contact_id                           | all   | tags     | condition        | time_restrictions | media_ids                                                                 |
+      | drop malak email   | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false | buf,ping |                  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
 
   @time_restrictions @time
   Scenario: Alerts only during specified time restrictions
@@ -138,7 +138,7 @@ Feature: Notification rules on a per contact basis
     Then  2 email alert should be queued for imani@example.com
 
   @blackhole @time
-  Scenario: Drop alerts matching a blackhole route
+  Scenario: Drop alerts matching a rejector
     Given the check is check 'ping' on entity 'buf'
     And   the check is in an ok state
     When  a critical event is received

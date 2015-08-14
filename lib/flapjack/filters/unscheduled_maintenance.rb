@@ -8,7 +8,6 @@ module Flapjack
       include Base
 
       def block?(check, opts = {})
-        old_state = opts[:old_state]
         new_state = opts[:new_state]
 
         result = check.in_unscheduled_maintenance? &&

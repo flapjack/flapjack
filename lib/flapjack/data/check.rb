@@ -9,9 +9,10 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/blackhole'
+require 'flapjack/data/acceptor'
 require 'flapjack/data/condition'
 require 'flapjack/data/medium'
+require 'flapjack/data/rejector'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/state'
 require 'flapjack/data/tag'
@@ -42,60 +43,16 @@ module Flapjack
                         :repeat_failure_delay  => :integer,
                         :notification_count    => :integer,
                         :condition             => :string,
-                        :failing               => :boolean
+                        :failing               => :boolean,
+                        :alertable             => :boolean
 
-      index_by :enabled, :failing
+      index_by :enabled, :failing, :alertable
       unique_index_by :name, :ack_hash
 
       # TODO validate uniqueness of :name, :ack_hash
 
-      # TODO verify that callbacks are called no matter which side
-      # of the association fires the initial event
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :checks, :after_add => :changed_tags,
-        :after_remove => :changed_tags,
-        :related_class_names => ['Flapjack::Data::Contact',
-          'Flapjack::Data::Rule', 'Flapjack::Data::Route']
-
-      def self.changed_tags(check_id, *t_ids)
-        Flapjack::Data::Check.find_by_id!(check_id).recalculate_routes
-      end
-
-      def recalculate_routes
-        self.routes.destroy_all
-        self.contacts.clear
-        return if self.tags.empty?
-
-        tag_ids = self.tags.ids
-
-        all_rules_for_tags_ids = Flapjack::Data::Tag.intersect(:id => tag_ids).
-          associated_ids_for(:rules).values.reduce(Set.new, :|)
-
-        return if all_rules_for_tags_ids.empty?
-
-        rule_tags_ids = Flapjack::Data::Rule.intersect(:id => all_rules_for_tags_ids).
-          associated_ids_for(:tags)
-
-        rule_tags_ids.delete_if {|rid, tids| (tids - tag_ids).size > 0 }
-
-        rule_ids = rule_tags_ids.keys
-
-        return if rule_ids.empty?
-
-        contact_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-          associated_ids_for(:contact).values
-
-        self.contacts.add_ids(*contact_ids) unless contact_ids.empty?
-
-        Flapjack::Data::Rule.intersect(:id => rule_ids).each do |r|
-          route = Flapjack::Data::Route.new(:alertable => false,
-            :conditions_list => r.conditions_list)
-          route.save
-
-          r.routes << route
-          self.routes << route
-        end
-      end
+        :inverse_of => :checks
 
       has_sorted_set :scheduled_maintenances,
         :class_name => 'Flapjack::Data::ScheduledMaintenance',
@@ -122,9 +79,6 @@ module Flapjack
         Flapjack::Data::State.intersect(:id => st_ids).destroy_all
       end
 
-      has_and_belongs_to_many :contacts, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :checks
-
       # the following associations are used internally, for the notification
       # and alert queue inter-pikelet workflow
       has_one :most_severe, :class_name => 'Flapjack::Data::State',
@@ -136,13 +90,11 @@ module Flapjack
       has_many :alerts, :class_name => 'Flapjack::Data::Alert',
         :inverse_of => :check
 
-      has_and_belongs_to_many :routes, :class_name => 'Flapjack::Data::Route',
-        :inverse_of => :checks
-
       # this can be called from the API (with no args) or from notifier.rb
-      # (which will pass routes to use, and an effective time)
+      # (which will pass a severity to use, and an effective time)
       def alerting_media(opts = {})
         time = opts[:time] || Time.now
+        severity = opts[:severity]
 
         # return empty set if disabled, or in a maintenance period (for API only,
         # these will have been checked already in processor if called by notifier)
@@ -165,61 +117,70 @@ module Flapjack
           end
         end
 
-        alert_routes = opts[:routes] || self.routes.intersect(:alertable => true)
-        route_rule_ids = alert_routes.associated_ids_for(:rule).values
+        # determine matching acceptors
+        tag_ids = self.tags.ids
 
-        rule_ids = route_rule_ids << Flapjack::Data::Rule.intersect(:all => true)
+        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids, :severity => severity)
+        acceptor_media_ids = Flapjack::Data::Acceptor.matching_media_ids(acceptor_ids,
+          :time => time)
 
-        # if a rule has no media, it's irrelevant here
-        rule_ids_by_contact_id = Flapjack::Data::Rule.
-          intersect(:id => rule_ids, :has_media => true).
-          associated_ids_for(:contact, :inversed => true)
+        return Flapjack::Data::Medium.empty if acceptor_media_ids.empty?
 
-        contacts = rule_ids_by_contact_id.empty? ? [] :
-          Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
+        # and matching rejectors
+        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids, :severity => severity)
+        rejector_media_ids = Flapjack::Data::Rejector.matching_media_ids(rejector_ids,
+          :time => time)
 
-        matching_rule_ids = contacts.inject([]) do |memo, contact|
-          timezone = contact.time_zone # || @default_contact_timezone
-          rule_ids = rule_ids_by_contact_id[contact.id]
-
-          unless rule_ids.empty?
-             memo += Flapjack::Data::Rule.intersect(:id => rule_ids).select {|rule|
-              rule.is_occurring_at?(time, timezone)
-            }.map(&:id)
-          end
-          memo
+        unless rejector_media_ids.empty?
+          acceptor_media_ids -= rejector_media_ids
+          return Flapjack::Data::Medium.empty if acceptor_media_ids.empty?
         end
 
-        return Flapjack::Data::Medium.empty if matching_rule_ids.empty?
+        Flapjack::Data::Medium.intersect(:id => acceptor_media_ids)
+      end
 
-        media_ids = Flapjack::Data::Rule.intersect(:id => matching_rule_ids).
-          associated_ids_for(:media).values.reduce(:|)
+      def contacts
+        # return empty set if disabled
+        return Flapjack::Data::Contact.empty unless self.enabled
 
-        return Flapjack::Data::Medium.empty if media_ids.empty?
+        # determine matching acceptors
+        tag_ids = self.tags.ids
+        time = Time.now
 
-        # remove any media for which any medium.blackhole.tags - self.tags is empty
-        blackhole_ids_by_media_id = Flapjack::Data::Medium.
-          intersect(:id => media_ids).associated_ids_for(:blackholes)
+        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids, :severity => severity)
+        acceptor_contact_ids = Flapjack::Data::Acceptor.matching_contact_ids(acceptor_ids,
+          :time => time)
+        return Flapjack::Data::Contact.empty if acceptor_contact_ids.empty?
 
-        blackhole_ids = blackhole_ids_by_media_id.values.reduce(:|)
 
-        unless blackhole_ids.empty?
-          tag_ids = self.tags.ids
-
-          tag_ids_by_blackhole_id = Flapjack::Data::Blackhole.
-            intersect(:id => blackhole_ids).associated_ids_for(:tags)
-
-          media_ids -= blackhole_ids_by_media_id.each_with_object([]) do |(media_id, media_blackhole_ids), memo|
-            memo << media_id if media_blackhole_ids.any? {|mb_id|
-              bh_tag_ids = tag_ids_by_blackhole_id[mb_id]
-              (bh_tag_ids - tag_ids).empty?
-            }
-          end
-
-          return Flapjack::Data::Medium.empty if media_ids.empty?
+        # and matching rejectors
+        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids, :severity => severity)
+        rejector_contact_ids = Flapjack::Data::Rejector.matching_contact_ids(rejector_ids,
+          :time => time)
+        unless rejector_contact_ids.empty?
+          acceptor_contact_ids -= rejector_contact_ids
+          return Flapjack::Data::Contact.empty if acceptor_contact_ids.empty?
         end
 
-        Flapjack::Data::Medium.intersect(:id => media_ids)
+        Flapjack::Data::Contact.intersect(:id => acceptor_contact_ids)
+      end
+
+      def matching_rule_ids(rule_klass, tag_ids, opts = {})
+        severity = opts[:severity]
+
+        global_rules = rule_klass.intersect(:all => true)
+        unless severity.nil?
+          global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+        end
+
+        rules = rule_klass.intersect(:all => [nil, false])
+        unless severity.nil?
+          rules = rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+        end
+
+        global_rules.ids + rules.associated_ids_for(:tags).each_with_object([]) do |(rule_id, rule_tag_ids), memo|
+          memo << rule_id if (rule_tag_ids - tag_ids).empty?
+        end
       end
 
       # end internal associations
@@ -277,7 +238,7 @@ module Flapjack
 
       swagger_schema :CheckLinks do
         key :required, [:self, :alerting_media, :contacts, :current_state,
-                        :latest_notifications, :scheduled_maintenance,
+                        :latest_notifications, :scheduled_maintenances,
                         :states, :tags, :unscheduled_maintenances]
         property :self do
           key :type, :string
@@ -397,17 +358,24 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true,
               :type => 'medium',
               :klass => Flapjack::Data::Medium,
-              :related_klasses => [
-                Flapjack::Data::Blackhole,
+              :lock_klasses => [
+                Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
-                Flapjack::Data::Route,
-                Flapjack::Data::Rule,
+                Flapjack::Data::Rejector,
+                Flapjack::Data::Tag,
                 Flapjack::Data::ScheduledMaintenance
               ]
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :type => 'contact',
+              :klass => Flapjack::Data::Contact,
+              :lock_klasses => [
+                Flapjack::Data::Acceptor,
+                Flapjack::Data::Rejector,
+                Flapjack::Data::Tag
+              ]
             ),
             :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
@@ -490,7 +458,10 @@ module Flapjack
         current_time = Time.now
 
         self.class.lock(Flapjack::Data::UnscheduledMaintenance,
-          Flapjack::Data::Route, Flapjack::Data::State) do
+          Flapjack::Data::State) do
+
+          self.alertable = false
+          self.save!
 
           # time_remaining
           if (unsched_maint.end_time - current_time) > 0

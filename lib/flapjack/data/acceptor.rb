@@ -7,10 +7,11 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/utility'
+
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/route'
 require 'flapjack/data/time_restriction'
 
 require 'flapjack/data/extensions/associations'
@@ -20,7 +21,7 @@ require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
-    class Rule
+    class Acceptor
 
       extend Flapjack::Utility
 
@@ -34,72 +35,17 @@ module Flapjack
       include Flapjack::Data::Extensions::ShortName
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :rules
+        :inverse_of => :acceptors
 
       has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :rules, :after_add => :has_some_media,
-        :after_remove => :has_no_media
+        :inverse_of => :acceptors, :after_add => :media_added,
+        :after_remove => :media_removed
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :rules, :after_add => :tags_added,
-        :after_remove => :tags_removed,
-        :related_class_names => ['Flapjack::Data::Contact',
-          'Flapjack::Data::Check', 'Flapjack::Data::Route']
+        :inverse_of => :acceptors, :after_add => :tags_added,
+        :after_remove => :tags_removed
 
-      def self.tags_added(rule_id, *t_ids)
-        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
-        rule.has_tags = true
-        rule.recalculate_routes
-        rule.save!
-      end
-
-      def self.tags_removed(rule_id, *t_ids)
-        rule = Flapjack::Data::Rule.find_by_id!(rule_id)
-        rule.has_tags = rule.tags.empty?
-        rule.recalculate_routes
-        rule.save!
-      end
-
-      has_many :routes, :class_name => 'Flapjack::Data::Route',
-        :inverse_of => :rule
-
-      before_destroy :remove_routes
-      def remove_routes
-        self.routes.destroy_all
-      end
-
-      # NB when a rule is created, recalculate_routes should be called
-      # by the creating code if no tags are being added. FIXME -- maybe do
-      # from an after_create hook just to be safe?
-      #
-      # FIXME on change to conditions_list, update value for all routes
-      def recalculate_routes
-        self.routes.destroy_all
-        return unless self.has_tags
-
-        co = self.contact
-        contact_id = co.nil? ? nil : co.id
-
-        check_assocs = self.tags.associations_for(:checks).values
-        return if check_assocs.empty?
-
-        checks = check_assocs.inject(Flapjack::Data::Check) do |memo, ca|
-          memo = memo.intersect(:id => ca)
-          memo
-        end
-
-        checks.each do |check|
-          route = Flapjack::Data::Route.new(:alertable => false,
-            :conditions_list => self.conditions_list)
-          route.save
-
-          self.routes << route
-          check.routes << route
-          check.contacts.add_ids(contact_id) unless contact_id.nil?
-        end
-      end
-
-      swagger_schema :Rule do
+      swagger_schema :Acceptor do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -107,7 +53,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Acceptor.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -125,11 +71,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleLinks
+          key :"$ref", :AcceptorLinks
         end
       end
 
-      swagger_schema :RuleLinks do
+      swagger_schema :AcceptorLinks do
         key :required, [:self, :contact, :media, :tags]
         property :self do
           key :type, :string
@@ -149,7 +95,7 @@ module Flapjack
         end
       end
 
-      swagger_schema :RuleCreate do
+      swagger_schema :AcceptorCreate do
         key :required, [:type]
         property :id do
           key :type, :string
@@ -157,7 +103,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Acceptor.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -175,11 +121,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleChangeLinks
+          key :"$ref", :AcceptorChangeLinks
         end
       end
 
-      swagger_schema :RuleUpdate do
+      swagger_schema :AcceptorUpdate do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -187,7 +133,7 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Rule.short_model_name.singular]
+          key :enum, [Flapjack::Data::Acceptor.short_model_name.singular]
         end
         property :name do
           key :type, :string
@@ -205,11 +151,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :RuleChangeLinks
+          key :"$ref", :AcceptorChangeLinks
         end
       end
 
-      swagger_schema :RuleChangeLinks do
+      swagger_schema :AcceptorChangeLinks do
         property :contact do
           key :"$ref", :jsonapi_ContactLinkage
         end
@@ -233,9 +179,6 @@ module Flapjack
             :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Medium,
-                              Flapjack::Data::Tag, Flapjack::Data::Check,
-                              Flapjack::Data::Route]
           )
         }
       end
