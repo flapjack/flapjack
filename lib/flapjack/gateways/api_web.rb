@@ -10,6 +10,8 @@ require 'flapjack/gateways/api_web/middleware/request_timestamp'
 
 require 'flapjack-diner'
 
+require 'flapjack/data/check'
+
 require 'flapjack/utility'
 
 module Flapjack
@@ -230,9 +232,9 @@ module Flapjack
 
         @checks = Flapjack::Diner.checks(:filter => opts,
                     :page => (params[:page] || 1),
-                    :include => 'current_state,latest_notifications,' \
-                      'current_scheduled_maintenances,' \
-                      'current_unscheduled_maintenance')
+                    :include => ['current_state', 'latest_notifications',
+                                 'current_scheduled_maintenances',
+                                 'current_unscheduled_maintenance'])
 
         @states = {}
 
@@ -262,10 +264,10 @@ module Flapjack
 
         # contacts.media will also return contacts, per JSONAPI v1 relationships
         @check = Flapjack::Diner.checks(check_id,
-                   :include => 'contacts.media,current_state,' \
-                               'latest_notifications,' \
-                               'current_scheduled_maintenances,' \
-                               'current_unscheduled_maintenance')
+                   :include => ['contacts.media', 'current_state',
+                                'latest_notifications',
+                                'current_scheduled_maintenances',
+                                'current_unscheduled_maintenance'])
 
         halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
@@ -274,22 +276,23 @@ module Flapjack
         unless included.nil? || included.empty?
           @state = check_extra_state(@check, included, @current_time)
 
-          # FIXME need to retrieve contact-media relationships info
-
           @contacts = some_included_records(@check[:relationships], :contacts,
             included, 'contact')
 
-          @contact_media = some_included_records(@check[:relationships], :'contacts.media',
-            included, 'medium')
+          @media_by_contact_id = @contacts.inject({}) do |memo, contact|
+            memo[contact[:id]] = some_included_records(contact[:relationships], :media,
+              included, 'medium')
+            memo
+          end
         end
 
         # these two requests will only get first page of 20 records, which is what we want
-        state_links = Flapjack::Diner.checks_link_states(check_id,
+        state_links = Flapjack::Diner.check_link_states(check_id,
           :include => 'states')
         @state_changes = all_included_records(state_links,
           Flapjack::Diner.context[:included], 'state')
 
-        sm_links = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
+        sm_links = Flapjack::Diner.check_link_scheduled_maintenances(check_id,
           :include => 'scheduled_maintenances')
 
         @scheduled_maintenances = all_included_records(sm_links,
@@ -408,7 +411,7 @@ module Flapjack
         @name = params[:name]
         opts.update(:name => @name) unless @name.nil?
 
-        @contacts = Flapjack::Diner.contacts(:page => params[:page],
+        @contacts = Flapjack::Diner.contacts(:page => params[:page] || 1,
           :filter => opts, :sort => '+name')
 
         unless @contacts.nil?
@@ -425,17 +428,24 @@ module Flapjack
       get "/contacts/:id" do
         contact_id = params[:id]
 
-        @contact = Flapjack::Diner.contacts(contact_id, :include => 'checks,media')
+        @contact = Flapjack::Diner.contacts(contact_id,
+          :include => ['acceptors', 'checks', 'media', 'rejectors'])
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
         context = Flapjack::Diner.context
 
         unless context.nil?
-          @checks = some_included_records(@contact[:relationships], :checks,
-            included, 'check')
-
-          # @media = included_records(check[:relationships], :'media',
-          #   included, 'medium')
+           included = context[:included]
+           unless included.nil?
+             @acceptors = some_included_records(@contact[:relationships], :acceptors,
+               included, 'acceptor')
+             @checks = some_included_records(@contact[:relationships], :checks,
+               included, 'check')
+             @media = some_included_records(@contact[:relationships], :media,
+               included, 'medium')
+             @rejectors = some_included_records(@contact[:relationships], :rejectors,
+               included, 'rejector')
+           end
         end
 
         erb 'contact.html'.to_sym

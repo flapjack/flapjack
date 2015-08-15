@@ -455,13 +455,13 @@
         </tr>
         <% @contacts.each do |contact| %>
           <tr>
-            <td><a href="<%= @base_url %>contacts/<%= u(contact.id) %>" title="contact details"><%= h contact.name %></a></td>
+            <td><a href="<%= @base_url %>contacts/<%= u(contact[:id]) %>" title="contact details"><%= h contact[:name] %></a></td>
             <td>
-              <% contact_media = @media_by_contact_id[contact.id] %>
+              <% contact_media = @media_by_contact_id[contact[:id]] %>
               <% if contact_media.nil? || contact_media.empty? %>
                 <p>No media</p>
               <% else %>
-                <p><%= h contact_media.map(&:transport).collect(&:capitalize).join(", ") %></p>
+                <p><%= h contact_media.map {|m| m[:attributes][:transport] }.collect(&:capitalize).join(", ") %></p>
               <% end %>
             </td>
           </tr>

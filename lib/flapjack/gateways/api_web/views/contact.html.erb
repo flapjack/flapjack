@@ -18,7 +18,7 @@
     </tr>
     <% @media.each do |med| %>
       <%# alerting_checks = med.alerting_checks %>
-      <% media_transport = med[:transport] %>
+      <% media_transport = med[:attributes][:transport] %>
       <%# alerting[media_transport] = alerting_checks unless alerting_checks.empty? %>
       <tr>
         <% if 'pagerduty'.eql?(media_transport) %>
@@ -39,16 +39,16 @@
           <% else %>
               <td><%= h media_transport.capitalize %></td>
           <% end %>
-          <td><%= h med[:address] %></td>
+          <td><%= h med[:attributes][:address] %></td>
           <td>
-            <% if med[:interval] %>
-              <%= h med[:interval] %> seconds
+            <% if med[:attributes][:interval] %>
+              <%= h med[:attributes][:interval] %> seconds
             <% else %>
               no custom interval
             <% end %>
           </td>
           <td>
-            <% rollup_threshold = med[:rollup_threshold] %>
+            <% rollup_threshold = med[:attributes][:rollup_threshold] %>
             <% num_alerting = alerting[media_transport].nil? ? 0 : alerting[media_transport].length %>
             <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
               No -
@@ -97,7 +97,7 @@
 <% end %>
 
 <h3>Notification Rules</h3>
-<% rules = @contact.rules.all %>
+<% rules = [] %>
 <% if !rules || rules.empty? %>
   <p>No notification rules</p>
 <% else %>
