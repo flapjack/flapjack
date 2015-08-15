@@ -134,11 +134,17 @@ module Flapjack
                 app.get %r{^/#{resource}(?:/(.+))?$} do
                   resource_id = params[:captures].nil? ? nil :
                                   params[:captures].first
+                  incl = params[:include].nil? ? nil : params[:include].split(',')
+
+                  locks = (incl.nil? || incl.empty?) ? [] :
+                    locks_for_jsonapi_include(self.class, :include => incl.dup,
+                      :query_type => :association)
+
                   status 200
 
                   json_data = {}
 
-                  resource_class.jsonapi_lock_method(:get) do
+                  resource_class.jsonapi_lock_method(:get, locks) do
                     resources, links, meta = if resource_id.nil?
                       scoped = resource_filter_sort(resource_class,
                        :filter => params[:filter], :sort => params[:sort])
@@ -159,7 +165,6 @@ module Flapjack
                         raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id)
                       end
                     else
-                      incl = params[:include].nil? ? nil : params[:include].split(',')
                       d = as_jsonapi(resource_class, resource, resources,
                                      (resource_id.nil? ? resources.ids : [resource_id]),
                                      :fields => params[:fields], :include => incl,

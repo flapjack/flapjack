@@ -156,6 +156,20 @@ module Flapjack
             resources_as_json.first
           end
 
+          def locks_for_jsonapi_include(resource_class, options = {})
+            incl = options[:include]
+            clause_done = options[:clause_done] || []
+
+            included = incl.collect {|i| i.split('.')}.sort_by(&:length)
+
+            included.inject([]) do |memo, incl_clause|
+              memo += lock_for_include_clause(resource_class, incl_clause,
+                :clause_done => clause_done,
+                :query_type => options[:query_type])
+              memo
+            end
+          end
+
           def as_jsonapi_included(klass, resources_name, resources, options = {})
             incl = options[:include]
             raise "No data to include" if incl.nil? || incl.empty?
@@ -387,6 +401,38 @@ module Flapjack
 
           def create_link_header(links)
             links.collect {|(k, v)| "<#{v}; rel=\"#{k}\"" }.join(', ')
+          end
+
+          def lock_for_include_clause(parent_klass, clause_left, options = {})
+            clause_done = options[:clause_done]
+
+            clause_fragment = clause_left.shift
+            clause_done.push(clause_fragment)
+
+            fragment_klass = nil
+
+            parent_links = if parent_klass.respond_to?(:jsonapi_associations)
+              parent_klass.jsonapi_associations || {}
+            else
+              {}
+            end
+
+            assoc_data = parent_links[clause_fragment.to_sym]
+
+            # FIXME :includable apply to resource_*, :link apply to association_*
+            return [] if assoc_data.nil? ||
+              (:resource.eql?(options[:query_type]) && !assoc_data.includable) ||
+              (:association.eql?(options[:query_type]) && !assoc_data.link)
+
+            fragment_klass = assoc_data.data_klass
+
+            data = [fragment_klass]
+
+            return data if clause_left.empty?
+
+            data + lock_for_include_clause(fragment_klass, clause_left,
+              :clause_done => clause_done,
+              :query_type => options[:query_type])
           end
 
           def data_for_include_clause(parent_klass, parent_resources,

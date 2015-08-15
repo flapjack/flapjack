@@ -177,11 +177,15 @@ module Flapjack
                 fields = params[:fields]
                 incl   = params[:include].nil? ? nil : params[:include].split(',')
 
-                # FIXME extra lock classes for include
+                assoc = jsonapi_links[assoc_name]
+
+                extra_locks = incl.nil? ? [] : locks_for_jsonapi_include(resource_class,
+                        :include => incl.dup, :query_type => :association)
+
+                locks = assoc.lock_klasses | extra_locks
+                locks.sort_by!(&:name)
 
                 status 200
-
-                assoc = jsonapi_links[assoc_name]
 
                 halt(err(404, 'Unknown relationship')) if assoc.nil?
 
@@ -190,7 +194,7 @@ module Flapjack
                 result = nil
                 meta = nil
 
-                resource_class.lock(*assoc.lock_klasses) do
+                resource_class.lock(*locks) do
                   res = resource_class.intersect(:id => resource_id)
                   empty = res.empty?
 
