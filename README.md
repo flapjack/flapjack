@@ -1,3 +1,7 @@
+Please note that Flapjack's master branch currently represents the `v2.0.0-alpha.1` pre-release of this gem. You may be looking for the [documentation for the release branch](https://github.com/flapjack/flapjack/blob/maint/1.x/README.md). Many things have changed for Flapjack v2, and the documentation needs to be fixed before the actual release.
+
+---
+
 # ![Flapjack](http://flapjack.io/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
 
 [![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
