@@ -1,0 +1,171 @@
+<div class="page-header">
+  <h2><%= h @contact[:name] %></h2>
+</div>
+
+<h3>Contact Media</h3>
+<% if @media.nil? || @media.empty? %>
+  <p>No media</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Media</th>
+      <th>Address</th>
+      <th>Interval</th>
+      <th>Summary Mode</th>
+      <th>Summary Threshold</th>
+    </tr>
+    <% @media.each do |med| %>
+      <% alerting_checks = @alerting_checks_by_media_id[med[:id]] %>
+      <% media_transport = med[:transport] %>
+      <tr>
+        <% if 'pagerduty'.eql?(media_transport) %>
+          <td>PagerDuty</td>
+          <td>
+            <% [:pagerduty_subdomain, :pagerduty_user_name,
+                :pagerduty_password, :pagerduty_token,
+                :pagerduty_ack_duration].each do |pk| %>
+              <% pv = med[pk] %>
+              <% unless pv.empty? %>
+                <p><%= :pagerduty_password.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
+              <% end %>
+            <% end %>
+          </td>
+          <td></td>
+          <td></td>
+          <td></td>
+        <% else %>
+          <% if 'sms'.eql?(media_transport) %>
+            <td><%= h media_transport.upcase %></td>
+          <% else %>
+            <td><%= h media_transport.capitalize %></td>
+          <% end %>
+          <td><%= h med[:address] %></td>
+          <td>
+            <% if med[:interval] %>
+              <%= h med[:interval] %> seconds
+            <% else %>
+              no custom interval
+            <% end %>
+          </td>
+          <td>
+            <% rollup_threshold = med[:rollup_threshold] %>
+            <% num_alerting = alerting_checks.nil? ? 0 : alerting_checks.length %>
+            <% if rollup_threshold.nil? || (num_alerting < rollup_threshold.to_i) %>
+              No -
+            <% else %>
+              Yes -
+            <% end %>
+            <%= num_alerting %> alerting
+          </td>
+          <td>
+            <% if rollup_threshold.nil? %>
+              -
+            <% else %>
+              <%= h rollup_threshold %>
+            <% end %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Alerting Checks</h3>
+<p>Alerting checks are any that are failing (and have alerted), not acknowledged, not in scheduled maintenance, and currently allowed by this contact's notification rules.</p>
+
+<% if @alerting_checks_by_media_id.nil? || @alerting_checks_by_media_id.empty? %>
+  <p><em>There are no currently alerting checks.</em></p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Medium</th>
+      <th>Alerting Checks</th>
+    </tr>
+    <% @alerting_checks_by_media_id.each_pair do |media_id, checks| %>
+      <% if checks.length > 0 %>
+        <tr>
+          <td><%= h @media.detect {|m| m[:id].eql?(media_id) }[:transport].capitalize %></td>
+          <td>
+            <% checks.each do |check| %>
+              <a href="<%= @base_url %>checks/<%= u(check[:id]) %>" title="check status"><%= h(check[:name]) %></a><br />
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Acceptors</h3>
+<% if !@acceptors || @acceptors.empty? %>
+  <p>No acceptors</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>ID</th>
+      <th>Tags</th>
+      <th>Conditions</th>
+      <th>Media</th>
+      <th>Time Restrictions</th>
+    </tr>
+    <% @acceptors.each do |acceptor| %>
+      <% rule_name = acceptor[:name].nil? || acceptor[:name].empty? ? acceptor[:id] : acceptor[:name] %>
+      <% tag_names = @tags_by_acceptor_id[acceptor[:id]].map {|t| t[:name] } %>
+      <% rule_conds = acceptor[:conditions_list] %>
+      <% transports = @media_by_acceptor_id.map {|m| m[:transport] } %>
+      <tr>
+        <td><%= h rule_name %></td>
+        <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
+        <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
+        <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
+        <td><%= h acceptor[:time_restrictions] %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>Rejectors</h3>
+<% if !@rejectors || @rejectors.empty? %>
+  <p>No rejectors</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>ID</th>
+      <th>Tags</th>
+      <th>Conditions</th>
+      <th>Media</th>
+      <th>Time Restrictions</th>
+    </tr>
+    <% @rejectors.each do |rejector| %>
+      <% rule_name = rejector[:name].nil? || rejector[:name].empty? ? rejector[:id] : rejector[:name] %>
+      <% tag_names = @tags_by_rejector_id[rejector[:id]].map {|t| t[:name] } %>
+      <% rule_conds = rejector[:conditions_list] %>
+      <% transports = @media_by_rejector_id.map {|m| m[:transport] } %>
+      <tr>
+        <td><%= h rule_name %></td>
+        <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
+        <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
+        <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
+        <td><%= h rejector[:time_restrictions] %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>
+
+<h3>All Checks</h3>
+<% if @checks.empty? %>
+  <p>No checks</p>
+<% else %>
+  <table class="table table-bordered table-hover table-condensed">
+    <tr>
+      <th>Checks</th>
+    </tr>
+    <tr>
+      <td>
+        <% @checks.each do |check| %>
+          <a href="<%= @base_url %>checks/<%= u(check[:id]) %>" title="check status"><%= h check[:name] %></a>
+        <% end %>
+      </td>
+    </tr>
+  </table>
+<% end %>

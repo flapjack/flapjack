@@ -117,6 +117,26 @@ module Flapjack
             IceCube::Schedule.from_hash(tr)
           end
 
+          protected
+
+          def apply_time_restrictions(rules, time)
+            # filter the rules by time restrictions
+            rule_ids_by_contact_id = rules.associated_ids_for(:contact, :inversed => true)
+
+            rule_contacts = rule_ids_by_contact_id.empty? ? [] :
+              Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
+
+            time_zones_by_rule_id = rule_contacts.each_with_object({}) do |c, memo|
+              rule_ids_by_contact_id[c.id].each do |r_id|
+                memo[r_id] = c.time_zone
+              end
+            end
+
+            rules.select do |rule|
+              rule.is_occurring_at?(time, time_zones_by_rule_id[rule.id])
+            end
+          end
+
           private
 
           def prepare_time_restriction(time_restriction, timezone = nil)
@@ -178,24 +198,6 @@ module Flapjack
             # "week_start": 0
 
             tr
-          end
-
-          def apply_time_restrictions(rules, time)
-            # filter the rules by time restrictions
-            rule_ids_by_contact_id = rules.associated_ids_for(:contact, :inversed => true)
-
-            rule_contacts = rule_ids_by_contact_id.empty? ? [] :
-              Flapjack::Data::Contact.find_by_ids(*rule_ids_by_contact_id.keys)
-
-            time_zones_by_rule_id = rule_contacts.each_with_object({}) do |c, memo|
-              rule_ids_by_contact_id[c.id].each do |r_id|
-                memo[r_id] = c.time_zone
-              end
-            end
-
-            rules.select do |rule|
-              rule.is_occurring_at?(time, time_zones_by_rule_id[rule.id])
-            end
           end
 
         end

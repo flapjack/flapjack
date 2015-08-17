@@ -16,7 +16,7 @@ require 'flapjack'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
-require 'flapjack/gateways/api_web'
+require 'flapjack/gateways/web'
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/jsonapi'
@@ -161,7 +161,7 @@ module Flapjack
 
     class HTTP < Flapjack::Pikelet::Base
 
-      TYPES = ['jsonapi', 'api_web']
+      TYPES = ['jsonapi', 'web']
 
       def start
         @pikelet_class.instance_variable_set('@config', @config)
@@ -224,7 +224,7 @@ module Flapjack
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],
              'sms_aspsms' => [Flapjack::Gateways::SmsAspsms],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],
-             'api_web'    => [Flapjack::Gateways::ApiWeb],
+             'web'    => [Flapjack::Gateways::Web],
             }
 
     def self.is_pikelet?(type)

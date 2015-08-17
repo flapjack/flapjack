@@ -461,7 +461,7 @@
               <% if contact_media.nil? || contact_media.empty? %>
                 <p>No media</p>
               <% else %>
-                <p><%= h contact_media.map {|m| m[:attributes][:transport] }.collect(&:capitalize).join(", ") %></p>
+                <p><%= h contact_media.map {|m| m[:transport] }.collect(&:capitalize).join(", ") %></p>
               <% end %>
             </td>
           </tr>

@@ -1,10 +1,10 @@
 require 'spec_helper'
-require 'flapjack/gateways/api_web'
+require 'flapjack/gateways/web'
 
-describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :logger => true do
+describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logger => true do
 
   def app
-    Flapjack::Gateways::ApiWeb
+    Flapjack::Gateways::Web
   end
 
   # let(:check_name)      { 'example.com:ping' }
@@ -19,7 +19,7 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
   } }
 
   before(:all) do
-    Flapjack::Gateways::ApiWeb.set :raise_errors, true
+    Flapjack::Gateways::Web.set :raise_errors, true
   end
 
   before(:each) do
@@ -36,9 +36,9 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
       allow(File).to receive(:file?).and_call_original
       allow(File).to receive(:file?).with(image_path) { true }
 
-      Flapjack::Gateways::ApiWeb.instance_variable_set('@config',
+      Flapjack::Gateways::Web.instance_variable_set('@config',
         config.merge({"logo_image_path" => image_path}))
-      Flapjack::Gateways::ApiWeb.start
+      Flapjack::Gateways::Web.start
 
       expect(Flapjack::Diner).to receive(:statistics).and_return([global_statistics_data])
       expect(Flapjack::Diner).to receive(:metrics).and_return(metrics_data)
@@ -51,8 +51,8 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
     end
 
     it "displays the standard logo if no custom logo configured" do
-      Flapjack::Gateways::ApiWeb.instance_variable_set('@config', config)
-      Flapjack::Gateways::ApiWeb.start
+      Flapjack::Gateways::Web.instance_variable_set('@config', config)
+      Flapjack::Gateways::Web.start
 
       expect(Flapjack::Diner).to receive(:statistics).and_return([global_statistics_data])
       expect(Flapjack::Diner).to receive(:metrics).and_return(metrics_data)
@@ -68,8 +68,8 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
   context 'web page behaviour' do
 
     before(:each) do
-      Flapjack::Gateways::ApiWeb.instance_variable_set('@config', config)
-      Flapjack::Gateways::ApiWeb.start
+      Flapjack::Gateways::Web.instance_variable_set('@config', config)
+      Flapjack::Gateways::Web.start
     end
 
     it "shows a page listing all checks" do
@@ -95,8 +95,11 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
     end
 
     it "shows a page listing flapjack statistics" do
-      expect(Flapjack::Diner).to receive(:statistics).and_return([global_statistics_data])
-      expect(Flapjack::Diner).to receive(:metrics).and_return(metrics_data)
+      stats_resp_data = [global_statistics_json]
+      expect(Flapjack::Diner).to receive(:statistics).and_return(resultify(stats_resp_data))
+
+      metrics_resp_data = metrics_json(metrics_data)
+      expect(Flapjack::Diner).to receive(:metrics).and_return(resultify(metrics_resp_data))
 
       get '/self_stats'
       expect(last_response).to be_ok
@@ -121,9 +124,9 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
       resp_state = state_json(state_data).merge(:relationships => state_rel(state_data))
 
       resp_included = [
-        resp_contact,
-        medium_json(email_data).merge(:relationships => medium_rel(email_data)),
-        resp_state
+        resultify(resp_contact),
+        resultify(medium_json(email_data).merge(:relationships => medium_rel(email_data))),
+        resultify(resp_state)
       ]
 
       expect(Flapjack::Diner).to receive(:checks).
@@ -131,7 +134,7 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
                                            'latest_notifications',
                                            'current_scheduled_maintenances',
                                            'current_unscheduled_maintenance']).
-        and_return(resp_data)
+        and_return(resultify(resp_data))
 
       expect(Flapjack::Diner).to receive(:check_link_states).
         with(check_data[:id], :include => 'states').
@@ -214,14 +217,19 @@ describe Flapjack::Gateways::ApiWeb, :sinatra => true, :pact_fixture => true, :l
       resp_data[:relationships][:rejectors][:data] = [
       ]
 
+      resp_medium = medium_json(email_data).merge(:relationships => medium_rel(email_data))
+      resp_medium[:relationships][:alerting_checks][:data] = [
+      ]
+
       resp_included = [
-        check_json(check_data).merge(:relationships => check_rel(check_data)),
-        medium_json(email_data).merge(:relationships => medium_rel(email_data))
+        resultify(check_json(check_data).merge(:relationships => check_rel(check_data))),
+        resultify(resp_medium)
       ]
 
       expect(Flapjack::Diner).to receive(:contacts).
-        with(contact_data[:id], :include => ['acceptors', 'checks', 'media', 'rejectors']).
-        and_return(resp_data)
+        with(contact_data[:id], :include => ['acceptors.tags', 'acceptors.media',
+          'checks', 'media.alerting_checks', 'rejectors.tags', 'rejectors.media']).
+        and_return(resultify(resp_data))
 
       expect(Flapjack::Diner).to receive(:context).
         and_return({:included => resp_included})

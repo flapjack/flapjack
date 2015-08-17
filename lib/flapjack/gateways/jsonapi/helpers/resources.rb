@@ -64,6 +64,8 @@ module Flapjack
                     memo[r.id] = case d
                     when nil
                       nil
+                    when Zermelo::Filter, Zermelo::Associations::Multiple
+                      d.ids
                     when Array, Set
                       d.map(&:id)
                     else
@@ -470,6 +472,8 @@ module Flapjack
                 memo[r.id] = case d
                 when nil
                   nil
+                when Zermelo::Filter, Zermelo::Associations::Multiple
+                  d.ids
                 when Array, Set
                   d.map(&:id)
                 else

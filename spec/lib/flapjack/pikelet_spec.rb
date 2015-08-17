@@ -90,17 +90,17 @@ describe Flapjack::Pikelet, :logger => true do
     expect(server).to receive(:binder).and_return(binder)
     expect(server).to receive(:run).with(false)
 
-    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::ApiWeb).
+    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::Web).
       and_return(server)
 
-    expect(Flapjack::Gateways::ApiWeb).to receive(:instance_variable_set).
+    expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
       with('@config', config)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
-    expect(Flapjack::Gateways::ApiWeb).to receive(:start)
+    expect(Flapjack::Gateways::Web).to receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('api_web', shutdown, :config => config)
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first
@@ -128,19 +128,19 @@ describe Flapjack::Pikelet, :logger => true do
     expect(server).to receive(:binder).and_return(binder)
     expect(server).to receive(:run).with(false).and_raise(exc)
 
-    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::ApiWeb).
+    expect(::Puma::Server).to receive(:new).with(Flapjack::Gateways::Web).
       and_return(server)
 
-    expect(Flapjack::Gateways::ApiWeb).to receive(:instance_variable_set).
+    expect(Flapjack::Gateways::Web).to receive(:instance_variable_set).
       with('@config', config)
 
     expect(Thread).to receive(:new).and_yield.and_return(thread)
 
     expect(shutdown).to receive(:call)
 
-    expect(Flapjack::Gateways::ApiWeb).to receive(:start)
+    expect(Flapjack::Gateways::Web).to receive(:start)
 
-    pikelets = Flapjack::Pikelet.create('api_web', shutdown, :config => config)
+    pikelets = Flapjack::Pikelet.create('web', shutdown, :config => config)
     expect(pikelets).not_to be_nil
     expect(pikelets.size).to eq(1)
     pikelet = pikelets.first

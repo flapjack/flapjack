@@ -94,7 +94,7 @@ module Flapjack
       # (which will pass a severity to use, and an effective time)
       def alerting_media(opts = {})
         time = opts[:time] || Time.now
-        severity = opts[:severity]
+        severity = opts[:severity] || self.condition
 
         # return empty set if disabled, or in a maintenance period (for API only,
         # these will have been checked already in processor if called by notifier)
@@ -147,14 +147,14 @@ module Flapjack
         tag_ids = self.tags.ids
         time = Time.now
 
-        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids, :severity => severity)
+        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids)
         acceptor_contact_ids = Flapjack::Data::Acceptor.matching_contact_ids(acceptor_ids,
           :time => time)
         return Flapjack::Data::Contact.empty if acceptor_contact_ids.empty?
 
 
         # and matching rejectors
-        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids, :severity => severity)
+        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids)
         rejector_contact_ids = Flapjack::Data::Rejector.matching_contact_ids(rejector_ids,
           :time => time)
         unless rejector_contact_ids.empty?

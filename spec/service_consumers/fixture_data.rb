@@ -40,10 +40,6 @@ module FixtureData
     ret
   end
 
-  # def contextify(resp_data)
-
-  # end
-
   def check_data
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',

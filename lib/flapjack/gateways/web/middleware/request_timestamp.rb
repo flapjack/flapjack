@@ -4,7 +4,7 @@ require 'rack'
 
 module Flapjack
   module Gateways
-    class ApiWeb < Sinatra::Base
+    class Web < Sinatra::Base
       module Middleware
         class RequestTimestamp < Struct.new(:app)
           def call(env)
