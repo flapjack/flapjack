@@ -225,6 +225,7 @@ module Flapjack
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],
              'sms_aspsms' => [Flapjack::Gateways::SmsAspsms],
              'aws_sns'    => [Flapjack::Gateways::AwsSns],
+             'web'    => [Flapjack::Gateways::Web],
 			 'threema'	  => [Flapjack::Gateways::Threema],
             }
 
