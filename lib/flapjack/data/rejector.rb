@@ -21,7 +21,7 @@ require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
   module Data
-    class Blackhole
+    class Rejector
 
       extend Flapjack::Utility
 
@@ -35,41 +35,17 @@ module Flapjack
       include Flapjack::Data::Extensions::ShortName
 
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
-        :inverse_of => :blackholes
+        :inverse_of => :rejectors
 
       has_and_belongs_to_many :media, :class_name => 'Flapjack::Data::Medium',
-        :inverse_of => :blackholes, :after_add => :media_added,
+        :inverse_of => :rejectors, :after_add => :media_added,
         :after_remove => :media_removed
 
-      def self.media_added(blackhole_id, *t_ids)
-        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
-        blackhole.has_tags = true
-        blackhole.save!
-      end
-
-      def self.media_removed(blackhole_id, *t_ids)
-        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
-        blackhole.has_media = blackhole.media.empty?
-        blackhole.save!
-      end
-
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :blackholes, :after_add => :tags_added,
+        :inverse_of => :rejectors, :after_add => :tags_added,
         :after_remove => :tags_removed
 
-      def self.tags_added(blackhole_id, *t_ids)
-        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
-        blackhole.has_tags = true
-        blackhole.save!
-      end
-
-      def self.tags_removed(blackhole_id, *t_ids)
-        blackhole = Flapjack::Data::Blackhole.find_by_id!(blackhole_id)
-        blackhole.has_tags = blackhole.tags.empty?
-        blackhole.save!
-      end
-
-      swagger_schema :Blackhole do
+      swagger_schema :Rejector do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -77,7 +53,13 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
+          key :enum, [Flapjack::Data::Rejector.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -89,11 +71,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :BlackholeLinks
+          key :"$ref", :RejectorLinks
         end
       end
 
-      swagger_schema :BlackholeLinks do
+      swagger_schema :RejectorLinks do
         key :required, [:self, :contact, :media, :tags]
         property :self do
           key :type, :string
@@ -113,7 +95,7 @@ module Flapjack
         end
       end
 
-      swagger_schema :BlackholeCreate do
+      swagger_schema :RejectorCreate do
         key :required, [:type]
         property :id do
           key :type, :string
@@ -121,7 +103,13 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
+          key :enum, [Flapjack::Data::Rejector.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -133,11 +121,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :BlackholeChangeLinks
+          key :"$ref", :RejectorChangeLinks
         end
       end
 
-      swagger_schema :BlackholeUpdate do
+      swagger_schema :RejectorUpdate do
         key :required, [:id, :type]
         property :id do
           key :type, :string
@@ -145,7 +133,13 @@ module Flapjack
         end
         property :type do
           key :type, :string
-          key :enum, [Flapjack::Data::Blackhole.short_model_name.singular]
+          key :enum, [Flapjack::Data::Rejector.short_model_name.singular]
+        end
+        property :name do
+          key :type, :string
+        end
+        property :all do
+          key :type, :boolean
         end
         property :conditions_list do
           key :type, :string
@@ -157,11 +151,11 @@ module Flapjack
           end
         end
         property :relationships do
-          key :"$ref", :BlackholeChangeLinks
+          key :"$ref", :RejectorChangeLinks
         end
       end
 
-      swagger_schema :BlackholeChangeLinks do
+      swagger_schema :RejectorChangeLinks do
         property :contact do
           key :"$ref", :jsonapi_ContactLinkage
         end
@@ -176,13 +170,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:conditions_list, :time_restrictions]
+            :attributes => [:name, :all, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )

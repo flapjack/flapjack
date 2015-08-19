@@ -12,7 +12,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "creates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Contact,
+           Flapjack::Data::Rejector).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -38,7 +41,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not create a medium if the data is improperly formatted" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Contact, Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Contact,
+           Flapjack::Data::Rejector).
+      and_yield
 
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
@@ -62,9 +68,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "returns a single medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:intersect).
@@ -83,9 +90,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "returns all media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector).
       and_yield
 
     meta = {
@@ -127,9 +135,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not return a medium if the medium is not present" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Check,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector).
       and_yield
 
     no_media = double('no_media')
@@ -144,7 +153,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "updates a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Rule).
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Rejector).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
@@ -162,7 +172,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "updates multiple media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Rule).
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Rejector).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_ids!).
@@ -187,7 +198,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not update a medium that's not present" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Rule).
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Rejector).
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
@@ -201,11 +213,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes a medium" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Alert,
-           Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
+           Flapjack::Data::Rejector,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).
       and_yield
@@ -221,11 +233,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "deletes multiple media" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Alert,
-           Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
+           Flapjack::Data::Rejector,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).
       and_yield
@@ -247,11 +259,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
 
   it "does not delete a medium that's not found" do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Alert,
-           Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
+           Flapjack::Data::Alert,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rule,
+           Flapjack::Data::Rejector,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State).
       and_yield

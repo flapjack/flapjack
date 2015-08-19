@@ -89,8 +89,7 @@ module Flapjack
 
         Flapjack.logger.debug("#{label} pass - not blocking because neither of the time comparison " +
                       "conditions were met")
-        return false
-
+        false
       end
     end
   end

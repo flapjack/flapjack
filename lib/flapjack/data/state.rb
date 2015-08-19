@@ -33,16 +33,17 @@ module Flapjack
       include Flapjack::Data::Extensions::Associations
       include Flapjack::Data::Extensions::ShortName
 
-      define_attributes :created_at        => :timestamp,
-                        :updated_at        => :timestamp,
-                        :condition         => :string,
-                        :action            => :string,
-                        :summary           => :string,
-                        :details           => :string,
-                        :perfdata_json     => :string
+      define_attributes :created_at    => :timestamp,
+                        :updated_at    => :timestamp,
+                        :finished_at   => :timestamp,
+                        :condition     => :string,
+                        :action        => :string,
+                        :summary       => :string,
+                        :details       => :string,
+                        :perfdata_json => :string
 
       index_by :condition, :action
-      range_index_by :created_at, :updated_at
+      range_index_by :created_at, :updated_at, :finished_at
 
       # public
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
@@ -111,8 +112,8 @@ module Flapjack
       end
 
       swagger_schema :State do
-        key :required, [:id, :created_at, :updated_at, :condition, :action,
-                        :summary, :details, :perfdata]
+        key :required, [:id, :created_at, :updated_at, :finished_at,
+                        :condition, :action, :summary, :details, :perfdata]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -126,6 +127,10 @@ module Flapjack
           key :format, :"date-time"
         end
         property :updated_at do
+          key :type, :string
+          key :format, :"date-time"
+        end
+        property :finished_at do
           key :type, :string
           key :format, :"date-time"
         end
@@ -167,8 +172,8 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:created_at, :updated_at, :condition, :action,
-                            :summary, :details, :perfdata]
+            :attributes => [:created_at, :updated_at, :finished_at, :condition,
+                            :action, :summary, :details, :perfdata]
           )
         }
       end

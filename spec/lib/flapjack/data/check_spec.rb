@@ -29,21 +29,21 @@ describe Flapjack::Data::Check, :redis => true do
   context "maintenance" do
 
     it "returns that it is not in unscheduled maintenance" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
       expect(check).not_to be_in_unscheduled_maintenance
     end
 
     it "returns that it is not in scheduled maintenance" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
       expect(check).not_to be_in_scheduled_maintenance
     end
 
     it "adds an unscheduled maintenance period and ends the current one early", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -65,7 +65,7 @@ describe Flapjack::Data::Check, :redis => true do
       expect(check).to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances.all
-      expect(usms).to be_an(Array)
+      expect(usms).to be_a(Set)
       expect(usms.size).to eq(2)
       expect(usms.map(&:summary)).to match_array(['scooby', 'shaggy'])
 
@@ -74,7 +74,7 @@ describe Flapjack::Data::Check, :redis => true do
     end
 
     it "ends an unscheduled maintenance period", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -94,13 +94,13 @@ describe Flapjack::Data::Check, :redis => true do
       expect(check).not_to be_in_unscheduled_maintenance
 
       usms = check.unscheduled_maintenances.all
-      expect(usms).to be_an(Array)
+      expect(usms).to be_a(Set)
       expect(usms.size).to eq(1)
       expect(usms.first.end_time.to_i).to eq(later_t.to_i)
     end
 
     it "ends a scheduled maintenance period for a future time" do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -112,20 +112,20 @@ describe Flapjack::Data::Check, :redis => true do
       check.scheduled_maintenances << sm
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.summary).to eq('2 hours')
 
       check.end_scheduled_maintenance(sm, t)
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms).to be_empty
     end
 
     # maint period starts an hour from now, goes for two hours -- at 30 minutes into
     # it we stop it, and its duration should be 30 minutes
     it "shortens a scheduled maintenance period covering a current time", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -142,13 +142,13 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.end_time.to_i).to eq(future.to_i)
     end
 
     it "does not alter or remove a scheduled maintenance period covering a past time", :time => true do
-      Factory.check(:name => check_name, :id => 1)
+      Factory.check(:name => check_name)
 
       check = Flapjack::Data::Check.intersect(:name => check_name).all.first
 
@@ -165,7 +165,7 @@ describe Flapjack::Data::Check, :redis => true do
       check.end_scheduled_maintenance(sm, future)
 
       sms = check.scheduled_maintenances.all
-      expect(sms).to be_an(Array)
+      expect(sms).to be_a(Set)
       expect(sms.size).to eq(1)
       expect(sms.first.end_time.to_i).to eq(t.to_i + (3 * 60 * 60))
     end

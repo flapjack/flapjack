@@ -1,11 +1,11 @@
 PATH
   remote: .
   specs:
-    flapjack (2.0.0alpha1)
+    flapjack (2.0.0.pre.alpha.1)
       activesupport
       chronic
       chronic_duration
-      flapjack-diner (= 2.0.0.pre.alpha.2)
+      flapjack-diner (= 2.0.0.pre.alpha.3)
       gli (= 2.13.1)
       hiredis
       ice_cube
@@ -21,7 +21,7 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
-      zermelo (= 1.2.1)
+      zermelo (= 1.3.0)
 
 GEM
   remote: https://rubygems.org/
@@ -58,7 +58,7 @@ GEM
     diff-lcs (1.2.5)
     docile (1.1.5)
     find_a_port (1.0.1)
-    flapjack-diner (2.0.0.pre.alpha.2)
+    flapjack-diner (2.0.0.pre.alpha.3)
       httparty (>= 0.10)
       json (>= 1.7.7)
     gherkin (2.12.2)
@@ -119,8 +119,8 @@ GEM
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
-    puma (2.12.3)
-    puma (2.12.3-java)
+    puma (2.13.0)
+    puma (2.13.0-java)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -165,14 +165,14 @@ GEM
       citrus (~> 3.0, > 3.0)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2015.5)
+    tzinfo-data (1.2015.6)
       tzinfo (>= 1.0.0)
     webmock (1.21.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
-    zermelo (1.2.1)
+    zermelo (1.3.0)
       activemodel
 
 PLATFORMS
@@ -192,4 +192,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.10.4
+   1.10.6

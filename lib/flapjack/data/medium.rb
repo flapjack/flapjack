@@ -55,52 +55,21 @@ module Flapjack
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :media
 
-      has_and_belongs_to_many :blackholes, :class_name => 'Flapjack::Data::Blackhole',
+      has_and_belongs_to_many :acceptors, :class_name => 'Flapjack::Data::Acceptor',
         :inverse_of => :media
 
-      has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
+      has_and_belongs_to_many :rejectors, :class_name => 'Flapjack::Data::Rejector',
         :inverse_of => :media
 
       # this can be called from the API (with no args) or from notifier.rb
       # (which will pass an effective time)
       def alerting_checks(opts = {})
         time = opts[:time] || Time.now
-        timezone = self.contact.timezone
+        init_scope = Flapjack::Data::Check.intersect(:enabled => true, :alertable => true)
+        ret = checks(:initial_scope => init_scope,
+                     :time => Time.now)
 
-        rule_ids = self.rules.select {|rule|
-          rule.is_occurring_at?(time, timezone)
-        }.map(&:id)
-
-        return Flapjack::Data::Check.empty if rule_ids.empty?
-
-        route_ids = Flapjack::Data::Rule.intersect(:id => rule_ids).
-          associated_ids_for(:routes).values.reduce(Set.new, :|)
-
-        return Flapjack::Data::Check.empty if route_ids.empty?
-
-        check_ids = Flapjack::Data::Route.intersect(:id => route_ids,
-          :alertable => true).associated_ids_for(:checks).values.reduce(Set.new, :|)
-
-        return Flapjack::Data::Check.empty if check_ids.empty?
-
-        # exclude any blackholes for checks with matching tags
-        blackhole_ids = self.blackholes.select {|blackhole|
-          blackhole.is_occurring_at?(time, timezone)
-        }.map(&:id)
-
-        unless blackhole_ids.empty?
-          grouped_blackhole_tag_ids = Flapjack::Data::Blackhole.
-            intersect(:id => blackhole_ids).associated_ids_for(:tags).values.reduce(Set.new, :|)
-
-          tag_ids_by_check_id = Flapjack::Data::Check.intersect(:id => check_ids).
-            associated_ids_for(:tags)
-
-          check_ids -= tag_ids_by_check_id.each_with_object([]) do |(check_id, tag_ids), memo|
-            memo << check_id if grouped_blackhole_tag_ids.any? {|bt_ids| (bt_ids - tag_ids).empty? }
-          end
-
-          return Flapjack::Data::Check.empty if check_ids.empty?
-        end
+        return Flapjack::Data::Check.empty if ret.empty?
 
         start_range = Zermelo::Filters::IndexRange.new(nil, time, :by_score => true)
         end_range   = Zermelo::Filters::IndexRange.new(time, nil, :by_score => true)
@@ -109,13 +78,57 @@ module Flapjack
           intersect(:start_time => start_range, :end_time => end_range).
           associated_ids_for(:check).values
 
-        unless sched_maint_check_ids.empty?
-          check_ids -= sched_maint_check_ids
+        ret = ret.diff(:id => sched_maint_check_ids) unless sched_maint_check_ids.empty?
 
-          return Flapjack::Data::Check.empty if check_ids.empty?
+        unsched_maint_check_ids = Flapjack::Data::UnscheduledMaintenance.
+          intersect(:start_time => start_range, :end_time => end_range).
+          associated_ids_for(:check).values
+
+        ret = ret.diff(:id => unsched_maint_check_ids) unless unsched_maint_check_ids.empty?
+        ret
+      end
+
+      def checks(opts = {})
+        timezone = self.contact.timezone
+        time = opts[:time] || Time.now
+        init_scope = opts[:initial_scope] || Flapjack::Data::Check.intersect(:enabled => true)
+
+        # TODO maybe fold time validation into 'matching_checks'
+        global_rejector_ids = self.rejectors.intersect(:all => true).select {|rejector|
+          rejector.is_occurring_at?(time, timezone)
+        }.map(&:id)
+
+        unless global_rejector_ids.empty?
+          # global blackhole
+          return Flapjack::Data::Check.empty
         end
 
-        Flapjack::Data::Check.intersect(:id => check_ids, :enabled => true)
+        rejector_ids = self.rejectors.intersect(:all => [nil, false]).select {|rejector|
+          rejector.is_occurring_at?(time, timezone)
+        }.map(&:id)
+
+        acceptors = self.acceptors.select {|acceptor|
+          acceptor.is_occurring_at?(time, timezone)
+        }
+
+        # no positives
+        return Flapjack::Data::Check.empty if acceptors.empty?
+
+        ret = init_scope
+
+        if acceptors.none? {|a| a.all }
+          # if no global acceptor, scope by tags for acceptors
+          acceptor_checks = Flapjack::Data::Acceptor.matching_checks(acceptors.map(&:id))
+          ret = ret.intersect(:id => acceptor_checks)
+        end
+
+        # then exclude by checks with tags matching rejector, if any
+        rejector_checks = Flapjack::Data::Rejector.matching_checks(rejector_ids)
+        unless rejector_checks.empty?
+          ret = ret.diff(:id => rejector_checks)
+        end
+
+        ret
       end
 
       has_many :alerts, :class_name => 'Flapjack::Data::Alert', :inverse_of => :medium
@@ -232,11 +245,15 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :acceptors do
+          key :type, :string
+          key :format, :url
+        end
         property :contact do
           key :type, :string
           key :format, :url
         end
-        property :rules do
+        property :rejectors do
           key :type, :string
           key :format, :url
         end
@@ -338,11 +355,14 @@ module Flapjack
       end
 
       swagger_schema :MediumChangeLinks do
+        property :acceptors do
+          key :"$ref", :jsonapi_AcceptorsLinkage
+        end
         property :contact do
           key :"$ref", :jsonapi_ContactLinkage
         end
-        property :rules do
-          key :"$ref", :jsonapi_RulesLinkage
+        property :rejectors do
+          key :"$ref", :jsonapi_RejectorsLinkage
         end
       end
 
@@ -368,7 +388,8 @@ module Flapjack
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :lock_klasses => [Flapjack::Data::Alert,
-                              Flapjack::Data::Blackhole,
+                              Flapjack::Data::Acceptor,
+                              Flapjack::Data::Rejector,
                               Flapjack::Data::Check,
                               Flapjack::Data::ScheduledMaintenance,
                               Flapjack::Data::State
@@ -380,16 +401,19 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
+            :acceptors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
+              :number => :multiple, :link => true, :includable => true
+            ),
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :type => 'check',
               :klass => Flapjack::Data::Check,
               :related_klasses => [
-                Flapjack::Data::Blackhole,
+                Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
-                Flapjack::Data::Route,
-                Flapjack::Data::Rule,
+                Flapjack::Data::Rejector,
                 Flapjack::Data::ScheduledMaintenance
               ]
             ),
@@ -397,7 +421,7 @@ module Flapjack
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
             ),
-            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )

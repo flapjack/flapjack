@@ -165,7 +165,9 @@ module Flapjack
                 Flapjack::UUID_RE
               end
 
-              app.get %r{^/#{resource}/(#{id_patt})/(?:relationships/)?(.*)} do
+              assoc_patt = jsonapi_links.keys.map(&:to_s).join("|")
+
+              app.get %r{^/#{resource}/(#{id_patt})/(?:relationships/)?(#{assoc_patt})(\?.+)?} do
                 resource_id = params[:captures][0]
                 assoc_name  = params[:captures][1].to_sym
 
@@ -175,9 +177,15 @@ module Flapjack
                 fields = params[:fields]
                 incl   = params[:include].nil? ? nil : params[:include].split(',')
 
-                status 200
-
                 assoc = jsonapi_links[assoc_name]
+
+                extra_locks = incl.nil? ? [] : locks_for_jsonapi_include(resource_class,
+                        :include => incl.dup, :query_type => :association)
+
+                locks = assoc.lock_klasses | extra_locks
+                locks.sort_by!(&:name)
+
+                status 200
 
                 halt(err(404, 'Unknown relationship')) if assoc.nil?
 
@@ -186,7 +194,7 @@ module Flapjack
                 result = nil
                 meta = nil
 
-                resource_class.lock(*assoc.lock_klasses) do
+                resource_class.lock(*locks) do
                   res = resource_class.intersect(:id => resource_id)
                   empty = res.empty?
 
@@ -237,7 +245,7 @@ module Flapjack
                 }
 
                 data = case result
-                when Array
+                when Array, Set
                   result.map {|assoc_id| {:type => assoc.type, :id => assoc_id} }
                 when String
                   {:type => assoc.type, :id => result}

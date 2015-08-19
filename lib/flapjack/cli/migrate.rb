@@ -15,7 +15,7 @@
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
 #   Not migrated:
-#      current rollup status (this should resolve on next relevant event)
+#      current alertable/rollup status (maybe these should reset on app)
 #      notifications/alerts (see note above)
 
 ENTITY_PATTERN_FRAGMENT = '[a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9]'
@@ -32,13 +32,13 @@ require 'hiredis'
 require 'zermelo'
 
 require 'flapjack'
+require 'flapjack/data/acceptor'
 require 'flapjack/data/condition'
 require 'flapjack/data/check'
 require 'flapjack/data/state'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
-require 'flapjack/data/rule'
-require 'flapjack/data/route'
+require 'flapjack/data/rejector'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
 require 'flapjack/data/tag'
@@ -129,7 +129,6 @@ module Flapjack
         migrate_scheduled_maintenances
         migrate_unscheduled_maintenances
 
-        set_alertable_routes
       rescue Exception => e
         puts e.message
         trace = e.backtrace.join("\n")
@@ -508,7 +507,10 @@ module Flapjack
 
           check_ids = @check_ids_by_contact_id_cache[contact.id]
 
-          rules = []
+          rules = {
+            Flapjack::Data::Acceptor => [],
+            Flapjack::Data::Rejector => []
+          }
 
           rule_ids = @source_redis.smembers(rules_key)
           rule_ids.each do |rule_id|
@@ -528,125 +530,83 @@ module Flapjack
             regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
               tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
 
-            media_states     = {}
-            blackhole_states = []
+            acceptor_conditions_by_media = {}
+            rejector_conditions_by_media = {}
 
             Flapjack::Data::Condition.unhealthy.keys.each do |fail_state|
-              blackhole = !!Flapjack.load_json(rule_data["#{fail_state}_blackhole"])
-              if blackhole
-                blackhole_states << fail_state
-                next
-              end
-
               media_types = Flapjack.load_json(rule_data["#{fail_state}_media"])
+              next if media_types.nil? || media_types.empty?
 
-              unless media_types.nil? || media_types.empty?
-                media_types_str = media_types.sort.join("|")
-                media_states[media_types_str] ||= []
-                media_states[media_types_str] << fail_state
-              end
+              media_types_str = media_types.sort.join("|")
+              blackhole = !!Flapjack.load_json(rule_data["#{fail_state}_blackhole"])
+              cond_by_media = blackhole ? rejector_conditions_by_media : acceptor_conditions_by_media
+              cond_by_media[media_types_str] ||= []
+              cond_by_media[media_types_str] << fail_state
             end
 
-            checks_and_tags_for_rule = proc do |rule|
+            checks_and_tags_for_rule = proc do |rule_klass, cond_by_media|
 
-              Flapjack::Data::Check.lock(Flapjack::Data::Rule, Flapjack::Data::Tag,
-                Flapjack::Data::Contact, Flapjack::Data::Route) do
+              rule_klass.lock(Flapjack::Data::Check, Flapjack::Data::Tag,
+                Flapjack::Data::Contact, Flapjack::Data::Medium) do
 
-                checks_for_rule = Flapjack::Data::Check.intersect(:id => check_ids)
+                cond_by_media.each_pair do |media_types_str, fail_states|
+                  rule = rule_klass.new
+                  rule.conditions_list   = fail_states.sort.join("|")
+                  rule.all = regex_entities.empty? && regex_tags.empty?
+                  rule.time_restrictions = time_restrictions
+                  rule.save
+                  raise rule.errors.full_messages.join(", ") unless rule.persisted?
 
-                checks = if regex_entities.empty? && regex_tags.empty?
-                  checks_for_rule.all
-                else
-                  # apply the entities/tag regexes as a filter
-                  checks_for_rule.select do |check|
-                    entity_name = check.name.split(':', 2).first
-                    if regex_entities.all? {|re| re === entity_name }
-                      # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
-                      # not sure if this does what we want, but it's how it currently works
-                      matching_re = []
-                      check.tags.each do |tag|
-                        matching_re += regex_tags.select {|re| re === tag.name }
+                  media_transports = media_types_str.split('|')
+                  media = contact.media.intersect(:transport => media_transports)
+                  rule.media.add_ids(*media.ids) unless media.empty?
+
+                  unless rule.all
+                    # apply the entities/tag regexes as a filter
+                    checks = Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
+                      entity_name = check.name.split(':', 2).first
+                      if regex_entities.all? {|re| re === entity_name }
+                        # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
+                        # not sure if this does what we want, but it's how it currently works
+                        matching_re = []
+                        check.tags.each do |tag|
+                          matching_re += regex_tags.select {|re| re === tag.name }
+                        end
+                        matching_re.size >= regex_tags.size
+                      else
+                        false
                       end
-                      matching_re.size >= regex_tags.size
-                    else
-                      false
                     end
+
+                    tags = checks.collect do |check|
+                      check_num = check_counts_by_id[check.id]
+                      if check_num.nil?
+                        check_num = check_counts_by_id.size + 1
+                        check_counts_by_id[check.id] = check_num
+                      end
+
+                      tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
+                      tag.save
+                      check.tags << tag
+                      tag
+                    end
+
+                    rule.tags.add(*tags) unless tags.empty?
                   end
+                  rules[rule_klass] << rule
                 end
-
-                tags = checks.collect do |check|
-                  check_num = check_counts_by_id[check.id]
-                  if check_num.nil?
-                    check_num = check_counts_by_id.size + 1
-                    check_counts_by_id[check.id] = check_num
-                  end
-
-                  tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
-                  tag.save
-                  check.tags << tag
-                  tag
-                end
-
-                rule.tags.add(*tags) unless tags.empty?
-
               end
             end
 
-            unless blackhole_states.empty?
-              rule = Flapjack::Data::Rule.new
-              rule.time_restrictions = time_restrictions
-              rule.conditions_list   = blackhole_states.sort.join("|")
-              rule.save
-              raise rule.errors.full_messages.join(", ") unless rule.persisted?
-
-              checks_and_tags_for_rule.call(rule)
-              rules << rule
-            end
-
-            media_states.each_pair do |media_types_str, fail_states|
-              rule = Flapjack::Data::Rule.new
-              rule.time_restrictions = time_restrictions
-              rule.conditions_list   = fail_states.sort.join("|")
-              rule.save
-              raise rule.errors.full_messages.join(", ") unless rule.persisted?
-
-              media_transports = media_types_str.split('|')
-              media = contact.media.intersect(:transport => media_transports)
-              rule.media.add_ids(*media.ids) unless media.empty?
-
-              checks_and_tags_for_rule.call(rule)
-              rules << rule
-            end
+            checks_and_tags_for_rule.call(Flapjack::Data::Rejector, rejector_conditions_by_media)
+            checks_and_tags_for_rule.call(Flapjack::Data::Acceptor, acceptor_conditions_by_media)
           end
 
-          contact.rules.add(*rules)
-        end
-      end
+          rejectors = rules[Flapjack::Data::Rejector]
+          contact.rejectors.add(*rejectors) unless rejectors.empty?
 
-      def set_alertable_routes
-        Flapjack::Data::Check.lock(Flapjack::Data::ScheduledMaintenance,
-          Flapjack::Data::UnscheduledMaintenance, Flapjack::Data::Route) do
-
-          Flapjack::Data::Check.each do |check|
-            cond = check.condition
-
-            route_ids = if cond.nil? || !check.enabled ||
-              Flapjack::Data::Condition.healthy?(cond) ||
-              check.in_scheduled_maintenance?(@time) ||
-              check.in_unscheduled_maintenance?(@time)
-
-              []
-            else
-              check.routes.
-                intersect(:conditions_list => [nil, /(?:^|,)#{cond}(?:,|$)/]).
-                ids
-            end
-
-            check.routes.each do |route|
-              route.alertable = route_ids.include?(route.id)
-              route.save!
-            end
-          end
+          acceptors = rules[Flapjack::Data::Acceptor]
+          contact.acceptors.add(*acceptors) unless acceptors.empty?
         end
       end
 

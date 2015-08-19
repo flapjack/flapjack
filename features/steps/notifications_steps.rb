@@ -101,27 +101,28 @@ Given /^the following media exist:$/ do |media|
   end
 end
 
-Given /^the following rules exist:$/ do |rules|
-  rules.hashes.each do |rule_data|
-    contact = Flapjack::Data::Contact.find_by_id(rule_data['contact_id'])
+Given /^the following acceptors exist:$/ do |acceptors|
+  acceptors.hashes.each do |acceptor_data|
+    contact = Flapjack::Data::Contact.find_by_id(acceptor_data['contact_id'])
     expect(contact).not_to be nil
 
     time_zone = contact.time_zone
     expect(time_zone).to be_an ActiveSupport::TimeZone
 
-    rule = Flapjack::Data::Rule.find_by_id(rule_data['id'])
-    expect(rule).to be nil
+    acceptor = Flapjack::Data::Acceptor.find_by_id(acceptor_data['id'])
+    expect(acceptor).to be nil
 
-    conditions = rule_data['condition'].split(',').map(&:strip).join(',')
+    conditions = acceptor_data['condition'].split(',').map(&:strip).join(',')
 
-    rule = Flapjack::Data::Rule.new(
-      :id             => rule_data['id'],
-      :is_blackhole   => ['1', 't', 'true', 'y', 'yes'].include?((rule_data['is_blackhole'] || '').strip.downcase),
+    acceptor = Flapjack::Data::Acceptor.new(
+      :id              => acceptor_data['id'],
+      :name            => acceptor_data['name'],
+      :all             => ['1', 't', 'true', 'y', 'yes'].include?((acceptor_data['all'] || '').strip.downcase),
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
-    unless rule_data['time_restrictions'].nil? || rule_data['time_restrictions'].strip.empty?
-      rule.time_restrictions = rule_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
+    unless acceptor_data['time_restrictions'].nil? || acceptor_data['time_restrictions'].strip.empty?
+      acceptor.time_restrictions = acceptor_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
         case tr
         when '8-18 weekdays'
           weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
@@ -131,19 +132,13 @@ Given /^the following rules exist:$/ do |rules|
         memo
       end
     end
-    expect(rule.save).to be true
 
-    contact.rules << rule
+    expect(acceptor.save).to be true
 
-    if rule_data['tags'].nil? || rule_data['tags'].strip.empty?
-      # generic rule, so force route recalc
-      Flapjack::Data::Rule.lock(Flapjack::Data::Tag, Flapjack::Data::Route,
-        Flapjack::Data::Check, Flapjack::Data::Contact) do
+    contact.acceptors << acceptor
 
-        rule.recalculate_routes
-      end
-    else
-      tags = rule_data['tags'].split(',').map(&:strip).collect do |tag_name|
+    unless acceptor_data['tags'].nil? || acceptor_data['tags'].strip.empty?
+      tags = acceptor_data['tags'].split(',').map(&:strip).collect do |tag_name|
         Flapjack::Data::Tag.lock do
           tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
           if tag.nil?
@@ -153,38 +148,40 @@ Given /^the following rules exist:$/ do |rules|
           tag
         end
       end
-      rule.tags.add(*tags) unless tags.empty?
+      acceptor.tags.add(*tags) unless tags.empty?
     end
 
-    unless rule_data['media_ids'].nil? || rule_data['media_ids'].strip.empty?
-      media_ids = rule_data['media_ids'].split(',').map(&:strip)
+    unless acceptor_data['media_ids'].nil? || acceptor_data['media_ids'].strip.empty?
+      media_ids = acceptor_data['media_ids'].split(',').map(&:strip)
       media = Flapjack::Data::Medium.find_by_ids(*media_ids)
       expect(media.map(&:id)).to match_array(media_ids)
-      rule.media.add(*media) unless media.empty?
+      acceptor.media.add(*media) unless media.empty?
     end
   end
 end
 
-Given /^the following blackholes exist:$/ do |blackholes|
-  blackholes.hashes.each do |blackhole_data|
-    contact = Flapjack::Data::Contact.find_by_id(blackhole_data['contact_id'])
+Given /^the following rejectors exist:$/ do |rejectors|
+  rejectors.hashes.each do |rejector_data|
+    contact = Flapjack::Data::Contact.find_by_id(rejector_data['contact_id'])
     expect(contact).not_to be nil
 
     time_zone = contact.time_zone
     expect(time_zone).to be_an ActiveSupport::TimeZone
 
-    blackhole = Flapjack::Data::Rule.find_by_id(blackhole_data['id'])
-    expect(blackhole).to be nil
+    rejector = Flapjack::Data::Rejector.find_by_id(rejector_data['id'])
+    expect(rejector).to be nil
 
-    conditions = blackhole_data['condition'].split(',').map(&:strip).join(',')
+    conditions = rejector_data['condition'].split(',').map(&:strip).join(',')
 
-    blackhole = Flapjack::Data::Blackhole.new(
-      :id             => blackhole_data['id'],
+    rejector = Flapjack::Data::Rejector.new(
+      :id              => rejector_data['id'],
+      :name            => rejector_data['name'],
+      :all             => ['1', 't', 'true', 'y', 'yes'].include?((rejector_data['all'] || '').strip.downcase),
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
-    unless blackhole_data['time_restrictions'].nil? || blackhole_data['time_restrictions'].strip.empty?
-      blackhole.time_restrictions = blackhole_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
+    unless rejector_data['time_restrictions'].nil? || rejector_data['time_restrictions'].strip.empty?
+      rejector.time_restrictions = rejector_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
         case tr
         when '8-18 weekdays'
           weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
@@ -195,12 +192,12 @@ Given /^the following blackholes exist:$/ do |blackholes|
       end
     end
 
-    expect(blackhole.save).to be true
+    expect(rejector.save).to be true
 
-    contact.blackholes << blackhole
+    contact.rejectors << rejector
 
-    unless blackhole_data['tags'].nil? || blackhole_data['tags'].strip.empty?
-      tags = blackhole_data['tags'].split(',').map(&:strip).collect do |tag_name|
+    unless rejector_data['tags'].nil? || rejector_data['tags'].strip.empty?
+      tags = rejector_data['tags'].split(',').map(&:strip).collect do |tag_name|
         Flapjack::Data::Tag.lock do
           tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
           if tag.nil?
@@ -210,14 +207,14 @@ Given /^the following blackholes exist:$/ do |blackholes|
           tag
         end
       end
-      blackhole.tags.add(*tags) unless tags.empty?
+      rejector.tags.add(*tags) unless tags.empty?
     end
 
-    unless blackhole_data['media_ids'].nil? || blackhole_data['media_ids'].strip.empty?
-      media_ids = blackhole_data['media_ids'].split(',').map(&:strip)
+    unless rejector_data['media_ids'].nil? || rejector_data['media_ids'].strip.empty?
+      media_ids = rejector_data['media_ids'].split(',').map(&:strip)
       media = Flapjack::Data::Medium.find_by_ids(*media_ids)
       expect(media.map(&:id)).to match_array(media_ids)
-      blackhole.media.add(*media) unless media.empty?
+      rejector.media.add(*media) unless media.empty?
     end
   end
 end
@@ -232,13 +229,12 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
-  expect(rule.save).to be true
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  expect(acceptor.save).to be true
 
-  contact.rules << rule
+  contact.acceptors << acceptor
 
-  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
-    Flapjack::Data::Route, Flapjack::Data::Rule) do
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Acceptor) do
 
     tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
       Flapjack::Data::Tag.lock do
@@ -250,11 +246,11 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
         tag
       end
     end
-    rule.tags.add(*tags) unless tags.empty?
+    acceptor.tags.add(*tags) unless tags.empty?
     check.tags.add(*tags) unless tags.empty?
   end
 
-  rule.media << sms
+  acceptor.media << sms
 end
 
 Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |check_name|
@@ -267,14 +263,12 @@ Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
-  expect(rule.save).to be true
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  expect(acceptor.save).to be true
 
-  contact.rules << rule
+  contact.acceptors << acceptor
 
-  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
-    Flapjack::Data::Route, Flapjack::Data::Rule) do
-
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Acceptor) do
     tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
       tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
       if tag.nil?
@@ -283,11 +277,11 @@ Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |chec
       end
       tag
     end
-    rule.tags.add(*tags)
+    acceptor.tags.add(*tags)
     check.tags.add(*tags)
   end
 
-  rule.media << nexmo
+  acceptor.media << nexmo
 end
 
 Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |check_name|
@@ -300,14 +294,12 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
-  expect(rule.save).to be true
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  expect(acceptor.save).to be true
 
-  contact.rules << rule
+  contact.acceptors << acceptor
 
-  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
-    Flapjack::Data::Route, Flapjack::Data::Rule) do
-
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Acceptor) do
     tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
       Flapjack::Data::Tag.lock do
         tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
@@ -318,11 +310,11 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
         tag
       end
     end
-    rule.tags.add(*tags) unless tags.empty?
+    acceptor.tags.add(*tags) unless tags.empty?
     check.tags.add(*tags) unless tags.empty?
   end
 
-  rule.media << email
+  acceptor.media << email
 end
 
 Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_name|
@@ -335,14 +327,12 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  rule = Flapjack::Data::Rule.new(:conditions_list => 'critical')
-  expect(rule.save).to be true
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  expect(acceptor.save).to be true
 
-  contact.rules << rule
+  contact.acceptors << acceptor
 
-  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Contact,
-    Flapjack::Data::Route, Flapjack::Data::Rule) do
-
+  Flapjack::Data::Tag.lock( Flapjack::Data::Check, Flapjack::Data::Acceptor) do
     tags = check_name.gsub(/\./, '_').split(':', 2).collect do |tag_name|
       Flapjack::Data::Tag.lock do
         tag = Flapjack::Data::Tag.intersect(:name => tag_name).all.first
@@ -353,11 +343,11 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
         tag
       end
     end
-    rule.tags.add(*tags) unless tags.empty?
+    acceptor.tags.add(*tags) unless tags.empty?
     check.tags.add(*tags) unless tags.empty?
   end
 
-  rule.media << sns
+  acceptor.media << sns
 end
 
 When /^an event notification is generated for check '(.+)'$/ do |check_name|

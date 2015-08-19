@@ -106,49 +106,43 @@ module Flapjack
       Flapjack::Data::Medium.lock(Flapjack::Data::Check,
                                   Flapjack::Data::ScheduledMaintenance,
                                   Flapjack::Data::UnscheduledMaintenance,
-                                  Flapjack::Data::Rule,
+                                  Flapjack::Data::Rejector,
                                   Flapjack::Data::Alert,
-                                  Flapjack::Data::Blackhole,
-                                  Flapjack::Data::Route,
+                                  Flapjack::Data::Acceptor,
+                                  Flapjack::Data::Tag,
                                   Flapjack::Data::Notification,
                                   Flapjack::Data::Contact,
                                   Flapjack::Data::State) do
 
         notification_state = notification.state
 
-        this_notification_ok = 'acknowledgement'.eql?(notification_state.action) ||
+        this_notification_ack = 'acknowledgement'.eql?(notification_state.action)
+        this_notification_ok = this_notification_ack ||
           Flapjack::Data::Condition.healthy?(notification_state.condition)
 
         # checks in sched/unsched maint will not be notified -- time should be taken
         # from the processor's created notification, maint period check done there only
-        this_notification_failure = !Flapjack::Data::Condition.healthy?(notification.severity)
         is_a_test            = 'test_notifications'.eql?(notification_state.action)
 
-        alert_routes = nil
+        alerting_severity = is_a_test ? 'critical' : notification.severity
 
-        if is_a_test
-          alert_routes = check.routes.intersect(:conditions_list => [nil, /(?:^|,)critical(?:,|$)/])
-        elsif !this_notification_ok
-          alert_routes = check.routes.intersect(:conditions_list => [nil, /(?:^|,)#{notification.severity}(?:,|$)/])
-          alert_routes.each do |route|
-            route.alertable = this_notification_failure
-            route.save! # no-op if the value didn't change
-          end
+        # clear alertable if OK, to get accurate rollup counts
+        if !is_a_test && !this_notification_ok
+          check.alertable = true
+          check.save
         end
 
-        media = check.alerting_media(:time => time, :routes => alert_routes).all
+        media = check.alerting_media(:time => time, :severity => alerting_severity).all
 
         Flapjack.logger.debug {
           "Alerting media for check #{check.name}:\n" +
             media.collect {|m| "#{m.transport} #{m.address}"}.join("\n")
         }
 
-        # clear routes if OK, to get accurate rollup counts
+        # clear alertable if OK, to get accurate rollup counts
         if !is_a_test && this_notification_ok
-          check.routes.each do |route|
-            route.alertable = false
-            route.save! # no-op if the value didn't change
-          end
+          check.alertable = false
+          check.save
         end
 
         media.inject([]) do |memo, alerting_medium|
@@ -161,6 +155,12 @@ module Flapjack
 
             if rollup_count_needed
               alerting_check_ids = alerting_medium.alerting_checks(:time => time).ids
+
+              Flapjack.logger.debug {
+                "Alerting checks for medium #{alerting_medium.id}:\n" +
+                  Flapjack::Data::Check.intersect(:id => alerting_check_ids).map(&:name).join("\n")
+              }
+
             end
 
             alert_rollup = if rollup_count_needed &&
@@ -180,8 +180,7 @@ module Flapjack
                'acknowledgement'.eql?(last_state.action))
 
             interval_allows = last_state.nil? ||
-              ((!last_state_ok && this_notification_failure) &&
-               ((last_state.created_at + (alerting_medium.interval || 0)) < notification_state.created_at))
+              ((last_state.created_at + (alerting_medium.interval || 0)) < notification_state.created_at)
 
             Flapjack.logger.debug "  last_state_ok = #{last_state_ok}\n" \
               "  interval_allows  = #{interval_allows}\n" \
@@ -192,7 +191,8 @@ module Flapjack
             next memo unless last_state.nil? ||
               (!last_state_ok && this_notification_ok) ||
               (alert_rollup != alerting_medium.last_rollup_type) ||
-              ('acknowledgement'.eql?(last_state.action) && this_notification_failure) ||
+              (this_notification_ack && !last_state_ok) ||
+              (last_state_ok && !this_notification_ok) ||
               (notification_state.condition != last_state.condition) ||
               interval_allows
           end

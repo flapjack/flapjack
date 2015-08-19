@@ -1,6 +1,7 @@
 Pact.provider_states_for "flapjack-diner" do
 
   provider_state "no data exists" do
+    set_up    { default_tear_down }
     tear_down { default_tear_down }
   end
 
@@ -48,7 +49,7 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a contact with one medium and one rule exists" do
+  provider_state "a contact with one medium and one acceptor exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)
       contact.save!
@@ -58,10 +59,10 @@ Pact.provider_states_for "flapjack-diner" do
 
       contact.media << email
 
-      rule = Flapjack::Data::Rule.new(rule_data)
-      rule.save!
+      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
+      acceptor.save!
 
-      contact.rules << rule
+      contact.acceptors << acceptor
     end
 
     tear_down { default_tear_down }
@@ -100,20 +101,19 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a rule exists" do
+  provider_state "an acceptor exists" do
     set_up do
-      rule = Flapjack::Data::Rule.new(rule_data)
-      rule.save!
-      rule.recalculate_routes
+      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
+      acceptor.save!
     end
 
     tear_down { default_tear_down }
   end
 
-  provider_state "a blackhole exists" do
+  provider_state "a rejector exists" do
     set_up do
-      blackhole = Flapjack::Data::Blackhole.new(blackhole_data)
-      blackhole.save!
+      rejector = Flapjack::Data::Rejector.new(rejector_data)
+      rejector.save!
     end
 
     tear_down { default_tear_down }
@@ -131,27 +131,25 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "two rules exist" do
+  provider_state "two acceptors exist" do
     set_up do
-      rule = Flapjack::Data::Rule.new(rule_data)
-      rule.save!
-      rule.recalculate_routes
+      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
+      acceptor.save!
 
-      rule_2 = Flapjack::Data::Rule.new(rule_2_data)
-      rule_2.save!
-      rule_2.recalculate_routes
+      acceptor_2 = Flapjack::Data::Acceptor.new(acceptor_2_data)
+      acceptor_2.save!
     end
 
     tear_down { default_tear_down }
   end
 
-  provider_state "two blackholes exist" do
+  provider_state "two rejectors exist" do
     set_up do
-      blackhole = Flapjack::Data::Blackhole.new(blackhole_data)
-      blackhole.save!
+      rejector = Flapjack::Data::Rejector.new(rejector_data)
+      rejector.save!
 
-      blackhole_2 = Flapjack::Data::Blackhole.new(blackhole_2_data)
-      blackhole_2.save!
+      rejector_2 = Flapjack::Data::Rejector.new(rejector_2_data)
+      rejector_2.save!
     end
 
     tear_down { default_tear_down }
@@ -281,16 +279,15 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a contact with a rule exists" do
+  provider_state "a contact with an acceptor exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)
       contact.save!
 
-      rule = Flapjack::Data::Rule.new(rule_data)
-      rule.save!
-      rule.recalculate_routes
+      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
+      acceptor.save!
 
-      contact.rules << rule
+      contact.acceptors << acceptor
     end
 
     tear_down { default_tear_down }
@@ -359,7 +356,7 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a check with a tag and a rule exists" do
+  provider_state "a check with a tag and an acceptor exists" do
     set_up do
       check = Flapjack::Data::Check.new(check_data)
       check.save!
@@ -367,11 +364,11 @@ Pact.provider_states_for "flapjack-diner" do
       tag = Flapjack::Data::Tag.new(tag_data)
       tag.save!
 
-      rule = Flapjack::Data::Rule.new(rule_data)
-      rule.save!
+      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
+      acceptor.save!
 
       check.tags << tag
-      rule.tags << tag
+      acceptor.tags << tag
     end
 
     tear_down { default_tear_down }

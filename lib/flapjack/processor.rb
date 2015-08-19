@@ -192,7 +192,9 @@ module Flapjack
 
       Flapjack::Data::Check.lock(Flapjack::Data::State,
         Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance,
-        Flapjack::Data::Tag, Flapjack::Data::Route, Flapjack::Data::Medium,
+        Flapjack::Data::Tag,
+        # Flapjack::Data::Route,
+        Flapjack::Data::Medium,
         Flapjack::Data::Notification, Flapjack::Data::Statistic) do
 
         check = Flapjack::Data::Check.intersect(:name => event.id).all.first ||
@@ -315,8 +317,6 @@ module Flapjack
           @instance_stats.ok_events += 1
         end
 
-        check.failing = !Flapjack::Data::Condition.healthy?(event_condition.name)
-
         new_state.condition = event_condition.name
 
         if old_state.nil? || old_state.condition.nil?
@@ -364,6 +364,7 @@ module Flapjack
         latest_notif.remove_ids(*notification_ids_to_remove) unless notification_ids_to_remove.empty?
 
         most_severe = check.most_severe
+
         most_severe_cond = most_severe.nil? ? nil :
           Flapjack::Data::Condition.for_name(most_severe.condition)
 
@@ -373,6 +374,8 @@ module Flapjack
 
           check.most_severe = new_state
           most_severe_cond = event_condition
+        elsif 'acknowledgement'.eql?(new_state.action)
+          check.most_severe = nil
         end
 
         severity = most_severe_cond.nil? ? 'ok' : most_severe_cond.name

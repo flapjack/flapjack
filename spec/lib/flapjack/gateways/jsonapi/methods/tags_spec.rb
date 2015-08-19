@@ -12,15 +12,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:name]) }
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:rule)  { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
+  let(:acceptor)  { double(Flapjack::Data::Acceptor, :id => acceptor_data[:id]) }
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -47,11 +45,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -92,11 +91,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags matching a filter" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -140,11 +140,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -163,11 +164,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves several tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     meta = {
@@ -218,11 +220,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it 'sets a linked check for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
-           Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).
@@ -246,11 +246,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(tag).to receive(:destroy)
@@ -263,11 +265,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes multiple tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     tags = double('tags')
@@ -288,11 +292,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "does not delete a tag that does not exist" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Blackhole,
+      with(Flapjack::Data::Acceptor,
            Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Route,
-           Flapjack::Data::Rule).
+           Flapjack::Data::Rejector,
+           Flapjack::Data::ScheduledMaintenance,
+           Flapjack::Data::State,
+           Flapjack::Data::UnscheduledMaintenance).
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:find_by_id!).

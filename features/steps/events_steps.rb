@@ -250,13 +250,13 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   expect(queued_length).to eq(num_queued.to_i)
 end
 
-When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
-  rule = Flapjack::Data::Rule.find_by_id(rule_id)
-  expect(rule).not_to be_nil
+When(/^the acceptor with id '(\S+)' is removed$/) do |acceptor_id|
+  acceptor = Flapjack::Data::Acceptor.find_by_id(acceptor_id)
+  expect(acceptor).not_to be_nil
 
-  rule.contact.rules.remove(rule) unless rule.contact.nil?
+  acceptor.contact.acceptors.remove(acceptor) unless acceptor.contact.nil?
 
-  rule.destroy
+  acceptor.destroy
 end
 
 When /^check '([\w\.\-]+)' (?:for|on) entity '([\w\.\-]+)' is (dis|en)abled$/ do |check_name, entity_name, dis_en|

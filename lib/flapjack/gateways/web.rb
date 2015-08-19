@@ -6,9 +6,11 @@ require 'sinatra/base'
 require 'tilt/erb'
 require 'uri'
 
-require 'flapjack/gateways/api_web/middleware/request_timestamp'
+require 'flapjack/gateways/web/middleware/request_timestamp'
 
 require 'flapjack-diner'
+
+require 'flapjack/data/check'
 
 require 'flapjack/utility'
 
@@ -16,11 +18,11 @@ module Flapjack
 
   module Gateways
 
-    class ApiWeb < Sinatra::Base
+    class Web < Sinatra::Base
 
       set :root, File.dirname(__FILE__)
 
-      use Flapjack::Gateways::ApiWeb::Middleware::RequestTimestamp
+      use Flapjack::Gateways::Web::Middleware::RequestTimestamp
       use Rack::MethodOverride
 
       set :sessions, :true
@@ -28,14 +30,14 @@ module Flapjack
       set :raise_errors, false
       set :protection, except: :path_traversal
 
-      set :views, settings.root + '/api_web/views'
-      set :public_folder, settings.root + '/api_web/public'
+      set :views, settings.root + '/web/views'
+      set :public_folder, settings.root + '/web/public'
 
       set :erb, :layout => 'layout.html'.to_sym
 
       class << self
         def start
-          Flapjack.logger.info "starting api_web - class"
+          Flapjack.logger.info "starting web - class"
 
           set :show_exceptions, false
           @show_exceptions = Sinatra::ShowExceptions.new(self)
@@ -55,19 +57,19 @@ module Flapjack
                                      :path => '/',
                                      :secret => session_secret || SecureRandom.hex(64)
 
-          api_url = @config['api_url']
-          if api_url.nil?
+          @api_url = @config['api_url']
+          if @api_url.nil?
             raise "'api_url' config must contain a Flapjack API instance address"
           end
-          if URI.regexp(['http', 'https']).match(api_url).nil?
-            raise "'api_url' is not a valid http or https URI (#{api_url})"
+          if URI.regexp(['http', 'https']).match(@api_url).nil?
+            raise "'api_url' is not a valid http or https URI (#{@api_url})"
           end
-          unless api_url.match(/^.*\/$/)
-            Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{api_url}/'"
-            api_url = "#{@api_url}/"
+          unless @api_url.match(/^.*\/$/)
+            Flapjack.logger.info "api_url must end with a trailing '/', setting to '#{@api_url}/'"
+            @api_url = "#{@api_url}/"
           end
 
-          Flapjack::Diner.base_uri(api_url)
+          Flapjack::Diner.base_uri(@api_url)
           Flapjack::Diner.logger = ::Logger.new('log/flapjack_diner.log')
 
           # constants won't be exposed to eRb scope
@@ -154,6 +156,8 @@ module Flapjack
       get '/self_stats' do
         @current_time = Time.now
 
+        @api_url = self.class.instance_variable_get('@api_url')
+
         @metrics   = Flapjack::Diner.metrics
         statistics = Flapjack::Diner.statistics
 
@@ -199,17 +203,37 @@ module Flapjack
         @tags = Flapjack::Diner.tags(:filter => opts,
           :page => (params[:page] || 1))
 
+        unless @tags.nil? || @tags.empty?
+          @pagination = pagination_from_context(Flapjack::Diner.context)
+          unless @pagination.nil?
+            @links = create_pagination_links(@pagination[:page],
+              @pagination[:total_pages])
+          end
+
+          included = Flapjack::Diner.context[:included]
+
+          unless included.nil? || included.empty?
+
+          end
+        end
+
         erb 'tags.html'.to_sym
       end
 
       get '/tags/:name' do
         tag_name = params[:name]
 
-        @tag = Flapjack::Diner.tags(tag_name)
+        @tag = Flapjack::Diner.tags(tag_name, :include => 'checks')
         err(404, "Could not find tag '#{tag_name}'") if @tag.nil?
 
-        check_ids = Flapjack::Diner.tag_link_checks(tag_name)
-        err(404, "Could not find checks for tag '#{tag_name}'") if check_ids.nil?
+        included = Flapjack::Diner.context[:included]
+
+        @checks = []
+
+        unless included.nil? || included.empty?
+          @checks = some_included_records(@tag[:relationships], :checks,
+            included, 'check')
+        end
 
         erb 'tag.html'.to_sym
       end
@@ -230,9 +254,9 @@ module Flapjack
 
         @checks = Flapjack::Diner.checks(:filter => opts,
                     :page => (params[:page] || 1),
-                    :include => 'current_state,latest_notifications,' \
-                      'current_scheduled_maintenances,' \
-                      'current_unscheduled_maintenance')
+                    :include => ['current_state', 'latest_notifications',
+                                 'current_scheduled_maintenances',
+                                 'current_unscheduled_maintenance'])
 
         @states = {}
 
@@ -262,34 +286,38 @@ module Flapjack
 
         # contacts.media will also return contacts, per JSONAPI v1 relationships
         @check = Flapjack::Diner.checks(check_id,
-                   :include => 'contacts.media,current_state,' \
-                               'latest_notifications,' \
-                               'current_scheduled_maintenances,' \
-                               'current_unscheduled_maintenance')
+                   :include => ['contacts.media', 'current_state',
+                                'latest_notifications',
+                                'current_scheduled_maintenances',
+                                'current_unscheduled_maintenance'])
 
         halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
         included = Flapjack::Diner.context[:included]
 
+        @contacts = []
+        @media_by_contact_id = {}
+
         unless included.nil? || included.empty?
           @state = check_extra_state(@check, included, @current_time)
-
-          # FIXME need to retrieve contact-media relationships info
 
           @contacts = some_included_records(@check[:relationships], :contacts,
             included, 'contact')
 
-          @contact_media = some_included_records(@check[:relationships], :'contacts.media',
-            included, 'medium')
+          @media_by_contact_id = @contacts.inject({}) do |memo, contact|
+            memo[contact[:id]] = some_included_records(contact[:relationships], :media,
+              included, 'medium')
+            memo
+          end
         end
 
         # these two requests will only get first page of 20 records, which is what we want
-        state_links = Flapjack::Diner.checks_link_states(check_id,
+        state_links = Flapjack::Diner.check_link_states(check_id,
           :include => 'states')
         @state_changes = all_included_records(state_links,
           Flapjack::Diner.context[:included], 'state')
 
-        sm_links = Flapjack::Diner.checks_link_scheduled_maintenances(check_id,
+        sm_links = Flapjack::Diner.check_link_scheduled_maintenances(check_id,
           :include => 'scheduled_maintenances')
 
         @scheduled_maintenances = all_included_records(sm_links,
@@ -408,7 +436,7 @@ module Flapjack
         @name = params[:name]
         opts.update(:name => @name) unless @name.nil?
 
-        @contacts = Flapjack::Diner.contacts(:page => params[:page],
+        @contacts = Flapjack::Diner.contacts(:page => params[:page] || 1,
           :filter => opts, :sort => '+name')
 
         unless @contacts.nil?
@@ -425,17 +453,75 @@ module Flapjack
       get "/contacts/:id" do
         contact_id = params[:id]
 
-        @contact = Flapjack::Diner.contacts(contact_id, :include => 'checks,media')
+        @contact = Flapjack::Diner.contacts(contact_id,
+          :include => ['acceptors.tags', 'acceptors.media',
+                       'checks', 'media.alerting_checks',
+                       'rejectors.tags', 'rejectors.media'])
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
+        @acceptors = []
+        @checks = []
+        @media = []
+        @rejectors = []
+
+        @alerting_checks_by_media_id = {}
+
+        @tags_by_acceptor_id  = {}
+        @media_by_acceptor_id = {}
+        @tags_by_rejector_id  = {}
+        @media_by_rejector_id = {}
+
         context = Flapjack::Diner.context
-
         unless context.nil?
-          @checks = some_included_records(@contact[:relationships], :checks,
-            included, 'check')
+          included = context[:included]
+          unless included.nil?
+            @acceptors = some_included_records(@contact[:relationships], :acceptors,
+              included, 'acceptor')
 
-          # @media = included_records(check[:relationships], :'media',
-          #   included, 'medium')
+            unless @acceptors.nil? || @acceptors.empty?
+              @tags_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
+                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :tags,
+                  included, 'tag')
+                memo
+              end
+
+              @media_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
+                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :media,
+                  included, 'medium')
+                memo
+              end
+            end
+
+            @checks = some_included_records(@contact[:relationships], :checks,
+              included, 'check')
+            @media = some_included_records(@contact[:relationships], :media,
+              included, 'medium')
+
+            unless @media.nil? || @media.empty?
+              @alerting_checks_by_media_id = @media.inject({}) do |memo, medium|
+                memo[medium[:id]] = some_included_records(medium[:relationships], :alerting_checks,
+                  included, 'check')
+                memo
+              end
+            end
+
+            @rejectors = some_included_records(@contact[:relationships], :rejectors,
+              included, 'rejector')
+
+            unless @rejectors.nil? || @rejectors.empty?
+              @tags_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
+                memo[rejector[:id]] = some_included_records(rejector[:relationships], :tags,
+                  included, 'tag')
+                memo
+              end
+
+              @media_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
+                memo[rejector[:id]] = some_included_records(rejector[:relationships], :media,
+                  included, 'medium')
+                memo
+              end
+            end
+          end
         end
 
         erb 'contact.html'.to_sym

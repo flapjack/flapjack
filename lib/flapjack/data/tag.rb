@@ -7,8 +7,9 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
+require 'flapjack/data/acceptor'
 require 'flapjack/data/check'
-require 'flapjack/data/rule'
+require 'flapjack/data/rejector'
 
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
@@ -29,29 +30,13 @@ module Flapjack
       define_attributes :name => :string
 
       has_and_belongs_to_many :checks,
-        :class_name => 'Flapjack::Data::Check', :inverse_of => :tags,
-        :after_add => :changed_checks, :after_remove => :changed_checks,
-        :related_class_names => ['Flapjack::Data::Contact', 'Flapjack::Data::Rule', 'Flapjack::Data::Route']
+        :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
 
-      def self.changed_checks(tag_id, *ch_ids)
-        Flapjack::Data::Check.intersect(:id => ch_ids).each do |check|
-          check.recalculate_routes
-        end
-      end
+      has_and_belongs_to_many :acceptors,
+        :class_name => 'Flapjack::Data::Acceptor', :inverse_of => :tags
 
-      has_and_belongs_to_many :rules,
-        :class_name => 'Flapjack::Data::Rule', :inverse_of => :tags,
-        :after_add => :changed_rules, :after_remove => :changed_rules,
-        :related_class_names => ['Flapjack::Data::Check', 'Flapjack::Data::Contact', 'Flapjack::Data::Route']
-
-      def self.changed_rules(tag_id, *r_ids)
-        Flapjack::Data::Rule.intersect(:id => r_ids).each do |rule|
-          rule.recalculate_routes
-        end
-      end
-
-      has_and_belongs_to_many :blackholes, :class_name => 'Flapjack::Data::Blackhole',
-        :inverse_of => :tags
+      has_and_belongs_to_many :rejectors,
+        :class_name => 'Flapjack::Data::Rejector', :inverse_of => :tags
 
       unique_index_by :name
 
@@ -70,6 +55,27 @@ module Flapjack
       before_update :update_allowed?
       def update_allowed?
         !self.changed.include?('name')
+      end
+
+      def scheduled_maintenances
+        sm_assocs = self.checks.associations_for(:scheduled_maintenances).
+          values
+
+        Flapjack::Data::ScheduledMaintenance.intersect(:id => sm_assocs)
+      end
+
+      def states
+        st_assocs = self.checks.associations_for(:states).
+          values
+
+        Flapjack::Data::State.intersect(:id => st_assocs)
+      end
+
+      def unscheduled_maintenances
+        usm_assocs = self.checks.associations_for(:unscheduled_maintenances).
+          values
+
+        Flapjack::Data::UnscheduledMaintenance.intersect(:id => usm_assocs)
       end
 
       swagger_schema :Tag do
@@ -95,7 +101,7 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :blackholes do
+        property :acceptors do
           key :type, :string
           key :format, :url
         end
@@ -103,7 +109,19 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :rules do
+        property :rejectors do
+          key :type, :string
+          key :format, :url
+        end
+        property :scheduled_maintenances do
+          key :type, :string
+          key :format, :url
+        end
+        property :states do
+          key :type, :string
+          key :format, :url
+        end
+        property :unscheduled_maintenances do
           key :type, :string
           key :format, :url
         end
@@ -139,14 +157,14 @@ module Flapjack
       end
 
       swagger_schema :TagChangeLinks do
-        property :blackholes do
-          key :"$ref", :jsonapi_BlackholesLinkage
+        property :acceptors do
+          key :"$ref", :jsonapi_AcceptorsLinkage
         end
         property :checks do
           key :"$ref", :jsonapi_ChecksLinkage
         end
-        property :rules do
-          key :"$ref", :jsonapi_RulesLinkage
+        property :rejectors do
+          key :"$ref", :jsonapi_RejectorsLinkage
         end
       end
 
@@ -166,7 +184,9 @@ module Flapjack
             :attributes => []
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Contact, Flapjack::Data::Route]
+            :lock_klasses => [Flapjack::Data::Contact,
+              # Flapjack::Data::Route
+            ]
           )
         }
       end
@@ -174,7 +194,7 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
-            :blackholes => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :acceptors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
@@ -182,10 +202,29 @@ module Flapjack
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
-            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
+            ),
+            :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'scheduled_maintenance',
+              :klass => Flapjack::Data::ScheduledMaintenance
+            ),
+            :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'state',
+              :klass => Flapjack::Data::State
+            ),
+            :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :get => true,
+              :number => :multiple, :link => true, :includable => false,
+              :type => 'unscheduled_maintenance',
+              :klass => Flapjack::Data::UnscheduledMaintenance
             )
+
           }
           populate_association_data(@jsonapi_associations)
         end

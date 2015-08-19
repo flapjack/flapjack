@@ -7,10 +7,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
 
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
   let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
-  let(:rule)    { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
+  let(:acceptor)    { double(Flapjack::Data::Acceptor, :id => acceptor_data[:id]) }
 
   let(:contact_media)  { double('contact_media') }
-  let(:contact_rules)  { double('contact_rules') }
+  let(:contact_acceptors)  { double('contact_acceptors') }
 
   let(:meta) {
     {
@@ -52,30 +52,30 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     ))
   end
 
-  it 'lists rules for a contact' do
+  it 'lists acceptors for a contact' do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Rule).and_yield
+      with(Flapjack::Data::Acceptor).and_yield
 
     sorted = double('sorted')
     paged  = double('paged')
-    expect(paged).to receive(:ids).and_return([rule.id])
+    expect(paged).to receive(:ids).and_return([acceptor.id])
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
     expect(sorted).to receive(:count).and_return(1)
-    expect(contact_rules).to receive(:sort).with(:id => :asc).and_return(sorted)
-    expect(contact).to receive(:rules).and_return(contact_rules)
+    expect(contact_acceptors).to receive(:sort).with(:id => :asc).and_return(sorted)
+    expect(contact).to receive(:acceptors).and_return(contact_acceptors)
 
     contacts = double('contacts', :all => [contact])
     expect(contacts).to receive(:empty?).and_return(false)
     expect(Flapjack::Data::Contact).to receive(:intersect).
       with(:id => contact.id).and_return(contacts)
 
-    get "/contacts/#{contact.id}/rules"
+    get "/contacts/#{contact.id}/acceptors"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data  => [{:type => 'rule', :id => rule.id}],
+      :data  => [{:type => 'acceptor', :id => acceptor.id}],
       :links => {
-        :self    => "http://example.org/contacts/#{contact.id}/relationships/rules",
-        :related => "http://example.org/contacts/#{contact.id}/rules",
+        :self    => "http://example.org/contacts/#{contact.id}/relationships/acceptors",
+        :related => "http://example.org/contacts/#{contact.id}/acceptors",
       },
       :meta => meta
     ))

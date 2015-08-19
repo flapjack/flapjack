@@ -31,7 +31,7 @@ module Flapjack
         raise "Scheduled maintenance not saved" unless persisted?
         raise "Scheduled maintenance already associated" unless check.nil?
 
-        checks = t.checks.intersect
+        checks = t.checks
 
         unless checks.empty?
           tag_checks = checks.all

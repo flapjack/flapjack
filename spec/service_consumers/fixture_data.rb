@@ -40,10 +40,6 @@ module FixtureData
     ret
   end
 
-  # def contextify(resp_data)
-
-  # end
-
   def check_data
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
@@ -74,62 +70,62 @@ module FixtureData
     {
       :alerting_media => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/alerting_media",
-          :related => "http://example.org/checks/#{id}/alerting_media"
+          :self => "http://#{api_host}/checks/#{id}/relationships/alerting_media",
+          :related => "http://#{api_host}/checks/#{id}/alerting_media"
         }
       },
       :contacts => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/contacts",
-          :related => "http://example.org/checks/#{id}/contacts"
+          :self => "http://#{api_host}/checks/#{id}/relationships/contacts",
+          :related => "http://#{api_host}/checks/#{id}/contacts"
         }
        },
       :current_scheduled_maintenances =>  {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/current_scheduled_maintenances",
-          :related => "http://example.org/checks/#{id}/current_scheduled_maintenances"
+          :self => "http://#{api_host}/checks/#{id}/relationships/current_scheduled_maintenances",
+          :related => "http://#{api_host}/checks/#{id}/current_scheduled_maintenances"
         }
       },
       :current_state => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/current_state",
-          :related => "http://example.org/checks/#{id}/current_state"
+          :self => "http://#{api_host}/checks/#{id}/relationships/current_state",
+          :related => "http://#{api_host}/checks/#{id}/current_state"
         }
       },
       :current_unscheduled_maintenance => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/current_unscheduled_maintenance",
-          :related => "http://example.org/checks/#{id}/current_unscheduled_maintenance"
+          :self => "http://#{api_host}/checks/#{id}/relationships/current_unscheduled_maintenance",
+          :related => "http://#{api_host}/checks/#{id}/current_unscheduled_maintenance"
         }
       },
       :latest_notifications => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/latest_notifications",
-          :related => "http://example.org/checks/#{id}/latest_notifications"
+          :self => "http://#{api_host}/checks/#{id}/relationships/latest_notifications",
+          :related => "http://#{api_host}/checks/#{id}/latest_notifications"
         }
       },
       :scheduled_maintenances => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/scheduled_maintenances",
-          :related => "http://example.org/checks/#{id}/scheduled_maintenances"
+          :self => "http://#{api_host}/checks/#{id}/relationships/scheduled_maintenances",
+          :related => "http://#{api_host}/checks/#{id}/scheduled_maintenances"
         }
       },
       :states => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/states",
-          :related => "http://example.org/checks/#{id}/states"
+          :self => "http://#{api_host}/checks/#{id}/relationships/states",
+          :related => "http://#{api_host}/checks/#{id}/states"
         }
       },
       :tags => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/tags",
-          :related => "http://example.org/checks/#{id}/tags"
+          :self => "http://#{api_host}/checks/#{id}/relationships/tags",
+          :related => "http://#{api_host}/checks/#{id}/tags"
         }
       },
       :unscheduled_maintenances => {
         :links => {
-          :self => "http://example.org/checks/#{id}/relationships/unscheduled_maintenances",
-          :related => "http://example.org/checks/#{id}/unscheduled_maintenances"
+          :self => "http://#{api_host}/checks/#{id}/relationships/unscheduled_maintenances",
+          :related => "http://#{api_host}/checks/#{id}/unscheduled_maintenances"
         }
       }
     }
@@ -162,10 +158,10 @@ module FixtureData
   def contact_rel(co_data)
     id = co_data[:id]
     {
-      :blackholes => {
+      :acceptors => {
         :links => {
-          :self => "http://#{api_host}/contacts/#{id}/relationships/blackholes",
-          :related => "http://#{api_host}/contacts/#{id}/blackholes"
+          :self => "http://#{api_host}/contacts/#{id}/relationships/acceptors",
+          :related => "http://#{api_host}/contacts/#{id}/acceptors"
         }
       },
       :checks => {
@@ -180,10 +176,10 @@ module FixtureData
           :related => "http://#{api_host}/contacts/#{id}/media"
         }
       },
-      :rules => {
+      :rejectors => {
         :links => {
-          :self => "http://#{api_host}/contacts/#{id}/relationships/rules",
-          :related => "http://#{api_host}/contacts/#{id}/rules"
+          :self => "http://#{api_host}/contacts/#{id}/relationships/rejectors",
+          :related => "http://#{api_host}/contacts/#{id}/rejectors"
         }
       }
     }
@@ -238,8 +234,8 @@ module FixtureData
     {
       :check => {
         :links => {
-          :self => "http://example.org/#{type}_maintenances/#{id}/relationships/check",
-          :related => "http://example.org/#{type}_maintenances/#{id}/check"
+          :self => "http://#{api_host}/#{type}_maintenances/#{id}/relationships/check",
+          :related => "http://#{api_host}/#{type}_maintenances/#{id}/check"
         }
       }
     }
@@ -283,6 +279,12 @@ module FixtureData
   def medium_rel(me_data)
     id = me_data[:id]
     {
+      :acceptors => {
+        :links => {
+          :self => "http://#{api_host}/media/#{id}/relationships/acceptors",
+          :related => "http://#{api_host}/media/#{id}/acceptors"
+        }
+      },
       :alerting_checks => {
         :links => {
           :self => "http://#{api_host}/media/#{id}/relationships/alerting_checks",
@@ -295,102 +297,102 @@ module FixtureData
           :related => "http://#{api_host}/media/#{id}/contact"
         }
       },
-      :rules => {
+      :rejectors => {
         :links => {
-          :self => "http://#{api_host}/media/#{id}/relationships/rules",
-          :related => "http://#{api_host}/media/#{id}/rules"
+          :self => "http://#{api_host}/media/#{id}/relationships/rejectors",
+          :related => "http://#{api_host}/media/#{id}/rejectors"
         }
       }
     }
   end
 
-  def rule_data
-    @rule_data ||= {
+  def acceptor_data
+    @acceptor_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
       :conditions_list => 'critical'
     }
   end
 
-  def rule_2_data
-    @rule_2_data ||= {
+  def acceptor_2_data
+    @acceptor_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
       :conditions_list => 'warning'
     }
   end
 
-  def rule_json(ru_data)
+  def acceptor_json(ac_data)
     {
-      :id => ru_data[:id],
-      :type => 'rule',
-      :attributes => ru_data.reject {|k,v| :id.eql?(k) }
+      :id => ac_data[:id],
+      :type => 'acceptor',
+      :attributes => ac_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
-  def rule_rel(ru_data)
-    id = ru_data[:id]
+  def acceptor_rel(ac_data)
+    id = ac_data[:id]
     {
       :contact => {
         :links => {
-          :self => "http://example.org/rules/#{id}/relationships/contact",
-          :related => "http://example.org/rules/#{id}/contact"
+          :self => "http://#{api_host}/acceptors/#{id}/relationships/contact",
+          :related => "http://#{api_host}/acceptors/#{id}/contact"
         }
       },
       :media => {
         :links => {
-          :self => "http://example.org/rules/#{id}/relationships/media",
-          :related => "http://example.org/rules/#{id}/media"
+          :self => "http://#{api_host}/acceptors/#{id}/relationships/media",
+          :related => "http://#{api_host}/acceptors/#{id}/media"
         }
       },
       :tags => {
         :links => {
-          :self => "http://example.org/rules/#{id}/relationships/tags",
-          :related => "http://example.org/rules/#{id}/tags"
+          :self => "http://#{api_host}/acceptors/#{id}/relationships/tags",
+          :related => "http://#{api_host}/acceptors/#{id}/tags"
         }
       }
     }
   end
 
-  def blackhole_data
-    @blackhole_data ||= {
+  def rejector_data
+    @rejector_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
       :conditions_list => 'critical'
     }
   end
 
-  def blackhole_2_data
-    @blackhole_2_data ||= {
+  def rejector_2_data
+    @rejector_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
       :conditions_list => 'warning'
     }
   end
 
-  def blackhole_json(bl_data)
+  def rejector_json(re_data)
     {
-      :id => bl_data[:id],
-      :type => 'blackhole',
-      :attributes => bl_data.reject {|k,v| :id.eql?(k) }
+      :id => re_data[:id],
+      :type => 'rejector',
+      :attributes => re_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
-  def blackhole_rel(bl_data)
-    id = bl_data[:id]
+  def rejector_rel(re_data)
+    id = re_data[:id]
     {
       :contact => {
         :links => {
-          :self => "http://example.org/blackholes/#{id}/relationships/contact",
-          :related => "http://example.org/blackholes/#{id}/contact"
+          :self => "http://#{api_host}/rejectors/#{id}/relationships/contact",
+          :related => "http://#{api_host}/rejectors/#{id}/contact"
         }
       },
       :media => {
         :links => {
-          :self => "http://example.org/blackholes/#{id}/relationships/media",
-          :related => "http://example.org/blackholes/#{id}/media"
+          :self => "http://#{api_host}/rejectors/#{id}/relationships/media",
+          :related => "http://#{api_host}/rejectors/#{id}/media"
         }
       },
       :tags => {
         :links => {
-          :self => "http://example.org/blackholes/#{id}/relationships/tags",
-          :related => "http://example.org/blackholes/#{id}/tags"
+          :self => "http://#{api_host}/rejectors/#{id}/relationships/tags",
+          :related => "http://#{api_host}/rejectors/#{id}/tags"
         }
       }
     }
@@ -428,8 +430,8 @@ module FixtureData
     {
       :check => {
         :links => {
-          :self => "http://example.org/states/#{id}/relationships/check",
-          :related => "http://example.org/states/#{id}/check"
+          :self => "http://#{api_host}/states/#{id}/relationships/check",
+          :related => "http://#{api_host}/states/#{id}/check"
         }
       }
     }
@@ -458,10 +460,10 @@ module FixtureData
   def tag_rel(ta_data)
     id = ta_data[:name]
     {
-      :blackholes => {
+      :acceptors => {
         :links => {
-          :self => "http://#{api_host}/tags/#{id}/relationships/blackholes",
-          :related => "http://#{api_host}/tags/#{id}/blackholes"
+          :self => "http://#{api_host}/tags/#{id}/relationships/acceptors",
+          :related => "http://#{api_host}/tags/#{id}/acceptors"
         }
       },
       :checks => {
@@ -470,10 +472,28 @@ module FixtureData
           :related => "http://#{api_host}/tags/#{id}/checks"
         }
       },
-      :rules => {
+      :rejectors => {
         :links => {
-          :self => "http://#{api_host}/tags/#{id}/relationships/rules",
-          :related => "http://#{api_host}/tags/#{id}/rules"
+          :self => "http://#{api_host}/tags/#{id}/relationships/rejectors",
+          :related => "http://#{api_host}/tags/#{id}/rejectors"
+        }
+      },
+      :scheduled_maintenances => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/scheduled_maintenances",
+          :related => "http://#{api_host}/tags/#{id}/scheduled_maintenances"
+        }
+      },
+      :states => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/states",
+          :related => "http://#{api_host}/tags/#{id}/states"
+        }
+      },
+      :unscheduled_maintenances => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/unscheduled_maintenances",
+          :related => "http://#{api_host}/tags/#{id}/unscheduled_maintenances"
         }
       }
     }
