@@ -19,34 +19,26 @@ module Flapjack
         module ClassMethods
 
           def jsonapi_lock_method(http_method, locks = nil, &block)
-            method_defs = if self.respond_to?(:jsonapi_methods)
-              self.jsonapi_methods
-            else
-              {}
-            end
-
-            method_def = method_defs[http_method]
-
             locks ||= []
-            unless method_def.nil?
-              l = (method_def.lock_klasses || [])
-              case http_method
-              when :delete
-               l |= (jsonapi_associations.values.map(&:lock_klasses).reduce(:|) || [])
-              else
-                jsonapi_associations.each_pair do |n, jal|
-                  next unless jal.send(http_method.to_sym).is_a?(TrueClass)
-                  l |= (jal.lock_klasses || [])
+
+            if :delete.eql?(http_method)
+              # all associations, not just the ones exposed via JSONAPI
+              self.send(:with_association_data) do |assoc_data|
+                assoc_data.each_pair do |name, data|
+                  locks |= [data.data_klass] + data.related_klasses
                 end
               end
-              locks |= l
+
+              locks |= jsonapi_associations.values.select {|a|
+                !a.type.nil?
+              }.map(&:lock_klasses).reduce([], :|)
             end
 
             if locks.empty?
-              self.lock { yield }
+              self.lock(&block)
             else
               locks.sort_by!(&:name)
-              self.lock(*locks) { yield }
+              self.lock(*locks, &block)
             end
           end
 

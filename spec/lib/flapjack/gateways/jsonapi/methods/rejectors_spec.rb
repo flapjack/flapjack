@@ -14,9 +14,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "creates a rejector" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -43,9 +41,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "does not create a rejector if the data is improperly formatted" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -69,9 +65,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "gets all rejectors" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     meta = {
@@ -113,9 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "gets a single rejector" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     expect(Flapjack::Data::Rejector).to receive(:intersect).
@@ -134,9 +126,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "does not get a rejector that does not exist" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     no_rejectors = double('no_rejectors')
@@ -151,9 +141,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
 
   it "retrieves a rejector and its linked contact record" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(Flapjack::Data::Contact).
       and_yield
 
     rejectors = double('rejectors')
@@ -192,8 +180,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rejectors', :sinatra => true, :l
   it "retrieves a rejector, its contact, and all of its contact's media records" do
     expect(Flapjack::Data::Rejector).to receive(:lock).
       with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+           Flapjack::Data::Medium).
       and_yield
 
     rejectors = double('rejectors')

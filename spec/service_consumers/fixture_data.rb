@@ -181,6 +181,12 @@ module FixtureData
           :self => "http://#{api_host}/contacts/#{id}/relationships/rejectors",
           :related => "http://#{api_host}/contacts/#{id}/rejectors"
         }
+      },
+      :tags => {
+        :links => {
+          :self => "http://#{api_host}/contacts/#{id}/relationships/tags",
+          :related => "http://#{api_host}/contacts/#{id}/tags"
+        }
       }
     }
   end
@@ -470,6 +476,12 @@ module FixtureData
         :links => {
           :self => "http://#{api_host}/tags/#{id}/relationships/checks",
           :related => "http://#{api_host}/tags/#{id}/checks"
+        }
+      },
+      :contacts => {
+        :links => {
+          :self => "http://#{api_host}/tags/#{id}/relationships/contacts",
+          :related => "http://#{api_host}/tags/#{id}/contacts"
         }
       },
       :rejectors => {

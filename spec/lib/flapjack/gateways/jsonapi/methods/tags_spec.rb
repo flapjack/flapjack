@@ -16,9 +16,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -45,12 +43,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector,
-           Flapjack::Data::ScheduledMaintenance,
-           Flapjack::Data::State,
-           Flapjack::Data::UnscheduledMaintenance).
+      with(no_args).
       and_yield
 
     meta = {
@@ -91,12 +84,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves paginated tags matching a filter" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector,
-           Flapjack::Data::ScheduledMaintenance,
-           Flapjack::Data::State,
-           Flapjack::Data::UnscheduledMaintenance).
+      with(no_args).
       and_yield
 
     meta = {
@@ -140,12 +128,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves one tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector,
-           Flapjack::Data::ScheduledMaintenance,
-           Flapjack::Data::State,
-           Flapjack::Data::UnscheduledMaintenance).
+      with(no_args).
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:intersect).
@@ -164,12 +147,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "retrieves several tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector,
-           Flapjack::Data::ScheduledMaintenance,
-           Flapjack::Data::State,
-           Flapjack::Data::UnscheduledMaintenance).
+      with(no_args).
       and_yield
 
     meta = {
@@ -220,9 +198,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it 'sets a linked check for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
-           Flapjack::Data::Rejector).
+      with(Flapjack::Data::Check).
       and_yield
 
     expect(Flapjack::Data::Check).to receive(:find_by_ids!).

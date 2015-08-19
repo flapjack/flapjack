@@ -137,7 +137,7 @@ module Flapjack
                   incl = params[:include].nil? ? nil : params[:include].split(',')
 
                   locks = (incl.nil? || incl.empty?) ? [] :
-                    locks_for_jsonapi_include(self.class, :include => incl.dup,
+                    locks_for_jsonapi_include(resource_class, :include => incl.dup,
                       :query_type => :association)
 
                   status 200

@@ -386,13 +386,6 @@ module Flapjack
                             :pagerduty_ack_duration]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Alert,
-                              Flapjack::Data::Acceptor,
-                              Flapjack::Data::Rejector,
-                              Flapjack::Data::Check,
-                              Flapjack::Data::ScheduledMaintenance,
-                              Flapjack::Data::State
-                             ]
           )
         }
       end
@@ -409,7 +402,7 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true,
               :type => 'check',
               :klass => Flapjack::Data::Check,
-              :related_klasses => [
+              :callback_classes => [
                 Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
                 Flapjack::Data::Rejector,

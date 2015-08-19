@@ -358,7 +358,7 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true,
               :type => 'medium',
               :klass => Flapjack::Data::Medium,
-              :lock_klasses => [
+              :callback_classes => [
                 Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
                 Flapjack::Data::Rejector,
@@ -371,7 +371,7 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true,
               :type => 'contact',
               :klass => Flapjack::Data::Contact,
-              :lock_klasses => [
+              :callback_classes => [
                 Flapjack::Data::Acceptor,
                 Flapjack::Data::Rejector,
                 Flapjack::Data::Tag

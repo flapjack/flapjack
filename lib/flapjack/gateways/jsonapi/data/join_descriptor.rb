@@ -14,18 +14,18 @@ module Flapjack
           attr_accessor :association_data
 
           def initialize(opts = {})
-            %w{post get patch delete number link includable type klass lock_klasses}.each do |a|
+            %w{post get patch delete number link includable type klass callback_classes}.each do |a|
               instance_variable_set("@#{a}", opts[a.to_sym])
             end
-            @lock_klasses ||= []
+            @callback_classes ||= []
           end
 
           def lock_klasses
             if @association_data.nil?
-              [@klass] | @lock_klasses
+              [@klass] | @callback_classes
             else
               [@association_data.data_klass] |
-                association_data.related_klasses | @lock_klasses
+                @association_data.related_klasses | @callback_classes
             end
           end
 

@@ -29,11 +29,14 @@ module Flapjack
 
       define_attributes :name => :string
 
+      has_and_belongs_to_many :acceptors,
+        :class_name => 'Flapjack::Data::Acceptor', :inverse_of => :tags
+
       has_and_belongs_to_many :checks,
         :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
 
-      has_and_belongs_to_many :acceptors,
-        :class_name => 'Flapjack::Data::Acceptor', :inverse_of => :tags
+      has_and_belongs_to_many :contacts,
+        :class_name => 'Flapjack::Data::Contact', :inverse_of => :tags
 
       has_and_belongs_to_many :rejectors,
         :class_name => 'Flapjack::Data::Rejector', :inverse_of => :tags
@@ -109,6 +112,10 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :contacts do
+          key :type, :string
+          key :format, :url
+        end
         property :rejectors do
           key :type, :string
           key :format, :url
@@ -163,6 +170,9 @@ module Flapjack
         property :checks do
           key :"$ref", :jsonapi_ChecksLinkage
         end
+        property :contacts do
+          key :"$ref", :jsonapi_ContactsLinkage
+        end
         property :rejectors do
           key :"$ref", :jsonapi_RejectorsLinkage
         end
@@ -184,9 +194,6 @@ module Flapjack
             :attributes => []
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :lock_klasses => [Flapjack::Data::Contact,
-              # Flapjack::Data::Route
-            ]
           )
         }
       end
@@ -199,6 +206,10 @@ module Flapjack
               :number => :multiple, :link => true, :includable => true
             ),
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
+              :number => :multiple, :link => true, :includable => true
+            ),
+            :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),

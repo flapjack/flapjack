@@ -51,6 +51,9 @@ module Flapjack
       has_many :media, :class_name => 'Flapjack::Data::Medium',
         :inverse_of => :contact
 
+      has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
+        :inverse_of => :contacts
+
       validates_with Flapjack::Data::Validators::IdValidator
 
       validates_each :timezone, :allow_nil => true do |record, att, value|
@@ -59,8 +62,8 @@ module Flapjack
 
       before_destroy :remove_child_records
       def remove_child_records
-        self.media.each      {|medium|   medium.destroy }
         self.acceptors.each  {|acceptor| acceptor.destroy }
+        self.media.each      {|medium|   medium.destroy }
         self.rejectors.each  {|rejector| rejector.destroy }
       end
 
@@ -156,6 +159,10 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
+        property :tags do
+          key :type, :string
+          key :format, :url
+        end
       end
 
       swagger_schema :ContactCreate do
@@ -204,13 +211,16 @@ module Flapjack
 
       swagger_schema :ContactChangeLinks do
         property :acceptors do
-          key :"$ref", :jsonapi_AcceptorLinkage
+          key :"$ref", :jsonapi_AcceptorsLinkage
         end
         property :media do
           key :"$ref", :jsonapi_MediaLinkage
         end
         property :rejectors do
-          key :"$ref", :jsonapi_RejectorLinkage
+          key :"$ref", :jsonapi_RejectorsLinkage
+        end
+        property :tags do
+          key :"$ref", :jsonapi_TagsLinkage
         end
       end
 
@@ -249,6 +259,10 @@ module Flapjack
             ),
             :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
+              :number => :multiple, :link => true, :includable => true
+            ),
+            :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+              :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )
           }

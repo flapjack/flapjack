@@ -125,9 +125,19 @@ module Flapjack
 
                   ids = resources_data.map {|d| d['id']}
 
+                  klasses_to_lock = resources_data.inject([]) do |memo, d|
+                    next memo unless d.has_key?('relationships')
+                    d['relationships'].each_pair do |k, v|
+                      assoc = jsonapi_links[k.to_sym]
+                      next if assoc.nil?
+                      memo |= assoc.lock_klasses
+                    end
+                    memo
+                  end
+
                   jsonapi_type = resource_class.short_model_name.singular
 
-                  resource_class.jsonapi_lock_method(:patch) do
+                  resource_class.jsonapi_lock_method(:patch, klasses_to_lock) do
 
                     resources = if resource_id.nil?
                       resources = resource_class.find_by_ids!(*ids)

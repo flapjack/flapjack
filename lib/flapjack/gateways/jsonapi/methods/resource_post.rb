@@ -120,11 +120,21 @@ module Flapjack
                     memo << d_id.to_s unless d_id.nil?
                   end
 
+                  klasses_to_lock = resources_data.inject([]) do |memo, d|
+                    next memo unless d.has_key?('relationships')
+                    d['relationships'].each_pair do |k, v|
+                      assoc = jsonapi_links[k.to_sym]
+                      next if assoc.nil?
+                      memo |= assoc.lock_klasses
+                    end
+                    memo
+                  end
+
                   attribute_types = resource_class.attribute_types
 
                   jsonapi_type = resource_class.short_model_name.singular
 
-                  resource_class.jsonapi_lock_method(:post) do
+                  resource_class.jsonapi_lock_method(:post, klasses_to_lock) do
 
                     unless data_ids.empty? || resource_class.included_modules.include?(Zermelo::Records::Stub)
                       conflicted_ids = resource_class.intersect(id_field => data_ids).ids

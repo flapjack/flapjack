@@ -13,8 +13,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "creates a scheduled maintenance period" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -46,8 +45,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it "doesn't create a scheduled maintenance period if the start time isn't passed" do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -75,7 +73,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it 'returns a single scheduled maintenance period' do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
       with(:id => scheduled_maintenance.id).and_return([scheduled_maintenance])
@@ -96,7 +95,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it 'returns multiple scheduled_maintenance periods' do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -149,7 +149,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
 
   it 'returns paginated scheduled maintenance periods' do
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {

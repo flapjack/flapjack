@@ -21,7 +21,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it 'returns a single unscheduled maintenance period' do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
       with(:id => unscheduled_maintenance.id).and_return([unscheduled_maintenance])
@@ -40,7 +41,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it 'returns multiple unscheduled_maintenance periods' do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -93,7 +95,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it 'returns paginated unscheduled maintenance periods' do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -135,7 +138,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "queries unscheduled maintenance periods by a closed date range" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -189,7 +193,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "queries unscheduled maintenance periods by an open date range" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -241,7 +246,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "queries unscheduled maintenance periods by exact date" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     meta = {
       :pagination => {
@@ -289,7 +295,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "fails when an invalid date string is passed as part of a date range" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(Flapjack::Data::Check).and_yield
+      with(no_args).
+      and_yield
 
     st_t = fixture_time - 1_000
     ft_t = fixture_time + 4_000
@@ -307,7 +314,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
 
   it "ends an unscheduled maintenance period for a check" do
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:lock).
-      with(no_args).and_yield
+      with(no_args).
+      and_yield
 
     end_time = Time.now + (60 * 60)
 

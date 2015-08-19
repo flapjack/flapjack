@@ -7,11 +7,6 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
     Flapjack::Gateways::Web
   end
 
-  # let(:check_name)      { 'example.com:ping' }
-
-  # let(:check)  { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  # let(:states) { double('states') }
-
   let(:redis)  { double(Redis) }
 
   let(:config) { {

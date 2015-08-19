@@ -12,11 +12,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
 
   let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
 
-  it "creates a acceptor" do
+  # TODO reject if not linked to contact on creation
+  it "creates an acceptor" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -41,11 +40,46 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
       resp_data))
   end
 
-  it "does not create a acceptor if the data is improperly formatted" do
+  it "creates an acceptor, linked to a contact" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(Flapjack::Data::Contact).
+      and_yield
+
+    empty_ids = double('empty_ids')
+    expect(empty_ids).to receive(:ids).and_return([])
+    expect(Flapjack::Data::Acceptor).to receive(:intersect).
+      with(:id => [acceptor_data[:id]]).and_return(empty_ids)
+
+    expect(acceptor).to receive(:invalid?).and_return(false)
+    expect(acceptor).to receive(:save!).and_return(true)
+    expect(Flapjack::Data::Acceptor).to receive(:new).with(acceptor_data).
+      and_return(acceptor)
+
+    expect(Flapjack::Data::Contact).to receive(:find_by_id!).
+      with(contact.id).and_return(contact)
+    expect(acceptor).to receive(:'contact=').with(contact)
+
+    req_data  = acceptor_json(acceptor_data).merge(
+      :relationships => {
+        :contact => {
+          :data => {:type => 'contact', :id => contact_data[:id]}
+        }
+      }
+    )
+    resp_data = req_data.merge(:relationships => acceptor_rel(acceptor_data))
+
+    expect(acceptor).to receive(:as_json).with(:only => an_instance_of(Array)).
+      and_return(acceptor_data.reject {|k,v| :id.eql?(k)})
+
+    post "/acceptors", Flapjack.dump_json(:data => req_data), jsonapi_env
+    expect(last_response.status).to eq(201)
+    expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data =>
+      resp_data))
+  end
+
+  it "does not create an acceptor if the data is improperly formatted" do
+    expect(Flapjack::Data::Acceptor).to receive(:lock).
+      with(no_args).
       and_yield
 
     empty_ids = double('empty_ids')
@@ -69,9 +103,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
 
   it "gets all acceptors" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     meta = {
@@ -113,9 +145,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
 
   it "gets a single acceptor" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     expect(Flapjack::Data::Acceptor).to receive(:intersect).
@@ -132,11 +162,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
       resp_data, :links => {:self  => "http://example.org/acceptors/#{acceptor.id}"}))
   end
 
-  it "does not get a acceptor that does not exist" do
+  it "does not get an acceptor that does not exist" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(no_args).
       and_yield
 
     no_acceptors = double('no_acceptors')
@@ -149,11 +177,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     expect(last_response).to be_not_found
   end
 
-  it "retrieves a acceptor and its linked contact record" do
+  it "retrieves an acceptor and its linked contact record" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
-      with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+      with(Flapjack::Data::Contact).
       and_yield
 
     acceptors = double('acceptors')
@@ -189,11 +215,10 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
       :links => {:self  => "http://example.org/acceptors/#{acceptor.id}?include=contact"}))
   end
 
-  it "retrieves a acceptor, its contact, and all of its contact's media records" do
+  it "retrieves an acceptor, its contact, and all of its contact's media records" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
       with(Flapjack::Data::Contact,
-           Flapjack::Data::Medium,
-           Flapjack::Data::Tag).
+           Flapjack::Data::Medium).
       and_yield
 
     acceptors = double('acceptors')
@@ -246,7 +271,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     ))
   end
 
-  it "deletes a acceptor" do
+  it "deletes an acceptor" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
       with(Flapjack::Data::Contact,
            Flapjack::Data::Medium,
@@ -283,7 +308,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     expect(last_response.status).to eq(204)
   end
 
-  it "does not delete a acceptor that does not exist" do
+  it "does not delete an acceptor that does not exist" do
     expect(Flapjack::Data::Acceptor).to receive(:lock).
       with(Flapjack::Data::Contact,
            Flapjack::Data::Medium,
