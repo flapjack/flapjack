@@ -149,7 +149,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
       and_yield
 
     expect(Flapjack::Data::Acceptor).to receive(:intersect).
-      with(:id => acceptor.id).and_return([acceptor])
+      with(:id => Set.new([acceptor.id])).and_return([acceptor])
 
     expect(acceptor).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(acceptor_data.reject {|k,v| :id.eql?(k)})
@@ -171,7 +171,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     expect(no_acceptors).to receive(:empty?).and_return(true)
 
     expect(Flapjack::Data::Acceptor).to receive(:intersect).
-      with(:id => acceptor.id).and_return(no_acceptors)
+      with(:id => Set.new([acceptor.id])).and_return(no_acceptors)
 
     get "/acceptors/#{acceptor.id}"
     expect(last_response).to be_not_found
@@ -187,8 +187,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     expect(acceptors).to receive(:collect) {|&arg| [arg.call(acceptor)] }
     expect(acceptors).to receive(:associated_ids_for).with(:contact).
       and_return(acceptor.id => contact.id)
+    expect(acceptors).to receive(:ids).and_return(Set.new([acceptor.id]))
     expect(Flapjack::Data::Acceptor).to receive(:intersect).
-      with(:id => acceptor.id).and_return(acceptors)
+      with(:id => Set.new([acceptor.id])).twice.and_return(acceptors)
 
     contacts = double('contacts')
     expect(contacts).to receive(:collect) {|&arg| [arg.call(contact)] }
@@ -226,15 +227,16 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Acceptors', :sinatra => true, :l
     expect(acceptors).to receive(:collect) {|&arg| [arg.call(acceptor)] }
     expect(acceptors).to receive(:associated_ids_for).with(:contact).
       and_return(acceptor.id => contact.id)
+    expect(acceptors).to receive(:ids).and_return(Set.new([acceptor.id]))
     expect(Flapjack::Data::Acceptor).to receive(:intersect).
-      with(:id => acceptor.id).and_return(acceptors)
+      with(:id => Set.new([acceptor.id])).twice.and_return(acceptors)
 
     contacts = double('contacts')
     expect(contacts).to receive(:collect) {|&arg| [arg.call(contact)] }
     expect(contacts).to receive(:associated_ids_for).with(:media).
       and_return({contact.id => [medium.id]})
     expect(Flapjack::Data::Contact).to receive(:intersect).
-      with(:id => [contact_data[:id]]).and_return(contacts)
+      with(:id => [contact_data[:id]]).twice.and_return(contacts)
 
     media = double('media')
     expect(media).to receive(:collect) {|&arg| [arg.call(medium)] }

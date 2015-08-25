@@ -17,7 +17,7 @@ module Flapjack
       # FIXME: add an administrative function to reset global or
       # instance Statistic objects
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks

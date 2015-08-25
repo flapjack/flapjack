@@ -94,6 +94,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(checks).to receive(:empty?).and_return(false)
     expect(checks).to receive(:associated_ids_for).with(:tags).
       and_return(check.id => [tag.id])
+    expect(checks).to receive(:ids).and_return(Set.new([check.id]))
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:id => Set.new([check.id])).and_return(checks)
     expect(Flapjack::Data::Check).to receive(:intersect).
       with(:id => check.id).and_return(checks)
 

@@ -15,7 +15,7 @@ module Flapjack
   module Data
     class UnscheduledMaintenance
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSortedSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks
@@ -26,6 +26,8 @@ module Flapjack
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
                         :summary    => :string
+
+      define_sort_attribute :start_time
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :unscheduled_maintenances

@@ -25,7 +25,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::UnscheduledMaintenances', :sinat
       and_yield
 
     expect(Flapjack::Data::UnscheduledMaintenance).to receive(:intersect).
-      with(:id => unscheduled_maintenance.id).and_return([unscheduled_maintenance])
+      with(:id => Set.new([unscheduled_maintenance.id])).and_return([unscheduled_maintenance])
 
     expect(unscheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(unscheduled_maintenance_data.reject {|k,v| :id.eql?(k)})

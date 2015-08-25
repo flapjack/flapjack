@@ -12,6 +12,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
               if resource_class.jsonapi_methods.include?(:get)
@@ -137,8 +138,7 @@ module Flapjack
                   incl = params[:include].nil? ? nil : params[:include].split(',')
 
                   locks = (incl.nil? || incl.empty?) ? [] :
-                    locks_for_jsonapi_include(resource_class, :include => incl.dup,
-                      :query_type => :association)
+                    lock_for_include_clause(resource_class, :include => incl.dup)
 
                   status 200
 
@@ -151,7 +151,7 @@ module Flapjack
                       paginate_get(scoped, :page => params[:page],
                         :per_page => params[:per_page])
                     else
-                      [resource_class.intersect(:id => resource_id), {}, {}]
+                      [resource_class.intersect(:id => Set.new([resource_id])), {}, {}]
                     end
 
                     links[:self] = request_url
@@ -165,8 +165,8 @@ module Flapjack
                         raise ::Zermelo::Records::Errors::RecordNotFound.new(resource_class, resource_id)
                       end
                     else
-                      d = as_jsonapi(resource_class, resource, resources,
-                                     (resource_id.nil? ? resources.ids : [resource_id]),
+                      d = as_jsonapi(resource_class, resources,
+                                     (resource_id.nil? ? resources.ids : Set.new([resource_id])),
                                      :fields => params[:fields], :include => incl,
                                      :unwrap => !resource_id.nil?, :query_type => :resource)
 

@@ -132,7 +132,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => tag.id).and_return([tag])
+      with(:id => Set.new([tag.id])).and_return([tag])
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)

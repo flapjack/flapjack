@@ -374,4 +374,25 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
+  provider_state "a check with a tag, current state and a latest notification exists" do
+    set_up do
+      check = Flapjack::Data::Check.new(check_data)
+      check.save!
+
+      tag = Flapjack::Data::Tag.new(tag_data)
+      tag.save!
+
+      sd = state_data.dup
+      [:created_at, :updated_at].each {|t| sd[t] = Time.parse(sd[t]) }
+      state = Flapjack::Data::State.new(sd)
+      state.save!
+
+      check.tags << tag
+      check.current_state = state
+      check.latest_notifications << state
+    end
+
+    tear_down { default_tear_down }
+  end
+
 end

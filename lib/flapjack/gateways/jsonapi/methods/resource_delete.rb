@@ -33,6 +33,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourceDelete::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|

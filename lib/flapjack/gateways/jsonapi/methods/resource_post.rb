@@ -27,6 +27,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
@@ -203,8 +204,7 @@ module Flapjack
 
                   response.headers['Location'] = "#{request.base_url}/#{resource}/#{resource_ids.join(',')}"
 
-                  ajs = as_jsonapi(resource_class, resource,
-                                   resources, resource_ids,
+                  ajs = as_jsonapi(resource_class, resources, resource_ids,
                                    :unwrap => unwrap, :query_type => :resource)
 
                   Flapjack.dump_json(ajs)

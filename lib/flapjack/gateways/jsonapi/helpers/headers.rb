@@ -21,7 +21,7 @@ module Flapjack
           end
 
           def err(status_code, *msg)
-            logger.info "Error: #{msg.inspect}"
+            Flapjack.logger.info "Error: #{msg.inspect}"
 
             if 'DELETE'.eql?(request.request_method)
               # not set by default for delete, but the error structure is JSON

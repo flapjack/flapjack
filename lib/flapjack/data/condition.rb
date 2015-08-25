@@ -31,7 +31,7 @@ module Flapjack
 
       # NB: not actually persisted; we probably want a non-persisted record type
       # for this case
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
 
       define_attributes :name      => :string,
                         :priority  => :integer

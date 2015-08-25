@@ -25,7 +25,7 @@ module Flapjack
   module Data
     class State
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSortedSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks
@@ -41,6 +41,8 @@ module Flapjack
                         :summary       => :string,
                         :details       => :string,
                         :perfdata_json => :string
+
+      define_sort_attribute :created_at
 
       index_by :condition, :action
       range_index_by :created_at, :updated_at, :finished_at

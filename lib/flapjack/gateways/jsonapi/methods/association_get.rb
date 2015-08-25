@@ -11,6 +11,7 @@ module Flapjack
           def self.registered(app)
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
+            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
 
@@ -179,8 +180,8 @@ module Flapjack
 
                 assoc = jsonapi_links[assoc_name]
 
-                extra_locks = incl.nil? ? [] : locks_for_jsonapi_include(resource_class,
-                        :include => incl.dup, :query_type => :association)
+                extra_locks = incl.nil? ? [] : lock_for_include_clause(resource_class,
+                        :include => incl.dup)
 
                 locks = assoc.lock_klasses | extra_locks
                 locks.sort_by!(&:name)
@@ -209,15 +210,17 @@ module Flapjack
                           halt(err(403, "Filter parameters must be passed as an Array"))
                         end
 
-                        if bad = params[:filter].detect? {|f| f !~ /^#{assocs}\.([^,]+))*$/ }
-                          halt(err(403, "Filter params must start with '#{assocs}.', not contain comma: '#{bad}'"))
+                        bad = params[:filter].detect {|f| f !~ /^#{assoc_name}\.(?:[^,]+)$/ }
+                        unless bad.nil?
+                          halt(err(403, "Filter params must start with '#{assoc_name}.', not contain comma: '#{bad}'"))
                         end
 
                         filters = params[:filter].collect do |f|
-                          f.sub(/^#{assocs}\./, '')
+                          f.sub(/^#{assoc_name}\./, '')
                         end
 
                         filter_ops = filter_params(assoc.data_klass, filters)
+
                         associated = associated.intersect(filter_ops)
                       end
 
@@ -232,7 +235,7 @@ module Flapjack
                     end
 
                     unless incl.nil?
-                      included = as_jsonapi_included(resource_class, resource, res,
+                      included = as_jsonapi_included(resource_class, res,
                         :include => incl, :fields => fields, :query_type => :association)
                     end
                   end
@@ -256,7 +259,6 @@ module Flapjack
                 ret = {:data => data, :links => links}
                 ret[:included] = included unless included.nil?
                 ret[:meta] = meta unless meta.nil?
-
                 Flapjack.dump_json(ret)
               end
             end

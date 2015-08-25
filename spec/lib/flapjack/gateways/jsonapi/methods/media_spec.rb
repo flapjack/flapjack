@@ -68,7 +68,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
       and_yield
 
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => medium.id).and_return([medium])
+      with(:id => Set.new([medium.id])).and_return([medium])
 
     expect(medium).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(email_data.reject {|k,v| :id.eql?(k)})
@@ -132,7 +132,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
     expect(no_media).to receive(:empty?).and_return(true)
 
     expect(Flapjack::Data::Medium).to receive(:intersect).
-      with(:id => medium.id).and_return(no_media)
+      with(:id => Set.new([medium.id])).and_return(no_media)
 
     get "/media/#{medium.id}"
     expect(last_response).to be_not_found

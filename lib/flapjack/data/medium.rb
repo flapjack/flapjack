@@ -20,7 +20,7 @@ module Flapjack
 
     class Medium
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks

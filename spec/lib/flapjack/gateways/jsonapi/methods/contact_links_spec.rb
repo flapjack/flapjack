@@ -187,6 +187,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
     expect(contacts).to receive(:empty?).and_return(false)
     expect(contacts).to receive(:associated_ids_for).with(:tags).
       and_return(contact.id => [tag.id])
+    expect(contacts).to receive(:ids).and_return(Set.new([contact.id]))
+    expect(Flapjack::Data::Contact).to receive(:intersect).
+      with(:id => Set.new([contact.id])).and_return(contacts)
     expect(Flapjack::Data::Contact).to receive(:intersect).
       with(:id => contact.id).and_return(contacts)
 
