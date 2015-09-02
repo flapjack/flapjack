@@ -36,14 +36,14 @@ module Flapjack
 
             if rangeable && (v =~ /\A(?:(#{pattern})\.\.(#{pattern})|(#{pattern})\.\.|\.\.(#{pattern}))\z/)
               start = nil
-              start_s = $1 || $3
+              start_s = Regexp.last_match(1) || Regexp.last_match(3)
               unless start_s.nil?
                 start = yield(start_s)
                 halt(err(403, "Couldn't parse #{name} '#{start_s}'")) if start.nil?
               end
 
               finish = nil
-              finish_s = $2 || $4
+              finish_s = Regexp.last_match(2) || Regexp.last_match(4)
               unless finish_s.nil?
                 finish = yield(finish_s)
                 halt(err(403, "Couldn't parse #{name} '#{finish_s}'")) if finish.nil?
@@ -95,7 +95,7 @@ module Flapjack
 
               value = if attrs_by_type[:string].include?(k.to_sym) || :id.eql?(k.to_sym)
                 if v =~ %r{^/(.+)/$}
-                  Regexp.new($1)
+                  Regexp.new(Regexp.last_match(1))
                 elsif v =~ /\|/
                   v.split('|')
                 else
@@ -151,8 +151,8 @@ module Flapjack
 
               sort_params.each_with_object({}) do |sort_param, memo|
                 sort_param =~ /^(\+|\-)([a-z_]+)$/i
-                rev  = $1
-                term = $2
+                rev  = Regexp.last_match(1)
+                term = Regexp.last_match(2)
                 memo[term.to_sym] = (rev == '-') ? :desc : :asc
               end
             end

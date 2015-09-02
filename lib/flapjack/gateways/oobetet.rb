@@ -249,7 +249,7 @@ module Flapjack
                   Flapjack.logger.debug("group message received: #{room}, #{text}")
                   if (text =~ /^((?i:problem|recovery|acknowledgement)).*#{Regexp.escape(@check_matcher)}/)
                     # got something interesting
-                    status = $1.downcase
+                    status = Regexp.last_match(1).downcase
                     Flapjack.logger.debug("found the following state for #{@check_matcher}: #{status}")
                     @time_checker.receive_status(status, time.to_i)
                   end

@@ -304,9 +304,9 @@ module Flapjack
                      `uname -a`.chomp + "\n"
 
             when /^find\s+(\d+\s+)?checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
-              limit_checks = $1.nil? ? 30 : $1.strip.to_i
-              pattern     = $2
-              tag         = $3
+              limit_checks = Regexp.last_match(1).nil? ? 30 : Regexp.last_match(1).strip.to_i
+              pattern     = Regexp.last_match(2)
+              tag         = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, nil, :limit => limit_checks) do |check_ids, descriptor, num_checks|
                 resp = "Checks #{descriptor}:\n"
@@ -320,9 +320,9 @@ module Flapjack
               end
 
             when /^state\s+of\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              pattern    = $1
-              tag        = $2
-              check_name = $3
+              pattern    = Regexp.last_match(1)
+              tag        = Regexp.last_match(2)
+              check_name = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
@@ -333,10 +333,10 @@ module Flapjack
               end
 
             when /^tell\s+me\s+about\s(\d+\s+)?+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              limit_checks = $1.nil? ? 30 : $1.strip.to_i
-              pattern      = $2
-              tag          = $3
-              check_name   = $4
+              limit_checks = Regexp.last_match(1).nil? ? 30 : Regexp.last_match(1).strip.to_i
+              pattern      = Regexp.last_match(2)
+              tag          = Regexp.last_match(3)
+              check_name   = Regexp.last_match(4)
 
               msg = derive_check_ids_for(pattern, tag, check_name, :limit => limit_checks,
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance,
@@ -350,15 +350,15 @@ module Flapjack
               end
 
             when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
-              ackid        = $1
-              comment      = $2
-              duration_str = $3
+              ackid        = Regexp.last_match(1)
+              comment      = Regexp.last_match(2)
+              duration_str = Regexp.last_match(3)
 
               error = nil
               dur   = nil
 
               if comment.nil? || (comment.length == 0)
-                error = "please provide a comment, eg \"#{@bot.alias}: ACKID #{$1} AL looking\""
+                error = "please provide a comment, eg \"#{@bot.alias}: ACKID #{Regexp.last_match(1)} AL looking\""
               elsif duration_str
                 # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
                 dur = ChronicDuration.parse(duration_str)
@@ -393,11 +393,11 @@ module Flapjack
               end
 
             when /^ack\s+#{CHECK_MATCH_FRAGMENT}(?:\s+(.*?)(?:\s*duration:.*?(\w+.*))?)?\s*$/im
-              pattern      = $1
-              tag          = $2
-              check_name   = $3
-              comment      = $4 ? $4.strip : nil
-              duration_str = $5 ? $5.strip : '1 hour'
+              pattern      = Regexp.last_match(1)
+              tag          = Regexp.last_match(2)
+              check_name   = Regexp.last_match(3)
+              comment      = Regexp.last_match(4) ? Regexp.last_match(4).strip : nil
+              duration_str = Regexp.last_match(5) ? Regexp.last_match(5).strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
 
               msg = derive_check_ids_for(pattern, tag, check_name,
@@ -425,14 +425,14 @@ module Flapjack
               end
 
             when /^maint\s+#{CHECK_MATCH_FRAGMENT}\s+(?:start-in:.*?(\w+.*?)|start-at:.*?(\w+.*?))?(?:\s+duration:.*?(\w+.*?))?(?:\s+comment:.*?(\w+.*?))?\s*$/im
-              pattern      = $1
-              tag          = $2
-              check_name   = $3
-              start_in     = $4 ? $4.strip : nil
-              start_at     = $5 ? $5.strip : nil
-              duration_str = $6 ? $6.strip : '1 hour'
+              pattern      = Regexp.last_match(1)
+              tag          = Regexp.last_match(2)
+              check_name   = Regexp.last_match(3)
+              start_in     = Regexp.last_match(4) ? Regexp.last_match(4).strip : nil
+              start_at     = Regexp.last_match(5) ? Regexp.last_match(5).strip : nil
+              duration_str = Regexp.last_match(6) ? Regexp.last_match(6).strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
-              comment      = $7 ? $7.strip : 'Test maintenance'
+              comment      = Regexp.last_match(7) ? Regexp.last_match(7).strip : 'Test maintenance'
 
               started = case
               when start_in
@@ -462,9 +462,9 @@ module Flapjack
               end
 
             when /^test\s+notifications\s+for\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              pattern    = $1
-              tag        = $2
-              check_name = $3
+              pattern    = Regexp.last_match(1)
+              tag        = Regexp.last_match(2)
+              check_name = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 summary = "Testing notifications to all contacts interested in checks #{descriptor}"
@@ -479,7 +479,7 @@ module Flapjack
               end
 
             when /^(.*)/
-              words = $1
+              words = Regexp.last_match(1)
               msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
 
             end
@@ -640,7 +640,7 @@ module Flapjack
                 identifier = identifiers.detect {|id| /^(?:@#{id}|#{id}:)\s*(.*)/m === check_xml.call(text) }
 
                 unless identifier.nil?
-                  the_command = $1
+                  the_command = Regexp.last_match(1)
                   Flapjack.logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
                   if interpreter
                     interpreter.receive_message(room, nick, time, the_command)
