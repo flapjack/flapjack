@@ -13,7 +13,6 @@ module Flapjack
   module Data
     module Extensions
       module RuleMatcher
-
         extend ActiveSupport::Concern
 
         module ClassMethods
@@ -45,27 +44,17 @@ module Flapjack
           # called by medium.checks
           # no global rules in the passed rule data
           def matching_checks(rule_ids)
-            rule_tags_ids = self.intersect(:id => rule_ids).
-              associated_ids_for(:tags)
+            m_checks = ['all_tags', 'any_tag'].inject(nil) do |memo, strategy|
+              tag_ids_by_rule_id = self.intersect(:strategy => strategy,
+                :id => rule_ids).associated_ids_for(:tags)
 
-            started = false
+              checks = checks_for_tag_match(strategy, tag_ids_by_rule_id)
 
-            m_checks = rule_tags_ids.keys.inject(nil) do |r_memo, rule_id|
-
-              assocs = Flapjack::Data::Tag.intersect(:id => rule_tags_ids[rule_id]).associations_for(:checks).values
-              next if assocs.empty?
-
-              r_checks = assocs.inject(Flapjack::Data::Check) do |c_memo, ca|
-                c_memo = c_memo.intersect(:id => ca)
-                c_memo
-              end
-
-              r_memo = if r_memo.nil?
-                Flapjack::Data::Check.intersect(:id => r_checks)
+              memo = if memo.nil?
+                Flapjack::Data::Check.intersect(:id => checks)
               else
-                r_memo.union(:id => r_checks)
+                memo.union(:id => checks)
               end
-              r_memo
             end
 
             return Flapjack::Data::Check.empty if m_checks.nil?
@@ -139,6 +128,37 @@ module Flapjack
 
           private
 
+          def checks_for_tag_match(strategy, tag_ids_by_rule_id)
+            tag_ids_by_rule_id.inject(nil) do |memo, (rule_id, tag_ids)|
+              assocs = Flapjack::Data::Tag.intersect(:id => tag_ids).
+                associations_for(:checks).values
+              next memo if assocs.empty?
+
+              checks = case strategy
+              when 'all_tags'
+                assocs.inject(Flapjack::Data::Check) do |c_memo, ca|
+                  c_memo = c_memo.intersect(:id => ca)
+                  c_memo
+                end
+              when 'any_tag'
+                assocs.inject(nil) do |c_memo, ca|
+                  if c_memo.nil?
+                    Flapjack::Data::Check.intersect(:id => ca)
+                  else
+                    c_memo.union(:id => ca)
+                  end
+                end
+              end
+
+              memo = if memo.nil?
+                Flapjack::Data::Check.intersect(:id => checks)
+              else
+                memo.union(:id => checks)
+              end
+              memo
+            end
+          end
+
           def prepare_time_restriction(time_restriction, timezone = nil)
             # this will hand back a 'deep' copy
             tr = symbolize(time_restriction)
@@ -199,23 +219,24 @@ module Flapjack
 
             tr
           end
-
         end
 
         included do
           # I've removed regex_* properties as they encourage loose binding against
-          # names, which may change. Do client-side grouping and create a tag!
+          # check names, which may change. Do client-side grouping and create a tag!
 
           define_attributes :name => :string,
-                            :all => :boolean,
+                            :strategy => :string,
                             :conditions_list => :string,
                             :time_restrictions_json => :string,
                             :has_media => :boolean,
                             :has_tags => :boolean
 
-          index_by :name, :all, :conditions_list, :has_media, :has_tags
+          index_by :name, :strategy, :conditions_list, :has_media, :has_tags
 
           validates_with Flapjack::Data::Validators::IdValidator
+
+          validates :strategy, :inclusion => {:in => self::STRATEGIES}
 
           validates_each :time_restrictions_json do |record, att, value|
             unless value.nil?

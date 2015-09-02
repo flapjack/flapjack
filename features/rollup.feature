@@ -17,11 +17,11 @@ Feature: Rollup on a per contact, per media basis
       | d1a39575-0480-4f65-a7f7-64c90db93731 | baz:ping | baz,ping |
 
     And the following acceptors exist:
-      | id                                   | contact_id                           | tags     | condition | time_restrictions | media_ids                                                                 |
-      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping | critical  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a |
-      | b18e9f48-59e7-4c25-b94c-d4ebd4a6559a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | foo,ping | warning   |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
-      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | baz,ping | critical  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a |
-      | f163bf33-b53e-4138-ab27-1dd89f2d6fdd | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | baz,ping | warning   |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+      | id                                   | contact_id                           | strategy | tags     | condition | time_restrictions | media_ids                                                                 |
+      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | all_tags | foo,ping | critical  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a |
+      | b18e9f48-59e7-4c25-b94c-d4ebd4a6559a | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | all_tags | foo,ping | warning   |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+      | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | all_tags | baz,ping | critical  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc,73e2803f-948e-467a-a707-37b9f53ee21a |
+      | f163bf33-b53e-4138-ab27-1dd89f2d6fdd | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | all_tags | baz,ping | warning   |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
 
   @time
   Scenario: Rollup threshold of 1 means first alert is a rollup

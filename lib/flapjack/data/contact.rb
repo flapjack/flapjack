@@ -73,43 +73,44 @@ module Flapjack
       end
 
       def checks
-        tag_acceptors    = self.acceptors.intersect(:all => [nil, false])
-        global_acceptors = self.acceptors.intersect(:all => true)
+        global_acceptors = self.acceptors.intersect(:strategy => 'global')
 
-        tag_rejectors    = self.rejectors.intersect(:all => [nil, false])
-
-        global_rejector_ids = self.rejectors.intersect(:all => true).select {|rejector|
+        global_rejector_ids = self.rejectors.intersect(:strategy => 'global').select {|rejector|
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
         # global blackhole
         return Flapjack::Data::Check.empty unless global_rejector_ids.empty?
 
-        rejector_ids = self.rejectors.intersect(:all => [nil, false]).select {|rejector|
+        tag_rejector_ids = self.rejectors.
+          intersect(:strategy => ['any_tag', 'all_tags']).select {|rejector|
+
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
-        acceptors = self.acceptors.select {|acceptor|
+        tag_acceptors = self.acceptors.
+          intersect(:strategy => ['any_tag', 'all_tags']).select {|acceptor|
+
           acceptor.is_occurring_at?(time, timezone)
         }
 
         # no positives
-        return Flapjack::Data::Check.empty if acceptors.empty?
+        return Flapjack::Data::Check.empty if tag_acceptors.empty?
 
 
         # initial scope is all enabled
         linked_checks = Flapjack::Data::Check.intersect(:enabled => true)
 
-        if acceptors.none? {|a| a.all }
+        if global_acceptors.empty?
           # if no global acceptor, scope by matching tags
-          acceptor_checks = Flapjack::Data::Acceptor.matching_checks(acceptors.map(&:id))
-          linked_checks = linked_checks.intersect(:id => acceptor_checks)
+          tag_acceptor_checks = Flapjack::Data::Acceptor.matching_checks(tag_acceptors.map(&:id))
+          linked_checks = linked_checks.intersect(:id => tag_acceptor_checks)
         end
 
         # then exclude by checks with tags matching rejector, if any
-        rejector_checks = Flapjack::Data::Rejector.matching_checks(rejector_ids)
-        unless rejector_checks.empty?
-          linked_checks = linked_checks.diff(:id => rejector_checks)
+        tag_rejector_checks = Flapjack::Data::Rejector.matching_checks(tag_rejector_ids)
+        unless tag_rejector_checks.empty?
+          linked_checks = linked_checks.diff(:id => tag_rejector_checks)
         end
 
         linked_checks

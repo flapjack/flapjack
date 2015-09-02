@@ -315,6 +315,7 @@ module FixtureData
   def acceptor_data
     @acceptor_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
+      :strategy    => 'all_tags',
       :conditions_list => 'critical'
     }
   end
@@ -322,6 +323,7 @@ module FixtureData
   def acceptor_2_data
     @acceptor_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
+      :strategy    => 'all_tags',
       :conditions_list => 'warning'
     }
   end
@@ -361,6 +363,7 @@ module FixtureData
   def rejector_data
     @rejector_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
+      :strategy    => 'all_tags',
       :conditions_list => 'critical'
     }
   end
@@ -368,6 +371,7 @@ module FixtureData
   def rejector_2_data
     @rejector_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
+      :strategy    => 'all_tags',
       :conditions_list => 'warning'
     }
   end

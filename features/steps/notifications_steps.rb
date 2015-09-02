@@ -117,7 +117,7 @@ Given /^the following acceptors exist:$/ do |acceptors|
     acceptor = Flapjack::Data::Acceptor.new(
       :id              => acceptor_data['id'],
       :name            => acceptor_data['name'],
-      :all             => ['1', 't', 'true', 'y', 'yes'].include?((acceptor_data['all'] || '').strip.downcase),
+      :strategy        => acceptor_data['strategy'],
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
@@ -176,7 +176,7 @@ Given /^the following rejectors exist:$/ do |rejectors|
     rejector = Flapjack::Data::Rejector.new(
       :id              => rejector_data['id'],
       :name            => rejector_data['name'],
-      :all             => ['1', 't', 'true', 'y', 'yes'].include?((rejector_data['all'] || '').strip.downcase),
+      :strategy        => rejector_data['strategy'],
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
@@ -229,7 +229,8 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical',
+    :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.acceptors << acceptor
@@ -263,7 +264,8 @@ Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical',
+    :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.acceptors << acceptor
@@ -294,7 +296,8 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical',
+    :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.acceptors << acceptor
@@ -327,7 +330,8 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical')
+  acceptor = Flapjack::Data::Acceptor.new(:conditions_list => 'critical',
+    :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.acceptors << acceptor

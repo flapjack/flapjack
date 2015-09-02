@@ -23,6 +23,8 @@ module Flapjack
   module Data
     class Acceptor
 
+      STRATEGIES = ['global', 'any_tag', 'all_tags']
+
       extend Flapjack::Utility
 
       include Zermelo::Records::RedisSet
@@ -58,8 +60,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
-        property :all do
-          key :type, :boolean
+        property :strategy do
+          key :type, :string
+          key :enum, Flapjack::Data::Acceptor::STRATEGIES
         end
         property :conditions_list do
           key :type, :string
@@ -108,8 +111,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
-        property :all do
-          key :type, :boolean
+        property :strategy do
+          key :type, :string
+          key :enum, Flapjack::Data::Acceptor::STRATEGIES
         end
         property :conditions_list do
           key :type, :string
@@ -138,8 +142,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
-        property :all do
-          key :type, :boolean
+        property :stratgey do
+          key :type, :string
+          key :enum, Flapjack::Data::Acceptor::STRATEGIES
         end
         property :conditions_list do
           key :type, :string
@@ -170,13 +175,13 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :all, :conditions_list, :time_restrictions]
+            :attributes => [:name, :strategy, :conditions_list, :time_restrictions]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :all, :conditions_list, :time_restrictions]
+            :attributes => [:name, :strategy, :conditions_list, :time_restrictions]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :all, :conditions_list, :time_restrictions]
+            :attributes => [:name, :strategy, :conditions_list, :time_restrictions]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )

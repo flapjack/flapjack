@@ -168,19 +168,34 @@ module Flapjack
       def matching_rule_ids(rule_klass, tag_ids, opts = {})
         severity = opts[:severity]
 
-        global_rules = rule_klass.intersect(:all => true)
+        global_rules = rule_klass.intersect(:strategy => 'global')
         unless severity.nil?
           global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
 
-        rules = rule_klass.intersect(:all => [nil, false])
+        all_tags_rules = rule_klass.intersect(:strategy => 'all_tags')
         unless severity.nil?
-          rules = rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+          all_tags_rules = all_tags_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
 
-        global_rules.ids + rules.associated_ids_for(:tags).each_with_object([]) do |(rule_id, rule_tag_ids), memo|
+        all_tags_rules_ids = all_tags_rules.associated_ids_for(:tags).
+          each_with_object([]) do |(rule_id, rule_tag_ids), memo|
+
           memo << rule_id if (rule_tag_ids - tag_ids).empty?
         end
+
+        any_tag_rules = rule_klass.intersect(:strategy => 'any_tag')
+        unless severity.nil?
+          any_tag_rules = any_tag_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+        end
+
+        any_tag_rules_ids = any_tag_rules.associated_ids_for(:tags).
+          each_with_object([]) do |(rule_id, rule_tag_ids), memo|
+
+          memo << rule_id unless (rule_tag_ids & tag_ids).empty?
+        end
+
+        global_rules.ids + all_tags_rules_ids + any_tag_rules_ids
       end
 
       # end internal associations
