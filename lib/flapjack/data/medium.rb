@@ -54,10 +54,7 @@ module Flapjack
       belongs_to :contact, :class_name => 'Flapjack::Data::Contact',
         :inverse_of => :media
 
-      has_and_belongs_to_many :acceptors, :class_name => 'Flapjack::Data::Acceptor',
-        :inverse_of => :media
-
-      has_and_belongs_to_many :rejectors, :class_name => 'Flapjack::Data::Rejector',
+      has_and_belongs_to_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :media
 
       # this can be called from the API (with no args) or from notifier.rb
@@ -93,7 +90,9 @@ module Flapjack
         init_scope = opts[:initial_scope] || Flapjack::Data::Check.intersect(:enabled => true)
 
         # TODO maybe fold time validation into 'matching_checks'
-        global_rejector_ids = self.rejectors.intersect(:strategy => 'global').select {|rejector|
+        global_rejector_ids = self.rules.intersect(:blackhole => true,
+          :strategy => 'global').select {|rejector|
+
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
@@ -102,11 +101,13 @@ module Flapjack
           return Flapjack::Data::Check.empty
         end
 
-        rejector_ids = self.rejectors.intersect(:strategy => 'all_tags').select {|rejector|
+        rejector_ids = self.rules.intersect(:blackhole => true,
+          :strategy => ['all_tags', 'any_tag']).select {|rejector|
+
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
-        acceptors = self.acceptors.select {|acceptor|
+        acceptors = self.rules.intersect(:blackhole => false).select {|acceptor|
           acceptor.is_occurring_at?(time, timezone)
         }
 
@@ -117,12 +118,12 @@ module Flapjack
 
         if acceptors.none? {|a| 'global'.eql?(a.strategy) }
           # if no global acceptor, scope by tags for acceptors
-          acceptor_checks = Flapjack::Data::Acceptor.matching_checks(acceptors.map(&:id))
+          acceptor_checks = Flapjack::Data::Rule.matching_checks(acceptors.map(&:id))
           ret = ret.intersect(:id => acceptor_checks)
         end
 
         # then exclude by checks with tags matching rejector, if any
-        rejector_checks = Flapjack::Data::Rejector.matching_checks(rejector_ids)
+        rejector_checks = Flapjack::Data::Rule.matching_checks(rejector_ids)
         unless rejector_checks.empty?
           ret = ret.diff(:id => rejector_checks)
         end
@@ -244,15 +245,11 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :acceptors do
-          key :type, :string
-          key :format, :url
-        end
         property :contact do
           key :type, :string
           key :format, :url
         end
-        property :rejectors do
+        property :rules do
           key :type, :string
           key :format, :url
         end
@@ -354,14 +351,11 @@ module Flapjack
       end
 
       swagger_schema :MediumChangeLinks do
-        property :acceptors do
-          key :"$ref", :jsonapi_AcceptorsLinkage
-        end
         property :contact do
           key :"$ref", :jsonapi_ContactLinkage
         end
-        property :rejectors do
-          key :"$ref", :jsonapi_RejectorsLinkage
+        property :rules do
+          key :"$ref", :jsonapi_RulesLinkage
         end
       end
 
@@ -393,19 +387,14 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
-            :acceptors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
-            ),
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :type => 'check',
               :klass => Flapjack::Data::Check,
               :callback_classes => [
-                Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
-                Flapjack::Data::Rejector,
+                Flapjack::Data::Rule,
                 Flapjack::Data::ScheduledMaintenance
               ]
             ),
@@ -413,7 +402,7 @@ module Flapjack
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true
             ),
-            :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             )

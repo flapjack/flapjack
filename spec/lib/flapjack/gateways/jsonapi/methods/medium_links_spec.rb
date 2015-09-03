@@ -7,9 +7,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
 
   let(:medium)  { double(Flapjack::Data::Medium, :id => email_data[:id]) }
   let(:contact) { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
-  let(:acceptor)    { double(Flapjack::Data::Acceptor, :id => acceptor_data[:id]) }
+  let(:rule)    { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
 
-  let(:medium_acceptors)  { double('medium_acceptors') }
+  let(:medium_rules)  { double('medium_rules') }
 
   let(:meta) {
     {
@@ -64,98 +64,98 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::MediumLinks', :sinatra => true, 
     expect(last_response.status).to eq(404)
   end
 
-  it 'adds a acceptor to a medium' do
+  it 'adds a rule to a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Acceptor).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 
-    expect(medium_acceptors).to receive(:add_ids).with(acceptor.id)
-    expect(medium).to receive(:acceptors).and_return(medium_acceptors)
+    expect(medium_rules).to receive(:add_ids).with(rule.id)
+    expect(medium).to receive(:rules).and_return(medium_rules)
 
-    post "/media/#{medium.id}/relationships/acceptors", Flapjack.dump_json(
-      :data => [{:type => 'acceptor', :id => acceptor.id}]), jsonapi_env
+    post "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
+      :data => [{:type => 'rule', :id => rule.id}]), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
-  it 'lists acceptors for a medium' do
+  it 'lists rules for a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Acceptor).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     sorted = double('sorted')
     paged  = double('paged')
-    expect(paged).to receive(:ids).and_return([acceptor.id])
+    expect(paged).to receive(:ids).and_return([rule.id])
     expect(sorted).to receive(:page).with(1, :per_page => 20).and_return(paged)
     expect(sorted).to receive(:count).and_return(1)
-    expect(medium_acceptors).to receive(:sort).with(:id => :asc).and_return(sorted)
-    expect(medium).to receive(:acceptors).and_return(medium_acceptors)
+    expect(medium_rules).to receive(:sort).with(:id => :asc).and_return(sorted)
+    expect(medium).to receive(:rules).and_return(medium_rules)
 
     media = double('media', :all => [medium])
     expect(media).to receive(:empty?).and_return(false)
     expect(Flapjack::Data::Medium).to receive(:intersect).
       with(:id => medium.id).and_return(media)
 
-    get "/media/#{medium.id}/acceptors"
+    get "/media/#{medium.id}/rules"
     expect(last_response.status).to eq(200)
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
-      :data  => [{:type => 'acceptor', :id => acceptor.id}],
+      :data  => [{:type => 'rule', :id => rule.id}],
       :links => {
-        :self    => "http://example.org/media/#{medium.id}/relationships/acceptors",
-        :related => "http://example.org/media/#{medium.id}/acceptors",
+        :self    => "http://example.org/media/#{medium.id}/relationships/rules",
+        :related => "http://example.org/media/#{medium.id}/rules",
       },
       :meta => meta
     ))
   end
 
-  it 'updates acceptors for a medium' do
+  it 'updates rules for a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Acceptor).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 
-    expect(medium_acceptors).to receive(:ids).and_return([])
-    expect(medium_acceptors).to receive(:add_ids).with(acceptor.id)
-    expect(medium).to receive(:acceptors).twice.and_return(medium_acceptors)
+    expect(medium_rules).to receive(:ids).and_return([])
+    expect(medium_rules).to receive(:add_ids).with(rule.id)
+    expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
-    patch "/media/#{medium.id}/relationships/acceptors", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => [
-        {:type => 'acceptor', :id => acceptor.id}
+        {:type => 'rule', :id => rule.id}
       ]
     ), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
-  it 'clears acceptors for a medium' do
+  it 'clears rules for a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Acceptor).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 
-    expect(medium_acceptors).to receive(:ids).and_return([acceptor.id])
-    expect(medium_acceptors).to receive(:remove_ids).with(acceptor.id)
-    expect(medium).to receive(:acceptors).twice.and_return(medium_acceptors)
+    expect(medium_rules).to receive(:ids).and_return([rule.id])
+    expect(medium_rules).to receive(:remove_ids).with(rule.id)
+    expect(medium).to receive(:rules).twice.and_return(medium_rules)
 
-    patch "/media/#{medium.id}/relationships/acceptors", Flapjack.dump_json(
+    patch "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
       :data => []
     ), jsonapi_env
     expect(last_response.status).to eq(204)
   end
 
-  it 'deletes a acceptor from a medium' do
+  it 'deletes a rule from a medium' do
     expect(Flapjack::Data::Medium).to receive(:lock).
-      with(Flapjack::Data::Acceptor).and_yield
+      with(Flapjack::Data::Rule).and_yield
 
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).with(medium.id).
       and_return(medium)
 
-    expect(medium_acceptors).to receive(:remove_ids).with(acceptor.id)
-    expect(medium).to receive(:acceptors).and_return(medium_acceptors)
+    expect(medium_rules).to receive(:remove_ids).with(rule.id)
+    expect(medium).to receive(:rules).and_return(medium_rules)
 
-    delete "/media/#{medium.id}/relationships/acceptors", Flapjack.dump_json(
-      :data => [{:type => 'acceptor', :id => acceptor.id}]
+    delete "/media/#{medium.id}/relationships/rules", Flapjack.dump_json(
+      :data => [{:type => 'rule', :id => rule.id}]
     ), jsonapi_env
     expect(last_response.status).to eq(204)
   end

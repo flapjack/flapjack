@@ -9,10 +9,9 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/condition'
 require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/state'
 require 'flapjack/data/tag'
@@ -120,15 +119,15 @@ module Flapjack
         # determine matching acceptors
         tag_ids = self.tags.ids
 
-        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids, :severity => severity)
-        acceptor_media_ids = Flapjack::Data::Acceptor.matching_media_ids(acceptor_ids,
+        acceptor_ids = matching_rule_ids(tag_ids, :blackhole => false, :severity => severity)
+        acceptor_media_ids = Flapjack::Data::Rule.matching_media_ids(acceptor_ids,
           :time => time)
 
         return Flapjack::Data::Medium.empty if acceptor_media_ids.empty?
 
         # and matching rejectors
-        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids, :severity => severity)
-        rejector_media_ids = Flapjack::Data::Rejector.matching_media_ids(rejector_ids,
+        rejector_ids = matching_rule_ids(tag_ids, :blackhole => true, :severity => severity)
+        rejector_media_ids = Flapjack::Data::Rule.matching_media_ids(rejector_ids,
           :time => time)
 
         unless rejector_media_ids.empty?
@@ -147,15 +146,15 @@ module Flapjack
         tag_ids = self.tags.ids
         time = Time.now
 
-        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids)
-        acceptor_contact_ids = Flapjack::Data::Acceptor.matching_contact_ids(acceptor_ids,
+        acceptor_ids = matching_rule_ids(tag_ids, :blackhole => false,)
+        acceptor_contact_ids = Flapjack::Data::Rule.matching_contact_ids(acceptor_ids,
           :time => time)
         return Flapjack::Data::Contact.empty if acceptor_contact_ids.empty?
 
 
         # and matching rejectors
-        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids)
-        rejector_contact_ids = Flapjack::Data::Rejector.matching_contact_ids(rejector_ids,
+        rejector_ids = matching_rule_ids(tag_ids, :blackhole => true)
+        rejector_contact_ids = Flapjack::Data::Rule.matching_contact_ids(rejector_ids,
           :time => time)
         unless rejector_contact_ids.empty?
           acceptor_contact_ids -= rejector_contact_ids
@@ -165,15 +164,16 @@ module Flapjack
         Flapjack::Data::Contact.intersect(:id => acceptor_contact_ids)
       end
 
-      def matching_rule_ids(rule_klass, tag_ids, opts = {})
+      def matching_rule_ids(tag_ids, opts = {})
         severity = opts[:severity]
+        blackhole = opts[:blackhole]
 
-        global_rules = rule_klass.intersect(:strategy => 'global')
+        global_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'global')
         unless severity.nil?
           global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
 
-        all_tags_rules = rule_klass.intersect(:strategy => 'all_tags')
+        all_tags_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'all_tags')
         unless severity.nil?
           all_tags_rules = all_tags_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
@@ -184,7 +184,7 @@ module Flapjack
           memo << rule_id if (rule_tag_ids - tag_ids).empty?
         end
 
-        any_tag_rules = rule_klass.intersect(:strategy => 'any_tag')
+        any_tag_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'any_tag')
         unless severity.nil?
           any_tag_rules = any_tag_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
@@ -374,9 +374,8 @@ module Flapjack
               :type => 'medium',
               :klass => Flapjack::Data::Medium,
               :callback_classes => [
-                Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
-                Flapjack::Data::Rejector,
+                Flapjack::Data::Rule,
                 Flapjack::Data::Tag,
                 Flapjack::Data::ScheduledMaintenance
               ]
@@ -387,8 +386,7 @@ module Flapjack
               :type => 'contact',
               :klass => Flapjack::Data::Contact,
               :callback_classes => [
-                Flapjack::Data::Acceptor,
-                Flapjack::Data::Rejector,
+                Flapjack::Data::Rule,
                 Flapjack::Data::Tag
               ]
             ),

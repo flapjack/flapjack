@@ -275,8 +275,7 @@ module Flapjack
         def check_ids_by_medium(filter_check_ids, opts = {})
           time = opts[:time]
 
-          Flapjack::Data::Medium.lock(Flapjack::Data::Acceptor,
-            Flapjack::Data::Check, Flapjack::Data::Rejector) do
+          Flapjack::Data::Medium.lock(Flapjack::Data::Check, Flapjack::Data::Rule) do
 
             media = Flapjack::Data::Medium.intersect(:transport => 'pagerduty')
 

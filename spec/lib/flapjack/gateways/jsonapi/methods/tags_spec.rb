@@ -12,7 +12,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
   let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:name]) }
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:acceptor)  { double(Flapjack::Data::Acceptor, :id => acceptor_data[:id]) }
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
@@ -222,10 +221,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).
@@ -241,10 +239,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes multiple tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).
@@ -268,10 +265,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "does not delete a tag that does not exist" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).

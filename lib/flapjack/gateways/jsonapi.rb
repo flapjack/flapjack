@@ -17,12 +17,11 @@ require 'swagger/blocks'
 require 'flapjack'
 require 'flapjack/utility'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/acknowledgement'
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
 require 'flapjack/data/state'
@@ -58,12 +57,11 @@ module Flapjack
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
       RESOURCE_CLASSES = [
-        Flapjack::Data::Acceptor,
         Flapjack::Data::Acknowledgement,
         Flapjack::Data::Check,
         Flapjack::Data::Contact,
         Flapjack::Data::Medium,
-        Flapjack::Data::Rejector,
+        Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
         Flapjack::Data::Statistic,
         Flapjack::Data::State,

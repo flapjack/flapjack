@@ -10,8 +10,6 @@ require 'flapjack/gateways/web/middleware/request_timestamp'
 
 require 'flapjack-diner'
 
-require 'flapjack/data/check'
-
 require 'flapjack/utility'
 
 module Flapjack
@@ -454,44 +452,23 @@ module Flapjack
         contact_id = params[:id]
 
         @contact = Flapjack::Diner.contacts(contact_id,
-          :include => ['acceptors.tags', 'acceptors.media',
-                       'checks', 'media.alerting_checks',
-                       'rejectors.tags', 'rejectors.media'])
+          :include => ['checks', 'media.alerting_checks',
+                       'rules.tags', 'rules.media'])
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
-        @acceptors = []
         @checks = []
         @media = []
-        @rejectors = []
+        @rules = []
 
         @alerting_checks_by_media_id = {}
 
-        @tags_by_acceptor_id  = {}
-        @media_by_acceptor_id = {}
-        @tags_by_rejector_id  = {}
-        @media_by_rejector_id = {}
+        @tags_by_rule_id  = {}
+        @media_by_rule_id = {}
 
         context = Flapjack::Diner.context
         unless context.nil?
           included = context[:included]
           unless included.nil?
-            @acceptors = some_included_records(@contact[:relationships], :acceptors,
-              included, 'acceptor')
-
-            unless @acceptors.nil? || @acceptors.empty?
-              @tags_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
-                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :tags,
-                  included, 'tag')
-                memo
-              end
-
-              @media_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
-                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :media,
-                  included, 'medium')
-                memo
-              end
-            end
-
             @checks = some_included_records(@contact[:relationships], :checks,
               included, 'check')
             @media = some_included_records(@contact[:relationships], :media,
@@ -505,18 +482,18 @@ module Flapjack
               end
             end
 
-            @rejectors = some_included_records(@contact[:relationships], :rejectors,
-              included, 'rejector')
+            @rules = some_included_records(@contact[:relationships], :rules,
+              included, 'rule')
 
-            unless @rejectors.nil? || @rejectors.empty?
-              @tags_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
-                memo[rejector[:id]] = some_included_records(rejector[:relationships], :tags,
+            unless @rules.nil? || @rules.empty?
+              @tags_by_rule_id = @rules.inject({}) do |memo, rule|
+                memo[rule[:id]] = some_included_records(rule[:relationships], :tags,
                   included, 'tag')
                 memo
               end
 
-              @media_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
-                memo[rejector[:id]] = some_included_records(rejector[:relationships], :media,
+              @media_by_rule_id = @rules.inject({}) do |memo, rule|
+                memo[rule[:id]] = some_included_records(rule[:relationships], :media,
                   included, 'medium')
                 memo
               end

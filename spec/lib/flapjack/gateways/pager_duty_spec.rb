@@ -153,7 +153,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
         with(an_instance_of(Time)).and_return(false)
 
       expect(Flapjack::Data::Medium).to receive(:lock).
-        with(Flapjack::Data::Acceptor, Flapjack::Data::Check, Flapjack::Data::Rejector).
+        with(Flapjack::Data::Check, Flapjack::Data::Rule).
         and_yield
 
       medium = double(Flapjack::Data::Medium, :id => SecureRandom.uuid)

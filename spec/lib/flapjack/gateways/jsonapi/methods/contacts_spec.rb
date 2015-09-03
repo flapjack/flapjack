@@ -412,10 +412,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
 
   it "deletes a contact" do
     expect(Flapjack::Data::Contact).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Medium,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::Tag).
       and_yield
 

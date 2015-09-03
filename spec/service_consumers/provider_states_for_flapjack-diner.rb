@@ -49,7 +49,7 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a contact with one medium and one acceptor exists" do
+  provider_state "a contact with one medium and one rule exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)
       contact.save!
@@ -59,10 +59,10 @@ Pact.provider_states_for "flapjack-diner" do
 
       contact.media << email
 
-      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
-      acceptor.save!
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
 
-      contact.acceptors << acceptor
+      contact.rules << rule
     end
 
     tear_down { default_tear_down }
@@ -101,19 +101,10 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "an acceptor exists" do
+  provider_state "a rule exists" do
     set_up do
-      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
-      acceptor.save!
-    end
-
-    tear_down { default_tear_down }
-  end
-
-  provider_state "a rejector exists" do
-    set_up do
-      rejector = Flapjack::Data::Rejector.new(rejector_data)
-      rejector.save!
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
     end
 
     tear_down { default_tear_down }
@@ -131,25 +122,13 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "two acceptors exist" do
+  provider_state "two rules exist" do
     set_up do
-      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
-      acceptor.save!
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
 
-      acceptor_2 = Flapjack::Data::Acceptor.new(acceptor_2_data)
-      acceptor_2.save!
-    end
-
-    tear_down { default_tear_down }
-  end
-
-  provider_state "two rejectors exist" do
-    set_up do
-      rejector = Flapjack::Data::Rejector.new(rejector_data)
-      rejector.save!
-
-      rejector_2 = Flapjack::Data::Rejector.new(rejector_2_data)
-      rejector_2.save!
+      rule_2 = Flapjack::Data::Rule.new(rule_2_data)
+      rule_2.save!
     end
 
     tear_down { default_tear_down }
@@ -279,15 +258,15 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a contact with an acceptor exists" do
+  provider_state "a contact with a rule exists" do
     set_up do
       contact = Flapjack::Data::Contact.new(contact_data)
       contact.save!
 
-      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
-      acceptor.save!
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
 
-      contact.acceptors << acceptor
+      contact.rules << rule
     end
 
     tear_down { default_tear_down }
@@ -356,7 +335,7 @@ Pact.provider_states_for "flapjack-diner" do
     tear_down { default_tear_down }
   end
 
-  provider_state "a check with a tag and an acceptor exists" do
+  provider_state "a check with a tag and a rule exists" do
     set_up do
       check = Flapjack::Data::Check.new(check_data)
       check.save!
@@ -364,11 +343,11 @@ Pact.provider_states_for "flapjack-diner" do
       tag = Flapjack::Data::Tag.new(tag_data)
       tag.save!
 
-      acceptor = Flapjack::Data::Acceptor.new(acceptor_data)
-      acceptor.save!
+      rule = Flapjack::Data::Rule.new(rule_data)
+      rule.save!
 
       check.tags << tag
-      acceptor.tags << tag
+      rule.tags << tag
     end
 
     tear_down { default_tear_down }

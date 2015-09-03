@@ -96,65 +96,36 @@
   </table>
 <% end %>
 
-<h3>Acceptors</h3>
-<% if !@acceptors || @acceptors.empty? %>
-  <p>No acceptors</p>
+<h3>Rules</h3>
+<% if !@rules || @rules.empty? %>
+  <p>No rules</p>
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
     <tr>
       <th>Name/ID</th>
+      <th>Blackhole</th>
       <th>Strategy</th>
       <th>Tags</th>
       <th>Conditions</th>
       <th>Media</th>
       <th>Time Restrictions</th>
     </tr>
-    <% @acceptors.each do |acceptor| %>
-      <% rule_name = acceptor[:name].nil? || acceptor[:name].empty? ? acceptor[:id] : acceptor[:name] %>
-      <% tags = @tags_by_acceptor_id[acceptor[:id]] %>
+    <% @rules.each do |rule| %>
+      <% rule_name = rule[:name].nil? || rule[:name].empty? ? rule[:id] : rule[:name] %>
+      <% blackhole = rule[:blackhole] ? 'true' : 'false' %>
+      <% tags = @tags_by_rule_id[rule[:id]] %>
       <% tag_names = tags.nil? ? [] : tags.map {|t| t[:name] } %>
-      <% rule_conds = acceptor[:conditions_list] %>
-      <% media = @media_by_acceptor_id[acceptor[:id]] %>
+      <% rule_conds = rule[:conditions_list] %>
+      <% media = @media_by_rule_id[rule[:id]] %>
       <% transports = media.nil? ? [] : media.map {|m| m[:transport] } %>
       <tr>
-        <td><%= h rule_name %></td>
-        <td><%= h( acceptor[:strategy]) %></td>
+        <td><%= h( rule_name ) %></td>
+        <td><%= h( blackhole ) %></td>
+        <td><%= h( rule[:strategy]) %></td>
         <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
         <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
         <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
-        <td><%= h acceptor[:time_restrictions] %></td>
-      </tr>
-    <% end %>
-  </table>
-<% end %>
-
-<h3>Rejectors</h3>
-<% if !@rejectors || @rejectors.empty? %>
-  <p>No rejectors</p>
-<% else %>
-  <table class="table table-bordered table-hover table-condensed">
-    <tr>
-      <th>Name/ID</th>
-      <th>Strategy</th>
-      <th>Tags</th>
-      <th>Conditions</th>
-      <th>Media</th>
-      <th>Time Restrictions</th>
-    </tr>
-    <% @rejectors.each do |rejector| %>
-      <% rule_name = rejector[:name].nil? || rejector[:name].empty? ? rejector[:id] : rejector[:name] %>
-      <% tags = @tags_by_rejector_id[rejector[:id]] %>
-      <% tag_names = tags.nil? ? [] : tags.map {|t| t[:name] } %>
-      <% rule_conds = rejector[:conditions_list] %>
-      <% media = @media_by_rejector_id[rejector[:id]] %>
-      <% transports = media.nil? ? [] : media.map {|m| m[:transport] } %>
-      <tr>
-        <td><%= h rule_name %></td>
-        <td><%= h( rejector[:strategy]) %></td>
-        <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
-        <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
-        <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
-        <td><%= h rejector[:time_restrictions] %></td>
+        <td><%= h rule[:time_restrictions] %></td>
       </tr>
     <% end %>
   </table>

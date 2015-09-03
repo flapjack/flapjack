@@ -207,9 +207,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
       resp_data[:relationships][:media][:data] = [
         {:type => 'medium', :id => email_data[:id]}
       ]
-      resp_data[:relationships][:acceptors][:data] = [
-      ]
-      resp_data[:relationships][:rejectors][:data] = [
+      resp_data[:relationships][:rules][:data] = [
       ]
 
       resp_medium = medium_json(email_data).merge(:relationships => medium_rel(email_data))
@@ -222,8 +220,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
       ]
 
       expect(Flapjack::Diner).to receive(:contacts).
-        with(contact_data[:id], :include => ['acceptors.tags', 'acceptors.media',
-          'checks', 'media.alerting_checks', 'rejectors.tags', 'rejectors.media']).
+        with(contact_data[:id], :include => ['checks', 'media.alerting_checks',
+          'rules.tags', 'rules.media']).
         and_return(resultify(resp_data))
 
       expect(Flapjack::Diner).to receive(:context).

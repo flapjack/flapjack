@@ -14,9 +14,8 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 require 'flapjack/data/tag'
 
 require 'flapjack/data/extensions/associations'
@@ -42,10 +41,7 @@ module Flapjack
 
       index_by :name
 
-      has_many :acceptors, :class_name => 'Flapjack::Data::Acceptor',
-        :inverse_of => :contact
-
-      has_many :rejectors, :class_name => 'Flapjack::Data::Rejector',
+      has_many :rules, :class_name => 'Flapjack::Data::Rule',
         :inverse_of => :contact
 
       has_many :media, :class_name => 'Flapjack::Data::Medium',
@@ -62,9 +58,8 @@ module Flapjack
 
       before_destroy :remove_child_records
       def remove_child_records
-        self.acceptors.each  {|acceptor| acceptor.destroy }
-        self.media.each      {|medium|   medium.destroy }
-        self.rejectors.each  {|rejector| rejector.destroy }
+        self.media.each  {|medium| medium.destroy }
+        self.rules.each  {|rule|   rule.destroy   }
       end
 
       def time_zone
@@ -75,23 +70,23 @@ module Flapjack
       def checks
         time = Time.now
 
-        global_acceptors = self.acceptors.intersect(:strategy => 'global')
+        global_acceptors = self.rules.intersect(:blackhole => false, :strategy => 'global')
 
-        global_rejector_ids = self.rejectors.intersect(:strategy => 'global').select {|rejector|
+        global_rejector_ids = self.rules.intersect(:blackhole => true, :strategy => 'global').select {|rejector|
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
         # global blackhole
         return Flapjack::Data::Check.empty unless global_rejector_ids.empty?
 
-        tag_rejector_ids = self.rejectors.
-          intersect(:strategy => ['any_tag', 'all_tags']).select {|rejector|
+        tag_rejector_ids = self.rules.intersect(:blackhole => true,
+          :strategy => ['any_tag', 'all_tags']).select {|rejector|
 
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
-        tag_acceptors = self.acceptors.
-          intersect(:strategy => ['any_tag', 'all_tags']).select {|acceptor|
+        tag_acceptors = self.rules.intersect(:blackhole => false,
+          :strategy => ['any_tag', 'all_tags']).select {|acceptor|
 
           acceptor.is_occurring_at?(time, timezone)
         }
@@ -105,12 +100,12 @@ module Flapjack
 
         if global_acceptors.empty?
           # if no global acceptor, scope by matching tags
-          tag_acceptor_checks = Flapjack::Data::Acceptor.matching_checks(tag_acceptors.map(&:id))
+          tag_acceptor_checks = Flapjack::Data::Rule.matching_checks(tag_acceptors.map(&:id))
           linked_checks = linked_checks.intersect(:id => tag_acceptor_checks)
         end
 
         # then exclude by checks with tags matching rejector, if any
-        tag_rejector_checks = Flapjack::Data::Rejector.matching_checks(tag_rejector_ids)
+        tag_rejector_checks = Flapjack::Data::Rule.matching_checks(tag_rejector_ids)
         unless tag_rejector_checks.empty?
           linked_checks = linked_checks.diff(:id => tag_rejector_checks)
         end
@@ -146,10 +141,6 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :acceptors do
-          key :type, :string
-          key :format, :url
-        end
         property :checks do
           key :type, :string
           key :format, :url
@@ -158,7 +149,7 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :rejectors do
+        property :rules do
           key :type, :string
           key :format, :url
         end
@@ -213,14 +204,11 @@ module Flapjack
       end
 
       swagger_schema :ContactChangeLinks do
-        property :acceptors do
-          key :"$ref", :jsonapi_AcceptorsLinkage
-        end
         property :media do
           key :"$ref", :jsonapi_MediaLinkage
         end
-        property :rejectors do
-          key :"$ref", :jsonapi_RejectorsLinkage
+        property :rules do
+          key :"$ref", :jsonapi_RulesLinkage
         end
         property :tags do
           key :"$ref", :jsonapi_TagsLinkage
@@ -246,10 +234,6 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
-            :acceptors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :get => true,
-              :number => :multiple, :link => true, :includable => true
-            ),
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
@@ -260,7 +244,7 @@ module Flapjack
               :get => true,
               :number => :multiple, :link => true, :includable => true
             ),
-            :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true
             ),

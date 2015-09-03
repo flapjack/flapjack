@@ -7,9 +7,8 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/check'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
@@ -29,17 +28,14 @@ module Flapjack
 
       define_attributes :name => :string
 
-      has_and_belongs_to_many :acceptors,
-        :class_name => 'Flapjack::Data::Acceptor', :inverse_of => :tags
-
       has_and_belongs_to_many :checks,
         :class_name => 'Flapjack::Data::Check', :inverse_of => :tags
 
       has_and_belongs_to_many :contacts,
         :class_name => 'Flapjack::Data::Contact', :inverse_of => :tags
 
-      has_and_belongs_to_many :rejectors,
-        :class_name => 'Flapjack::Data::Rejector', :inverse_of => :tags
+      has_and_belongs_to_many :rules,
+        :class_name => 'Flapjack::Data::Rule', :inverse_of => :tags
 
       unique_index_by :name
 
@@ -104,10 +100,6 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :acceptors do
-          key :type, :string
-          key :format, :url
-        end
         property :checks do
           key :type, :string
           key :format, :url
@@ -116,7 +108,7 @@ module Flapjack
           key :type, :string
           key :format, :url
         end
-        property :rejectors do
+        property :rules do
           key :type, :string
           key :format, :url
         end
@@ -164,17 +156,14 @@ module Flapjack
       end
 
       swagger_schema :TagChangeLinks do
-        property :acceptors do
-          key :"$ref", :jsonapi_AcceptorsLinkage
-        end
         property :checks do
           key :"$ref", :jsonapi_ChecksLinkage
         end
         property :contacts do
           key :"$ref", :jsonapi_ContactsLinkage
         end
-        property :rejectors do
-          key :"$ref", :jsonapi_RejectorsLinkage
+        property :rules do
+          key :"$ref", :jsonapi_RulesLinkage
         end
       end
 
@@ -201,10 +190,6 @@ module Flapjack
       def self.jsonapi_associations
         if @jsonapi_associations.nil?
           @jsonapi_associations = {
-            :acceptors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
-              :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
-            ),
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
@@ -213,7 +198,7 @@ module Flapjack
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
-            :rejectors => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
+            :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true
             ),
