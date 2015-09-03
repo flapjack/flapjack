@@ -24,7 +24,7 @@ module Flapjack
           end
 
           def media_removed(rule_id, *m_ids)
-            rule = self.find_by_id!(rejector_id)
+            rule = self.find_by_id!(rule_id)
             rule.has_media = rule.media.empty?
             rule.save!
           end
