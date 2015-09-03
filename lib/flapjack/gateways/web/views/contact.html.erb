@@ -102,7 +102,8 @@
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
     <tr>
-      <th>ID</th>
+      <th>Name/ID</th>
+      <th>Strategy</th>
       <th>Tags</th>
       <th>Conditions</th>
       <th>Media</th>
@@ -110,11 +111,14 @@
     </tr>
     <% @acceptors.each do |acceptor| %>
       <% rule_name = acceptor[:name].nil? || acceptor[:name].empty? ? acceptor[:id] : acceptor[:name] %>
-      <% tag_names = @tags_by_acceptor_id[acceptor[:id]].map {|t| t[:name] } %>
+      <% tags = @tags_by_acceptor_id[acceptor[:id]] %>
+      <% tag_names = tags.nil? ? [] : tags.map {|t| t[:name] } %>
       <% rule_conds = acceptor[:conditions_list] %>
-      <% transports = @media_by_acceptor_id.map {|m| m[:transport] } %>
+      <% media = @media_by_acceptor_id[acceptor[:id]] %>
+      <% transports = media.nil? ? [] : media.map {|m| m[:transport] } %>
       <tr>
         <td><%= h rule_name %></td>
+        <td><%= h( acceptor[:strategy]) %></td>
         <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
         <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
         <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
@@ -130,7 +134,8 @@
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
     <tr>
-      <th>ID</th>
+      <th>Name/ID</th>
+      <th>Strategy</th>
       <th>Tags</th>
       <th>Conditions</th>
       <th>Media</th>
@@ -138,11 +143,14 @@
     </tr>
     <% @rejectors.each do |rejector| %>
       <% rule_name = rejector[:name].nil? || rejector[:name].empty? ? rejector[:id] : rejector[:name] %>
-      <% tag_names = @tags_by_rejector_id[rejector[:id]].map {|t| t[:name] } %>
+      <% tags = @tags_by_rejector_id[rejector[:id]] %>
+      <% tag_names = tags.nil? ? [] : tags.map {|t| t[:name] } %>
       <% rule_conds = rejector[:conditions_list] %>
-      <% transports = @media_by_rejector_id.map {|m| m[:transport] } %>
+      <% media = @media_by_rejector_id[rejector[:id]] %>
+      <% transports = media.nil? ? [] : media.map {|m| m[:transport] } %>
       <tr>
         <td><%= h rule_name %></td>
+        <td><%= h( rejector[:strategy]) %></td>
         <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
         <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
         <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>

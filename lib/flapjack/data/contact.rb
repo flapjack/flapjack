@@ -73,6 +73,8 @@ module Flapjack
       end
 
       def checks
+        time = Time.now
+
         global_acceptors = self.acceptors.intersect(:strategy => 'global')
 
         global_rejector_ids = self.rejectors.intersect(:strategy => 'global').select {|rejector|
