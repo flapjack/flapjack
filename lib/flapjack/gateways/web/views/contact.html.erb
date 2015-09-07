@@ -125,7 +125,7 @@
         <td><%= h( !tag_names.empty? ? tag_names.join(', ') : '-') %></td>
         <td><%= h( (!rule_conds.nil? && !rule_conds.empty?) ? rule_conds : '-')%></td>
         <td><%= h( !transports.empty? ? transports.join(', ') : '-') %></td>
-        <td><%= h rule[:time_restrictions] %></td>
+        <td><%= h rule[:time_restriction_ical] %></td>
       </tr>
     <% end %>
   </table>

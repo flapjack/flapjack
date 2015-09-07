@@ -32,7 +32,7 @@ Feature: Notification rules on a per contact basis
       | 982fc9fb-fbf8-44cd-b6de-6ccbab8e7230 | buf:ping | buf,ping  |
 
     And the following rules exist:
-      | name               | id                                   | contact_id                           | blackhole | strategy | tags     | condition        | time_restrictions | media_ids                                                                 |
+      | name               | id                                   | contact_id                           | blackhole | strategy | tags     | condition        | time_restriction | media_ids                                                                 |
       | malak email t      | b0c8deb9-b8c8-4fdd-acc4-72493852ca15 | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | false     | all_tags | foo,ping | critical         | 8-18 weekdays     | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
       | imani email        | 2df6bbc4-d6a4-4f23-b6e5-5c4a07c6e686 | 65d32027-1942-43b3-93c5-52f4b12d36b0 | false     | all_tags | bar,ping | critical,unknown |                   | 1d473cef-5369-4396-9f59-533f3db6c1cb                                      |
       | imani sms          | fb989a80-2f65-49e6-8d73-1777ad0aee0d | 65d32027-1942-43b3-93c5-52f4b12d36b0 | false     | any_tag  | buf,ssh  |                  |                   | 7f96a216-76aa-45fc-a88e-7431cd6d7aac                                      |
@@ -45,7 +45,7 @@ Feature: Notification rules on a per contact basis
       | fang sms           | 1c501800-6b20-458d-bb99-a78d17397c00 | 5da490ec-72a0-42b0-834f-4049867dfce7 | false     | global   |          |                  |                   | 862228f8-fc80-4887-bc4c-e133fcda4107                                      |
       | drop malak email   | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | true      | all_tags | buf,ping |                  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
 
-  @time_restrictions @time
+  @time_restriction @time
   Scenario: Alerts only during specified time restrictions
     Given the timezone is Asia/Baghdad
     And   the time is February 1 2013 6:59
@@ -69,7 +69,7 @@ Feature: Notification rules on a per contact basis
     When  a critical event is received
     Then  3 email alerts should be queued for malak@example.com
 
-  # Scenario: time restrictions continue to work as expected when a contact changes timezone
+  # Scenario: time restriction continues to work as expected when a contact changes timezone
 
   @severity @time
   Scenario: Don't alert when severity does not match any matching routes's severity

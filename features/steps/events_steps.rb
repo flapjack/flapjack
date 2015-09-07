@@ -109,19 +109,6 @@ def submit_test(entity_name, check_name)
   Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
-def icecube_schedule_to_time_restriction(sched, time_zone)
-  tr = sched.to_hash
-  tr[:start_time] = {:time => time_zone.utc_to_local(tr[:start_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
-  tr[:end_time]   = {:time => time_zone.utc_to_local(tr[:end_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
-
-  # rewrite IceCube::WeeklyRule to Weekly, etc
-  tr[:rrules].each {|rrule|
-    rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
-  }
-
-  stringify(tr)
-end
-
 def stringify(obj)
   return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  stringify(v); memo} if obj.is_a?(Hash)
   return obj.inject([]){|memo,v    | memo         << stringify(v); memo} if obj.is_a?(Array)

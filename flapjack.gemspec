@@ -31,13 +31,14 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'activesupport'
   gem.add_dependency 'ice_cube'
+  gem.add_dependency 'icalendar'
   gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
   gem.add_dependency 'gli', '= 2.13.1'
   gem.add_dependency 'terminal-table'
   gem.add_dependency 'toml-rb'
   gem.add_dependency 'puma'
-  gem.add_dependency 'flapjack-diner', '= 2.0.0.pre.alpha.3'
+  # gem.add_dependency 'flapjack-diner', '= 2.0.0.pre.alpha.3'
 
   gem.add_development_dependency 'rake'
 end

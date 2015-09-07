@@ -6,6 +6,7 @@ require 'active_support/inflector'
 require 'active_support/core_ext/hash/slice'
 
 require 'ice_cube'
+require 'icalendar'
 require 'swagger/blocks'
 
 require 'zermelo/records/redis'
@@ -14,8 +15,6 @@ require 'flapjack/utility'
 
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
-
-require 'flapjack/data/time_restriction'
 
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
@@ -44,28 +43,19 @@ module Flapjack
                         :blackhole => :boolean,
                         :strategy => :string,
                         :conditions_list => :string,
-                        :time_restrictions_json => :string,
                         :has_media => :boolean,
-                        :has_tags => :boolean
+                        :time_restriction_ical => :string
 
-      index_by :name, :blackhole, :strategy, :conditions_list, :has_media, :has_tags
+      index_by :name, :blackhole, :strategy, :conditions_list, :has_media
 
       validates_with Flapjack::Data::Validators::IdValidator
 
       validates :blackhole, :inclusion => {:in => [true, false]}
       validates :strategy, :inclusion => {:in => self::STRATEGIES}
 
-      validates_each :time_restrictions_json do |record, att, value|
-        unless value.nil?
-          restrictions = Flapjack.load_json(value)
-          case restrictions
-          when Enumerable
-            record.errors.add(att, 'are invalid') if restrictions.any? {|tr|
-              !prepare_time_restriction(tr)
-            }
-          else
-            record.errors.add(att, 'must contain a serialized Enumerable')
-          end
+      validates_each :time_restriction_ical do |record, att, value|
+        unless record.valid_time_restriction_ical?
+          record.errors.add(:time_restriction_ical, 'is not valid ICAL syntax')
         end
       end
 
@@ -77,42 +67,59 @@ module Flapjack
         :after_remove => :media_removed
 
       has_and_belongs_to_many :tags, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :rules, :after_add => :tags_added,
-        :after_remove => :tags_removed
+        :inverse_of => :rules
 
       def initialize(attributes = {})
         super
         send(:"attribute=", 'has_media', false)
-        send(:"attribute=", 'has_tags', false)
       end
 
-      # TODO handle JSON exception
-      def time_restrictions
-        if self.time_restrictions_json.nil?
-          @time_restrictions = nil
+      def time_restriction
+        return if time_restriction_ical.nil? || !valid_time_restriction_ical?
+        IceCube::Schedule.from_ical(time_restriction_ical)
+      end
+
+      def time_restriction=(restriction)
+        if restriction.nil?
+          self.time_restriction_ical = nil
           return
         end
-        @time_restrictions ||= Flapjack.load_json(self.time_restrictions_json)
-      end
-
-      def time_restrictions=(restrictions)
-        @time_restrictions = restrictions
-        self.time_restrictions_json = restrictions.nil? ? nil : Flapjack.dump_json(restrictions)
-      end
-
-      # nil time_restrictions matches
-      # times (start, end) within time restrictions will have any UTC offset removed and will be
-      # considered to be in the timezone of the contact
-      def is_occurring_at?(time, timezone)
-        return true if self.time_restrictions.nil? || self.time_restrictions.empty?
-
-        user_time = time.in_time_zone(timezone)
-
-        self.time_restrictions.any? do |tr|
-          # add contact's timezone to the time restriction schedule
-          schedule = self.class.time_restriction_to_icecube_schedule(tr, timezone)
-          !schedule.nil? && schedule.occurring_at?(user_time)
+        unless restriction.is_a?(IceCube::Schedule)
+          raise "Invalid data type for time_restriction= (#{restriction.class.name})"
         end
+        # ice_cube ignores time zone info when parsing ical, so we'll enforce UTC
+        # and cast to the contact's preferred time zone as appropriate when using
+        # (this should also handle the case of the user changing her timezone)
+        restriction.start_time = restriction.start_time.nil? ? nil : restriction.start_time.utc
+        restriction.end_time = restriction.end_time.nil? ? nil : restriction.end_time.utc
+        self.time_restriction_ical = restriction.to_ical
+      end
+
+      def valid_time_restriction_ical?
+        return true if time_restriction_ical.nil?
+        wrapped_value = ['BEGIN:VCALENDAR',
+                         'VERSION:2.0',
+                         'PRODID:validationid',
+                         'CALSCALE:GREGORIAN',
+                         'BEGIN:VEVENT',
+                         time_restriction_ical,
+                         'END:VEVENT',
+                         'END:VCALENDAR'].join("\n")
+
+        # icalendar is noisy with errors
+        old_icalendar_log_level = ::Icalendar.logger.level
+        ::Icalendar.logger.level = ::Logger::FATAL
+        icalendar = ::Icalendar.parse(wrapped_value)
+        ::Icalendar.logger.level = old_icalendar_log_level
+
+        !(icalendar.empty? || icalendar.first.events.empty? ||
+          !icalendar.first.events.first.valid?)
+      end
+
+      # nil time_restriction matches
+      def is_occurring_at?(time, time_zone = Time.zone)
+        return true if time_restriction.nil?
+        time_restriction.occurring_at?(time.in_time_zone(time_zone))
       end
 
       def self.media_added(rule_id, *m_ids)
@@ -124,18 +131,6 @@ module Flapjack
       def self.media_removed(rule_id, *m_ids)
         rule = self.find_by_id!(rule_id)
         rule.has_media = rule.media.empty?
-        rule.save!
-      end
-
-      def self.tags_added(rule_id, *t_ids)
-        rule = self.find_by_id!(rule_id)
-        rule.has_tags = true
-        rule.save!
-      end
-
-      def self.tags_removed(rule_id, *t_ids)
-        rule = self.find_by_id!(rule_id)
-        rule.has_tags = rule.tags.empty?
         rule.save!
       end
 
@@ -167,7 +162,7 @@ module Flapjack
         time = opts[:time] || Time.now
         contact_rules = self.intersect(:id => rule_ids)
 
-        matching_ids = self.apply_time_restrictions(contact_rules, time).
+        matching_ids = apply_time_restriction(contact_rules, time).
           map(&:id)
 
         self.intersect(:id => matching_ids).
@@ -182,34 +177,15 @@ module Flapjack
         # if a rule has no media, it's irrelevant here
         media_rules = self.intersect(:id => rule_ids, :has_media => true)
 
-        matching_ids = apply_time_restrictions(media_rules, time).
+        matching_ids = apply_time_restriction(media_rules, time).
           map(&:id)
 
         self.intersect(:id => matching_ids).
           associated_ids_for(:media).values.reduce(Set.new, :|)
       end
 
-      # NB: ice_cube doesn't have much rule data validation, and has
-      # problems with infinite loops if the data can't logically match; see
-      #   https://github.com/seejohnrun/ice_cube/issues/127 &
-      #   https://github.com/seejohnrun/ice_cube/issues/137
-      # We may want to consider some sort of timeout-based check around
-      # anything that could fall into that.
-      #
-      # We don't want to replicate IceCube's from_hash behaviour here,
-      # but we do need to apply some sanity checking on the passed data.
-      def self.time_restriction_to_icecube_schedule(tr, timezone)
-        return if tr.nil? || !tr.is_a?(Hash) ||
-          timezone.nil? || !timezone.is_a?(ActiveSupport::TimeZone)
-
-        tr = prepare_time_restriction(tr, timezone)
-        return if tr.nil?
-
-        IceCube::Schedule.from_hash(tr)
-      end
-
       swagger_schema :Rule do
-        key :required, [:id, :type]
+        key :required, [:id, :type, :blackhole, :strategy]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -221,6 +197,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :blackhole do
+          key :type, :boolean
+        end
         property :strategy do
           key :type, :string
           key :enum, Flapjack::Data::Rule::STRATEGIES
@@ -228,11 +207,8 @@ module Flapjack
         property :conditions_list do
           key :type, :string
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
+        property :time_restriction_ical do
+          key :type, :string
         end
         property :relationships do
           key :"$ref", :RuleLinks
@@ -260,7 +236,7 @@ module Flapjack
       end
 
       swagger_schema :RuleCreate do
-        key :required, [:type]
+        key :required, [:type, :blackhole, :strategy]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -272,6 +248,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :blackhole do
+          key :type, :boolean
+        end
         property :strategy do
           key :type, :string
           key :enum, Flapjack::Data::Rule::STRATEGIES
@@ -279,14 +258,24 @@ module Flapjack
         property :conditions_list do
           key :type, :string
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
+        property :time_restriction_ical do
+          key :type, :string
         end
         property :relationships do
-          key :"$ref", :RuleChangeLinks
+          key :"$ref", :RuleCreateLinks
+        end
+      end
+
+      swagger_schema :RuleCreateLinks do
+        key :required, [:contact]
+        property :contact do
+          key :"$ref", :jsonapi_ContactLinkage
+        end
+        property :media do
+          key :"$ref", :jsonapi_MediaLinkage
+        end
+        property :tags do
+          key :"$ref", :jsonapi_TagsLinkage
         end
       end
 
@@ -303,6 +292,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :blackhole do
+          key :type, :boolean
+        end
         property :stratgey do
           key :type, :string
           key :enum, Flapjack::Data::Rule::STRATEGIES
@@ -310,11 +302,8 @@ module Flapjack
         property :conditions_list do
           key :type, :string
         end
-        property :time_restrictions do
-          key :type, :array
-          items do
-            key :"$ref", :TimeRestrictions
-          end
+        property :time_restriction_ical do
+          key :type, :string
         end
         property :relationships do
           key :"$ref", :RuleChangeLinks
@@ -322,9 +311,6 @@ module Flapjack
       end
 
       swagger_schema :RuleChangeLinks do
-        property :contact do
-          key :"$ref", :jsonapi_ContactLinkage
-        end
         property :media do
           key :"$ref", :jsonapi_MediaLinkage
         end
@@ -336,13 +322,16 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list, :time_restrictions]
+            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+              :time_restriction_ical]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list, :time_restrictions]
+            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+              :time_restriction_ical]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list, :time_restrictions]
+            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+              :time_restriction_ical]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
           )
@@ -372,8 +361,8 @@ module Flapjack
 
       protected
 
-      def self.apply_time_restrictions(rules, time)
-        # filter the rules by time restrictions
+      def self.apply_time_restriction(rules, time)
+        # filter the rules by time restriction
         rule_ids_by_contact_id = rules.associated_ids_for(:contact, :inversed => true)
 
         rule_contacts = rule_ids_by_contact_id.empty? ? [] :
@@ -421,67 +410,6 @@ module Flapjack
           end
           memo
         end
-      end
-
-      def self.prepare_time_restriction(time_restriction, timezone = nil)
-        # this will hand back a 'deep' copy
-        tr = symbolize(time_restriction)
-
-        parsed_time = proc {|tr, field|
-          if t = tr.delete(field)
-            t = t.dup
-            t = t[:time] if t.is_a?(Hash)
-
-            if t.is_a?(Time)
-              t
-            else
-              begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
-            end
-          else
-            nil
-          end
-        }
-
-        start_time = parsed_time.call(tr, :start_date) || parsed_time.call(tr, :start_time)
-        end_time   = parsed_time.call(tr, :end_date) || parsed_time.call(tr, :end_time)
-
-        return unless start_time && end_time
-
-        tr[:start_time] = timezone ?
-                            {:time => start_time, :zone => timezone.name} :
-                            start_time
-
-        tr[:end_time]   = timezone ?
-                            {:time => end_time, :zone => timezone.name} :
-                            end_time
-
-        tr[:duration]   = end_time - start_time
-
-        # check that rrule types are valid IceCube rule types
-        return unless tr[:rrules].is_a?(Array) &&
-          tr[:rrules].all? {|rr| rr.is_a?(Hash)} &&
-          (tr[:rrules].map {|rr| rr[:rule_type]} -
-           ['Daily', 'Hourly', 'Minutely', 'Monthly', 'Secondly',
-            'Weekly', 'Yearly']).empty?
-
-        # rewrite Weekly to IceCube::WeeklyRule, etc
-        tr[:rrules].each {|rrule|
-          rrule[:rule_type] = "IceCube::#{rrule[:rule_type]}Rule"
-        }
-
-        # exrules is deprecated in latest ice_cube, but may be stored in data
-        # serialised from earlier versions of the gem
-        # ( https://github.com/flapjack/flapjack/issues/715 )
-        tr.delete(:exrules)
-
-        # TODO does this need to check classes for the following values?
-        # "validations": {
-        #   "day": [1,2,3,4,5]
-        # },
-        # "interval": 1,
-        # "week_start": 0
-
-        tr
       end
     end
   end

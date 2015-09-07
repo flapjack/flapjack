@@ -122,18 +122,17 @@ Given /^the following rules exist:$/ do |rules|
       :conditions_list => conditions.empty? ? nil : conditions
     )
 
-    unless rule_data['time_restrictions'].nil? || rule_data['time_restrictions'].strip.empty?
-      rule.time_restrictions = rule_data['time_restrictions'].split(',').map(&:strip).inject([]) do |memo, tr|
-        case tr
+    unless rule_data['time_restriction'].nil?
+      tr = rule_data['time_restriction'].strip
+      unless tr.empty?
+        rule.time_restriction = case tr
         when '8-18 weekdays'
           weekdays_8_18 = IceCube::Schedule.new(time_zone.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
           weekdays_8_18.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
-          memo << icecube_schedule_to_time_restriction(weekdays_8_18, time_zone)
+          weekdays_8_18
         end
-        memo
       end
     end
-
     expect(rule.save).to be true
 
     contact.rules << rule

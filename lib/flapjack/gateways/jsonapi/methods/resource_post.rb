@@ -191,7 +191,7 @@ module Flapjack
                       rl.each_pair do |assoc, value|
                         case value
                         when Array
-                          r.send(assoc.to_sym).add(*value)
+                          r.send(assoc.to_sym).add(*value) unless value.empty?
                         else
                           r.send("#{assoc}=".to_sym, value)
                         end

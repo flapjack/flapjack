@@ -85,7 +85,7 @@ module Flapjack
       end
 
       def checks(opts = {})
-        timezone = self.contact.timezone
+        time_zone = self.contact.time_zone
         time = opts[:time] || Time.now
         init_scope = opts[:initial_scope] || Flapjack::Data::Check.intersect(:enabled => true)
 
@@ -93,7 +93,7 @@ module Flapjack
         global_rejector_ids = self.rules.intersect(:blackhole => true,
           :strategy => 'global').select {|rejector|
 
-          rejector.is_occurring_at?(time, timezone)
+          rejector.is_occurring_at?(time, time_zone)
         }.map(&:id)
 
         unless global_rejector_ids.empty?
@@ -104,11 +104,11 @@ module Flapjack
         rejector_ids = self.rules.intersect(:blackhole => true,
           :strategy => ['all_tags', 'any_tag']).select {|rejector|
 
-          rejector.is_occurring_at?(time, timezone)
+          rejector.is_occurring_at?(time, time_zone)
         }.map(&:id)
 
         acceptors = self.rules.intersect(:blackhole => false).select {|acceptor|
-          acceptor.is_occurring_at?(time, timezone)
+          acceptor.is_occurring_at?(time, time_zone)
         }
 
         # no positives
