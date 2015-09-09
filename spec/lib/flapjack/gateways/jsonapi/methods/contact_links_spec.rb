@@ -8,7 +8,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
   let(:contact)  { double(Flapjack::Data::Contact, :id => contact_data[:id]) }
   let(:medium)   { double(Flapjack::Data::Medium, :id => email_data[:id]) }
   let(:rule)     { double(Flapjack::Data::Rule, :id => rule_data[:id]) }
-  let(:tag)      { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
+  let(:tag)      { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
 
   let(:contact_media)  { double('contact_media') }
   let(:contact_rules)  { double('contact_rules') }
@@ -169,7 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
       :included => [{
         :id => tag.id,
         :type => 'tag',
-        :attributes => tag_data,
+        :attributes => tag_data.reject {|k,v| :id.eql?(k) },
         :relationships => tag_rel(tag_data)
       }],
       :links => {

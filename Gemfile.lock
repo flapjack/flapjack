@@ -1,7 +1,6 @@
 GIT
   remote: git://github.com/flapjack/flapjack-diner.git
-  revision: 513c036c7fa7287251cf62edbac4fa372f0bbbc1
-  ref: 513c036
+  revision: 20cebe7032b42136e6e8510d3759071b8590eeb5
   specs:
     flapjack-diner (2.0.0.pre.alpha.3)
       httparty (>= 0.10)

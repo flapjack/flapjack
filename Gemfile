@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gemspec :name => 'flapjack'
 
-gem 'flapjack-diner', :github => 'flapjack/flapjack-diner', :ref => '513c036'
+gem 'flapjack-diner', :github => 'flapjack/flapjack-diner'
 gem 'zermelo', :github => 'flapjack/zermelo', :branch => 'sorted_set_ids_zset'
 
 group :test do

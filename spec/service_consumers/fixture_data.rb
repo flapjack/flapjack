@@ -391,26 +391,29 @@ module FixtureData
 
   def tag_data
     @tag_data ||= {
+     :id => '1850b8d7-1055-4a6e-9c96-f8f50e55bd0f',
      :name => 'database',
     }
   end
 
   def tag_2_data
     @tag_2_data ||= {
+     :id => 'c7a12328-8902-4974-8efa-68ec3e284507',
      :name => 'physical',
     }
   end
 
   def tag_json(ta_data)
-    id = ta_data[:name]
+    id = ta_data[:id]
     {
+      :id => id,
       :type => 'tag',
-      :attributes => ta_data
+      :attributes => ta_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
   def tag_rel(ta_data)
-    id = ta_data[:name]
+    id = ta_data[:id]
     {
       :checks => {
         :links => {

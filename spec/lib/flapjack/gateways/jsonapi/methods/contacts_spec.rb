@@ -241,8 +241,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     get '/contacts?page=2&per_page=3'
     expect(last_response).to be_ok
 
-    # ap Flapjack.load_json(last_response.body)
-
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(:data => resp_data,
       :links => links, :meta => meta))
   end

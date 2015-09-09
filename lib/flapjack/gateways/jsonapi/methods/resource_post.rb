@@ -8,27 +8,15 @@ module Flapjack
       module Methods
         module ResourcePost
 
-          module Helpers
-            def id_from_data(id_field, data)
-              case id_field
-              when :id
-                data['id']
-              else
-                if data.has_key?('attributes')
-                  data['attributes'][id_field]
-                else
-                  nil
-                end
-              end
-            end
-          end
+          # module Helpers
+          # end
 
           def self.registered(app)
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
-            app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
+            # app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
 
@@ -113,11 +101,8 @@ module Flapjack
 
                   resources = nil
 
-                  id_field = resource_class.respond_to?(:jsonapi_id) ?
-                               resource_class.jsonapi_id.to_sym : :id
-
                   data_ids = resources_data.each_with_object([]) do |d, memo|
-                    d_id = id_from_data(id_field, d)
+                    d_id = d['id']
                     memo << d_id.to_s unless d_id.nil?
                   end
 
@@ -138,8 +123,8 @@ module Flapjack
                   resource_class.jsonapi_lock_method(:post, klasses_to_lock) do
 
                     unless data_ids.empty? || resource_class.included_modules.include?(Zermelo::Records::Stub)
-                      conflicted_ids = resource_class.intersect(id_field => data_ids).ids
-                      halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following #{id_field}s: " +
+                      conflicted_ids = resource_class.intersect(:id => data_ids).ids
+                      halt(err(409, "#{resource_class.name.split('::').last.pluralize} already exist with the following ids: " +
                                conflicted_ids.to_a.join(', '))) unless conflicted_ids.empty?
                     end
                     links_by_resource = resources_data.each_with_object({}) do |rd, memo|
@@ -148,12 +133,7 @@ module Flapjack
                       type = rd['type']
                       halt(err(409, "Resource missing data type")) if type.nil?
                       halt(err(409, "Resource data type '#{type}' does not match endpoint '#{jsonapi_type}'")) unless jsonapi_type.eql?(type)
-                      r_id = case id_field
-                      when :id
-                        rd['id']
-                      else
-                        record_data[id_field]
-                      end
+                      r_id = rd['id']
                       record_data[:id] = r_id unless r_id.nil?
                       r = resource_class.new(record_data)
 

@@ -6,7 +6,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
 
   let(:check_tags)  { double('check_tags') }
 
@@ -107,7 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       :included => [{
         :id => tag.id,
         :type => 'tag',
-        :attributes => tag_data,
+        :attributes => tag_data.reject {|k,v| :id.eql?(k) },
         :relationships => tag_rel(tag_data)
       }],
       :links => {

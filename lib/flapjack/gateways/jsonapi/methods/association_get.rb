@@ -160,15 +160,9 @@ module Flapjack
 
               end
 
-              id_patt = if Flapjack::Data::Tag.eql?(resource_class)
-                "\\S+"
-              else
-                Flapjack::UUID_RE
-              end
-
               assoc_patt = jsonapi_links.keys.map(&:to_s).join("|")
 
-              app.get %r{^/#{resource}/(#{id_patt})/(?:relationships/)?(#{assoc_patt})(\?.+)?} do
+              app.get %r{^/#{resource}/(#{Flapjack::UUID_RE})/(?:relationships/)?(#{assoc_patt})(\?.+)?} do
                 resource_id = params[:captures][0]
                 assoc_name  = params[:captures][1].to_sym
 

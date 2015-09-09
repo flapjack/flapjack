@@ -5,11 +5,11 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   include_context "jsonapi"
 
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
-  let(:tag_2) { double(Flapjack::Data::Tag, :id => tag_2_data[:name]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag_2) { double(Flapjack::Data::Tag, :id => tag_2_data[:id]) }
 
-  let(:tag_data_with_id)   { tag_data.merge(:id => tag_data[:name]) }
-  let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:name]) }
+  let(:tag_data_with_id)   { tag_data.merge(:id => tag_data[:id]) }
+  let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:id]) }
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
 
@@ -21,7 +21,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:name => [tag_data[:name]]).and_return(empty_ids)
+      with(:id => [tag_data[:id]]).and_return(empty_ids)
 
     expect(tag).to receive(:invalid?).and_return(false)
     expect(tag).to receive(:save!).and_return(true)
@@ -193,6 +193,25 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     expect(last_response).to be_ok
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data => resp_data, :links => links, :meta => meta))
+  end
+
+  it "updates a tag" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(no_args).
+      and_yield
+
+    expect(Flapjack::Data::Tag).to receive(:find_by_id!).
+      with(tag.id).and_return(tag)
+
+    expect(tag).to receive(:name=).with('database_only')
+    expect(tag).to receive(:invalid?).and_return(false)
+    expect(tag).to receive(:save!).and_return(true)
+
+    patch "/tags/#{tag.id}",
+      Flapjack.dump_json(:data => {:id => tag.id,
+        :type => 'tag', :attributes => {:name => 'database_only'}}),
+      jsonapi_env
+    expect(last_response.status).to eq(204)
   end
 
   it 'sets a linked check for a tag' do
