@@ -70,22 +70,25 @@ module Flapjack
       def checks
         time = Time.now
 
-        global_acceptors = self.rules.intersect(:blackhole => false, :strategy => 'global')
+        global_acceptors = self.rules.intersect(:enabled => true,
+          :blackhole => false, :strategy => 'global')
 
-        global_rejector_ids = self.rules.intersect(:blackhole => true, :strategy => 'global').select {|rejector|
+        global_rejector_ids = self.rules.intersect(:enabled => true,
+          :blackhole => true, :strategy => 'global').select {|rejector|
+
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
         # global blackhole
         return Flapjack::Data::Check.empty unless global_rejector_ids.empty?
 
-        tag_rejector_ids = self.rules.intersect(:blackhole => true,
-          :strategy => ['any_tag', 'all_tags']).select {|rejector|
+        tag_rejector_ids = self.rules.intersect(:enabled => true,
+          :blackhole => true, :strategy => ['any_tag', 'all_tags']).select {|rejector|
 
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
-        tag_acceptors = self.rules.intersect(:blackhole => false,
+        tag_acceptors = self.rules.intersect(:enabled => true, :blackhole => false,
           :strategy => ['any_tag', 'all_tags']).select {|acceptor|
 
           acceptor.is_occurring_at?(time, timezone)

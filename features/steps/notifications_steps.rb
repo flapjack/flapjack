@@ -117,6 +117,7 @@ Given /^the following rules exist:$/ do |rules|
     rule = Flapjack::Data::Rule.new(
       :id              => rule_data['id'],
       :name            => rule_data['name'],
+      :enabled         => true,
       :blackhole       => ['1', 't', 'true', 'y', 'yes'].include?((rule_data['blackhole'] || '').strip.downcase),
       :strategy        => rule_data['strategy'],
       :conditions_list => conditions.empty? ? nil : conditions
@@ -170,8 +171,8 @@ Given /^(?:a|the) user wants to receive SMS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Rule.new(:blackhole => false, :conditions_list => 'critical',
-    :strategy => 'all_tags')
+  acceptor = Flapjack::Data::Rule.new(:enabled => true, :blackhole => false,
+    :conditions_list => 'critical', :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.rules << acceptor
@@ -205,8 +206,8 @@ Given /^(?:a|the) user wants to receive Nexmo alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Rule.new(:blackhole => false, :conditions_list => 'critical',
-    :strategy => 'all_tags')
+  acceptor = Flapjack::Data::Rule.new(:enabled => true, :blackhole => false,
+    :conditions_list => 'critical', :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.rules << acceptor
@@ -237,8 +238,8 @@ Given /^(?:a|the) user wants to receive email alerts for check '(.+)'$/ do |chec
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Rule.new(:blackhole => false, :conditions_list => 'critical',
-    :strategy => 'all_tags')
+  acceptor = Flapjack::Data::Rule.new(:enabled => true, :blackhole => false,
+    :conditions_list => 'critical', :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.rules << acceptor
@@ -271,8 +272,8 @@ Given /^(?:a|the) user wants to receive SNS alerts for check '(.+)'$/ do |check_
 
   check = find_or_create_check(:name => check_name)
 
-  acceptor = Flapjack::Data::Rule.new(:blackhole => false, :conditions_list => 'critical',
-    :strategy => 'all_tags')
+  acceptor = Flapjack::Data::Rule.new(:enabled => true, :blackhole => false,
+    :conditions_list => 'critical', :strategy => 'all_tags')
   expect(acceptor.save).to be true
 
   contact.rules << acceptor

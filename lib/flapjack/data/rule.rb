@@ -40,16 +40,18 @@ module Flapjack
       # check names, which may change. Do client-side grouping and create a tag!
 
       define_attributes :name => :string,
+                        :enabled => :boolean,
                         :blackhole => :boolean,
                         :strategy => :string,
                         :conditions_list => :string,
                         :has_media => :boolean,
                         :time_restriction_ical => :string
 
-      index_by :name, :blackhole, :strategy, :conditions_list, :has_media
+      index_by :name, :enabled, :blackhole, :strategy, :conditions_list, :has_media
 
       validates_with Flapjack::Data::Validators::IdValidator
 
+      validates :enabled, :inclusion => {:in => [true, false]}
       validates :blackhole, :inclusion => {:in => [true, false]}
       validates :strategy, :inclusion => {:in => self::STRATEGIES}
 
@@ -185,7 +187,7 @@ module Flapjack
       end
 
       swagger_schema :Rule do
-        key :required, [:id, :type, :blackhole, :strategy]
+        key :required, [:id, :type, :enabled, :blackhole, :strategy]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -196,6 +198,9 @@ module Flapjack
         end
         property :name do
           key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
         end
         property :blackhole do
           key :type, :boolean
@@ -236,7 +241,7 @@ module Flapjack
       end
 
       swagger_schema :RuleCreate do
-        key :required, [:type, :blackhole, :strategy]
+        key :required, [:type, :enabled, :blackhole, :strategy]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -247,6 +252,9 @@ module Flapjack
         end
         property :name do
           key :type, :string
+        end
+        property :enabled do
+          key :type, :boolean
         end
         property :blackhole do
           key :type, :boolean
@@ -292,6 +300,9 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :enabled do
+          key :type, :boolean
+        end
         property :blackhole do
           key :type, :boolean
         end
@@ -322,15 +333,15 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+            :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+            :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :blackhole, :strategy, :conditions_list,
+            :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(

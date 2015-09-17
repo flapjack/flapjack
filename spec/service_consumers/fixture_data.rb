@@ -303,6 +303,7 @@ module FixtureData
   def rule_data
     @rule_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
+      :enabled     => true,
       :blackhole   => false,
       :strategy    => 'all_tags',
       :conditions_list => 'critical'
@@ -312,6 +313,7 @@ module FixtureData
   def rule_2_data
     @rule_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
+      :enabled     => true,
       :blackhole   => true,
       :strategy    => 'all_tags',
       :conditions_list => 'warning'

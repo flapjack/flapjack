@@ -168,12 +168,14 @@ module Flapjack
         severity = opts[:severity]
         blackhole = opts[:blackhole]
 
-        global_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'global')
+        global_rules = Flapjack::Data::Rule.intersect(:enabled => true,
+          :blackhole => blackhole, :strategy => 'global')
         unless severity.nil?
           global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
 
-        all_tags_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'all_tags')
+        all_tags_rules = Flapjack::Data::Rule.intersect(:enabled => true,
+          :blackhole => blackhole, :strategy => 'all_tags')
         unless severity.nil?
           all_tags_rules = all_tags_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
@@ -184,7 +186,8 @@ module Flapjack
           memo << rule_id if (rule_tag_ids - tag_ids).empty?
         end
 
-        any_tag_rules = Flapjack::Data::Rule.intersect(:blackhole => blackhole, :strategy => 'any_tag')
+        any_tag_rules = Flapjack::Data::Rule.intersect(:enabled => true,
+          :blackhole => blackhole, :strategy => 'any_tag')
         unless severity.nil?
           any_tag_rules = any_tag_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
         end
@@ -526,9 +529,6 @@ module Flapjack
         self.unscheduled_maintenances.intersect(:start_time => start_range,
           :end_time => end_range)
       end
-
     end
-
   end
-
 end

@@ -207,22 +207,16 @@ module Flapjack
             @links = create_pagination_links(@pagination[:page],
               @pagination[:total_pages])
           end
-
-          included = Flapjack::Diner.context[:included]
-
-          unless included.nil? || included.empty?
-
-          end
         end
 
         erb 'tags.html'.to_sym
       end
 
-      get '/tags/:name' do
-        tag_name = params[:name]
+      get '/tags/:id' do
+        tag_id = params[:id]
 
-        @tag = Flapjack::Diner.tags(tag_name, :include => 'checks')
-        err(404, "Could not find tag '#{tag_name}'") if @tag.nil?
+        @tag = Flapjack::Diner.tags(tag_id, :include => 'checks')
+        err(404, "Could not find tag '#{tag_id}'") if @tag.nil?
 
         included = Flapjack::Diner.context[:included]
 

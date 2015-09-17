@@ -90,7 +90,7 @@ module Flapjack
         init_scope = opts[:initial_scope] || Flapjack::Data::Check.intersect(:enabled => true)
 
         # TODO maybe fold time validation into 'matching_checks'
-        global_rejector_ids = self.rules.intersect(:blackhole => true,
+        global_rejector_ids = self.rules.intersect(:enabled => true, :blackhole => true,
           :strategy => 'global').select {|rejector|
 
           rejector.is_occurring_at?(time, time_zone)
@@ -101,13 +101,13 @@ module Flapjack
           return Flapjack::Data::Check.empty
         end
 
-        rejector_ids = self.rules.intersect(:blackhole => true,
+        rejector_ids = self.rules.intersect(:enabled => true, :blackhole => true,
           :strategy => ['all_tags', 'any_tag']).select {|rejector|
 
           rejector.is_occurring_at?(time, time_zone)
         }.map(&:id)
 
-        acceptors = self.rules.intersect(:blackhole => false).select {|acceptor|
+        acceptors = self.rules.intersect(:enabled => true, :blackhole => false).select {|acceptor|
           acceptor.is_occurring_at?(time, time_zone)
         }
 

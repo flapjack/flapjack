@@ -15,7 +15,7 @@ describe Flapjack::Data::Rule, :redis => true do
   let(:eighteen_zero_one)    { Time.local(2013,2,1,18,1,0)  }
 
   it 'accepts a valid ical string as a time restriction value' do
-    rule_opts = {:blackhole => false, :strategy => 'global'}
+    rule_opts = {:enabled => true, :blackhole => false, :strategy => 'global'}
 
     rule = Flapjack::Data::Rule.new(rule_opts.merge(:time_restriction_ical => weekdays_8_18.to_ical))
     expect(rule.is_occurring_at?(seven_fifty_nine)).to be false
@@ -34,7 +34,7 @@ describe Flapjack::Data::Rule, :redis => true do
   end
 
   it 'rejects an invalid ical string as a time restriction value' do
-    rule_opts = {:blackhole => false, :strategy => 'global'}
+    rule_opts = {:enabled => true, :blackhole => false, :strategy => 'global'}
 
     rule = Flapjack::Data::Rule.new(rule_opts.merge(:time_restriction_ical => 'HAHAHA'))
     expect(rule.time_restriction).to be_nil
