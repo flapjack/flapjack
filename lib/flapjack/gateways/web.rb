@@ -335,7 +335,7 @@ module Flapjack
         Flapjack::Diner.create_acknowledgements(:summary => summary,
           :duration => duration, :check => check_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           session[:error] = "Could not create the acknowledgement: #{err}"
         end
@@ -349,7 +349,7 @@ module Flapjack
         Flapjack::Diner.update_unscheduled_maintenances(
           :id => unscheduled_maintenance_id, :end_time => Time.now)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           session[:error] = "Could not end unscheduled maintenance: #{err}"
         end
@@ -369,7 +369,7 @@ module Flapjack
           :start_time => start_time, :end_time => (start_time + duration),
           :check => check_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not create scheduled maintenance: #{err}"
           session[:error] = "Could not create scheduled maintenance for the check."
@@ -383,7 +383,7 @@ module Flapjack
 
         Flapjack::Diner.update_checks(:id => check_id, :enabled => false)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not disable check: #{err}"
           session[:error] = "Could not disable the check."
@@ -398,7 +398,7 @@ module Flapjack
         Flapjack::Diner.update_scheduled_maintenances({:id => scheduled_maintenance_id,
           :end_time => Time.now})
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not end scheduled maintenance: #{err}"
           session[:error] = "Could not end scheduled maintenance."
@@ -414,7 +414,7 @@ module Flapjack
 
         Flapjack::Diner.delete_scheduled_maintenances(scheduled_maintenance_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not delete scheduled maintenance: #{err}"
           session[:error] = "Could not delete scheduled maintenance."
