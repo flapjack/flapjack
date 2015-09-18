@@ -102,7 +102,7 @@ module Flapjack
         end
 
         rejector_ids = self.rules.intersect(:enabled => true, :blackhole => true,
-          :strategy => ['all_tags', 'any_tag']).select {|rejector|
+          :strategy => ['all_tags', 'any_tag', 'no_tag']).select {|rejector|
 
           rejector.is_occurring_at?(time, time_zone)
         }.map(&:id)

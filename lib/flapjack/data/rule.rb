@@ -24,7 +24,7 @@ module Flapjack
   module Data
     class Rule
 
-      STRATEGIES = ['global', 'any_tag', 'all_tags']
+      STRATEGIES = ['global', 'any_tag', 'all_tags', 'no_tag']
 
       extend Flapjack::Utility
 
@@ -53,7 +53,7 @@ module Flapjack
 
       validates :enabled, :inclusion => {:in => [true, false]}
       validates :blackhole, :inclusion => {:in => [true, false]}
-      validates :strategy, :inclusion => {:in => self::STRATEGIES}
+      validates :strategy, :inclusion => {:in => Flapjack::Data::Rule::STRATEGIES}
 
       validates_each :time_restriction_ical do |record, att, value|
         unless record.valid_time_restriction_ical?
@@ -141,7 +141,7 @@ module Flapjack
       # rule_ids will be all acceptors
       # (blackhole == false) or all rejectors (blackhole == true)
       def self.matching_checks(rule_ids)
-        m_checks = ['all_tags', 'any_tag'].inject(nil) do |memo, strategy|
+        m_checks = ['all_tags', 'any_tag', 'no_tag'].inject(nil) do |memo, strategy|
           tag_ids_by_rule_id = self.intersect(:strategy => strategy,
             :id => rule_ids).associated_ids_for(:tags)
 
@@ -411,6 +411,11 @@ module Flapjack
               else
                 c_memo.union(:id => ca)
               end
+            end
+          when 'no_tag'
+            assocs.inject(Flapjack::Data::Check) do |c_memo, ca|
+              c_memo = c_memo.diff(:id => ca)
+              c_memo
             end
           end
 

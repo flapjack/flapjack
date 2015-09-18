@@ -83,13 +83,13 @@ module Flapjack
         return Flapjack::Data::Check.empty unless global_rejector_ids.empty?
 
         tag_rejector_ids = self.rules.intersect(:enabled => true,
-          :blackhole => true, :strategy => ['any_tag', 'all_tags']).select {|rejector|
+          :blackhole => true, :strategy => ['any_tag', 'all_tags', 'no_tag']).select {|rejector|
 
           rejector.is_occurring_at?(time, timezone)
         }.map(&:id)
 
         tag_acceptors = self.rules.intersect(:enabled => true, :blackhole => false,
-          :strategy => ['any_tag', 'all_tags']).select {|acceptor|
+          :strategy => ['any_tag', 'all_tags', 'no_tag']).select {|acceptor|
 
           acceptor.is_occurring_at?(time, timezone)
         }

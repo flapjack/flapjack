@@ -22,9 +22,7 @@ require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
-
   module Data
-
     class Check
 
       include Zermelo::Records::RedisSet
@@ -168,37 +166,29 @@ module Flapjack
         severity = opts[:severity]
         blackhole = opts[:blackhole]
 
-        global_rules = Flapjack::Data::Rule.intersect(:enabled => true,
-          :blackhole => blackhole, :strategy => 'global')
-        unless severity.nil?
-          global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+        matcher_by_strategy = {
+          'global'   => nil,
+          'all_tags' => proc {|rule_tag_ids| (rule_tag_ids - tag_ids).empty? },
+          'any_tag'  => proc {|rule_tag_ids| !((rule_tag_ids & tag_ids).empty?) },
+          'no_tag'   => proc {|rule_tag_ids| (rule_tag_ids & tag_ids).empty? }
+        }
+
+        matcher_by_strategy.each_with_object(Set.new) do |(strategy, matcher), memo|
+          rules = Flapjack::Data::Rule.intersect(:enabled => true,
+            :blackhole => blackhole, :strategy => strategy)
+          unless severity.nil?
+            rules = rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+          end
+
+          if matcher.nil?
+            memo.merge(rules.ids)
+            next
+          end
+
+          rules.associated_ids_for(:tags).each_pair do |rule_id, rule_tag_ids|
+            memo << rule_id if matcher.call(rule_tag_ids)
+          end
         end
-
-        all_tags_rules = Flapjack::Data::Rule.intersect(:enabled => true,
-          :blackhole => blackhole, :strategy => 'all_tags')
-        unless severity.nil?
-          all_tags_rules = all_tags_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
-        end
-
-        all_tags_rules_ids = all_tags_rules.associated_ids_for(:tags).
-          each_with_object([]) do |(rule_id, rule_tag_ids), memo|
-
-          memo << rule_id if (rule_tag_ids - tag_ids).empty?
-        end
-
-        any_tag_rules = Flapjack::Data::Rule.intersect(:enabled => true,
-          :blackhole => blackhole, :strategy => 'any_tag')
-        unless severity.nil?
-          any_tag_rules = any_tag_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
-        end
-
-        any_tag_rules_ids = any_tag_rules.associated_ids_for(:tags).
-          each_with_object([]) do |(rule_id, rule_tag_ids), memo|
-
-          memo << rule_id unless (rule_tag_ids & tag_ids).empty?
-        end
-
-        global_rules.ids + all_tags_rules_ids + any_tag_rules_ids
       end
 
       # end internal associations

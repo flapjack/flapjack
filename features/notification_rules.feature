@@ -3,12 +3,13 @@ Feature: Notification rules on a per contact basis
 
   Background:
     Given the following contacts exist:
-      | id                                   | name            | timezone       |
-      | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | Malak Al-Musawi | Asia/Baghdad   |
-      | 65d32027-1942-43b3-93c5-52f4b12d36b0 | Imani Farooq    | Europe/Moscow  |
-      | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | Vera Дурейко    | Europe/Paris   |
-      | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | Lucia Moretti   | Europe/Rome    |
-      | 5da490ec-72a0-42b0-834f-4049867dfce7 | Wang Fang Wong  | Asia/Shanghai  |
+      | id                                   | name            | timezone         |
+      | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | Malak Al-Musawi | Asia/Baghdad     |
+      | 65d32027-1942-43b3-93c5-52f4b12d36b0 | Imani Farooq    | Europe/Moscow    |
+      | 9f77502c-1daf-47a2-b806-f3ae7d04cefb | Vera Дурейко    | Europe/Paris     |
+      | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | Lucia Moretti   | Europe/Rome      |
+      | 5da490ec-72a0-42b0-834f-4049867dfce7 | Wang Fang Wong  | Asia/Shanghai    |
+      | 09ab8f30-a2da-475b-a61f-8fdab4430567 | John Bloke      | Australia/Sydney |
 
     And the following media exist:
       | id                                   | contact_id                           | transport | address           | interval | rollup_threshold |
@@ -22,6 +23,8 @@ Feature: Notification rules on a per contact basis
       | ad25c952-c300-4285-9301-ef4408c9d645 | 158ec8fd-36ca-4d10-a2f4-dc04d374e321 | sms       | +61400000004      | 60       | 5                |
       | f15078cf-3643-4cf1-b701-ac9fe2836365 | 5da490ec-72a0-42b0-834f-4049867dfce7 | email     | fang@example.com  | 15       | 5                |
       | 862228f8-fc80-4887-bc4c-e133fcda4107 | 5da490ec-72a0-42b0-834f-4049867dfce7 | sms       | +61400000005      | 60       | 5                |
+      | 2e92f734-0597-40bb-bcc6-6ccef4b34720 | 09ab8f30-a2da-475b-a61f-8fdab4430567 | email     | bloke@example.com | 15       | 5                |
+      | 94b74a9f-7d16-4713-83cf-37196abed014 | 09ab8f30-a2da-475b-a61f-8fdab4430567 | sms       | +61400000006      | 60       | 5                |
 
     And the following checks exist:
       | id                                   | name     | tags      |
@@ -44,6 +47,9 @@ Feature: Notification rules on a per contact basis
       | fang email         | 724bf183-215c-4ba9-b835-56db781c4844 | 5da490ec-72a0-42b0-834f-4049867dfce7 | false     | global   |          |                  |                   | f15078cf-3643-4cf1-b701-ac9fe2836365                                      |
       | fang sms           | 1c501800-6b20-458d-bb99-a78d17397c00 | 5da490ec-72a0-42b0-834f-4049867dfce7 | false     | global   |          |                  |                   | 862228f8-fc80-4887-bc4c-e133fcda4107                                      |
       | drop malak email   | dd7005b9-d30b-4875-9e83-dec7fb70895c | 7f96a216-76aa-45fc-a88e-7431cd6d7aac | true      | all_tags | buf,ping |                  |                   | 28032dbf-388d-4f52-91b2-dc5e5be2becc                                      |
+      | bloke sms g        | 4441658d-c7af-45ef-bc8e-f6cd61fdc241 | 09ab8f30-a2da-475b-a61f-8fdab4430567 | false     | global   |          |                  |                   | 94b74a9f-7d16-4713-83cf-37196abed014 |
+      | bloke sms no       | 0f860a78-2f8a-40ca-8070-e1d88c6ff041 | 09ab8f30-a2da-475b-a61f-8fdab4430567 | true      | no_tag   | buf      |                  |                   | 94b74a9f-7d16-4713-83cf-37196abed014 |
+
 
   @time_restriction @time
   Scenario: Alerts only during specified time restrictions
@@ -260,6 +266,24 @@ Feature: Notification rules on a per contact basis
     And   1 minute passes
     And   a critical event is received
     Then  1 sms alert should be queued for +61400000002
+
+  @time
+  Scenario: A 'no_tag' blackhole rule should not match if a tag matches
+    Given the check is check 'ping' on entity 'buf'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  1 sms alert should be queued for +61400000006
+
+  @time
+  Scenario: A 'no_tag' blackhole rule should match if no tag matches
+    Given the check is check 'ping' on entity 'foo'
+    And   the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  no sms alerts should be queued for +61400000006
 
   @time
   Scenario: Test notifications behave like a critical notification
