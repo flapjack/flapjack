@@ -168,10 +168,10 @@ module Flapjack
       end
 
       def self.string_to_sign(method, host, uri, query)
-        @safe_re ||= Regexp.new("[^#{URI::PATTERN::UNRESERVED}]")
-
         encoded_query = query.keys.sort.collect {|key|
-          "#{URI.escape(key, @safe_re)}=#{URI.escape(query[key].to_s, @safe_re)}"
+          k = URI.encode_www_form_component(key)
+          v = URI.encode_www_form_component(query[key].to_s)
+          "#{k}=#{v}"
         }.join("&")
 
         [method.upcase,

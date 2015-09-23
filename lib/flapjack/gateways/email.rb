@@ -174,7 +174,7 @@ module Flapjack
 
           erb_to_be_executed = html_template
           body_html = html_template_erb.result(bnd)
-        rescue => e
+        rescue
           Flapjack.logger.error "Error while executing ERBs for an email: " +
             "ERB being executed: #{erb_to_be_executed}"
           raise
@@ -182,7 +182,7 @@ module Flapjack
 
         Flapjack.logger.debug("preparing email to: #{to}, subject: #{subject}, message-id: #{message_id}")
 
-        mail = Mail.new do
+        Mail.new do
           from from
           to to
           subject subject
@@ -198,10 +198,7 @@ module Flapjack
             body body_html
           end
         end
-
       end
-
     end
   end
 end
-

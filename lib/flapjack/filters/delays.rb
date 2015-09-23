@@ -47,8 +47,6 @@ module Flapjack
           intersect(:action => 'acknowledgement').first
 
         last_problem_time  = last_problem.nil?  ? nil : last_problem.created_at
-        last_recovery_time = last_recovery.nil? ? nil : last_recovery.created_at
-        last_ack_time      = last_ack.nil?      ? nil : last_ack.created_at
         last_notif = [last_problem, last_recovery, last_ack].compact.
                        sort_by(&:created_at).last
 

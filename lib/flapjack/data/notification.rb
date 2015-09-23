@@ -6,9 +6,6 @@
 
 require 'zermelo/records/redis'
 
-require 'flapjack/data/alert'
-require 'flapjack/data/contact'
-
 module Flapjack
   module Data
     class Notification

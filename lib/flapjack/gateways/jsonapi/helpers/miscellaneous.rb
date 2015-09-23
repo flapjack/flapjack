@@ -70,7 +70,6 @@ module Flapjack
             sl = options[:singular_links] ? options[:singular_links].keys.map(&:to_s) : []
             ml = options[:multiple_links] ? options[:multiple_links].keys.map(&:to_s) : []
             all_links = sl + ml
-            klass = options[:klass]
 
             # FIXME check error codes against JSONAPI spec
 
@@ -101,9 +100,9 @@ module Flapjack
                       v['data']['id'].is_a?(String) &&
                       v['data']['type'].is_a?(String)
 
-                      unless options[:singular_links][k.to_sym].type == v['data']['type']
-                        halt(err(403, "Related '#{k}' has wrong type #{v['data']['type']}"))
-                      end
+                    unless options[:singular_links][k.to_sym].type == v['data']['type']
+                      halt(err(403, "Related '#{k}' has wrong type #{v['data']['type']}"))
+                    end
                   else
                     halt(err(403, "Data reference for '#{k}' must be an Array of Hashes with 'id' & 'type' String values")) unless v['data'].is_a?(Array) &&
                       v['data'].all? {|l| l.has_key?('id') } &&
@@ -111,8 +110,11 @@ module Flapjack
                       v['data'].all? {|l| l['id'].is_a?(String) } &&
                       v['data'].all? {|l| l['type'].is_a?(String) }
 
-                      t = options[:multiple_links][k.to_sym].type
-                      bad_type = v['data'].detect {|l| !t.eql?(l['type'])}
+                    t = options[:multiple_links][k.to_sym].type
+                    bad_type = v['data'].detect {|l| !t.eql?(l['type'])}
+                    unless bad_type.nil?
+                      halt(403, "Data reference for '#{k}' has invalid type '#{bad_type}', should be '#{t}")
+                    end
                   end
                 end
               end
@@ -122,7 +124,7 @@ module Flapjack
           def validate_and_parsetime(value)
             return unless value
             Time.iso8601(value).getutc
-          rescue ArgumentError => e
+          rescue ArgumentError
             logger.error "Couldn't parse time from '#{value}'"
             nil
           end

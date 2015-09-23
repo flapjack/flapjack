@@ -17,6 +17,10 @@ require 'flapjack/version'
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/tag'
+
 
 module Flapjack
 
@@ -78,7 +82,7 @@ module Flapjack
           Flapjack.logger.debug("processing jabber notification address: #{address}, " +
                         "check: '#{check_name}', state: #{state}, summary: #{alert.summary}")
 
-          event_count = alert.event_count
+          # event_count = alert.event_count
 
           @ack_str = if state.eql?('ok') || ['test', 'acknowledgement'].include?(alert.type)
             nil
@@ -98,7 +102,7 @@ module Flapjack
           message = nil
           begin
             message = message_template_erb.result(bnd).chomp
-          rescue => e
+          rescue
             Flapjack.logger.error "Error while executing the ERB for a jabber message, " +
               "ERB being executed: #{message_template}"
             raise
@@ -312,9 +316,9 @@ module Flapjack
                 resp = "Checks #{descriptor}:\n"
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
                 resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
-                resp += checks.map {|check|
-                  cond = check.condition
-                  "#{check.name} is #{cond.nil? ? '[none]' : cond.upcase}"
+                resp += checks.map {|chk|
+                  cond = chk.condition
+                  "#{chk.name} is #{cond.nil? ? '[none]' : cond.upcase}"
                 }.join(', ')
                 resp
               end
@@ -326,9 +330,9 @@ module Flapjack
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
-                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                    cond = check.condition
-                    "#{check.name} - #{cond.nil? ? '[none]' : cond.upcase}"
+                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|chk|
+                    cond = chk.condition
+                    "#{chk.name} - #{cond.nil? ? '[none]' : cond.upcase}"
                   }.join("\n")
               end
 
@@ -344,8 +348,8 @@ module Flapjack
                 current_time = Time.now
                 resp = "Details of checks #{descriptor}\n"
                 resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
-                resp += Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                          get_check_details(check, current_time)
+                resp += Flapjack::Data::Check.intersect(:id => check_ids).collect {|chk|
+                          get_check_details(chk, current_time)
                         }.join("")
               end
 
@@ -447,7 +451,7 @@ module Flapjack
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
 
-                checks.each do |check|
+                checks.each do |chk|
                   sched_maint = Flapjack::Data::ScheduledMaintenance.new(
                     :start_time => started,
                     :end_time   => started + duration,
@@ -455,7 +459,7 @@ module Flapjack
                   )
                   sched_maint.save
 
-                  check.scheduled_maintenances << sched_maint
+                  chk.scheduled_maintenances << sched_maint
                 end
 
                 "Scheduled maintenance for #{duration/60} minutes starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
@@ -527,6 +531,7 @@ module Flapjack
           @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
 
           @state_buffer = []
+          @should_quit = false
         end
 
         def alias
@@ -607,7 +612,7 @@ module Flapjack
                     text += elem.texts.join(" ")
                   end
                   text = data if text.empty? && !data.empty?
-                rescue REXML::ParseException => exc
+                rescue REXML::ParseException
                   # invalid XML, so we'll just clear everything inside angled brackets
                   text = data.gsub(/<[^>]+>/, '').strip
                 end

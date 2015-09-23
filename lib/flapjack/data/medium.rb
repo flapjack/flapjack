@@ -4,13 +4,17 @@ require 'swagger/blocks'
 
 require 'zermelo/records/redis'
 
+require 'flapjack/data/alert'
+require 'flapjack/data/check'
+require 'flapjack/data/contact'
+require 'flapjack/data/rule'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/unscheduled_maintenance'
+
+require 'flapjack/data/extensions/associations'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/alert'
-require 'flapjack/data/check'
-
-require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
@@ -385,7 +389,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :alerting_checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,

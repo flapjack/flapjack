@@ -10,7 +10,7 @@ module Flapjack
 
           module Helpers
             def resource_delete(klass, id)
-              resources_data, unwrap = wrapped_params(:allow_nil => !id.nil?)
+              resources_data, _ = wrapped_params(:allow_nil => !id.nil?)
 
               ids = resources_data.nil? ? [id] : resources_data.map {|d| d['id']}
 

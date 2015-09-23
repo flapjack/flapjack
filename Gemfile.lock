@@ -1,6 +1,6 @@
 GIT
   remote: git://github.com/flapjack/flapjack-diner.git
-  revision: b668421b67dc88cf8600b57b9bf64751483d0c27
+  revision: 1c54f240961c6102cff4607354d099dba15d074c
   specs:
     flapjack-diner (2.0.0.pre.alpha.3)
       httparty (= 0.13.5)
@@ -8,7 +8,7 @@ GIT
 
 GIT
   remote: git://github.com/flapjack/zermelo.git
-  revision: 6855d01586f2950e405356008004626b808930be
+  revision: aa5b2a1c9925f595a8d7dfcdec9c3183c6818c6b
   branch: sorted_set_ids_zset
   specs:
     zermelo (1.3.0)

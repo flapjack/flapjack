@@ -205,7 +205,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Media', :sinatra => true, :logge
            Flapjack::Data::State).
       and_yield
 
-    media = double('media')
     expect(medium).to receive(:destroy)
     expect(Flapjack::Data::Medium).to receive(:find_by_id!).
       with(medium.id).and_return(medium)

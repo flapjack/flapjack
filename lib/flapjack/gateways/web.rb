@@ -59,7 +59,15 @@ module Flapjack
           if @api_url.nil?
             raise "'api_url' config must contain a Flapjack API instance address"
           end
-          if URI.regexp(['http', 'https']).match(@api_url).nil?
+
+          uri = begin
+            URI(@api_url)
+          rescue URI::InvalidURIError
+            # TODO should we just log and re-raise the exception?
+            raise "'api_url' is not a valid URI (#{@api_url})"
+          end
+
+          unless ['http', 'https'].include?(uri.scheme)
             raise "'api_url' is not a valid http or https URI (#{@api_url})"
           end
           unless @api_url.match(/^.*\/$/)
@@ -323,8 +331,6 @@ module Flapjack
       post "/acknowledgements" do
         summary  = params[:summary]
         check_id = params[:check_id]
-
-        t = Time.now
 
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
@@ -700,7 +706,10 @@ module Flapjack
       end
 
       def include_page_title
-        @page_title ? "#{@page_title} | Flapjack" : "Flapjack"
+        if instance_variable_defined?('@page_title') && !@page_title.nil?
+          return "#{@page_title} | Flapjack"
+        end
+        "Flapjack"
       end
 
       def boolean_from_str(str)

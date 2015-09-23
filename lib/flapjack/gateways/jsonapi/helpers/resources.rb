@@ -89,7 +89,7 @@ module Flapjack
               end
             end
 
-            r = filter.each_with_object({}) do |filter_str, memo|
+            filter.each_with_object({}) do |filter_str, memo|
               k, v = filter_str.split(':', 2)
               halt(err(403, "Single filter parameters must be 'key:value'")) if k.nil? || v.nil?
 

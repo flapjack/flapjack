@@ -1,4 +1,4 @@
-<% unless @pagination.nil? %>
+<% if instance_variable_defined?('@pagination') && !@pagination.nil? %>
   <ul class="pagination">
     <% if @pagination[:page] == 1 %>
       <li class="disabled"><span>&laquo;</span></li>

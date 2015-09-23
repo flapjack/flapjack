@@ -416,7 +416,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
            Flapjack::Data::Tag).
       and_yield
 
-    contacts = double('contacts')
     expect(contact).to receive(:destroy)
     expect(Flapjack::Data::Contact).to receive(:find_by_id!).
       with(contact.id).and_return(contact)

@@ -111,7 +111,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,

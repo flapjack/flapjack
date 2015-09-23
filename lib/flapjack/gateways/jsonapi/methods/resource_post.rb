@@ -96,8 +96,7 @@ module Flapjack
 
                   validate_data(resources_data, :attributes => attributes,
                     :singular_links => singular_links,
-                    :multiple_links => multiple_links,
-                    :klass => resource_class)
+                    :multiple_links => multiple_links)
 
                   resources = nil
 

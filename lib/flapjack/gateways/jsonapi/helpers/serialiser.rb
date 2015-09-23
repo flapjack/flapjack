@@ -80,7 +80,7 @@ module Flapjack
               data
             end
 
-            unless (resources_as_json.size == 1) && options[:unwrap].is_a?(TrueClass)
+            unless (resources_as_json.size == 1) && unwrap.is_a?(TrueClass)
               return resources_as_json
             end
 
@@ -183,8 +183,8 @@ module Flapjack
             assoc_data = parent_links[name.to_sym]
 
             return [] if assoc_data.nil? ||
-              (:resource.eql?(options[:query_type]) && !assoc_data.includable) ||
-              (:association.eql?(options[:query_type]) && !assoc_data.link)
+              (:resource.eql?(query_type) && !assoc_data.includable) ||
+              (:association.eql?(query_type) && !assoc_data.link)
 
             fragment_klass = assoc_data.data_klass
 
@@ -269,7 +269,7 @@ module Flapjack
             resources_name = klass.short_model_name.plural
 
             resource_ids.each_with_object({}) do |r_id, memo|
-              memo[r_id] = jsonapi_assocs.each_with_object({}) do |(jl_name, jl_data), a_memo|
+              memo[r_id] = jsonapi_assocs.keys.each_with_object({}) do |jl_name, a_memo|
                 linked = {
                   :links => {
                     :self    => "#{request.base_url}/#{resources_name}/#{r_id}/relationships/#{jl_name}",

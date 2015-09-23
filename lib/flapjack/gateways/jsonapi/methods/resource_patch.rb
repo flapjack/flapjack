@@ -44,9 +44,7 @@ module Flapjack
                   model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
-                  model_type_data = "jsonapi_data_#{model_type}".to_sym
                   model_type_update_data = "jsonapi_data_#{model_type}Update".to_sym
-
                   model_type_update_data_plural = "jsonapi_data_#{model_type_plural}Update".to_sym
 
                   swagger_path "/#{resource}/{#{single}_id}" do
@@ -115,14 +113,13 @@ module Flapjack
                                   params[:captures].first
                   status 204
 
-                  resources_data, unwrap = wrapped_params
+                  resources_data, _ = wrapped_params
 
                   attributes = method_def.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
                     :singular_links => singular_links,
-                    :multiple_links => multiple_links,
-                    :klass => resource_class)
+                    :multiple_links => multiple_links)
 
                   ids = resources_data.map {|d| d['id']}
 

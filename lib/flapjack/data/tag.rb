@@ -7,9 +7,6 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/check'
-require 'flapjack/data/rule'
-
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
@@ -175,7 +172,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,

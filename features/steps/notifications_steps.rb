@@ -1,3 +1,9 @@
+require 'flapjack/data/check'
+require 'flapjack/data/contact'
+require 'flapjack/data/medium'
+require 'flapjack/data/rule'
+require 'flapjack/data/tag'
+
 require 'flapjack/gateways/aws_sns'
 require 'flapjack/gateways/email'
 require 'flapjack/gateways/sms_messagenet'

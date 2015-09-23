@@ -1,5 +1,4 @@
 require 'spec_helper'
-
 require 'flapjack/coordinator'
 
 describe Flapjack::Coordinator do
@@ -177,8 +176,6 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true}}
     new_cfg = {'gateways' => {'jabber' => {'enabled' => true}}}
 
-    new_config = double('new_config')
-    filename = double('filename')
 
     expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)
@@ -207,9 +204,6 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'foo' => 'baz'}}
 
-    new_config = double('new_config')
-    filename = double('filename')
-
     expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
@@ -229,9 +223,6 @@ describe Flapjack::Coordinator do
   it "reloads a pikelet config while restarting it" do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'baz' => 'qux'}}
-
-    new_config = double('new_config')
-    filename = double('filename')
 
     expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
     expect(config).to receive(:reload)

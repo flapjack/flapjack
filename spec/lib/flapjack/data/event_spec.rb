@@ -79,7 +79,7 @@ describe Flapjack::Data::Event do
       bad_event_data.delete(required_key.to_s)
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
-      parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
+      _, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
       expect(errors).not_to be_empty
     end
 
@@ -88,7 +88,7 @@ describe Flapjack::Data::Event do
       bad_event_data[required_key] = {'hello' => 'there'}
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
-      parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
+      _, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
       expect(errors).not_to be_empty
     end
   end
@@ -101,7 +101,7 @@ describe Flapjack::Data::Event do
       bad_event_data[optional_key.to_s] = {'hello' => 'there'}
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
-      parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
+      _, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
       expect(errors).not_to be_empty
     end
 
@@ -113,7 +113,7 @@ describe Flapjack::Data::Event do
       numstr_event_data[key.to_s] = '352'
       numstr_event_json = Flapjack.dump_json(numstr_event_data)
 
-      parsed, errors = Flapjack::Data::Event.parse_and_validate(numstr_event_json)
+      _, errors = Flapjack::Data::Event.parse_and_validate(numstr_event_json)
       expect(errors).to be_empty
     end
 
@@ -122,7 +122,7 @@ describe Flapjack::Data::Event do
       bad_event_data[key] = 'NaN'
       bad_event_json = Flapjack.dump_json(bad_event_data)
 
-      parsed, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
+      _, errors = Flapjack::Data::Event.parse_and_validate(bad_event_json)
       expect(errors).not_to be_empty
     end
 

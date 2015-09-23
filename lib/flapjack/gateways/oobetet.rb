@@ -34,6 +34,7 @@ module Flapjack
 
           @flapjack_ok = true
           @last_alert = nil
+          @last_breach = nil
         end
 
         def start

@@ -350,7 +350,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,
@@ -393,7 +393,7 @@ module Flapjack
       private
 
       def self.checks_for_tag_match(strategy, tag_ids_by_rule_id)
-        tag_ids_by_rule_id.inject(nil) do |memo, (rule_id, tag_ids)|
+        tag_ids_by_rule_id.values.inject(nil) do |memo, tag_ids|
           assocs = Flapjack::Data::Tag.intersect(:id => tag_ids).
             associations_for(:checks).values
           next memo if assocs.empty?
