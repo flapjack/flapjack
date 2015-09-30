@@ -169,8 +169,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ContactLinks', :sinatra => true,
       :included => [{
         :id => tag.id,
         :type => 'tag',
-        :attributes => tag_data.reject {|k,v| :id.eql?(k) },
-        :relationships => tag_rel(tag_data)
+        :attributes => tag_data.reject {|k,v| :id.eql?(k) }
       }],
       :links => {
         :self    => "http://example.org/contacts/#{contact.id}/relationships/tags",

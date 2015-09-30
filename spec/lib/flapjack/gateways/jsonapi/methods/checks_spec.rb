@@ -253,7 +253,6 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       and_return(:name => check_data[:name], :enabled => check_data[:enabled])
 
     resp_data = check_json(check_data).merge(:relationships => check_rel(check_data))
-    resp_data[:attributes]
 
     get "/checks/#{check.id}?fields[check]=name%2Cenabled"
     expect(last_response).to be_ok
@@ -300,8 +299,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
       :included => [{
         :id => tag.id,
         :type => 'tag',
-        :attributes => tag_data.reject {|k,v| :id.eql?(k) },
-        :relationships => tag_rel(tag_data)
+        :attributes => tag_data.reject {|k,v| :id.eql?(k) }
       }],
       :links => {:self => "http://example.org/checks/#{check.id}?include=tags"}))
   end

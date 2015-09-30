@@ -376,10 +376,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Contacts', :sinatra => true, :lo
     resp_data = contact_json(contact_data).merge(:relationships => contact_rel(contact_data))
     resp_data[:relationships][:media][:data] = [{:type => 'medium', :id => medium.id}]
 
-    resp_included = [medium_json(email_data).merge(:relationships => medium_rel(email_data))]
+    resp_included = [medium_json(email_data)]
     resp_included.first[:attributes].delete_if {|k, v| ![:transport, :address].include?(k)}
-
-    # ap Flapjack.load_json(last_response.body)
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data => resp_data,

@@ -21,8 +21,8 @@ module Flapjack
             end
 
             ret = {
-              :data     => as_jsonapi_data(klass, resources, resources_ids,
-                :payload => payload, :fields => fields,
+              :data => as_jsonapi_data(klass, resources, resources_ids,
+                :primary => true, :payload => payload, :fields => fields,
                 :unwrap => options[:unwrap])
             }
             unless payload.nil? || payload.empty?
@@ -62,7 +62,7 @@ module Flapjack
               Set.new(fields).keep_if {|f| whitelist.include?(f) }.to_a
             end
 
-            links = jsonapi_linkages(klass, resources_ids,
+            links = jsonapi_linkages(klass, resources_ids, :primary => options[:primary],
               :payload => payload, :relationship_scopes => relationship_scopes)
 
             resources_as_json = resources.collect do |r|
@@ -269,16 +269,19 @@ module Flapjack
             resources_name = klass.short_model_name.plural
 
             resource_ids.each_with_object({}) do |r_id, memo|
+
               memo[r_id] = jsonapi_assocs.keys.each_with_object({}) do |jl_name, a_memo|
-                linked = {
-                  :links => {
+                linked = {}
+
+                if opts[:primary]
+                  linked[:links] = {
                     :self    => "#{request.base_url}/#{resources_name}/#{r_id}/relationships/#{jl_name}",
                     :related => "#{request.base_url}/#{resources_name}/#{r_id}/#{jl_name}"
                   }
-                }
+                end
 
                 payload_scopes = if relationship_scopes.nil? || relationship_scopes.empty?
-                  [jl_name.to_s]
+                  opts[:primary] ? [jl_name.to_s] : []
                 else
                   relationship_scopes.map {|rls| "#{rls}.#{jl_name}" }
                 end
@@ -298,6 +301,7 @@ module Flapjack
                   end
                 end
 
+                next if linked.empty?
                 a_memo[jl_name] = linked
               end
             end

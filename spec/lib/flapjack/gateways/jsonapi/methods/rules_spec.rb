@@ -170,7 +170,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
     resp_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
 
-    resp_included = [contact_json(contact_data).merge(:relationships => contact_rel(contact_data))]
+    resp_included = [contact_json(contact_data)]
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
       :data => resp_data,
@@ -220,12 +220,12 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Rules', :sinatra => true, :logge
     resp_data = rule_json(rule_data).merge(:relationships => rule_rel(rule_data))
     resp_data[:relationships][:contact][:data] = {:type => 'contact', :id => contact.id}
 
-    resp_incl_contact = contact_json(contact_data).merge(:relationships => contact_rel(contact_data))
-    resp_incl_contact[:relationships][:media][:data] = [{:type => 'medium', :id => medium.id}]
+    resp_incl_contact = contact_json(contact_data)
+    resp_incl_contact[:relationships] = {:media => {:data => [{:type => 'medium', :id => medium.id}]}}
 
     resp_included = [
       resp_incl_contact,
-      medium_json(email_data).merge(:relationships => medium_rel(email_data))
+      medium_json(email_data)
     ]
 
     expect(last_response.body).to be_json_eql(Flapjack.dump_json(
