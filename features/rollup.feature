@@ -10,6 +10,7 @@ Feature: Rollup on a per contact, per media basis
       | id  | name           | contacts |
       | 1   | foo            | 1        |
       | 2   | baz            | 1        |
+      | 3   | zoo            | 1        |
 
     And user 1 has the following notification intervals:
       | email | sms |
@@ -54,24 +55,24 @@ Feature: Rollup on a per contact, per media basis
   Scenario: Transition to rollup when threshold is met
     Given check 'ping' for entity 'foo' is in an ok state
     And   check 'ping' for entity 'baz' is in an ok state
-    When  a critical event is received for check 'ping' on entity 'foo'
+    When  a critical event is received for check 'ping' on entity 'foo' with details 'event 1 - no alert due to delay'
     Then  no sms alerts should be queued for +61400000001
     When  1 minute passes
-    And   a critical event is received for check 'ping' on entity 'foo'
+    And   a critical event is received for check 'ping' on entity 'foo' with details 'event 2 - gen alert'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     When  5 minutes passes
-    And   a critical event is received for check 'ping' on entity 'baz'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 3 - no alert due to delay'
     And   1 minute passes
-    And   a critical event is received for check 'ping' on entity 'baz'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 4 - alert, SMS to rollup'
     Then  1 sms alert of type problem and rollup none should be queued for +61400000001
     And   1 sms alert of type problem and rollup problem should be queued for +61400000001
     When  1 minute passes
-    And   an ok event is received for check 'ping' on entity 'foo'
+    And   an ok event is received for check 'ping' on entity 'foo' with details 'event 5'
     Then  no sms alerts of type recovery and rollup none should be queued for +61400000001
     And   1 sms alert of type recovery and rollup recovery should be queued for +61400000001
     And   3 sms alerts should be queued for +61400000001
     When  1 minute passes
-    And   an ok event is received for check 'ping' on entity 'baz'
+    And   an ok event is received for check 'ping' on entity 'baz' with details 'event 6'
     Then  1 sms alert of type recovery and rollup none should be queued for +61400000001
     And   1 sms alert of type recovery and rollup recovery should be queued for +61400000001
     And   4 sms alerts should be queued for +61400000001
@@ -264,17 +265,57 @@ Feature: Rollup on a per contact, per media basis
   Scenario: Multiple notifications should not occur when in rollup
     Given check 'ping' for entity 'foo' is in an ok state
     And   check 'ping' for entity 'baz' is in an ok state
-    When  a critical event is received for check 'ping' on entity 'foo'
-    And   a critical event is received for check 'ping' on entity 'baz'
+    When  a critical event is received for check 'ping' on entity 'foo' with details 'event 1: no notif, delay'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 2: no notif, delay'
     And   1 minute passes
-    And   a critical event is received for check 'ping' on entity 'foo'
-    And   a critical event is received for check 'ping' on entity 'baz'
+    And   a critical event is received for check 'ping' on entity 'foo' with details 'event 3: alert: email (rollup), sms'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 4: alert: email (none), sms (rollup)'
     And   1 minute passes
-    And   a critical event is received for check 'ping' on entity 'foo'
+    And   a critical event is received for check 'ping' on entity 'foo' with details 'event 5: alert: email (none - drop alerts), sms (none - drop alerts)'
     Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
     And   19 minutes passes
-    And   a critical event is received for check 'ping' on entity 'baz'
+    # We have two alerting checks, so both notifications are in rollup mode
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 6: alert: email (rollup), sms (rollup)'
     Then  2 email alerts of type problem and rollup problem should be queued for malak@example.com
     And   1 minute passes
-    And   a critical event is received for check 'ping' on entity 'baz'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 7: alert: email (none), sms (none)'
     Then  2 email alerts of type problem and rollup problem should be queued for malak@example.com
+
+  @time
+  Scenario: Multiple notifications should not occur when in rollup (v2)
+    Given check 'ping' for entity 'foo' is in an ok state
+    And   check 'ping' for entity 'baz' is in an ok state
+    And   check 'ping' for entity 'zoo' is in an ok state
+
+    # No notifications due to initial_failure_delay
+    When  a critical event is received for check 'ping' on entity 'foo' with details 'event 1: no notif, delay'
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 2: no notif, delay'
+    And   a critical event is received for check 'ping' on entity 'zoo' with details 'event 3: no notif, delay'
+    And   1 minute passes
+
+    # One email notification, move to rollup
+    And   a critical event is received for check 'ping' on entity 'foo' with details 'event 4: alert: email (rollup)'
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
+
+    # No more email notifications, due to rollup
+    And   a critical event is received for check 'ping' on entity 'baz' with details 'event 5: alert: email (none)'
+    And   a critical event is received for check 'ping' on entity 'zoo' with details 'event 6: alert: email (none)'
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
+
+    And 20 minutes passes
+    # The rollup expired
+
+    # We send the recovery, but we are still in rollup mode
+    And   an ok event is received for check 'ping' on entity 'foo' with details 'event 7: alert: email (rollup)'
+    Then  1 email alert of type problem and rollup problem should be queued for malak@example.com
+    Then  1 email alert of type recovery and rollup problem should be queued for malak@example.com
+
+    # Another recovery, email should not be sent, we are still in rollup mode, and we have just sent one
+    And   an ok event is received for check 'ping' on entity 'baz' with details 'event 8'
+    Then  1 email alert of type recovery and rollup problem should be queued for malak@example.com
+    Then  0 email alert of type recovery and rollup recovery should be queued for malak@example.com
+
+    # Another recovery, email should not be sent, we are still in rollup mode, and we have just sent one
+    And   an ok event is received for check 'ping' on entity 'zoo' with details 'event 9'
+    Then  1 email alert of type recovery and rollup problem should be queued for malak@example.com
+    Then  1 email alert of type recovery and rollup recovery should be queued for malak@example.com

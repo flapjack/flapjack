@@ -89,69 +89,34 @@ def end_unscheduled_maintenance(entity, check)
   entity_check.end_unscheduled_maintenance(Time.now.to_i)
 end
 
-def submit_ok(entity, check)
+# Construct and submit an event
+# @param kind: one of 'ok','warning', 'critical', 'unknown', 'acknowledgement', 'test_notifications'
+def one_event(kind, entity, check, details:nil)
   event = {
-    'type'    => 'service',
-    'state'   => 'ok',
-    'summary' => '0% packet loss',
-    'entity'  => entity,
-    'check'   => check
+      'type'               => 'service',
+      'state'              => kind,
+      'summary'            => "",
+      'entity'             => entity,
+      'check'              => check
   }
-  submit_event(event)
-end
-
-def submit_warning(entity, check)
-  event = {
-    'type'    => 'service',
-    'state'   => 'warning',
-    'summary' => '25% packet loss',
-    'entity'  => entity,
-    'check'   => check
-  }
-  submit_event(event)
-end
-
-def submit_critical(entity, check)
-  event = {
-    'type'    => 'service',
-    'state'   => 'critical',
-    'summary' => '100% packet loss',
-    'entity'  => entity,
-    'check'   => check
-  }
-  submit_event(event)
-end
-
-def submit_unknown(entity, check)
-  event = {
-    'type'    => 'service',
-    'state'   => 'unknown',
-    'summary' => 'check execution error',
-    'entity'  => entity,
-    'check'   => check
-  }
-  submit_event(event)
-end
-
-def submit_acknowledgement(entity, check)
-  event = {
-    'type'               => 'action',
-    'state'              => 'acknowledgement',
-    'summary'            => "I'll have this fixed in a jiffy, saw the same thing yesterday",
-    'entity'             => entity,
-    'check'              => check
-  }
-  submit_event(event)
-end
-
-def submit_test(entity, check)
-  event = {
-    'type'               => 'action',
-    'state'              => 'test_notifications',
-    'summary'            => "test notification for all contacts interested in #{entity}",
-    'entity'             => entity,
-    'check'              => check
-  }
+  event['details'] = details unless details.nil?
+  case kind
+    when 'ok'
+      event['summary'] = '0% packet loss'
+    when 'warning'
+      event['summary'] = '25% packet loss'
+    when 'critical'
+      event['summary'] = '100% packet loss'
+    when 'unknown'
+      event['summary'] = 'check execution error'
+    when 'acknowledgement'
+      event['type'] = 'action'
+      event['summary'] = "I'll have this fixed in a jiffy, saw the same thing yesterday"
+    when 'test'
+      event['type'] = 'action'
+      event['state'] = 'test_notifications'
+      event['summary'] = "test notification for all contacts interested in #{entity}"
+  end
   submit_event(event)
 end
 
@@ -224,52 +189,10 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   drain_events  # TODO these should only be in When clauses
 end
 
-When /^an ok event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
+When /^an? ((?:ok)|(?:failure)|(?:critical)|(?:warning)|(?:unknown)|(?:acknowledgement)|(?:test)) event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?(?: with details '([^']+)')?$/ do |kind, check, entity, details|
   check  ||= @check
   entity ||= @entity
-  submit_ok(entity, check)
-  drain_events
-end
-
-When /^a failure event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_critical(entity, check)
-  drain_events
-end
-
-When /^a critical event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_critical(entity, check)
-  drain_events
-end
-
-When /^a warning event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_warning(entity, check)
-  drain_events
-end
-
-When /^an unknown event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_unknown(entity, check)
-  drain_events
-end
-
-When /^an acknowledgement .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_acknowledgement(entity, check)
-  drain_events
-end
-
-When /^a test .*is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
-  check  ||= @check
-  entity ||= @entity
-  submit_test(entity, check)
+  one_event(kind, entity, check, details:details)
   drain_events
 end
 
