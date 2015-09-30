@@ -95,7 +95,8 @@ def submit_ok(entity, check)
     'state'   => 'ok',
     'summary' => '0% packet loss',
     'entity'  => entity,
-    'check'   => check
+    'check'   => check,
+    'tags'    => [ 'tag1', 'tag2' ]
   }
   submit_event(event)
 end

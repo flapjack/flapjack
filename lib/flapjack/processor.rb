@@ -228,7 +228,8 @@ module Flapjack
                                   :summary => event.summary, :count => event.counter,
                                   :details => event.details, :perfdata => event.perfdata,
                                   :initial_failure_delay => event.initial_failure_delay,
-                                  :repeat_failure_delay => event.repeat_failure_delay)
+                                  :repeat_failure_delay => event.repeat_failure_delay,
+                                  :tags => event.tags)
 
         entity_check.update_current_scheduled_maintenance
 
