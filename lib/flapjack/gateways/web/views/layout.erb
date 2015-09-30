@@ -7,6 +7,7 @@
   require_js  'jquery-1.10.2'
   require_js  'jquery.tablesorter'
   require_js  'jquery.tablesorter.widgets'
+  require_js  'jquery.tablesorter.pager'
   require_js  'tablesort'
   require_js  'moment'
 %>
@@ -86,6 +87,7 @@
       <%= yield %>
     </div>
 
+
     <footer>
       <p class="credits">Flapjack version <%= ::Flapjack::VERSION %>
         <span class="separator">|</span>
@@ -100,5 +102,22 @@
         </a>
       </p>
     </footer>
+
+    <!-- A tableSorter pager template -->
+    <script type="text/template" id="tablesorter-pager-template">
+      <img src="img/pager/first.png" class="first" alt="First" />
+      <img src="img/pager//prev.png" class="prev" alt="Prev" />
+      <span class="pagedisplay"></span> <!-- this can be any element, including an input -->
+      <img src="img/pager//next.png" class="next" alt="Next" />
+      <img src="img/pager//last.png" class="last" alt="Last" />
+      Page size: <select class="pagesize" title="Select page size">
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+        <option value="1000">1000</option>
+      </select>
+      Page: <select class="gotoPage" title="Select page number"></select>
+    </script>
+
   </body>
 </html>
