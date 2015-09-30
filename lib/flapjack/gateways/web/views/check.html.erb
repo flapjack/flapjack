@@ -220,7 +220,7 @@
   <div id="output" class="col-md-6">
     <h3>Output:</h3>
     <div class='check_summary'><%= h @check_summary %></div>
-    <p><%= h @check_details %></p>
+    <div class='check_details'><%= h @check_details %></div>
     <% if @check_perfdata && @check_perfdata.is_a?(Array) %>
     <h3>Performance Data:</h3>
     <table>
