@@ -185,7 +185,7 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   entity ||= @entity
   remove_scheduled_maintenance(entity, check)
   set_critical_state(entity, check)
-  submit_acknowledgement(entity, check)
+  one_event('acknowledgement', entity, check)
   drain_events  # TODO these should only be in When clauses
 end
 
