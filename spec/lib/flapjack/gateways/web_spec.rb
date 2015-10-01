@@ -184,6 +184,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(entity_check).to receive(:last_notifications_of_each_type).and_return(last_notifications)
       expect(entity_check).to receive(:maintenances).with(nil, nil, :scheduled => true).and_return([])
       expect(entity_check).to receive(:failed?).and_return(false)
+      expect(entity_check).to receive(:tags_saved).and_return(['tag1', 'tag2'])
       expect(entity_check).to receive(:current_maintenance).with(:scheduled => true).and_return(false)
       expect(entity_check).to receive(:current_maintenance).with(:scheduled => false).and_return(false)
       expect(entity_check).to receive(:contacts).and_return([])
