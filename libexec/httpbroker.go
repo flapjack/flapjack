@@ -13,6 +13,18 @@ import (
 	"time"
 )
 
+type SNSSubscribe struct {
+	Message          string `json:"Message"`
+	MessageID        string `json:"MessageId"`
+	Signature        string `json:"Signature"`
+	SignatureVersion string `json:"SignatureVersion"`
+	SigningCertURL   string `json:"SigningCertURL"`
+	SubscribeURL     string `json:"SubscribeURL"`
+	Timestamp        string `json:"Timestamp"`
+	Token            string `json:"Token"`
+	TopicArn         string `json:"TopicArn"`
+	Type             string `json:"Type"`
+}
 type SNSNotification struct {
 	Message          string `json:"Message"`
 	MessageID        string `json:"MessageId"`
@@ -34,7 +46,7 @@ type CWAlarm struct {
 	OldStateValue    string      `json:"OldStateValue"`
 	Region           string      `json:"Region"`
 	StateChangeTime  string      `json:"StateChangeTime"`
-	Time 		 int64         `json:"Time"`
+	Time 			 int64         `json:"Time"`
 	Trigger          struct {
 		ComparisonOperator string `json:"ComparisonOperator"`
 		Dimensions         []struct {
@@ -54,6 +66,7 @@ type CWAlarm struct {
 // handler caches
 func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
     var snsmessage SNSNotification
+    var snssubscription SNSSubscribe
     var cwalarmmessage CWAlarm
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -62,6 +75,11 @@ func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, message, err)
 		return
 	}
+	json.Unmarshal(body, &snssubscription)
+		if snssubscription.SubscribeURL != ""{
+			http.Get(snssubscription.SubscribeURL)
+			return
+		}
     err = json.Unmarshal(body, &snsmessage)
     if err != nil {
 		message := "Error: Couldn't read request body from the SNS notification: %s\n"
@@ -123,7 +141,7 @@ func submitCachedState(cwalarmmessage map[string]CWAlarm, config Config) {
 			event := flapjack.Event{
 				Entity:  state.AlarmName,
 				Check:   state.Trigger.MetricName,
-				Type:    "service", // @TODO: Make this magic
+             			Type:    "service", // @TODO: Make this magic
 				State:   state.NewStateValue,
 				Summary: state.NewStateReason,
 				Time:    now,
@@ -170,10 +188,10 @@ func main() {
 	}
 
 	updates := make(chan CWAlarm)
-	cwalarmmessage := map[string]CWAlarm{}
+	state := map[string]CWAlarm{}
 
-	go cacheState(updates, cwalarmmessage)
-	go submitCachedState(cwalarmmessage, config)
+	go cacheState(updates, state)
+	go submitCachedState(state, config)
 
 	m := martini.Classic()
 	m.Group("/state", func(r martini.Router) {
@@ -181,7 +199,7 @@ func main() {
 			CreateState(updates, res, req)
 		})
 		r.Get("", func() []byte {
-			data, _ := json.Marshal(cwalarmmessage)
+			data, _ := json.Marshal(state)
 			return data
 		})
 	})
