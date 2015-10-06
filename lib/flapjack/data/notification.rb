@@ -233,8 +233,11 @@ module Flapjack
               when rollup_threshold.nil?
                 # back away slowly
               when alerting_checks >= rollup_threshold
-                next ret if contact.drop_rollup_notifications_for_media?(media)
-                contact.update_sent_rollup_alert_keys_for_media(media, :delete => ok?)
+                if contact.drop_rollup_notifications_for_media?(media)
+                  logger.debug "rollup decisions: #{@event_id} #{@state} #{media} #{address} skip because in rollup mode"
+                  next ret
+                end
+                contact.update_sent_rollup_alert_keys_for_media(media, :delete => false)
                 rollup_type = 'problem'
               when recovered
                 # alerting checks was just cleaned such that it is now below the rollup threshold
