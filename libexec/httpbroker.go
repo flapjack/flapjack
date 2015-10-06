@@ -2,14 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"flapjack"
 	"fmt"
+        "flapjack"
+        "os"
 	"github.com/go-martini/martini"
 	"gopkg.in/alecthomas/kingpin.v1"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -152,9 +152,12 @@ func submitCachedState(cwalarmmessage map[string]CWAlarm, config Config) {
 			}
 			transport.Send(event)
 		}
-		time.Sleep(config.Interval)
+                time.Sleep(config.Interval)
 	}
+
+
 }
+
 
 var (
 	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("80").OverrideDefaultFromEnvar("PORT").String()
