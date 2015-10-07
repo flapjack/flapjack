@@ -1,26 +1,11 @@
-GIT
-  remote: git://github.com/flapjack/flapjack-diner.git
-  revision: 3d3a958eb3274cb5d27a5149aaa9161aa0bfed1d
-  specs:
-    flapjack-diner (2.0.0.pre.alpha.3)
-      httparty (= 0.13.5)
-      json (>= 1.7.7)
-
-GIT
-  remote: git://github.com/flapjack/zermelo.git
-  revision: aa5b2a1c9925f595a8d7dfcdec9c3183c6818c6b
-  branch: sorted_set_ids_zset
-  specs:
-    zermelo (1.3.0)
-      activemodel
-
 PATH
   remote: .
   specs:
-    flapjack (2.0.0.pre.alpha.1)
+    flapjack (2.0.0.a1)
       activesupport
       chronic
       chronic_duration
+      flapjack-diner (= 2.0.0.a4)
       gli (= 2.13.1)
       hiredis
       icalendar
@@ -37,6 +22,7 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
+      zermelo (= 1.4.0)
 
 GEM
   remote: https://rubygems.org/
@@ -73,6 +59,9 @@ GEM
     diff-lcs (1.2.5)
     docile (1.1.5)
     find_a_port (1.0.1)
+    flapjack-diner (2.0.0.a4)
+      httparty (= 0.13.5)
+      json (>= 1.7.7)
     gherkin (2.12.2)
       multi_json (~> 1.3)
     gherkin (2.12.2-java)
@@ -94,8 +83,8 @@ GEM
       rspec (>= 2.0, < 4.0)
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
-    mime-types (2.6.1)
-    minitest (5.8.0)
+    mime-types (2.6.2)
+    minitest (5.8.1)
     multi_json (1.11.2)
     multi_test (0.1.2)
     multi_xml (0.5.5)
@@ -132,8 +121,8 @@ GEM
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
-    puma (2.13.4)
-    puma (2.13.4-java)
+    puma (2.14.0)
+    puma (2.14.0-java)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -178,13 +167,15 @@ GEM
       citrus (~> 3.0, > 3.0)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2015.6)
+    tzinfo-data (1.2015.7)
       tzinfo (>= 1.0.0)
     webmock (1.21.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
+    zermelo (1.4.0)
+      activemodel
 
 PLATFORMS
   java
@@ -194,7 +185,6 @@ DEPENDENCIES
   cucumber (>= 2.0.0.rc.4)
   delorean
   flapjack!
-  flapjack-diner!
   json_spec
   pact
   rack-test
@@ -202,7 +192,6 @@ DEPENDENCIES
   rspec
   simplecov
   webmock
-  zermelo!
 
 BUNDLED WITH
    1.10.6
