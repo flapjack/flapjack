@@ -49,7 +49,9 @@ class MockLogger
   %w(debug info warn error fatal).each do |level|
     class_eval <<-RUBY
       def #{level}(msg)
+        # puts "#{level}: "+msg
         @messages << msg
+
       end
     RUBY
   end
