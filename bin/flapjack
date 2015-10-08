@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'gli'
+require 'flapjack/version'
 
 $stdout.sync = true
 
