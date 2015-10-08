@@ -101,6 +101,7 @@ func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
             alarmstate = "CRITICAL"
         }
 
+        cwalarmmessage.NewStateValue = alarmstate
 
     cwalarmmessage.Time = time.Now().Unix()
 
