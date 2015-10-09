@@ -76,7 +76,7 @@ module Flapjack
           end
 
           Flapjack::Diner.base_uri(@api_url)
-          Flapjack::Diner.logger = ::Logger.new('log/flapjack_diner.log')
+          Flapjack::Diner.logger = Flapjack.logger
 
           # constants won't be exposed to eRb scope
           @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
