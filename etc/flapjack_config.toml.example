@@ -35,7 +35,6 @@ daemonize = true
   queue = "notifications"
   email_queue = "email_notifications"
   sms_queue = "sms_notifications"
-  sms_queue = "sms_notifications"
   sms_nexmo_queue = "sms_nexmo_notifications"
   slack_queue = "slack_notifications"
   sms_twilio_queue = "sms_twilio_notifications"
