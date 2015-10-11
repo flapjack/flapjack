@@ -6,7 +6,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
   include_context "jsonapi"
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
 
   let(:check_tags)  { double('check_tags') }
 
@@ -94,6 +94,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
     expect(checks).to receive(:empty?).and_return(false)
     expect(checks).to receive(:associated_ids_for).with(:tags).
       and_return(check.id => [tag.id])
+    expect(checks).to receive(:ids).and_return(Set.new([check.id]))
+    expect(Flapjack::Data::Check).to receive(:intersect).
+      with(:id => Set.new([check.id])).and_return(checks)
     expect(Flapjack::Data::Check).to receive(:intersect).
       with(:id => check.id).and_return(checks)
 
@@ -104,8 +107,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::CheckLinks', :sinatra => true, :
       :included => [{
         :id => tag.id,
         :type => 'tag',
-        :attributes => tag_data,
-        :relationships => tag_rel(tag_data)
+        :attributes => tag_data.reject {|k,v| :id.eql?(k) }
       }],
       :links => {
         :self    => "http://example.org/checks/#{check.id}/relationships/tags",

@@ -73,8 +73,7 @@ module Flapjack
       check_name  = check.name
 
       # TODO check whether time should come from something stored in the notification
-      alerts = alerts_for(notification, check,
-        :transports => @queues.keys, :time => Time.now)
+      alerts = alerts_for(notification, check, :time => Time.now)
 
       if alerts.nil? || alerts.empty?
         Flapjack.logger.info { "No alerts" }
@@ -101,14 +100,12 @@ module Flapjack
 
     def alerts_for(notification, check, opts = {})
       time       = opts[:time]
-      transports = opts[:transports]
 
       Flapjack::Data::Medium.lock(Flapjack::Data::Check,
                                   Flapjack::Data::ScheduledMaintenance,
                                   Flapjack::Data::UnscheduledMaintenance,
-                                  Flapjack::Data::Rejector,
+                                  Flapjack::Data::Rule,
                                   Flapjack::Data::Alert,
-                                  Flapjack::Data::Acceptor,
                                   Flapjack::Data::Tag,
                                   Flapjack::Data::Notification,
                                   Flapjack::Data::Contact,
@@ -206,10 +203,10 @@ module Flapjack
             :rollup => alert_rollup)
 
           unless alert_rollup.nil? || alerting_check_ids.empty?
-            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |check, m|
-              cond = check.condition
+            alert.rollup_states = Flapjack::Data::Check.intersect(:id => alerting_check_ids).all.each_with_object({}) do |ch, m|
+              cond = ch.condition
               m[cond] ||= []
-              m[cond] << check.name
+              m[cond] << ch.name
             end
           end
 

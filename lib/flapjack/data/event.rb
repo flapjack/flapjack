@@ -2,16 +2,13 @@
 
 require 'flapjack/redis_proxy'
 
-require 'flapjack/data/check'
-
 module Flapjack
   module Data
     class Event
 
       attr_accessor :counter, :id_hash
 
-      attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata,
-                  :initial_failure_delay, :repeat_failure_delay
+      attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       # type was a required key in v1, but is superfluous
       REQUIRED_KEYS = %w(state check)
@@ -197,13 +194,11 @@ module Flapjack
       end
 
       [:time, :initial_failure_delay, :repeat_failure_delay, :duration].each do |num_prop|
-
         define_method(num_prop) do
           prop = instance_variable_get("@#{num_prop}")
           return if prop.nil?
           prop.to_i
         end
-
       end
 
       def dump

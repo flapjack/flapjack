@@ -17,6 +17,10 @@ require 'flapjack/version'
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/unscheduled_maintenance'
+require 'flapjack/data/tag'
+
 
 module Flapjack
 
@@ -78,7 +82,7 @@ module Flapjack
           Flapjack.logger.debug("processing jabber notification address: #{address}, " +
                         "check: '#{check_name}', state: #{state}, summary: #{alert.summary}")
 
-          event_count = alert.event_count
+          # event_count = alert.event_count
 
           @ack_str = if state.eql?('ok') || ['test', 'acknowledgement'].include?(alert.type)
             nil
@@ -98,7 +102,7 @@ module Flapjack
           message = nil
           begin
             message = message_template_erb.result(bnd).chomp
-          rescue => e
+          rescue
             Flapjack.logger.error "Error while executing the ERB for a jabber message, " +
               "ERB being executed: #{message_template}"
             raise
@@ -304,39 +308,39 @@ module Flapjack
                      `uname -a`.chomp + "\n"
 
             when /^find\s+(\d+\s+)?checks\s+(?:matching\s+\/(.+)\/|with\s+tag\s+(.+))\s*$/im
-              limit_checks = $1.nil? ? 30 : $1.strip.to_i
-              pattern     = $2
-              tag         = $3
+              limit_checks = Regexp.last_match(1).nil? ? 30 : Regexp.last_match(1).strip.to_i
+              pattern     = Regexp.last_match(2)
+              tag         = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, nil, :limit => limit_checks) do |check_ids, descriptor, num_checks|
                 resp = "Checks #{descriptor}:\n"
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
                 resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
-                resp += checks.map {|check|
-                  cond = check.condition
-                  "#{check.name} is #{cond.nil? ? '[none]' : cond.upcase}"
+                resp += checks.map {|chk|
+                  cond = chk.condition
+                  "#{chk.name} is #{cond.nil? ? '[none]' : cond.upcase}"
                 }.join(', ')
                 resp
               end
 
             when /^state\s+of\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              pattern    = $1
-              tag        = $2
-              check_name = $3
+              pattern    = Regexp.last_match(1)
+              tag        = Regexp.last_match(2)
+              check_name = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 "State of checks #{descriptor}:\n" +
-                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                    cond = check.condition
-                    "#{check.name} - #{cond.nil? ? '[none]' : cond.upcase}"
+                  Flapjack::Data::Check.intersect(:id => check_ids).collect {|chk|
+                    cond = chk.condition
+                    "#{chk.name} - #{cond.nil? ? '[none]' : cond.upcase}"
                   }.join("\n")
               end
 
             when /^tell\s+me\s+about\s(\d+\s+)?+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              limit_checks = $1.nil? ? 30 : $1.strip.to_i
-              pattern      = $2
-              tag          = $3
-              check_name   = $4
+              limit_checks = Regexp.last_match(1).nil? ? 30 : Regexp.last_match(1).strip.to_i
+              pattern      = Regexp.last_match(2)
+              tag          = Regexp.last_match(3)
+              check_name   = Regexp.last_match(4)
 
               msg = derive_check_ids_for(pattern, tag, check_name, :limit => limit_checks,
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance,
@@ -344,21 +348,21 @@ module Flapjack
                 current_time = Time.now
                 resp = "Details of checks #{descriptor}\n"
                 resp += "Showing first #{limit_checks} results of #{num_checks}:\n" if num_checks > limit_checks
-                resp += Flapjack::Data::Check.intersect(:id => check_ids).collect {|check|
-                          get_check_details(check, current_time)
+                resp += Flapjack::Data::Check.intersect(:id => check_ids).collect {|chk|
+                          get_check_details(chk, current_time)
                         }.join("")
               end
 
             when /^ACKID\s+([0-9A-F]+)(?:\s*(.*?)(?:\s*duration:.*?(\w+.*))?)$/im
-              ackid        = $1
-              comment      = $2
-              duration_str = $3
+              ackid        = Regexp.last_match(1)
+              comment      = Regexp.last_match(2)
+              duration_str = Regexp.last_match(3)
 
               error = nil
               dur   = nil
 
               if comment.nil? || (comment.length == 0)
-                error = "please provide a comment, eg \"#{@bot.alias}: ACKID #{$1} AL looking\""
+                error = "please provide a comment, eg \"#{@bot.alias}: ACKID #{Regexp.last_match(1)} AL looking\""
               elsif duration_str
                 # a fairly liberal match above, we'll let chronic_duration do the heavy lifting
                 dur = ChronicDuration.parse(duration_str)
@@ -393,11 +397,11 @@ module Flapjack
               end
 
             when /^ack\s+#{CHECK_MATCH_FRAGMENT}(?:\s+(.*?)(?:\s*duration:.*?(\w+.*))?)?\s*$/im
-              pattern      = $1
-              tag          = $2
-              check_name   = $3
-              comment      = $4 ? $4.strip : nil
-              duration_str = $5 ? $5.strip : '1 hour'
+              pattern      = Regexp.last_match(1)
+              tag          = Regexp.last_match(2)
+              check_name   = Regexp.last_match(3)
+              comment      = Regexp.last_match(4) ? Regexp.last_match(4).strip : nil
+              duration_str = Regexp.last_match(5) ? Regexp.last_match(5).strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
 
               msg = derive_check_ids_for(pattern, tag, check_name,
@@ -425,14 +429,14 @@ module Flapjack
               end
 
             when /^maint\s+#{CHECK_MATCH_FRAGMENT}\s+(?:start-in:.*?(\w+.*?)|start-at:.*?(\w+.*?))?(?:\s+duration:.*?(\w+.*?))?(?:\s+comment:.*?(\w+.*?))?\s*$/im
-              pattern      = $1
-              tag          = $2
-              check_name   = $3
-              start_in     = $4 ? $4.strip : nil
-              start_at     = $5 ? $5.strip : nil
-              duration_str = $6 ? $6.strip : '1 hour'
+              pattern      = Regexp.last_match(1)
+              tag          = Regexp.last_match(2)
+              check_name   = Regexp.last_match(3)
+              start_in     = Regexp.last_match(4) ? Regexp.last_match(4).strip : nil
+              start_at     = Regexp.last_match(5) ? Regexp.last_match(5).strip : nil
+              duration_str = Regexp.last_match(6) ? Regexp.last_match(6).strip : '1 hour'
               duration     = ChronicDuration.parse(duration_str)
-              comment      = $7 ? $7.strip : 'Test maintenance'
+              comment      = Regexp.last_match(7) ? Regexp.last_match(7).strip : 'Test maintenance'
 
               started = case
               when start_in
@@ -447,7 +451,7 @@ module Flapjack
                       :lock_klasses => [Flapjack::Data::ScheduledMaintenance]) do |check_ids, descriptor|
                 checks = Flapjack::Data::Check.find_by_ids(*check_ids)
 
-                checks.each do |check|
+                checks.each do |chk|
                   sched_maint = Flapjack::Data::ScheduledMaintenance.new(
                     :start_time => started,
                     :end_time   => started + duration,
@@ -455,16 +459,16 @@ module Flapjack
                   )
                   sched_maint.save
 
-                  check.scheduled_maintenances << sched_maint
+                  chk.scheduled_maintenances << sched_maint
                 end
 
                 "Scheduled maintenance for #{duration/60} minutes starting at #{Time.at(started)} on:\n" + checks.collect {|c| "#{c.name}" }.join("\n")
               end
 
             when /^test\s+notifications\s+for\s+#{CHECK_MATCH_FRAGMENT}\s*$/im
-              pattern    = $1
-              tag        = $2
-              check_name = $3
+              pattern    = Regexp.last_match(1)
+              tag        = Regexp.last_match(2)
+              check_name = Regexp.last_match(3)
 
               msg = derive_check_ids_for(pattern, tag, check_name) do |check_ids, descriptor|
                 summary = "Testing notifications to all contacts interested in checks #{descriptor}"
@@ -479,7 +483,7 @@ module Flapjack
               end
 
             when /^(.*)/
-              words = $1
+              words = Regexp.last_match(1)
               msg   = "what do you mean, '#{words}'? Type 'help' for a list of acceptable commands."
 
             end
@@ -527,6 +531,7 @@ module Flapjack
           @identifiers = ((@config['identifiers'] || []) + [@alias]).uniq
 
           @state_buffer = []
+          @should_quit = false
         end
 
         def alias
@@ -607,7 +612,7 @@ module Flapjack
                     text += elem.texts.join(" ")
                   end
                   text = data if text.empty? && !data.empty?
-                rescue REXML::ParseException => exc
+                rescue REXML::ParseException
                   # invalid XML, so we'll just clear everything inside angled brackets
                   text = data.gsub(/<[^>]+>/, '').strip
                 end
@@ -640,7 +645,7 @@ module Flapjack
                 identifier = identifiers.detect {|id| /^(?:@#{id}|#{id}:)\s*(.*)/m === check_xml.call(text) }
 
                 unless identifier.nil?
-                  the_command = $1
+                  the_command = Regexp.last_match(1)
                   Flapjack.logger.debug("matched identifier: #{identifier}, command: #{the_command.inspect}")
                   if interpreter
                     interpreter.receive_message(room, nick, time, the_command)

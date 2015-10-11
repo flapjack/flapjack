@@ -10,8 +10,6 @@ require 'flapjack/gateways/web/middleware/request_timestamp'
 
 require 'flapjack-diner'
 
-require 'flapjack/data/check'
-
 require 'flapjack/utility'
 
 module Flapjack
@@ -61,7 +59,15 @@ module Flapjack
           if @api_url.nil?
             raise "'api_url' config must contain a Flapjack API instance address"
           end
-          if URI.regexp(['http', 'https']).match(@api_url).nil?
+
+          uri = begin
+            URI(@api_url)
+          rescue URI::InvalidURIError
+            # TODO should we just log and re-raise the exception?
+            raise "'api_url' is not a valid URI (#{@api_url})"
+          end
+
+          unless ['http', 'https'].include?(uri.scheme)
             raise "'api_url' is not a valid http or https URI (#{@api_url})"
           end
           unless @api_url.match(/^.*\/$/)
@@ -70,7 +76,7 @@ module Flapjack
           end
 
           Flapjack::Diner.base_uri(@api_url)
-          Flapjack::Diner.logger = ::Logger.new('log/flapjack_diner.log')
+          Flapjack::Diner.logger = Flapjack.logger
 
           # constants won't be exposed to eRb scope
           @default_logo_url = "img/flapjack-2013-notext-transparent-300-300.png"
@@ -209,31 +215,18 @@ module Flapjack
             @links = create_pagination_links(@pagination[:page],
               @pagination[:total_pages])
           end
-
-          included = Flapjack::Diner.context[:included]
-
-          unless included.nil? || included.empty?
-
-          end
         end
 
         erb 'tags.html'.to_sym
       end
 
-      get '/tags/:name' do
-        tag_name = params[:name]
+      get '/tags/:id' do
+        tag_id = params[:id]
 
-        @tag = Flapjack::Diner.tags(tag_name, :include => 'checks')
-        err(404, "Could not find tag '#{tag_name}'") if @tag.nil?
+        @tag = Flapjack::Diner.tags(tag_id, :include => 'checks')
+        err(404, "Could not find tag '#{tag_id}'") if @tag.nil?
 
-        included = Flapjack::Diner.context[:included]
-
-        @checks = []
-
-        unless included.nil? || included.empty?
-          @checks = some_included_records(@tag[:relationships], :checks,
-            included, 'check')
-        end
+        @checks = Flapjack::Diner.related(@tag, :checks)
 
         erb 'tag.html'.to_sym
       end
@@ -267,12 +260,8 @@ module Flapjack
               @pagination[:total_pages])
           end
 
-          included = Flapjack::Diner.context[:included]
-
-          unless included.nil? || included.empty?
-            @states = @checks.each_with_object({}) do |check, memo|
-              memo[check[:id]] = check_state(check, included, time)
-            end
+          @states = @checks.each_with_object({}) do |check, memo|
+            memo[check[:id]] = check_state(check, time)
           end
         end
 
@@ -293,35 +282,34 @@ module Flapjack
 
         halt(404, "Could not find check '#{check_id}'") if @check.nil?
 
-        included = Flapjack::Diner.context[:included]
-
         @contacts = []
         @media_by_contact_id = {}
 
-        unless included.nil? || included.empty?
-          @state = check_extra_state(@check, included, @current_time)
+        @state = check_extra_state(@check, @current_time)
 
-          @contacts = some_included_records(@check[:relationships], :contacts,
-            included, 'contact')
+        @contacts = Flapjack::Diner.related(@check, :contacts)
 
-          @media_by_contact_id = @contacts.inject({}) do |memo, contact|
-            memo[contact[:id]] = some_included_records(contact[:relationships], :media,
-              included, 'medium')
-            memo
-          end
+        @media_by_contact_id = @contacts.inject({}) do |memo, contact|
+          memo[contact[:id]] = Flapjack::Diner.related(contact, :media)
+          memo
         end
 
         # these two requests will only get first page of 20 records, which is what we want
         state_links = Flapjack::Diner.check_link_states(check_id,
           :include => 'states')
-        @state_changes = all_included_records(state_links,
-          Flapjack::Diner.context[:included], 'state')
+
+        incl = Flapjack::Diner.included_data
+        unless incl.nil?
+          @state_changes = incl['state'].nil? ? [] : incl['state'].values
+        end
 
         sm_links = Flapjack::Diner.check_link_scheduled_maintenances(check_id,
           :include => 'scheduled_maintenances')
 
-        @scheduled_maintenances = all_included_records(sm_links,
-          Flapjack::Diner.context[:included], 'scheduled_maintenance')
+        incl = Flapjack::Diner.included_data
+        unless incl.nil?
+          @scheduled_maintenances = incl['scheduled_maintenance'].nil? ? [] : incl['scheduled_maintenance'].values
+        end
 
         @error = session[:error]; session.delete(:error)
 
@@ -332,8 +320,6 @@ module Flapjack
         summary  = params[:summary]
         check_id = params[:check_id]
 
-        t = Time.now
-
         dur = ChronicDuration.parse(params[:duration] || '')
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
@@ -343,7 +329,7 @@ module Flapjack
         Flapjack::Diner.create_acknowledgements(:summary => summary,
           :duration => duration, :check => check_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           session[:error] = "Could not create the acknowledgement: #{err}"
         end
@@ -357,7 +343,7 @@ module Flapjack
         Flapjack::Diner.update_unscheduled_maintenances(
           :id => unscheduled_maintenance_id, :end_time => Time.now)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           session[:error] = "Could not end unscheduled maintenance: #{err}"
         end
@@ -377,7 +363,7 @@ module Flapjack
           :start_time => start_time, :end_time => (start_time + duration),
           :check => check_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not create scheduled maintenance: #{err}"
           session[:error] = "Could not create scheduled maintenance for the check."
@@ -391,7 +377,7 @@ module Flapjack
 
         Flapjack::Diner.update_checks(:id => check_id, :enabled => false)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not disable check: #{err}"
           session[:error] = "Could not disable the check."
@@ -406,7 +392,7 @@ module Flapjack
         Flapjack::Diner.update_scheduled_maintenances({:id => scheduled_maintenance_id,
           :end_time => Time.now})
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not end scheduled maintenance: #{err}"
           session[:error] = "Could not end scheduled maintenance."
@@ -422,7 +408,7 @@ module Flapjack
 
         Flapjack::Diner.delete_scheduled_maintenances(scheduled_maintenance_id)
 
-        err = Flapjack::Diner.last_error
+        err = Flapjack::Diner.error
         unless err.nil?
           Flapjack.logger.info "Could not delete scheduled maintenance: #{err}"
           session[:error] = "Could not delete scheduled maintenance."
@@ -454,73 +440,40 @@ module Flapjack
         contact_id = params[:id]
 
         @contact = Flapjack::Diner.contacts(contact_id,
-          :include => ['acceptors.tags', 'acceptors.media',
-                       'checks', 'media.alerting_checks',
-                       'rejectors.tags', 'rejectors.media'])
+          :include => ['checks', 'media.alerting_checks',
+                       'rules.tags', 'rules.media'])
         halt(404, "Could not find contact '#{contact_id}'") if @contact.nil?
 
-        @acceptors = []
         @checks = []
         @media = []
-        @rejectors = []
+        @rules = []
 
         @alerting_checks_by_media_id = {}
 
-        @tags_by_acceptor_id  = {}
-        @media_by_acceptor_id = {}
-        @tags_by_rejector_id  = {}
-        @media_by_rejector_id = {}
+        @tags_by_rule_id  = {}
+        @media_by_rule_id = {}
 
-        context = Flapjack::Diner.context
-        unless context.nil?
-          included = context[:included]
-          unless included.nil?
-            @acceptors = some_included_records(@contact[:relationships], :acceptors,
-              included, 'acceptor')
+        @checks = Flapjack::Diner.related(@contact, :checks)
+        @media = Flapjack::Diner.related(@contact, :media)
 
-            unless @acceptors.nil? || @acceptors.empty?
-              @tags_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
-                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :tags,
-                  included, 'tag')
-                memo
-              end
+        unless @media.nil? || @media.empty?
+          @alerting_checks_by_media_id = @media.inject({}) do |memo, medium|
+            memo[medium[:id]] = Flapjack::Diner.related(medium, :alerting_checks)
+            memo
+          end
+        end
 
-              @media_by_acceptor_id = @acceptors.inject({}) do |memo, acceptor|
-                memo[acceptor[:id]] = some_included_records(acceptor[:relationships], :media,
-                  included, 'medium')
-                memo
-              end
-            end
+        @rules = Flapjack::Diner.related(@contact, :rules)
 
-            @checks = some_included_records(@contact[:relationships], :checks,
-              included, 'check')
-            @media = some_included_records(@contact[:relationships], :media,
-              included, 'medium')
+        unless @rules.nil? || @rules.empty?
+          @tags_by_rule_id = @rules.inject({}) do |memo, rule|
+            memo[rule[:id]] = Flapjack::Diner.related(rule, :tags)
+            memo
+          end
 
-            unless @media.nil? || @media.empty?
-              @alerting_checks_by_media_id = @media.inject({}) do |memo, medium|
-                memo[medium[:id]] = some_included_records(medium[:relationships], :alerting_checks,
-                  included, 'check')
-                memo
-              end
-            end
-
-            @rejectors = some_included_records(@contact[:relationships], :rejectors,
-              included, 'rejector')
-
-            unless @rejectors.nil? || @rejectors.empty?
-              @tags_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
-                memo[rejector[:id]] = some_included_records(rejector[:relationships], :tags,
-                  included, 'tag')
-                memo
-              end
-
-              @media_by_rejector_id = @acceptors.inject({}) do |memo, rejector|
-                memo[rejector[:id]] = some_included_records(rejector[:relationships], :media,
-                  included, 'medium')
-                memo
-              end
-            end
+          @media_by_rule_id = @rules.inject({}) do |memo, rule|
+            memo[rule[:id]] = Flapjack::Diner.related(rule, :media)
+            memo
           end
         end
 
@@ -547,9 +500,8 @@ module Flapjack
 
     private
 
-      def check_state(check, included, time)
-        current_state = some_included_records(check[:relationships], :current_state,
-          included, 'state')
+      def check_state(check, time)
+        current_state = Flapjack::Diner.related(check, :current_state)
 
         last_changed = if current_state.nil? || current_state[:created_at].nil?
           nil
@@ -571,12 +523,9 @@ module Flapjack
           end
         end
 
-        latest_notifications = some_included_records(check[:relationships], :latest_notifications,
-          included, 'state')
+        latest_notifications = Flapjack::Diner.related(check, :latest_notifications)
 
-        current_scheduled_maintenances = some_included_records(check[:relationships],
-          :current_scheduled_maintenances, included, 'scheduled_maintenance')
-
+        current_scheduled_maintenances = Flapjack::Diner.related(check, :current_scheduled_maintenances)
         current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
           begin
             DateTime.parse(sm[:end_time]).to_i
@@ -588,9 +537,7 @@ module Flapjack
 
         in_scheduled_maintenance = !current_scheduled_maintenance.nil?
 
-        current_unscheduled_maintenance = some_included_records(check[:relationships],
-          :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
-
+        current_unscheduled_maintenance = Flapjack::Diner.related(check, :current_unscheduled_maintenance)
         in_unscheduled_maintenance = !current_unscheduled_maintenance.nil?
 
         {
@@ -604,15 +551,12 @@ module Flapjack
         }
       end
 
-      def check_extra_state(check, included, time)
-        state = check_state(check, included, time)
+      def check_extra_state(check, time)
+        state = check_state(check, time)
 
-        current_state = some_included_records(check[:relationships], :current_state,
-          included, 'state')
+        current_state = Flapjack::Diner.related(check, :current_state)
 
-        current_scheduled_maintenances = some_included_records(check[:relationships],
-          :current_scheduled_maintenances, included, 'scheduled_maintenance')
-
+        current_scheduled_maintenances = Flapjack::Diner.related(check, :current_scheduled_maintenances)
         current_scheduled_maintenance = current_scheduled_maintenances.max_by do |sm|
           begin
             DateTime.parse(sm[:end_time]).to_i
@@ -622,8 +566,7 @@ module Flapjack
           end
         end
 
-        current_unscheduled_maintenance = some_included_records(check[:relationships],
-          :current_unscheduled_maintenance, included, 'unscheduled_maintenance')
+        current_unscheduled_maintenance = Flapjack::Diner.related(check, :current_unscheduled_maintenance)
 
         state.merge(
           :details       => current_state.nil? ? '-' : current_state[:details],
@@ -632,47 +575,6 @@ module Flapjack
           :current_scheduled_maintenance => current_scheduled_maintenance,
           :current_unscheduled_maintenance => current_unscheduled_maintenance,
         )
-      end
-
-      def all_included_records(links, included, type)
-        case links
-        when Array
-          # respects the order provided by the main linkage data
-          ids = links.inject([]) do |memo, link|
-            if type.eql?(link[:type])
-              memo << link[:id]
-            end
-            memo
-          end
-          included.select {|incl|
-            type.eql?(incl[:type]) && ids.include?(incl[:id])
-          }.sort_by {|a| ids.index {|i| i == a[:id]}}
-        when Hash
-          included.detect do |incl|
-            type.eql?(incl[:type]) && links[:id].eql?(incl[:id])
-          end
-        end
-      end
-
-      def some_included_records(links, field, included, type)
-        return unless links.has_key?(field) && links[field].has_key?(:data) &&
-          !links[field][:data].nil?
-
-        if links[field][:data].is_a?(Array)
-          ids = links[field][:data].collect {|lr| lr[:id]}
-          return [] if ids.empty?
-
-          included.select {|incl|
-            type.eql?(incl[:type]) && ids.include?(incl[:id])
-          }.sort_by {|a| ids.index {|i| i == a[:id]}}
-        else
-          id = links[field][:data][:id]
-          return if id.nil?
-
-          included.detect do |incl|
-            type.eql?(incl[:type]) && id.eql?(incl[:id])
-          end
-        end
       end
 
       def pagination_from_context(context)
@@ -729,7 +631,10 @@ module Flapjack
       end
 
       def include_page_title
-        @page_title ? "#{@page_title} | Flapjack" : "Flapjack"
+        if instance_variable_defined?('@page_title') && !@page_title.nil?
+          return "#{@page_title} | Flapjack"
+        end
+        "Flapjack"
       end
 
       def boolean_from_str(str)

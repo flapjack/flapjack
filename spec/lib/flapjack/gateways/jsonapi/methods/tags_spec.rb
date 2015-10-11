@@ -5,14 +5,13 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   include_context "jsonapi"
 
-  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
-  let(:tag_2) { double(Flapjack::Data::Tag, :id => tag_2_data[:name]) }
+  let(:tag)   { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
+  let(:tag_2) { double(Flapjack::Data::Tag, :id => tag_2_data[:id]) }
 
-  let(:tag_data_with_id)   { tag_data.merge(:id => tag_data[:name]) }
-  let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:name]) }
+  let(:tag_data_with_id)   { tag_data.merge(:id => tag_data[:id]) }
+  let(:tag_2_data_with_id) { tag_2_data.merge(:id => tag_2_data[:id]) }
 
   let(:check) { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:acceptor)  { double(Flapjack::Data::Acceptor, :id => acceptor_data[:id]) }
 
   it "creates a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
@@ -22,7 +21,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
     empty_ids = double('empty_ids')
     expect(empty_ids).to receive(:ids).and_return([])
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:name => [tag_data[:name]]).and_return(empty_ids)
+      with(:id => [tag_data[:id]]).and_return(empty_ids)
 
     expect(tag).to receive(:invalid?).and_return(false)
     expect(tag).to receive(:save!).and_return(true)
@@ -132,7 +131,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       and_yield
 
     expect(Flapjack::Data::Tag).to receive(:intersect).
-      with(:id => tag.id).and_return([tag])
+      with(:id => Set.new([tag.id])).and_return([tag])
 
     expect(tag).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(tag_data)
@@ -196,6 +195,25 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
       :data => resp_data, :links => links, :meta => meta))
   end
 
+  it "updates a tag" do
+    expect(Flapjack::Data::Tag).to receive(:lock).
+      with(no_args).
+      and_yield
+
+    expect(Flapjack::Data::Tag).to receive(:find_by_id!).
+      with(tag.id).and_return(tag)
+
+    expect(tag).to receive(:name=).with('database_only')
+    expect(tag).to receive(:invalid?).and_return(false)
+    expect(tag).to receive(:save!).and_return(true)
+
+    patch "/tags/#{tag.id}",
+      Flapjack.dump_json(:data => {:id => tag.id,
+        :type => 'tag', :attributes => {:name => 'database_only'}}),
+      jsonapi_env
+    expect(last_response.status).to eq(204)
+  end
+
   it 'sets a linked check for a tag' do
     expect(Flapjack::Data::Tag).to receive(:lock).
       with(Flapjack::Data::Check).
@@ -222,10 +240,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes a tag" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).
@@ -241,10 +258,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "deletes multiple tags" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).
@@ -268,10 +284,9 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Tags', :sinatra => true, :logger
 
   it "does not delete a tag that does not exist" do
     expect(Flapjack::Data::Tag).to receive(:lock).
-      with(Flapjack::Data::Acceptor,
-           Flapjack::Data::Check,
+      with(Flapjack::Data::Check,
            Flapjack::Data::Contact,
-           Flapjack::Data::Rejector,
+           Flapjack::Data::Rule,
            Flapjack::Data::ScheduledMaintenance,
            Flapjack::Data::State,
            Flapjack::Data::UnscheduledMaintenance).

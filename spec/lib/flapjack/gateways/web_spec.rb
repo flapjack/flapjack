@@ -116,13 +116,8 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
         {:type => 'medium', :id => email_data[:id]}
       ]
 
-      resp_state = state_json(state_data).merge(:relationships => state_rel(state_data))
-
-      resp_included = [
-        resultify(resp_contact),
-        resultify(medium_json(email_data).merge(:relationships => medium_rel(email_data))),
-        resultify(resp_state)
-      ]
+      resp_medium = medium_json(email_data)
+      resp_state = state_json(state_data)
 
       expect(Flapjack::Diner).to receive(:checks).
         with(check_data[:id], :include => ['contacts.media', 'current_state',
@@ -139,9 +134,15 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
         with(check_data[:id], :include => 'scheduled_maintenances').
         and_return([])
 
-      expect(Flapjack::Diner).to receive(:context).exactly(3).times.
-        and_return({:included => resp_included}, {:included => [resp_state]},
-          {:included => []})
+      expect(Flapjack::Diner).to receive(:included_data).twice.and_return({})
+
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_data), :contacts).and_return([resultify(resp_contact)])
+      expect(Flapjack::Diner).to receive(:related).twice.with(resultify(resp_data), :current_state).and_return(resultify(resp_state))
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_data), :latest_notifications).and_return([])
+      expect(Flapjack::Diner).to receive(:related).twice.with(resultify(resp_data), :current_scheduled_maintenances).and_return([])
+      expect(Flapjack::Diner).to receive(:related).twice.with(resultify(resp_data), :current_unscheduled_maintenance).and_return(nil)
+
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_contact), :media).and_return([resultify(resp_medium)])
 
       get "/checks/#{check_data[:id]}"
       expect(last_response).to be_ok
@@ -207,27 +208,22 @@ describe Flapjack::Gateways::Web, :sinatra => true, :pact_fixture => true, :logg
       resp_data[:relationships][:media][:data] = [
         {:type => 'medium', :id => email_data[:id]}
       ]
-      resp_data[:relationships][:acceptors][:data] = [
-      ]
-      resp_data[:relationships][:rejectors][:data] = [
-      ]
+      resp_data[:relationships][:rules][:data] = []
 
-      resp_medium = medium_json(email_data).merge(:relationships => medium_rel(email_data))
-      resp_medium[:relationships][:alerting_checks][:data] = [
-      ]
+      resp_check = check_json(check_data)
 
-      resp_included = [
-        resultify(check_json(check_data).merge(:relationships => check_rel(check_data))),
-        resultify(resp_medium)
-      ]
+      resp_medium = medium_json(email_data)
+      resp_medium[:relationships] = {:alerting_checks => {:data => []}}
+
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_data), :checks).and_return([resultify(resp_check)])
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_data), :media).and_return([resultify(resp_medium)])
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_medium), :alerting_checks).and_return([])
+      expect(Flapjack::Diner).to receive(:related).with(resultify(resp_data), :rules).and_return([])
 
       expect(Flapjack::Diner).to receive(:contacts).
-        with(contact_data[:id], :include => ['acceptors.tags', 'acceptors.media',
-          'checks', 'media.alerting_checks', 'rejectors.tags', 'rejectors.media']).
+        with(contact_data[:id], :include => ['checks', 'media.alerting_checks',
+          'rules.tags', 'rules.media']).
         and_return(resultify(resp_data))
-
-      expect(Flapjack::Diner).to receive(:context).
-        and_return({:included => resp_included})
 
       get "/contacts/#{contact_data[:id]}"
       expect(last_response).to be_ok

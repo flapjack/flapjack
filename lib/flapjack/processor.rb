@@ -293,7 +293,7 @@ module Flapjack
 
       event.counter = @global_stats.all_events
 
-      ncsm_sched_maint  = nil
+      # ncsm_sched_maint  = nil
 
       if event_condition.nil?
         # Action events represent human or automated interaction with Flapjack

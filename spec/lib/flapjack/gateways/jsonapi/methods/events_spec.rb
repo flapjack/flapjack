@@ -10,7 +10,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Events', :sinatra => true, :logg
   let(:test_notification_2) { double(Flapjack::Data::TestNotification, :id => test_notification_2_data[:id]) }
 
   let(:check)  { double(Flapjack::Data::Check, :id => check_data[:id]) }
-  let(:tag)    { double(Flapjack::Data::Tag, :id => tag_data[:name]) }
+  let(:tag)    { double(Flapjack::Data::Tag, :id => tag_data[:id]) }
 
   let(:queue) { 'events' }
 

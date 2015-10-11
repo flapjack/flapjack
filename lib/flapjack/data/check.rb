@@ -9,26 +9,21 @@ require 'zermelo/records/redis'
 require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/condition'
-require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
-require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/state'
-require 'flapjack/data/tag'
 require 'flapjack/data/unscheduled_maintenance'
 
 require 'flapjack/data/extensions/associations'
+require 'flapjack/data/extensions/short_name'
+
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
 require 'flapjack/gateways/jsonapi/data/method_descriptor'
 
 module Flapjack
-
   module Data
-
     class Check
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks
@@ -120,15 +115,15 @@ module Flapjack
         # determine matching acceptors
         tag_ids = self.tags.ids
 
-        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids, :severity => severity)
-        acceptor_media_ids = Flapjack::Data::Acceptor.matching_media_ids(acceptor_ids,
+        acceptor_ids = matching_rule_ids(tag_ids, :blackhole => false, :severity => severity)
+        acceptor_media_ids = Flapjack::Data::Rule.matching_media_ids(acceptor_ids,
           :time => time)
 
         return Flapjack::Data::Medium.empty if acceptor_media_ids.empty?
 
         # and matching rejectors
-        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids, :severity => severity)
-        rejector_media_ids = Flapjack::Data::Rejector.matching_media_ids(rejector_ids,
+        rejector_ids = matching_rule_ids(tag_ids, :blackhole => true, :severity => severity)
+        rejector_media_ids = Flapjack::Data::Rule.matching_media_ids(rejector_ids,
           :time => time)
 
         unless rejector_media_ids.empty?
@@ -147,15 +142,15 @@ module Flapjack
         tag_ids = self.tags.ids
         time = Time.now
 
-        acceptor_ids = matching_rule_ids(Flapjack::Data::Acceptor, tag_ids)
-        acceptor_contact_ids = Flapjack::Data::Acceptor.matching_contact_ids(acceptor_ids,
+        acceptor_ids = matching_rule_ids(tag_ids, :blackhole => false,)
+        acceptor_contact_ids = Flapjack::Data::Rule.matching_contact_ids(acceptor_ids,
           :time => time)
         return Flapjack::Data::Contact.empty if acceptor_contact_ids.empty?
 
 
         # and matching rejectors
-        rejector_ids = matching_rule_ids(Flapjack::Data::Rejector, tag_ids)
-        rejector_contact_ids = Flapjack::Data::Rejector.matching_contact_ids(rejector_ids,
+        rejector_ids = matching_rule_ids(tag_ids, :blackhole => true)
+        rejector_contact_ids = Flapjack::Data::Rule.matching_contact_ids(rejector_ids,
           :time => time)
         unless rejector_contact_ids.empty?
           acceptor_contact_ids -= rejector_contact_ids
@@ -165,21 +160,32 @@ module Flapjack
         Flapjack::Data::Contact.intersect(:id => acceptor_contact_ids)
       end
 
-      def matching_rule_ids(rule_klass, tag_ids, opts = {})
+      def matching_rule_ids(tag_ids, opts = {})
         severity = opts[:severity]
+        blackhole = opts[:blackhole]
 
-        global_rules = rule_klass.intersect(:all => true)
-        unless severity.nil?
-          global_rules = global_rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
-        end
+        matcher_by_strategy = {
+          'global'   => nil,
+          'all_tags' => proc {|rule_tag_ids| (rule_tag_ids - tag_ids).empty? },
+          'any_tag'  => proc {|rule_tag_ids| !((rule_tag_ids & tag_ids).empty?) },
+          'no_tag'   => proc {|rule_tag_ids| (rule_tag_ids & tag_ids).empty? }
+        }
 
-        rules = rule_klass.intersect(:all => [nil, false])
-        unless severity.nil?
-          rules = rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
-        end
+        matcher_by_strategy.each_with_object(Set.new) do |(strategy, matcher), memo|
+          rules = Flapjack::Data::Rule.intersect(:enabled => true,
+            :blackhole => blackhole, :strategy => strategy)
+          unless severity.nil?
+            rules = rules.intersect(:conditions_list => [nil, /(?:^|,)#{severity}(?:,|$)/])
+          end
 
-        global_rules.ids + rules.associated_ids_for(:tags).each_with_object([]) do |(rule_id, rule_tag_ids), memo|
-          memo << rule_id if (rule_tag_ids - tag_ids).empty?
+          if matcher.nil?
+            memo.merge(rules.ids)
+            next
+          end
+
+          rules.associated_ids_for(:tags).each_pair do |rule_id, rule_tag_ids|
+            memo << rule_id if matcher.call(rule_tag_ids)
+          end
         end
       end
 
@@ -351,7 +357,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :alerting_media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
@@ -359,9 +365,8 @@ module Flapjack
               :type => 'medium',
               :klass => Flapjack::Data::Medium,
               :callback_classes => [
-                Flapjack::Data::Acceptor,
                 Flapjack::Data::Contact,
-                Flapjack::Data::Rejector,
+                Flapjack::Data::Rule,
                 Flapjack::Data::Tag,
                 Flapjack::Data::ScheduledMaintenance
               ]
@@ -372,8 +377,7 @@ module Flapjack
               :type => 'contact',
               :klass => Flapjack::Data::Contact,
               :callback_classes => [
-                Flapjack::Data::Acceptor,
-                Flapjack::Data::Rejector,
+                Flapjack::Data::Rule,
                 Flapjack::Data::Tag
               ]
             ),
@@ -513,9 +517,6 @@ module Flapjack
         self.unscheduled_maintenances.intersect(:start_time => start_range,
           :end_time => end_range)
       end
-
     end
-
   end
-
 end

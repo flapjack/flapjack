@@ -10,7 +10,7 @@ module Flapjack
 
           module Helpers
             def resource_delete(klass, id)
-              resources_data, unwrap = wrapped_params(:allow_nil => !id.nil?)
+              resources_data, _ = wrapped_params(:allow_nil => !id.nil?)
 
               ids = resources_data.nil? ? [id] : resources_data.map {|d| d['id']}
 
@@ -33,6 +33,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Headers
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Miscellaneous
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
+            app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourceDelete::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|

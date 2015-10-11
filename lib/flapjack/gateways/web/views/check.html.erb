@@ -33,9 +33,9 @@
 
   <div class="col-md-6">
    <%
-    current_scheduled_maintenance = @state[:current_scheduled_maintenance]
-    current_unscheduled_maintenance = @state[:current_unscheduled_maintenance]
-    latest_notifications = @state[:latest_notifications]
+    current_scheduled_maintenance = @state.nil? ? nil : @state[:current_scheduled_maintenance]
+    current_unscheduled_maintenance = @state.nil? ? nil : @state[:current_unscheduled_maintenance]
+    latest_notifications = @state.nil? ? nil : @state[:latest_notifications]
 
     if current_scheduled_maintenance.nil? &&
        current_unscheduled_maintenance.nil? &&
@@ -237,66 +237,70 @@
 
 <div class="row">
   <div id="output" class="col-md-6">
-    <h3>Output: <%= h @state[:summary] %></h3>
-    <p><%= h @state[:details] %></p>
-    <% if @state[:perfdata] && @state[:perfdata].is_a?(Array) %>
-    <h3>Performance Data:</h3>
-    <table>
-      <% @state[:perfdata].each do |perfdata| %>
-      <tr>
-        <td><%= perfdata["key"] %></td>
-        <td><%= perfdata["value"] %></td>
-      </tr>
-      <% end %>
-    </table>
-    <% end %>
-    <table class="table table-hover table-condensed">
-      <tr>
-        <td>Last state change:</td>
-        <% if @state[:last_changed].nil? %>
-          <td>-</td>
-          <td>-</td>
-        <% else %>
-          <td><%= h relative_time_ago(@state[:last_changed], @current_time) %> ago</td>
-          <td><%= h @state[:last_changed].to_s %></td>
-        <% end %>
-        <td>&nbsp;</td>
-      </tr>
-      <tr>
-        <td>Last update:</td>
-        <% if @state[:last_updated].nil? %>
-          <td>-</td>
-          <td>-</td>
-        <% else %>
-          <td><%= h relative_time_ago(@state[:last_updated], @current_time) %> ago</td>
-          <td><%= h @state[:last_updated].to_s %></td>
-        <% end %>
-        <td>&nbsp;</td>
-      </tr>
-      <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
+    <% if @state.nil? %>
+      <p>No events received for this check.</p>
+    <% else %>
+      <h3>Output</h3>
+      <p><%= h @state[:details] %></p>
+      <% if @state[:perfdata] && @state[:perfdata].is_a?(Array) %>
+      <h3>Performance Data:</h3>
+      <table>
+        <% @state[:perfdata].each do |perfdata| %>
         <tr>
-          <td>Last <%= h type.to_s %> notification:</td>
-          <% notif = latest_notifications.detect {|ln| ln[:condition].eql?(type.to_s) || ln[:action].eql?(type.to_s) } %>
-          <% if notif.nil? %>
-            <td>never</td>
-            <td>&nbsp;</td>
-            <td>&nbsp;</td>
-          <% else %>
-            <%
-              notif_relative = begin
-                notif_created = DateTime.parse(notif[:created_at])
-                relative_time_ago(@current_time, notif_created) + " ago"
-              rescue ArgumentError
-                nil
-              end
-            %>
-            <td><%= h(notif_relative) %></td>
-            <td><%= h(notif[:created_at]) %></td>
-            <td><%= h(notif[:summary]) %></td>
-          <% end %>
+          <td><%= perfdata["key"] %></td>
+          <td><%= perfdata["value"] %></td>
         </tr>
+        <% end %>
+      </table>
       <% end %>
-    </table>
+      <table class="table table-hover table-condensed">
+        <tr>
+          <td>Last state change:</td>
+          <% if @state[:last_changed].nil? %>
+            <td>-</td>
+            <td>-</td>
+          <% else %>
+            <td><%= h relative_time_ago(@state[:last_changed], @current_time) %> ago</td>
+            <td><%= h @state[:last_changed].to_s %></td>
+          <% end %>
+          <td>&nbsp;</td>
+        </tr>
+        <tr>
+          <td>Last update:</td>
+          <% if @state[:last_updated].nil? %>
+            <td>-</td>
+            <td>-</td>
+          <% else %>
+            <td><%= h relative_time_ago(@state[:last_updated], @current_time) %> ago</td>
+            <td><%= h @state[:last_updated].to_s %></td>
+          <% end %>
+          <td>&nbsp;</td>
+        </tr>
+        <% [:critical, :warning, :unknown, :ok, :acknowledgement].each do |type| %>
+          <tr>
+            <td>Last <%= h type.to_s %> notification:</td>
+            <% notif = latest_notifications.detect {|ln| ln[:condition].eql?(type.to_s) || ln[:action].eql?(type.to_s) } %>
+            <% if notif.nil? %>
+              <td>never</td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+            <% else %>
+              <%
+                notif_relative = begin
+                  notif_created = DateTime.parse(notif[:created_at])
+                  relative_time_ago(@current_time, notif_created) + " ago"
+                rescue ArgumentError
+                  nil
+                end
+              %>
+              <td><%= h(notif_relative) %></td>
+              <td><%= h(notif[:created_at]) %></td>
+              <td><%= h(notif[:summary]) %></td>
+            <% end %>
+          </tr>
+        <% end %>
+      </table>
+    <% end %>
   </div><!-- col-md-6 -->
 
   <div id="recent-state-changes" class="col-md-6">

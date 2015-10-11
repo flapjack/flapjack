@@ -41,7 +41,7 @@
     </tr>
     <% @tags.each do |tag| %>
     <tr>
-      <td><a href="<%= @base_url %>tags/<%= tag[:name] %>" title="tag details"><%= h tag[:name] %></a></td>
+      <td><a href="<%= @base_url %>tags/<%= tag[:id] %>" title="tag details"><%= h tag[:name] %></a></td>
     </tr>
     <% end %>
   </table>

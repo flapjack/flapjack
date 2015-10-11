@@ -32,13 +32,12 @@ require 'hiredis'
 require 'zermelo'
 
 require 'flapjack'
-require 'flapjack/data/acceptor'
 require 'flapjack/data/condition'
 require 'flapjack/data/check'
 require 'flapjack/data/state'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
 require 'flapjack/data/tag'
@@ -143,7 +142,7 @@ module Flapjack
       def migrate_contacts_and_media
         source_keys_matching('contact:?*').each do |contact_key|
           contact_key =~ /\Acontact:(#{ID_PATTERN_FRAGMENT})\z/
-          contact_id = $1
+          contact_id = Regexp.last_match(1)
           raise "Bad regex for '#{contact_key}'" if contact_id.nil?
 
           contact_data = @source_redis.hgetall(contact_key).merge(:id => contact_id)
@@ -201,7 +200,7 @@ module Flapjack
 
         source_keys_matching('entity_tag:?*').each do |entity_tag_key|
           entity_tag_key =~ /\Aentity_tag:(#{TAG_PATTERN_FRAGMENT})\z/
-          entity_tag = $1
+          entity_tag = Regexp.last_match(1)
           raise "Bad regex for '#{entity_tag_key}'" if entity_tag.nil?
 
           entity_ids = @source_redis.smembers(entity_tag_key)
@@ -219,7 +218,7 @@ module Flapjack
 
         all_checks_keys.each do |all_checks_key|
           all_checks_key =~ /\Aall_checks:(#{ENTITY_PATTERN_FRAGMENT})\z/
-          entity_name = $1
+          entity_name = Regexp.last_match(1)
           raise "Bad regex for '#{all_checks_key}'" if entity_name.nil?
 
           entity_tags = entity_tags_by_entity_name[entity_name]
@@ -253,8 +252,8 @@ module Flapjack
         source_keys_matching('contacts_for:?*').each do |contacts_for_key|
 
           contacts_for_key =~ /\Acontacts_for:(#{ID_PATTERN_FRAGMENT})(?::(#{CHECK_PATTERN_FRAGMENT}))?\z/
-          entity_id   = $1
-          check_name  = $2
+          entity_id   = Regexp.last_match(1)
+          check_name  = Regexp.last_match(2)
           if entity_id.nil?
             raise "Bad regex for '#{contacts_for_key}'"
           end
@@ -299,8 +298,8 @@ module Flapjack
       def migrate_states
         source_keys_matching('?*:?*:states').each do |timestamp_key|
           timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):states\z/
-          entity_name = $1
-          check_name  = $2
+          entity_name = Regexp.last_match(1)
+          check_name  = Regexp.last_match(2)
           if entity_name.nil? || check_name.nil?
             raise "Bad regex for #{timestamp_key}"
           end
@@ -377,8 +376,8 @@ module Flapjack
       def migrate_actions
         source_keys_matching('?*:?*:actions').each do |timestamp_key|
           timestamp_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):actions\z/
-          entity_name = $1
-          check_name  = $2
+          entity_name = Regexp.last_match(1)
+          check_name  = Regexp.last_match(2)
           if entity_name.nil? || check_name.nil?
             raise "Bad regex for #{timestamp_key}"
           end
@@ -408,8 +407,8 @@ module Flapjack
       def migrate_scheduled_maintenances
         source_keys_matching('?*:?*:scheduled_maintenances').each do |sm_key|
           sm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):scheduled_maintenances\z/
-          entity_name = $1
-          check_name  = $2
+          entity_name = Regexp.last_match(1)
+          check_name  = Regexp.last_match(2)
           if entity_name.nil? || check_name.nil?
             raise "Bad regex for #{sm_key}"
           end
@@ -449,8 +448,8 @@ module Flapjack
       def migrate_unscheduled_maintenances
         source_keys_matching('?*:?*:unscheduled_maintenances').each do |usm_key|
           usm_key =~ /\A(#{ENTITY_PATTERN_FRAGMENT}):(#{CHECK_PATTERN_FRAGMENT}):unscheduled_maintenances\z/
-          entity_name = $1
-          check_name  = $2
+          entity_name = Regexp.last_match(1)
+          check_name  = Regexp.last_match(2)
           if entity_name.nil? || check_name.nil?
             raise "Bad regex for #{usm_key}"
           end
@@ -494,7 +493,7 @@ module Flapjack
         source_keys_matching('contact_notification_rules:?*').each do |rules_key|
 
           rules_key =~ /\Acontact_notification_rules:(#{ID_PATTERN_FRAGMENT})\z/
-          contact_id = $1
+          contact_id = Regexp.last_match(1)
           raise "Bad regex for '#{rules_key}'" if contact_id.nil?
 
           contact = find_contact(contact_id)

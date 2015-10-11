@@ -25,12 +25,6 @@ module Flapjack
 
       define_attributes :summary => :string
 
-      belongs_to :check, :class_name => 'Flapjack::Data::Check',
-        :inverse_of => :test_notifications
-
-      belongs_to :tag, :class_name => 'Flapjack::Data::Tag',
-        :inverse_of => :test_notifications
-
       attr_accessor :queue
 
       def save!
@@ -106,15 +100,19 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,
-              :number => :singular, :link => false, :includable => false
+              :number => :singular, :link => false, :includable => false,
+              :type => 'check',
+              :klass => Flapjack::Data::Check
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,
-              :number => :singular, :link => false, :includable => false
+              :number => :singular, :link => false, :includable => false,
+              :type => 'tag',
+              :klass => Flapjack::Data::Tag
             )
           }
           populate_association_data(@jsonapi_associations)

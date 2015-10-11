@@ -9,7 +9,7 @@ describe Flapjack::RedisProxy do
   it "does not initialize the Redis connection immediately" do
     expect(Redis).not_to receive(:new)
 
-    proxy = Flapjack::RedisProxy.new
+    Flapjack::RedisProxy.new
   end
 
   it "proxies commands through to the underlying Redis connection" do

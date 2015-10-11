@@ -17,7 +17,7 @@ module Flapjack
     class Alert
 
       include Flapjack::Utility
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
 
       define_attributes :condition      => :string,
                         :action         => :string,

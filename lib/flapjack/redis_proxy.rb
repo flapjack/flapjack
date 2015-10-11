@@ -22,6 +22,11 @@ module Flapjack
       attr_accessor :config
     end
 
+    def initialize
+      @proxied_connection = nil
+      @connection_failed = nil
+    end
+
     # need to override Kernel.exec
     def exec
       proxied_connection.exec

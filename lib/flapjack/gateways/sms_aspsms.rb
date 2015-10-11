@@ -74,10 +74,8 @@ module Flapjack
         message_type = alert.rollup ? 'rollup' : 'alert'
 
         sms_dir = File.join(File.dirname(__FILE__), 'sms_aspsms')
-
         sms_template_erb, sms_template =
-            load_template(@config['templates'], message_type, 'text',
-                          File.join(File.dirname(__FILE__), 'sms_aspsms'))
+            load_template(@config['templates'], message_type, 'text', sms_dir)
 
         @alert = alert
         bnd = binding

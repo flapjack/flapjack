@@ -65,7 +65,7 @@ describe Flapjack::Gateways::Jabber, :logger => true do
       expect(alert).to receive(:state).and_return('critical')
       expect(alert).to receive(:state_title_case).and_return('Critical')
       expect(alert).to receive(:summary).twice.and_return('')
-      expect(alert).to receive(:event_count).and_return(33)
+      # expect(alert).to receive(:event_count).and_return(33)
       expect(alert).to receive(:type).twice.and_return('problem')
       expect(alert).to receive(:type_sentence_case).and_return('Problem')
       expect(alert).to receive(:rollup).and_return(nil)

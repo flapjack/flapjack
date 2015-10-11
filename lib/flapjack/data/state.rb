@@ -15,7 +15,6 @@ require 'flapjack/data/extensions/short_name'
 require 'flapjack/data/validators/id_validator'
 
 require 'flapjack/data/condition'
-require 'flapjack/data/notification'
 
 require 'flapjack/data/extensions/associations'
 require 'flapjack/gateways/jsonapi/data/join_descriptor'
@@ -25,7 +24,7 @@ module Flapjack
   module Data
     class State
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSortedSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks
@@ -41,6 +40,8 @@ module Flapjack
                         :summary       => :string,
                         :details       => :string,
                         :perfdata_json => :string
+
+      define_sort_attribute :created_at
 
       index_by :condition, :action
       range_index_by :created_at, :updated_at, :finished_at
@@ -179,7 +180,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,

@@ -77,7 +77,7 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::ScheduledMaintenances', :sinatra
       and_yield
 
     expect(Flapjack::Data::ScheduledMaintenance).to receive(:intersect).
-      with(:id => scheduled_maintenance.id).and_return([scheduled_maintenance])
+      with(:id => Set.new([scheduled_maintenance.id])).and_return([scheduled_maintenance])
 
     expect(scheduled_maintenance).to receive(:as_json).with(:only => an_instance_of(Array)).
       and_return(scheduled_maintenance_data.reject {|k,v| :id.eql?(k)})

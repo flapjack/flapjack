@@ -158,12 +158,6 @@ module FixtureData
   def contact_rel(co_data)
     id = co_data[:id]
     {
-      :acceptors => {
-        :links => {
-          :self => "http://#{api_host}/contacts/#{id}/relationships/acceptors",
-          :related => "http://#{api_host}/contacts/#{id}/acceptors"
-        }
-      },
       :checks => {
         :links => {
           :self => "http://#{api_host}/contacts/#{id}/relationships/checks",
@@ -176,10 +170,10 @@ module FixtureData
           :related => "http://#{api_host}/contacts/#{id}/media"
         }
       },
-      :rejectors => {
+      :rules => {
         :links => {
-          :self => "http://#{api_host}/contacts/#{id}/relationships/rejectors",
-          :related => "http://#{api_host}/contacts/#{id}/rejectors"
+          :self => "http://#{api_host}/contacts/#{id}/relationships/rules",
+          :related => "http://#{api_host}/contacts/#{id}/rules"
         }
       },
       :tags => {
@@ -285,12 +279,6 @@ module FixtureData
   def medium_rel(me_data)
     id = me_data[:id]
     {
-      :acceptors => {
-        :links => {
-          :self => "http://#{api_host}/media/#{id}/relationships/acceptors",
-          :related => "http://#{api_host}/media/#{id}/acceptors"
-        }
-      },
       :alerting_checks => {
         :links => {
           :self => "http://#{api_host}/media/#{id}/relationships/alerting_checks",
@@ -303,102 +291,62 @@ module FixtureData
           :related => "http://#{api_host}/media/#{id}/contact"
         }
       },
-      :rejectors => {
+      :rules => {
         :links => {
-          :self => "http://#{api_host}/media/#{id}/relationships/rejectors",
-          :related => "http://#{api_host}/media/#{id}/rejectors"
+          :self => "http://#{api_host}/media/#{id}/relationships/rules",
+          :related => "http://#{api_host}/media/#{id}/rules"
         }
       }
     }
   end
 
-  def acceptor_data
-    @acceptor_data ||= {
+  def rule_data
+    @rule_data ||= {
       :id          => '05983623-fcef-42da-af44-ed6990b500fa',
+      :enabled     => true,
+      :blackhole   => false,
+      :strategy    => 'all_tags',
       :conditions_list => 'critical'
     }
   end
 
-  def acceptor_2_data
-    @acceptor_2_data ||= {
+  def rule_2_data
+    @rule_2_data ||= {
       :id          => '20f182fc-6e32-4794-9007-97366d162c51',
+      :enabled     => true,
+      :blackhole   => true,
+      :strategy    => 'all_tags',
       :conditions_list => 'warning'
     }
   end
 
-  def acceptor_json(ac_data)
+  def rule_json(ru_data)
     {
-      :id => ac_data[:id],
-      :type => 'acceptor',
-      :attributes => ac_data.reject {|k,v| :id.eql?(k) }
+      :id => ru_data[:id],
+      :type => 'rule',
+      :attributes => ru_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
-  def acceptor_rel(ac_data)
-    id = ac_data[:id]
+  def rule_rel(ru_data)
+    id = ru_data[:id]
     {
       :contact => {
         :links => {
-          :self => "http://#{api_host}/acceptors/#{id}/relationships/contact",
-          :related => "http://#{api_host}/acceptors/#{id}/contact"
+          :self => "http://#{api_host}/rules/#{id}/relationships/contact",
+          :related => "http://#{api_host}/rules/#{id}/contact"
         }
       },
       :media => {
         :links => {
-          :self => "http://#{api_host}/acceptors/#{id}/relationships/media",
-          :related => "http://#{api_host}/acceptors/#{id}/media"
+          :self => "http://#{api_host}/rules/#{id}/relationships/media",
+          :related => "http://#{api_host}/rules/#{id}/media"
         }
       },
       :tags => {
         :links => {
-          :self => "http://#{api_host}/acceptors/#{id}/relationships/tags",
-          :related => "http://#{api_host}/acceptors/#{id}/tags"
-        }
-      }
-    }
-  end
-
-  def rejector_data
-    @rejector_data ||= {
-      :id          => '05983623-fcef-42da-af44-ed6990b500fa',
-      :conditions_list => 'critical'
-    }
-  end
-
-  def rejector_2_data
-    @rejector_2_data ||= {
-      :id          => '20f182fc-6e32-4794-9007-97366d162c51',
-      :conditions_list => 'warning'
-    }
-  end
-
-  def rejector_json(re_data)
-    {
-      :id => re_data[:id],
-      :type => 'rejector',
-      :attributes => re_data.reject {|k,v| :id.eql?(k) }
-    }
-  end
-
-  def rejector_rel(re_data)
-    id = re_data[:id]
-    {
-      :contact => {
-        :links => {
-          :self => "http://#{api_host}/rejectors/#{id}/relationships/contact",
-          :related => "http://#{api_host}/rejectors/#{id}/contact"
-        }
-      },
-      :media => {
-        :links => {
-          :self => "http://#{api_host}/rejectors/#{id}/relationships/media",
-          :related => "http://#{api_host}/rejectors/#{id}/media"
-        }
-      },
-      :tags => {
-        :links => {
-          :self => "http://#{api_host}/rejectors/#{id}/relationships/tags",
-          :related => "http://#{api_host}/rejectors/#{id}/tags"
+          :self => "http://#{api_host}/rules/#{id}/relationships/tags",
+          :related => "http://#{api_host}/rules/#{id}/tags"
         }
       }
     }
@@ -445,33 +393,30 @@ module FixtureData
 
   def tag_data
     @tag_data ||= {
+     :id => '1850b8d7-1055-4a6e-9c96-f8f50e55bd0f',
      :name => 'database',
     }
   end
 
   def tag_2_data
     @tag_2_data ||= {
+     :id => 'c7a12328-8902-4974-8efa-68ec3e284507',
      :name => 'physical',
     }
   end
 
   def tag_json(ta_data)
-    id = ta_data[:name]
+    id = ta_data[:id]
     {
+      :id => id,
       :type => 'tag',
-      :attributes => ta_data
+      :attributes => ta_data.reject {|k,v| :id.eql?(k) }
     }
   end
 
   def tag_rel(ta_data)
-    id = ta_data[:name]
+    id = ta_data[:id]
     {
-      :acceptors => {
-        :links => {
-          :self => "http://#{api_host}/tags/#{id}/relationships/acceptors",
-          :related => "http://#{api_host}/tags/#{id}/acceptors"
-        }
-      },
       :checks => {
         :links => {
           :self => "http://#{api_host}/tags/#{id}/relationships/checks",
@@ -484,10 +429,10 @@ module FixtureData
           :related => "http://#{api_host}/tags/#{id}/contacts"
         }
       },
-      :rejectors => {
+      :rules => {
         :links => {
-          :self => "http://#{api_host}/tags/#{id}/relationships/rejectors",
-          :related => "http://#{api_host}/tags/#{id}/rejectors"
+          :self => "http://#{api_host}/tags/#{id}/relationships/rules",
+          :related => "http://#{api_host}/tags/#{id}/rules"
         }
       },
       :scheduled_maintenances => {

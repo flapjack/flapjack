@@ -17,12 +17,11 @@ require 'swagger/blocks'
 require 'flapjack'
 require 'flapjack/utility'
 
-require 'flapjack/data/acceptor'
 require 'flapjack/data/acknowledgement'
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
-require 'flapjack/data/rejector'
+require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
 require 'flapjack/data/state'
@@ -34,7 +33,7 @@ require 'flapjack/gateways/jsonapi/middleware/array_param_fixer'
 require 'flapjack/gateways/jsonapi/middleware/json_params_parser'
 require 'flapjack/gateways/jsonapi/middleware/request_timestamp'
 
-%w[headers miscellaneous resources swagger_docs].each do |helper|
+%w[headers miscellaneous resources serialiser swagger_docs].each do |helper|
   require "flapjack/gateways/jsonapi/helpers/#{helper}"
 end
 
@@ -58,12 +57,11 @@ module Flapjack
       # JSON_PATCH_MEDIA_TYPE = 'application/json-patch+json; charset=utf-8'
 
       RESOURCE_CLASSES = [
-        Flapjack::Data::Acceptor,
         Flapjack::Data::Acknowledgement,
         Flapjack::Data::Check,
         Flapjack::Data::Contact,
         Flapjack::Data::Medium,
-        Flapjack::Data::Rejector,
+        Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
         Flapjack::Data::Statistic,
         Flapjack::Data::State,
@@ -232,12 +230,12 @@ module Flapjack
 
       error Zermelo::Records::Errors::RecordInvalid do
         e = env['sinatra.error']
-        halt err(403, *e.record.errors.full_messages)
+        err(403, *e.record.errors.full_messages)
       end
 
       error Zermelo::Records::Errors::RecordNotSaved do
         e = env['sinatra.error']
-        halt err(403, *e.record.errors.full_messages)
+        err(403, *e.record.errors.full_messages)
       end
 
       error Zermelo::Records::Errors::RecordNotFound do

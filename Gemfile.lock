@@ -1,13 +1,14 @@
 PATH
   remote: .
   specs:
-    flapjack (2.0.0.pre.alpha.1)
+    flapjack (2.0.0.a1)
       activesupport
       chronic
       chronic_duration
-      flapjack-diner (= 2.0.0.pre.alpha.3)
+      flapjack-diner (= 2.0.0.a4)
       gli (= 2.13.1)
       hiredis
+      icalendar
       ice_cube
       json-stream
       mail
@@ -21,15 +22,15 @@ PATH
       tzinfo
       tzinfo-data
       xmpp4r (>= 0.5.5)
-      zermelo (= 1.3.0)
+      zermelo (= 1.4.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
-    activemodel (4.2.3)
-      activesupport (= 4.2.3)
+    activemodel (4.2.4)
+      activesupport (= 4.2.4)
       builder (~> 3.1)
-    activesupport (4.2.3)
+    activesupport (4.2.4)
       i18n (~> 0.7)
       json (~> 1.7, >= 1.7.7)
       minitest (~> 5.1)
@@ -58,8 +59,8 @@ GEM
     diff-lcs (1.2.5)
     docile (1.1.5)
     find_a_port (1.0.1)
-    flapjack-diner (2.0.0.pre.alpha.3)
-      httparty (>= 0.10)
+    flapjack-diner (2.0.0.a4)
+      httparty (= 0.13.5)
       json (>= 1.7.7)
     gherkin (2.12.2)
       multi_json (~> 1.3)
@@ -72,6 +73,7 @@ GEM
       json (~> 1.8)
       multi_xml (>= 0.5.2)
     i18n (0.7.0)
+    icalendar (2.3.0)
     ice_cube (0.13.0)
     json (1.8.3)
     json (1.8.3-java)
@@ -81,8 +83,8 @@ GEM
       rspec (>= 2.0, < 4.0)
     mail (2.6.3)
       mime-types (>= 1.16, < 3)
-    mime-types (2.6.1)
-    minitest (5.8.0)
+    mime-types (2.6.2)
+    minitest (5.8.1)
     multi_json (1.11.2)
     multi_test (0.1.2)
     multi_xml (0.5.5)
@@ -119,8 +121,8 @@ GEM
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
-    puma (2.13.0)
-    puma (2.13.0-java)
+    puma (2.14.0)
+    puma (2.14.0-java)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
@@ -152,7 +154,7 @@ GEM
       rack (~> 1.4)
       rack-protection (~> 1.4)
       tilt (>= 1.3, < 3)
-    swagger-blocks (1.1.3)
+    swagger-blocks (1.2.0)
     term-ansicolor (1.3.2)
       tins (~> 1.0)
     terminal-table (1.5.2)
@@ -165,14 +167,14 @@ GEM
       citrus (~> 3.0, > 3.0)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2015.6)
+    tzinfo-data (1.2015.7)
       tzinfo (>= 1.0.0)
     webmock (1.21.0)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
     webrick (1.3.1)
     xmpp4r (0.5.6)
-    zermelo (1.3.0)
+    zermelo (1.4.0)
       activemodel
 
 PLATFORMS

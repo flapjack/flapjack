@@ -26,6 +26,8 @@ module Flapjack
       ActiveSupport.use_standard_json_time_format = true
       ActiveSupport.time_precision = 0
 
+      @exit_value = nil
+
       @config   = config
       @pikelets = []
 

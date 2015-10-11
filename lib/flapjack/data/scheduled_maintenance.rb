@@ -12,7 +12,7 @@ require 'flapjack/gateways/jsonapi/data/method_descriptor'
 module Flapjack
   module Data
     class ScheduledMaintenance
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSortedSet
       include ActiveModel::Serializers::JSON
       self.include_root_in_json = false
       include Swagger::Blocks
@@ -23,6 +23,8 @@ module Flapjack
       define_attributes :start_time => :timestamp,
                         :end_time   => :timestamp,
                         :summary    => :string
+
+      define_sort_attribute :start_time
 
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
         :inverse_of => :scheduled_maintenances
@@ -193,7 +195,7 @@ module Flapjack
       end
 
       def self.jsonapi_associations
-        if @jsonapi_associations.nil?
+        unless instance_variable_defined?('@jsonapi_associations')
           @jsonapi_associations = {
             :check => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,

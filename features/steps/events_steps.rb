@@ -109,19 +109,6 @@ def submit_test(entity_name, check_name)
   Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
 
-def icecube_schedule_to_time_restriction(sched, time_zone)
-  tr = sched.to_hash
-  tr[:start_time] = {:time => time_zone.utc_to_local(tr[:start_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
-  tr[:end_time]   = {:time => time_zone.utc_to_local(tr[:end_time][:time]).strftime("%Y-%m-%d %H:%M:%S"), :zone => time_zone}
-
-  # rewrite IceCube::WeeklyRule to Weekly, etc
-  tr[:rrules].each {|rrule|
-    rrule[:rule_type] = /^.*\:\:(.*)Rule$/.match(rrule[:rule_type])[1]
-  }
-
-  stringify(tr)
-end
-
 def stringify(obj)
   return obj.inject({}){|memo,(k,v)| memo[k.to_s] =  stringify(v); memo} if obj.is_a?(Hash)
   return obj.inject([]){|memo,v    | memo         << stringify(v); memo} if obj.is_a?(Array)
@@ -250,13 +237,14 @@ Then /^(\w+) (\w+) alert(?:s)?(?: of)?(?: type (\w+))?(?: and)?(?: rollup (\w+))
   expect(queued_length).to eq(num_queued.to_i)
 end
 
-When(/^the acceptor with id '(\S+)' is removed$/) do |acceptor_id|
-  acceptor = Flapjack::Data::Acceptor.find_by_id(acceptor_id)
-  expect(acceptor).not_to be_nil
+When(/^the rule with id '(\S+)' is removed$/) do |rule_id|
+  rule = Flapjack::Data::Rule.find_by_id(rule_id)
+  expect(rule).not_to be_nil
 
-  acceptor.contact.acceptors.remove(acceptor) unless acceptor.contact.nil?
+  # # this should happen anyway...
+  # rule.contact.rules.remove(rule) unless rule.contact.nil?
 
-  acceptor.destroy
+  rule.destroy
 end
 
 When /^check '([\w\.\-]+)' (?:for|on) entity '([\w\.\-]+)' is (dis|en)abled$/ do |check_name, entity_name, dis_en|

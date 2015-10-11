@@ -6,14 +6,11 @@
 
 require 'zermelo/records/redis'
 
-require 'flapjack/data/alert'
-require 'flapjack/data/contact'
-
 module Flapjack
   module Data
     class Notification
 
-      include Zermelo::Records::Redis
+      include Zermelo::Records::RedisSet
 
       define_attributes :severity           => :string,
                         :duration           => :integer,
