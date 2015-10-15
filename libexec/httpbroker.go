@@ -29,6 +29,18 @@ type State struct {
 	TTL int64 `json:"ttl"`
 }
 
+type SNSSubscribe struct {
+	Message          string `json:"Message"`
+	MessageID        string `json:"MessageId"`
+	Signature        string `json:"Signature"`
+	SignatureVersion string `json:"SignatureVersion"`
+	SigningCertURL   string `json:"SigningCertURL"`
+	SubscribeURL     string `json:"SubscribeURL"`
+	Timestamp        string `json:"Timestamp"`
+	Token            string `json:"Token"`
+	TopicArn         string `json:"TopicArn"`
+	Type             string `json:"Type"`
+}
 type SNSNotification struct {
 	Message          string `json:"Message"`
 	MessageID        string `json:"MessageId"`
@@ -41,7 +53,6 @@ type SNSNotification struct {
 	Type             string `json:"Type"`
 	UnsubscribeURL   string `json:"UnsubscribeURL"`
 }
-
 type CWAlarm struct {
 	AWSAccountID     string      `json:"AWSAccountId"`
 	AlarmDescription interface{} `json:"AlarmDescription"`
@@ -51,6 +62,7 @@ type CWAlarm struct {
 	OldStateValue    string      `json:"OldStateValue"`
 	Region           string      `json:"Region"`
 	StateChangeTime  string      `json:"StateChangeTime"`
+	Time             int64       `json:"Time"`
 	Trigger          struct {
 		ComparisonOperator string `json:"ComparisonOperator"`
 		Dimensions         []struct {
@@ -90,36 +102,58 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 		}
 
 	case SNS:
-		var snsmessage SNSNotification
-		var cwalarmmessage CWAlarm
-		err = json.Unmarshal(body, &snsmessage)
+		var sns_messages SNSNotification
+		var sns_subscription SNSSubscribe
+		var cw_alarm CWAlarm
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			message := "Error: Couldn't read request body: %s\n"
+			log.Printf(message, err)
+			fmt.Fprintf(w, message, err)
+			return
+		}
+
+		json.Unmarshal(body, &sns_subscription)
+		if sns_subscription.SubscribeURL != "" {
+			http.Get(sns_subscription.SubscribeURL)
+			return
+		}
+
+		err = json.Unmarshal(body, &sns_messages)
 		if err != nil {
 			message := "Error: Couldn't read request body from the SNS notification: %s\n"
 			log.Println(message, err)
 			fmt.Fprintf(w, message, err)
 			return
 		}
-		inputmessage := []byte(snsmessage.Message)
-		err = json.Unmarshal(inputmessage, &cwalarmmessage)
+
+		input_message := []byte(sns_messages.Message)
+		err = json.Unmarshal(input_message, &cw_alarm)
 		if err != nil {
 			message := "Error: Couldn't read request body from the SNS message: %s\n"
 			log.Println(message, err)
 			fmt.Fprintf(w, message, err)
 			return
 		}
-		alarmstate := "OK"
-		if cwalarmmessage.NewStateValue == "ALARM" {
 
-			alarmstate = "CRITICAL"
+		var event_state string
+		switch strings.ToLower(cw_alarm.NewStateValue) {
+		case "alarm":
+			event_state = "critical"
+		default:
+			event_state = "ok"
 		}
-		s := `{"entity": "` + cwalarmmessage.AlarmName + `", "check": "` + cwalarmmessage.Trigger.MetricName + `", "type": "service", "tags": "asg", "state": "` + alarmstate + `", "summary": "` + cwalarmmessage.NewStateReason + `", "ttl": 30}`
-		inputstate := []byte(s)
-		err = json.Unmarshal(inputstate, &state)
-		if err != nil {
-			message := "Error: Couldn't read request body: %s\n"
-			log.Println(message, err)
-			fmt.Fprintf(w, message, err)
-			return
+
+		state = State{
+			flapjack.Event{
+				Entity: cw_alarm.AlarmName,
+				Check:  cw_alarm.Trigger.MetricName,
+				// Type:    "service", // @TODO: Make this magic
+				State:   event_state,
+				Summary: cw_alarm.NewStateReason,
+			},
+			0,
 		}
 	}
 
