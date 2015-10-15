@@ -541,6 +541,21 @@ command :receiver do |receiver|
       end
     end
   end
+
+  receiver.desc 'HTTP API that caches and submits Cloudwatch events'
+  receiver.command :cloudwatchbroker do |cloudwatchbroker|
+    cloudwatchbroker.passthrough = true
+    cloudwatchbroker.action do |global_options, options, args|
+      libexec = Pathname.new(__FILE__).parent.parent.parent.parent.join('libexec').expand_path
+      cloudwatchbroker  = libexec.join('httpbroker')
+      if cloudwatchbroker.exist?
+        Kernel.exec(cloudwatchbroker.to_s, *(ARGV + ['--format=sns']))
+      else
+        exit_now! "HTTP broker doesn't exist"
+      end
+    end
+  end
+
 end
 
 

@@ -16,10 +16,9 @@ fi
 
 go build -x -o libexec/httpbroker libexec/httpbroker.go
 go build -x -o libexec/oneoff libexec/oneoff.go
-go build -x -o libexec/cloudwatch_broker libexec/cloudwatch_broker.go
 
 if [ ! -z "$CROSSCOMPILE" ]; then
-  for command in httpbroker oneoff cloudwatch_broker; do
+  for command in httpbroker oneoff; do
     GOOS=linux GOARCH=amd64 CGOENABLED=0 go build -x -o libexec/$command.linux_amd64 libexec/$command.go
     GOOS=linux GOARCH=386 CGOENABLED=0 go build -x -o libexec/$command.linux_386 libexec/$command.go
   done

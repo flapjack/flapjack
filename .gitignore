@@ -31,9 +31,6 @@ libexec/httpbroker.linux_amd64
 libexec/oneoff
 libexec/oneoff.linux_386
 libexec/oneoff.linux_amd64
-libexec/cloudwatch_broker
-libexec/cloudwatch_broker.linux_386
-libexec/cloudwatch_broker.linux_amd64
 src/github.com
 src/gopkg.in
 etc/flapjack_config.toml
