@@ -19,11 +19,6 @@ flag [:c,:config],
   :arg_name => '/path/to/flapjack.toml',
   :default_value => '/etc/flapjack/flapjack_config.toml'
 
-desc 'Environment to boot'
-flag [:n, :env, :environment],
-  :arg_name => '<environment>',
-  :default_value => 'production'
-
 desc 'Force UTF-8 encoding'
 switch [:'force-utf8'],
   :negatable => true,
