@@ -80,7 +80,7 @@ module Flapjack
           return [parsed, errors]
         end
         [nil, errors]
-      rescue Oj::Error => e
+      rescue JSON::JSONError => e
         errors << "Error deserialising event json: #{e}, raw json: #{raw.inspect}"
         [nil, errors]
       end
@@ -124,7 +124,7 @@ module Flapjack
 
         begin
           event_json = Flapjack.dump_json(event)
-        rescue Oj::Error => e
+        rescue JSON::JSONError => e
           Flapjack.logger.warn("Error serialising event json: #{e}, event: #{event.inspect}")
           event_json = nil
         end
