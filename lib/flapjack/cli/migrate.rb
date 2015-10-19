@@ -4,7 +4,7 @@
 #
 # Assumes no Flapjack instances running on source or destination DB. Also
 # assumes an empty event queue and empty notification queues; best to run an
-# instance of Flapjack with the processor disabled to drain out notifications
+# instance of Flapjack v1 with the processor disabled to drain out notifications
 # prior to running this.
 
 # To see the state of the redis databases before and after, e.g. (using nodejs
@@ -15,7 +15,7 @@
 #  redis-dump -d 8 >~/Desktop/dump8.txt
 #
 #   Not migrated:
-#      current alertable/rollup status (maybe these should reset on app)
+#      current alertable/rollup status (these should reset on app start)
 #      notifications/alerts (see note above)
 
 ENTITY_PATTERN_FRAGMENT = '[a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9]'
@@ -29,6 +29,7 @@ I18n.config.enforce_available_locales = true
 
 require 'redis'
 require 'hiredis'
+require 'ice_cube'
 require 'zermelo'
 
 require 'flapjack'
@@ -42,9 +43,13 @@ require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/unscheduled_maintenance'
 require 'flapjack/data/tag'
 
+require 'flapjack/utility'
+
 module Flapjack
   module CLI
     class Migrate
+
+      include Flapjack::Utility
 
       def initialize(global_options, options)
         @global_options = global_options
@@ -269,14 +274,15 @@ module Flapjack
             @check_ids_by_contact_id_cache[contact.id] ||= []
           end
 
-          tag_for_check = proc do |en, cn, tn|
-            check = find_check(en, cn)
-            check.tags << find_tag(tn, :create => true)
+          # # FIXME this should link checks to a contact tag
+          # tag_for_check = proc do |en, cn, tn|
+          #   check = find_check(en, cn)
+          #   check.tags << find_tag(tn, :create => true)
 
-            contacts.each do |contact|
-              @check_ids_by_contact_id_cache[contact.id] << check.id
-            end
-          end
+          #   contacts.each do |contact|
+          #     @check_ids_by_contact_id_cache[contact.id] << check.id
+          #   end
+          # end
 
           if check_name.nil?
             # interested in entity, so apply to all checks for that entity
@@ -284,12 +290,12 @@ module Flapjack
 
             all_checks_for_entity = @source_redis.zrange("all_checks:#{entity_name}", 0, -1)
             all_checks_for_entity.each do |check_name|
-              tag_for_check.call(entity_name, check_name, tag_name)
+              # tag_for_check.call(entity_name, check_name, tag_name)
             end
           else
             # interested in check
-            tag_for_check.call(entity_name, check_name,
-              "check_#{entity_name}:#{check_name}")
+            # tag_for_check.call(entity_name, check_name,
+              # "check_#{entity_name}:#{check_name}")
           end
         end
       end
@@ -485,6 +491,10 @@ module Flapjack
         end
       end
 
+      def extract_rule_json(source_json, field)
+
+      end
+
       # depends on contacts, media, checks
       def migrate_rules
         contact_counts_by_id = {}
@@ -504,108 +514,187 @@ module Flapjack
             contact_counts_by_id[contact.id] = contact_num
           end
 
+          # OLD_FIXME use this as an overall filter for the various entity matchers
+          # FIXME instead, use the created tag with another no_tag filter rule
           check_ids = @check_ids_by_contact_id_cache[contact.id]
 
-          rules = {
-            Flapjack::Data::Acceptor => [],
-            Flapjack::Data::Rejector => []
-          }
+          new_rule_ids = []
 
-          rule_ids = @source_redis.smembers(rules_key)
-          rule_ids.each do |rule_id|
-            rule_data = @source_redis.hgetall("notification_rule:#{rule_id}")
+          Flapjack::Data::Rule.lock(Flapjack::Data::Check, Flapjack::Data::Tag,
+            Flapjack::Data::Contact, Flapjack::Data::Medium) do
 
-            time_restrictions = Flapjack.load_json(rule_data['time_restrictions'])
+            rule_ids = @source_redis.smembers(rules_key)
+            rule_ids.each do |rule_id|
+              rule_data = @source_redis.hgetall("notification_rule:#{rule_id}")
 
-            entities       = Set.new( Flapjack.load_json(rule_data['entities']))
-            regex_entities = Set.new( Flapjack.load_json(rule_data['regex_entities']))
+              old_time_restrictions_json = rule_data['time_restrictions']
 
-            tags       = Set.new( Flapjack.load_json(rule_data['tags']))
-            regex_tags = Set.new( Flapjack.load_json(rule_data['regex_tags']))
-
-            # collect specific matches together with regexes
-            regex_entities = regex_entities.collect {|re| Regexp.new(re) } +
-              entities.to_a.collect {|entity| /\A#{Regexp.escape(entity)}\z/}
-            regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
-              tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
-
-            acceptor_conditions_by_media = {}
-            rejector_conditions_by_media = {}
-
-            Flapjack::Data::Condition.unhealthy.keys.each do |fail_state|
-              media_types = Flapjack.load_json(rule_data["#{fail_state}_media"])
-              next if media_types.nil? || media_types.empty?
-
-              media_types_str = media_types.sort.join("|")
-              blackhole = !!Flapjack.load_json(rule_data["#{fail_state}_blackhole"])
-              cond_by_media = blackhole ? rejector_conditions_by_media : acceptor_conditions_by_media
-              cond_by_media[media_types_str] ||= []
-              cond_by_media[media_types_str] << fail_state
-            end
-
-            checks_and_tags_for_rule = proc do |rule_klass, cond_by_media|
-
-              rule_klass.lock(Flapjack::Data::Check, Flapjack::Data::Tag,
-                Flapjack::Data::Contact, Flapjack::Data::Medium) do
-
-                cond_by_media.each_pair do |media_types_str, fail_states|
-                  rule = rule_klass.new
-                  rule.conditions_list   = fail_states.sort.join("|")
-                  rule.all = regex_entities.empty? && regex_tags.empty?
-                  rule.time_restrictions = time_restrictions
-                  rule.save
-                  raise rule.errors.full_messages.join(", ") unless rule.persisted?
-
-                  media_transports = media_types_str.split('|')
-                  media = contact.media.intersect(:transport => media_transports)
-                  rule.media.add_ids(*media.ids) unless media.empty?
-
-                  unless rule.all
-                    # apply the entities/tag regexes as a filter
-                    checks = Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
-                      entity_name = check.name.split(':', 2).first
-                      if regex_entities.all? {|re| re === entity_name }
-                        # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
-                        # not sure if this does what we want, but it's how it currently works
-                        matching_re = []
-                        check.tags.each do |tag|
-                          matching_re += regex_tags.select {|re| re === tag.name }
-                        end
-                        matching_re.size >= regex_tags.size
-                      else
-                        false
-                      end
-                    end
-
-                    tags = checks.collect do |check|
-                      check_num = check_counts_by_id[check.id]
-                      if check_num.nil?
-                        check_num = check_counts_by_id.size + 1
-                        check_counts_by_id[check.id] = check_num
-                      end
-
-                      tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
-                      tag.save
-                      check.tags << tag
-                      tag
-                    end
-
-                    rule.tags.add(*tags) unless tags.empty?
-                  end
-                  rules[rule_klass] << rule
+              time_restrictions = if old_time_restrictions_json.nil? || old_time_restrictions_json.empty?
+                 nil
+              else
+                old_time_restrictions = Flapjack.load_json(old_time_restrictions_json)
+                if old_time_restrictions.nil? || old_time_restrictions.empty?
+                  []
+                elsif tr.is_a?(Hash)
+                  [rule_time_restriction_to_icecube_schedule(tr, contact.time_zone)]
+                elsif tr.is_a?(Array)
+                  tr.map {|t| rule_time_restriction_to_icecube_schedule(t, contact.time_zone)}
                 end
+              end
+
+
+              entity_json = rule_data['entities']
+
+              entity_names = if entity_json.nil? || entity_json.empty?
+                nil
+              else
+                old_entity_names = Flapjack.load_json(entity_json)
+                if old_entity_names.nil? || old_entity_names.empty?
+                  Set.new([])
+                elsif old_entity_names.is_a?(String)
+                  Set.new([old_entity_names])
+                elsif tr.is_a?(Array)
+                  Set.new(old_entity_names)
+                end
+              end
+
+              old_regex_entities = Set.new( Flapjack.load_json(rule_data['regex_entities']))
+
+              old_tags           = Set.new( Flapjack.load_json(rule_data['tags']))
+              old_regex_tags     = Set.new( Flapjack.load_json(rule_data['regex_tags']))
+
+              # # collect specific matches together with regexes
+              # regex_entities = regex_entities.collect {|re| Regexp.new(re) } +
+              #   entities.to_a.collect {|entity| /\A#{Regexp.escape(entity)}\z/}
+              # regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
+              #   tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
+
+              # TODO apply the various regexes to get static snapshot of entity tags as
+              # at time of migration -- best we can do, the v1 vs v2 concepts are fairly
+              # different
+
+              # # apply the entities/tag regexes as a filter, only applying to data
+              # # as it stands at time of migration -- but it's the closest we can
+              # # get given the data model changes
+              # checks = Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
+              #   entity_name = check.name.split(':', 2).first
+              #   if regex_entities.all? {|re| re === entity_name }
+              #     # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
+              #     # not sure if this does what we want, but it's how it currently works
+              #     matching_re = []
+              #     check.tags.each do |tag|
+              #       matching_re += regex_tags.select {|re| re === tag.name }
+              #     end
+              #     matching_re.size >= regex_tags.size
+              #   else
+              #     false
+              #   end
+              # end
+
+              # tags = checks.collect do |check|
+              #   check_num = check_counts_by_id[check.id]
+              #   if check_num.nil?
+              #     check_num = check_counts_by_id.size + 1
+              #     check_counts_by_id[check.id] = check_num
+              #   end
+
+              #   tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
+              #   tag.save
+              #   check.tags << tag
+              #   tag
+              # end
+
+              rules_to_create = []
+
+              conditions_by_blackhole_and_media = {false => {},
+                                                   true => {}}
+
+              Flapjack::Data::Condition.unhealthy.keys.each do |fail_state|
+                media_types = Flapjack.load_json(rule_data["#{fail_state}_media"])
+                next if media_types.nil? || media_types.empty?
+
+                media_types_str = media_types.sort.join("|")
+                blackhole = !!Flapjack.load_json(rule_data["#{fail_state}_blackhole"])
+                conditions_by_blackhole_and_media[blackhole][media_types_str] ||= []
+                conditions_by_blackhole_and_media[blackhole][media_types_str] << fail_state
+              end
+
+              # multiplier -- conditions_by_blackhole_and_media[false].size +
+              #               conditions_by_blackhole_and_media[true].size
+
+              condition[false, true].each do |blackhole|
+                rules_to_create = conditions_by_blackhole_and_media[blackhole].each_with_object({}) do |(media_types_str, fail_states), memo|
+                  media_types = media_types_str.split('|')
+
+                  rule_media_ids = contact.media.intersect(:transport => media_types).ids
+                  # if no media to communicate by, don't save the rule
+                  next if rule_media_ids.empty?
+
+                  memo << {
+                    :enabled         => true,
+                    :blackhole       => blackhole,
+                    :strategy        => entity_names.empty? ? 'global' : 'all_tags',
+                    :conditions_list => fail_states.sort.join(','),
+                    :medium_ids      => rule_media_ids
+                  }
+                end
+              end
+
+              # multiply by number of applied time restrictions, if any
+              unless time_restrictions.empty?
+                replace_rules = time_restrictions.each_with_object([]) do |tr, memo|
+                  memo += rules_to_create.collect do |r|
+                    r.merge(:time_restriction => tr)
+                  end
+                end
+
+                rules_to_create = replace_rules
+              end
+
+              unless entity_names.empty?
+
+                all_entity_tags = Flapjack::Data::Tag.intersect(:name => '/^manage_service_\d+_.+$/').all
+
+                entity_tag_ids = all_entity_tags.each_with_object([]) do |tag, memo|
+                  next if tag.name.nil?
+                  next unless tag.name =~ /^manage_service_(\d+)_(.+)$/
+                  # eldest_service_id = Regexp.last_match(1)
+                  service_name = Regexp.last_match(2)
+
+                  next unless entity_names.include?(service_name)
+                  memo << tag.id
+                end
+
+                filter_data = {
+                  :blackhole => true,
+                  :strategy => 'no_tag',
+                  :tag_ids => entity_tag_ids
+                }
+
+                filter_rules = rules_to_create.each_with_object([]) do |r, memo|
+                  memo << r.merge(filter_data)
+                end
+
+                rules_to_create += filter_rules
+              end
+
+              new_rule_ids += rules_to_create.collect do |r|
+                new_rule_id = SecureRandom.uuid
+                r[:id] = new_rule_id
+                medium_ids = r.delete(:medium_ids)
+                tag_ids = r.delete(:tag_ids)
+                rule = Flapjack::Data::Rule.new(r)
+                rule.save!
+                rule.media.add_ids(*medium_ids)
+                rule.tags.add_ids(*tag_ids) unless tag_ids.empty?
+                new_rule_id
               end
             end
 
-            checks_and_tags_for_rule.call(Flapjack::Data::Rejector, rejector_conditions_by_media)
-            checks_and_tags_for_rule.call(Flapjack::Data::Acceptor, acceptor_conditions_by_media)
+            contact.rules.add_ids(*new_rule_ids) unless new_rule_ids.empty?
           end
 
-          rejectors = rules[Flapjack::Data::Rejector]
-          contact.rejectors.add(*rejectors) unless rejectors.empty?
-
-          acceptors = rules[Flapjack::Data::Acceptor]
-          contact.acceptors.add(*acceptors) unless acceptors.empty?
+          contact.rules.add(*rules) unless rules.empty?
         end
       end
 
@@ -658,6 +747,94 @@ module Flapjack
         end
 
         tag
+      end
+
+      # NB: ice_cube doesn't have much rule data validation, and has
+      # problems with infinite loops if the data can't logically match; see
+      #   https://github.com/seejohnrun/ice_cube/issues/127 &
+      #   https://github.com/seejohnrun/ice_cube/issues/137
+      # We may want to consider some sort of timeout-based check around
+      # anything that could fall into that.
+      #
+      # We don't want to replicate IceCube's from_hash behaviour here,
+      # but we do need to apply some sanity checking on the passed data.
+      def rule_time_restriction_to_icecube_schedule(tr, timezone, opts = {})
+        return if tr.nil? || !tr.is_a?(Hash) ||
+                  timezone.nil? || !timezone.is_a?(ActiveSupport::TimeZone)
+        prepared_restrictions = rule_prepare_time_restriction(tr, timezone)
+        return if prepared_restrictions.nil?
+        IceCube::Schedule.from_hash(prepared_restrictions)
+      rescue ArgumentError => ae
+        if logger = opts[:logger]
+          logger.error "Couldn't parse rule data #{e.class}: #{e.message}"
+          logger.error prepared_restrictions.inspect
+          logger.error e.backtrace.join("\n")
+        end
+        nil
+      end
+
+      def rule_prepare_time_restriction(time_restriction, timezone = nil)
+        # this will hand back a 'deep' copy
+        tr = symbolize(time_restriction)
+
+        return unless (tr.has_key?(:start_time) || tr.has_key?(:start_date)) &&
+          (tr.has_key?(:end_time) || tr.has_key?(:end_date))
+
+        # exrules is deprecated in latest ice_cube, but may be stored in data
+        # serialised from earlier versions of the gem
+        # ( https://github.com/flapjack/flapjack/issues/715 )
+        tr.delete(:exrules)
+
+        parsed_time = proc {|tr, field|
+          if t = tr.delete(field)
+            t = t.dup
+            t = t[:time] if t.is_a?(Hash)
+
+            if t.is_a?(Time)
+              t
+            else
+              begin; (timezone || Time).parse(t); rescue ArgumentError; nil; end
+            end
+          else
+            nil
+          end
+        }
+
+        start_time = parsed_time.call(tr, :start_date) || parsed_time.call(tr, :start_time)
+        end_time   = parsed_time.call(tr, :end_date) || parsed_time.call(tr, :end_time)
+
+        return unless start_time && end_time
+
+        tr[:start_time] = timezone ?
+                            {:time => start_time, :zone => timezone.name} :
+                            start_time
+
+        tr[:end_time]   = timezone ?
+                            {:time => end_time, :zone => timezone.name} :
+                            end_time
+
+        tr[:duration]   = end_time - start_time
+
+        # check that rrule types are valid IceCube rule types
+        return unless tr[:rrules].is_a?(Array) &&
+          tr[:rrules].all? {|rr| rr.is_a?(Hash)} &&
+          (tr[:rrules].map {|rr| rr[:rule_type]} -
+           ['Daily', 'Hourly', 'Minutely', 'Monthly', 'Secondly',
+            'Weekly', 'Yearly']).empty?
+
+        # rewrite Weekly to IceCube::WeeklyRule, etc
+        tr[:rrules].each {|rrule|
+          rrule[:rule_type] = "IceCube::#{rrule[:rule_type]}Rule"
+        }
+
+        # TODO does this need to check classes for the following values?
+        # "validations": {
+        #   "day": [1,2,3,4,5]
+        # },
+        # "interval": 1,
+        # "week_start": 0
+
+        tr
       end
 
     end
