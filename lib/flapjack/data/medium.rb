@@ -49,8 +49,6 @@ module Flapjack
                         :interval               => :integer,
                         :rollup_threshold       => :integer,
                         :pagerduty_subdomain    => :string,
-                        :pagerduty_user_name    => :string,
-                        :pagerduty_password     => :string,
                         :pagerduty_token        => :string,
                         :pagerduty_ack_duration => :integer,
                         :last_rollup_type       => :string
@@ -170,22 +168,15 @@ module Flapjack
       validates :pagerduty_subdomain, :presence => true,
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
-      validates :pagerduty_user_name, :presence => true,
-        :if => proc {|m| 'pagerduty'.eql?(m.transport) && m.pagerduty_token.blank? }
-
-      validates :pagerduty_password, :presence => true,
-        :if => proc {|m| 'pagerduty'.eql?(m.transport) && m.pagerduty_token.blank? }
-
       validates :pagerduty_token, :presence => true,
-        :if => proc {|m| 'pagerduty'.eql?(m.transport) &&
-          (m.pagerduty_user_name.blank? || m.pagerduty_password.blank?) }
+        :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
       validates :pagerduty_ack_duration, :allow_nil => true,
         :numericality => {:greater_than => 0, :only_integer => true},
         :if => proc {|m| 'pagerduty'.eql?(m.transport) }
 
-      validates_each :pagerduty_subdomain, :pagerduty_user_name,
-        :pagerduty_password, :pagerduty_token, :pagerduty_ack_duration,
+      validates_each :pagerduty_subdomain, :pagerduty_token,
+        :pagerduty_ack_duration,
         :unless =>  proc {|m| 'pagerduty'.eql?(m.transport) } do |record, att, value|
         record.errors.add(att, 'must be nil') unless value.nil?
       end
@@ -223,12 +214,6 @@ module Flapjack
           key :minimum, 1
         end
         property :pagerduty_subdomain do
-          key :type, :string
-        end
-        property :pagerduty_user_name do
-          key :type, :string
-        end
-        property :pagerduty_password do
           key :type, :string
         end
         property :pagerduty_token do
@@ -290,12 +275,6 @@ module Flapjack
         property :pagerduty_subdomain do
           key :type, :string
         end
-        property :pagerduty_user_name do
-          key :type, :string
-        end
-        property :pagerduty_password do
-          key :type, :string
-        end
         property :pagerduty_token do
           key :type, :string
         end
@@ -336,12 +315,6 @@ module Flapjack
         property :pagerduty_subdomain do
           key :type, :string
         end
-        property :pagerduty_user_name do
-          key :type, :string
-        end
-        property :pagerduty_password do
-          key :type, :string
-        end
         property :pagerduty_token do
           key :type, :string
         end
@@ -367,20 +340,17 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
-                            :pagerduty_subdomain, :pagerduty_user_name,
-                            :pagerduty_password, :pagerduty_token,
+                            :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration]
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
-                            :pagerduty_subdomain, :pagerduty_user_name,
-                            :pagerduty_password, :pagerduty_token,
+                            :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration]
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
-                            :pagerduty_subdomain, :pagerduty_user_name,
-                            :pagerduty_password, :pagerduty_token,
+                            :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration]
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
