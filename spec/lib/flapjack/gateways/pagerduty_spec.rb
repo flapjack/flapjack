@@ -110,7 +110,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
     stub_request(:get, "https://flpjck.pagerduty.com/api/v1/incidents?" +
       "fields=incident_number,status,last_status_change_by&incident_key=#{check}&" +
       "since=#{since}&status=acknowledged&until=#{unt}").
-      with(:headers => {'Authorization'=>['flapjack', 'password123']}).
+      with(:headers => {'Authorization'=>'Token token=token123'}).
       to_return(:status => 200, :body => response.to_json, :headers => {})
 
     expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
@@ -118,7 +118,7 @@ describe Flapjack::Gateways::Pagerduty, :logger => true do
 
     EM.synchrony do
       result = fp.send(:pagerduty_acknowledged?, 'subdomain' => 'flpjck',
-      'username' => 'flapjack', 'password' => 'password123', 'check' => check)
+        'token' => 'token123', 'check' => check)
 
       expect(result).to be_a(Hash)
       expect(result).to have_key(:pg_acknowledged_by)

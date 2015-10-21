@@ -229,6 +229,23 @@ module Flapjack
         logger.warn "Corrected rollup to no longer include disabled checks" unless logger.nil?
         redis.set('corrected_rollup_including_disabled_checks', 'true')
       end
+
+      def self.clear_pagerduty_username_and_password(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        logger = options[:logger]
+        return if redis.exists('cleared_pagerduty_username_and_password')
+
+        Flapjack::Data::Contact.all(:redis => redis).each do |contact|
+          k = "contact_pagerduty:#{contact.id}"
+          redis.multi do |r|
+            r.hdel(k, 'username')
+            r.hdel(k, 'password')
+          end
+        end
+
+        logger.warn "Cleared PagerDuty username and password media fields" unless logger.nil?
+        redis.set('cleared_pagerduty_username_and_password', 'true')
+      end
     end
   end
 end

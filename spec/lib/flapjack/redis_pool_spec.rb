@@ -19,6 +19,7 @@ describe Flapjack::RedisPool do
       expect(Flapjack::Data::Migration).to receive(:refresh_archive_index).exactly(redis_count).times
       expect(Flapjack::Data::Migration).to receive(:validate_scheduled_maintenance_periods).exactly(redis_count).times
       expect(Flapjack::Data::Migration).to receive(:correct_rollup_including_disabled_checks).exactly(redis_count).times
+      expect(Flapjack::Data::Migration).to receive(:clear_pagerduty_username_and_password).exactly(redis_count).times
 
       frp = Flapjack::RedisPool.new(:size => redis_count)
 

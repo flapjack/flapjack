@@ -259,3 +259,6 @@ DEPENDENCIES
   ruby-prof
   simplecov
   webmock
+
+BUNDLED WITH
+   1.10.6
