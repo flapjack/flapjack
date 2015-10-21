@@ -52,7 +52,12 @@ module Flapjack
       ncsm_duration_conf = @config['new_check_scheduled_maintenance_duration'] || '100 years'
       @ncsm_duration = ChronicDuration.parse(ncsm_duration_conf, :keep_zero => true)
 
-      @ncsm_ignore_tags = @config['new_check_scheduled_maintenance_ignore_tags'] || []
+      ncsm_ignore = @config['new_check_scheduled_maintenance_ignore_regex']
+      @ncsm_ignore_regex = if ncsm_ignore.nil? || ncsm_ignore.strip.empty?
+        nil
+      else
+        Regexp.new(ncsm_ignore)
+      end
 
       @exit_on_queue_empty = !!@config['exit_on_queue_empty']
 
@@ -213,7 +218,20 @@ module Flapjack
                      timestamp)
 
         check.enabled = true unless event_condition.nil?
+
+        ncsm_sched_maint = nil
+        if check.id.nil? && (@ncsm_duration > 0) && (@ncsm_ignore_regex.nil? ||
+          @ncsm_ignore_regex.match(check.name).nil?)
+
+          Flapjack.logger.info { "Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}" }
+          ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
+            :end_time => timestamp + @ncsm_duration,
+            :summary => 'Automatically created for new check')
+          ncsm_sched_maint.save!
+        end
+
         check.save! # no-op if not new and not changed
+        check.scheduled_maintenances << ncsm_sched_maint unless ncsm_sched_maint.nil?
 
         @global_stats.save!
         @instance_stats.save!
@@ -318,26 +336,6 @@ module Flapjack
         end
 
         new_state.condition = event_condition.name
-
-        if old_state.nil? || old_state.condition.nil?
-          Flapjack.logger.info { "No previous condition for event #{event.id}" }
-
-          # # FIXME need some other way to register for NCSM than tags:
-          # #   https://github.com/flapjack/flapjack/issues/859
-          # if (@ncsm_duration > 0) && !check.id.nil? &&
-          #   (check.tags.all.map(&:name) & @ncsm_ignore_tags).empty?
-
-          #   Flapjack.logger.info { "Setting scheduled maintenance for #{time_period_in_words(@ncsm_duration)}" }
-
-          #   ncsm_sched_maint = Flapjack::Data::ScheduledMaintenance.new(:start_time => timestamp,
-          #     :end_time => timestamp + @ncsm_duration,
-          #     :summary => 'Automatically created for new check')
-          #   ncsm_sched_maint.save!
-
-          #   check.scheduled_maintenances << ncsm_sched_maint
-          # end
-        end
-
         new_state.perfdata = event.perfdata
       end
 

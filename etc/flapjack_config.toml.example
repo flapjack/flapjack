@@ -23,7 +23,7 @@ daemonize = true
   # Value parsed by https://github.com/hpoydar/chronic_duration
   # You can disable this setting by specifying "0 seconds".
   new_check_scheduled_maintenance_duration = "100 years"
-  new_check_scheduled_maintenance_ignore_tags = ["bypass_ncsm"]
+  new_check_scheduled_maintenance_ignore_regex = "bypass_ncsm$"
   [processor.logger]
     level = "INFO"
     syslog_errors = true
