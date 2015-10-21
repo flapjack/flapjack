@@ -173,8 +173,6 @@ module Flapjack
                 :transport => 'pagerduty',
                 :address => address,
                 :pagerduty_subdomain => pagerduty_credentials['subdomain'],
-                :pagerduty_user_name => pagerduty_credentials['username'],
-                :pagerduty_password => pagerduty_credentials['password'],
                 :pagerduty_token => pagerduty_credentials['token'],
                 :pagerduty_ack_duration => nil
               }

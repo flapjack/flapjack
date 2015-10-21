@@ -158,8 +158,6 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
 
       medium = double(Flapjack::Data::Medium, :id => SecureRandom.uuid)
       expect(medium).to receive(:pagerduty_subdomain).and_return('mydomain')
-      expect(medium).to receive(:pagerduty_user_name).and_return(nil)
-      expect(medium).to receive(:pagerduty_password).and_return(nil)
       expect(medium).to receive(:pagerduty_token).and_return('abc')
       expect(medium).to receive(:pagerduty_ack_duration).and_return(nil)
 
@@ -185,7 +183,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:lock => lock,
                                                          :config => config)
       expect(fpa).to receive(:pagerduty_acknowledgements).
-        with(an_instance_of(Time), 'mydomain', nil, nil, 'abc', [check.name]).
+        with(an_instance_of(Time), 'mydomain', 'abc', [check.name]).
         and_return(response['incidents'])
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
@@ -213,7 +211,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, nil, nil, token, [check.name])
+      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
 
       expect(result).to be_a(Array)
@@ -271,7 +269,7 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, nil, nil, token, [check.name])
+      result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
 
       expect(result).to be_a(Array)
@@ -318,8 +316,8 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
 
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
-      fpa.send(:pagerduty_acknowledgements, now, subdomain, nil, nil, token, [check.name])
-      fpa.send(:pagerduty_acknowledgements, (now + 10), subdomain, nil, nil, token, [check.name])
+      fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
+      fpa.send(:pagerduty_acknowledgements, (now + 10), subdomain, token, [check.name])
       expect(req_first).to have_been_requested
       expect(req_second).to have_been_requested
     end
@@ -351,7 +349,5 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
       expect(fpa).not_to receive(:pagerduty_acknowledgements)
       expect { fpa.start }.to raise_error(Flapjack::PikeletStop)
     end
-
   end
-
 end
