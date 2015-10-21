@@ -324,7 +324,8 @@ module Flapjack
         duration = (dur.nil? || (dur <= 0)) ? (4 * 60 * 60) : dur
 
         # FIXME create with known id, poll a few times and return
-        # success/failure in session
+        # success/failure in session -- or maybe some AJAX method to
+        # show success/failure?
 
         Flapjack::Diner.create_acknowledgements(:summary => summary,
           :duration => duration, :check => check_id)

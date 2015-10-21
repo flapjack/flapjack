@@ -36,8 +36,9 @@ module Flapjack
       include Flapjack::Data::Extensions::Associations
       include Flapjack::Data::Extensions::ShortName
 
-      # I've removed regex_* properties as they encourage loose binding against
-      # check names, which may change. Do client-side grouping and create a tag!
+      # regex_* properties have been removed as they encourage loose binding
+      # against check names, which may change. Do client-side grouping and
+      # create a tag!
 
       define_attributes :name => :string,
                         :enabled => :boolean,

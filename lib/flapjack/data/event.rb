@@ -11,6 +11,7 @@ module Flapjack
       attr_reader :id, :summary, :details, :acknowledgement_id, :perfdata
 
       # type was a required key in v1, but is superfluous
+      # tags are now ignored, tags on the checks are used for rule matching
       REQUIRED_KEYS = %w(state check)
       OPTIONAL_KEYS = %w(entity time initial_failure_delay
         repeat_failure_delay summary details acknowledgement_id duration tags
