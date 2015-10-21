@@ -272,15 +272,14 @@ module Flapjack
             @check_ids_by_contact_id_cache[contact.id] ||= []
           end
 
-          # # FIXME this should link checks to a contact tag
-          # tag_for_check = proc do |en, cn, tn|
-          #   check = find_check(en, cn)
-          #   check.tags << find_tag(tn, :create => true)
+          tag_for_check = proc do |en, cn, tn|
+            check = find_check(en, cn)
+            check.tags << find_tag(tn, :create => true)
 
-          #   contacts.each do |contact|
-          #     @check_ids_by_contact_id_cache[contact.id] << check.id
-          #   end
-          # end
+            contacts.each do |contact|
+              @check_ids_by_contact_id_cache[contact.id] << check.id
+            end
+          end
 
           if check_name.nil?
             # interested in entity, so apply to all checks for that entity
@@ -288,12 +287,12 @@ module Flapjack
 
             all_checks_for_entity = @source_redis.zrange("all_checks:#{entity_name}", 0, -1)
             all_checks_for_entity.each do |check_name|
-              # tag_for_check.call(entity_name, check_name, tag_name)
+              tag_for_check.call(entity_name, check_name, tag_name)
             end
           else
             # interested in check
-            # tag_for_check.call(entity_name, check_name,
-              # "check_#{entity_name}:#{check_name}")
+            tag_for_check.call(entity_name, check_name,
+              "check_#{entity_name}:#{check_name}")
           end
         end
       end
@@ -514,8 +513,6 @@ module Flapjack
             contact_counts_by_id[contact.id] = contact_num
           end
 
-          # OLD_FIXME use this as an overall filter for the various entity matchers
-          # FIXME instead, use the created tag with another no_tag filter rule
           check_ids = @check_ids_by_contact_id_cache[contact.id]
 
           Flapjack::Data::Rule.lock(Flapjack::Data::Check, Flapjack::Data::Tag,
@@ -602,17 +599,14 @@ module Flapjack
               # then limit further by checks with names containing tag words
               unless tags.nil? || tags.empty?
                 old_tags_checks = tags.inject(old_tags_checks) do |memo, tag|
-                  # FIXME needs to search for it at start or end of string, or space-delimited
-                  memo = memo.intersect(:name => /#{Regexp.escape(tag)}/)
-                  memo
+                  memo.intersect(:name => /(?: |^)#{Regexp.escape(tag)}(?: |$)/)
                 end
               end
 
               # and by checks with names matching regexes
               unless tag_regexes.nil? || tag_regexes.empty?
                 old_tags_checks = tag_regexes.inject(old_tags_checks) do |memo, tag_regex|
-                  memo = memo.intersect(:name => /#{tag_regex}/)
-                  memo
+                  memo.intersect(:name => /#{tag_regex}/)
                 end
               end
 
