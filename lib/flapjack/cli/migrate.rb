@@ -489,8 +489,10 @@ module Flapjack
         end
       end
 
-      def extract_rule_json(source_json, field)
-
+      def field_from_rule_json(rule, field)
+        field_json = rule[field]
+        return if field_json.nil? || field_json.empty?
+        Flapjack.load_json(field_json)
       end
 
       # depends on contacts, media, checks
@@ -516,10 +518,10 @@ module Flapjack
           # FIXME instead, use the created tag with another no_tag filter rule
           check_ids = @check_ids_by_contact_id_cache[contact.id]
 
-          new_rule_ids = []
-
           Flapjack::Data::Rule.lock(Flapjack::Data::Check, Flapjack::Data::Tag,
             Flapjack::Data::Contact, Flapjack::Data::Medium) do
+
+            new_rule_ids = []
 
             rule_ids = @source_redis.smembers(rules_key)
             rule_ids.each do |rule_id|
@@ -540,69 +542,89 @@ module Flapjack
                 end
               end
 
+              filter_tag_ids = Set.new
 
-              entity_json = rule_data['entities']
-
-              entity_names = if entity_json.nil? || entity_json.empty?
-                nil
+              old_entities = field_from_rule_json(rule_data, 'entities')
+              entity_names = case old_entities
+              when String
+                Set.new([old_entities])
+              when Array
+                Set.new(old_entities)
               else
-                old_entity_names = Flapjack.load_json(entity_json)
-                if old_entity_names.nil? || old_entity_names.empty?
-                  Set.new([])
-                elsif old_entity_names.is_a?(String)
-                  Set.new([old_entity_names])
-                elsif tr.is_a?(Array)
-                  Set.new(old_entity_names)
+                nil
+              end
+
+              old_regex_entities = field_from_rule_json(rule_data, 'regex_entities')
+              entity_regexes = case old_regex_entities
+              when String
+                Set.new([Regexp.new(old_regex_entities)])
+              when Array
+                Set.new(old_regex_entities.map {|re| Regexp.new(re) })
+              else
+                nil
+              end
+
+              Flapjack::Data::Tag.intersect(:name => '/^manage_service_\d+_.+$/').each do |tag|
+                next if tag.name.nil? ||
+                  (tag.name !~ /^manage_service_(\d+)_(.+)$/)
+                # eldest_service_id = Regexp.last_match(1)
+                service_name = Regexp.last_match(2)
+
+                next unless entity_names.include?(service_name) ||
+                  entity_regexes.all? {|re| !re.match(service_name).nil? }
+                filter_tag_ids << tag.id
+              end
+
+
+              old_tags = field_from_rule_json(rule, 'tags')
+              tags = case old_tags
+              when String
+                Set.new([old_tags])
+              when Array
+                Set.new(old_tags)
+              else
+                nil
+              end
+
+              old_regex_tags = field_from_rule_json(rule, 'regex_tags')
+              tag_regexes = case old_regex_tags
+              when String
+                Set.new([Regexp.new(old_regex_tags)])
+              when Array
+                Set.new(old_regex_tags.map {|re| Regexp.new(re) })
+              else
+                nil
+              end
+
+              # start with the initial limited visibility range (overall scope)
+              old_tags_checks = Flapjack::Data::Check.intersect(:id => check_ids)
+
+              # then limit further by checks with names containing tag words
+              unless tags.nil? || tags.empty?
+                old_tags_checks = tags.inject(old_tags_checks) do |memo, tag|
+                  # FIXME needs to search for it at start or end of string, or space-delimited
+                  memo = memo.intersect(:name => /#{Regexp.escape(tag)}/)
+                  memo
                 end
               end
 
-              old_regex_entities = Set.new( Flapjack.load_json(rule_data['regex_entities']))
+              # and by checks with names matching regexes
+              unless tag_regexes.nil? || tag_regexes.empty?
+                old_tags_checks = tag_regexes.inject(old_tags_checks) do |memo, tag_regex|
+                  memo = memo.intersect(:name => /#{tag_regex}/)
+                  memo
+                end
+              end
 
-              old_tags           = Set.new( Flapjack.load_json(rule_data['tags']))
-              old_regex_tags     = Set.new( Flapjack.load_json(rule_data['regex_tags']))
+              unless old_tags_checks.nil?
+                tag = Flapjack::Data::Tag.new(:name => "migrated_rule_#{rule_id}")
+                tag.save!
+                tag.checks.add_ids(*old_tags_checks.ids)
+                limit_tag_ids << tag.id
+              end
 
-              # # collect specific matches together with regexes
-              # regex_entities = regex_entities.collect {|re| Regexp.new(re) } +
-              #   entities.to_a.collect {|entity| /\A#{Regexp.escape(entity)}\z/}
-              # regex_tags     = regex_tags.collect {|re| Regexp.new(re) } +
-              #   tags.to_a.collect {|tag| /\A#{Regexp.escape(tag)}\z/}
-
-              # TODO apply the various regexes to get static snapshot of entity tags as
-              # at time of migration -- best we can do, the v1 vs v2 concepts are fairly
-              # different
-
-              # # apply the entities/tag regexes as a filter, only applying to data
-              # # as it stands at time of migration -- but it's the closest we can
-              # # get given the data model changes
-              # checks = Flapjack::Data::Check.intersect(:id => check_ids).select do |check|
-              #   entity_name = check.name.split(':', 2).first
-              #   if regex_entities.all? {|re| re === entity_name }
-              #     # copying logic from https://github.com/flapjack/flapjack/blob/68a3fd1144a0aa516cf53e8ae5cb83916f78dd94/lib/flapjack/data/notification_rule.rb
-              #     # not sure if this does what we want, but it's how it currently works
-              #     matching_re = []
-              #     check.tags.each do |tag|
-              #       matching_re += regex_tags.select {|re| re === tag.name }
-              #     end
-              #     matching_re.size >= regex_tags.size
-              #   else
-              #     false
-              #   end
-              # end
-
-              # tags = checks.collect do |check|
-              #   check_num = check_counts_by_id[check.id]
-              #   if check_num.nil?
-              #     check_num = check_counts_by_id.size + 1
-              #     check_counts_by_id[check.id] = check_num
-              #   end
-
-              #   tag = Flapjack::Data::Tag.new(:name => "migrated-contact_#{contact_num}-check_#{check_num}")
-              #   tag.save
-              #   check.tags << tag
-              #   tag
-              # end
-
-              rules_to_create = []
+              normal_rules_to_create = []
+              filter_rules_to_create = []
 
               conditions_by_blackhole_and_media = {false => {},
                                                    true => {}}
@@ -631,7 +653,7 @@ module Flapjack
                   memo << {
                     :enabled         => true,
                     :blackhole       => blackhole,
-                    :strategy        => entity_names.empty? ? 'global' : 'all_tags',
+                    :strategy        => 'global', # filter rule also applies
                     :conditions_list => fail_states.sort.join(','),
                     :medium_ids      => rule_media_ids
                   }
@@ -649,50 +671,44 @@ module Flapjack
                 rules_to_create = replace_rules
               end
 
-              unless entity_names.empty?
-
-                all_entity_tags = Flapjack::Data::Tag.intersect(:name => '/^manage_service_\d+_.+$/').all
-
-                entity_tag_ids = all_entity_tags.each_with_object([]) do |tag, memo|
-                  next if tag.name.nil?
-                  next unless tag.name =~ /^manage_service_(\d+)_(.+)$/
-                  # eldest_service_id = Regexp.last_match(1)
-                  service_name = Regexp.last_match(2)
-
-                  next unless entity_names.include?(service_name)
-                  memo << tag.id
-                end
-
+              unless blackhole || filter_tag_ids.empty?
                 filter_data = {
                   :blackhole => true,
-                  :strategy => 'no_tag',
-                  :tag_ids => entity_tag_ids
+                  :strategy => 'no_tag'
                 }
 
                 filter_rules = rules_to_create.each_with_object([]) do |r, memo|
                   memo << r.merge(filter_data)
                 end
 
-                rules_to_create += filter_rules
+                filter_rules_to_create += filter_rules
               end
 
               new_rule_ids += rules_to_create.collect do |r|
                 new_rule_id = SecureRandom.uuid
                 r[:id] = new_rule_id
                 medium_ids = r.delete(:medium_ids)
-                tag_ids = r.delete(:tag_ids)
                 rule = Flapjack::Data::Rule.new(r)
                 rule.save!
                 rule.media.add_ids(*medium_ids)
                 rule.tags.add_ids(*tag_ids) unless tag_ids.empty?
                 new_rule_id
               end
+
+              new_rule_ids += filter_rules_to_create.collect do |r|
+                new_rule_id = SecureRandom.uuid
+                r[:id] = new_rule_id
+                medium_ids = r.delete(:medium_ids)
+                rule = Flapjack::Data::Rule.new(r)
+                rule.save!
+                rule.media.add_ids(*medium_ids)
+                rule.tags.add_ids(*filter_tag_ids) unless tag_ids.empty?
+                new_rule_id
+              end
             end
 
             contact.rules.add_ids(*new_rule_ids) unless new_rule_ids.empty?
           end
-
-          contact.rules.add(*rules) unless rules.empty?
         end
       end
 
