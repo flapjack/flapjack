@@ -30,7 +30,7 @@ module Flapjack
               halt err(422, "No valid pagerduty credentials were submitted")
             end
 
-            fields = ['service_key', 'subdomain', 'token', 'username', 'password']
+            fields = ['service_key', 'subdomain', 'token']
 
             pagerduty_credential = pagerduty_credentials_data.last
 
@@ -91,7 +91,6 @@ module Flapjack
             params[:contact_id].split(',').uniq.collect {|c_id| find_contact(c_id)}.each do |contact|
               apply_json_patch('pagerduty_credentials') do |op, property, linked, value|
                 if 'replace'.eql?(op)
-
                   pdc = contact.pagerduty_credentials
                   pd_data = pdc.nil? ? {} : pdc.clone
 
@@ -104,12 +103,6 @@ module Flapjack
                     contact.set_pagerduty_credentials(pd_data)
                   when 'token'
                     pd_data['token'] = value
-                    contact.set_pagerduty_credentials(pd_data)
-                  when 'username'
-                    pd_data['username'] = value
-                    contact.set_pagerduty_credentials(pd_data)
-                  when 'password'
-                    pd_data['password'] = value
                     contact.set_pagerduty_credentials(pd_data)
                   end
                 end

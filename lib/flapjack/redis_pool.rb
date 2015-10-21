@@ -34,6 +34,8 @@ module Flapjack
           :logger => logger)
         Flapjack::Data::Migration.correct_rollup_including_disabled_checks(:redis => redis,
           :logger => logger)
+        Flapjack::Data::Migration.clear_pagerduty_username_and_password(:redis => redis,
+          :logger => logger)
         redis
       }
     end
