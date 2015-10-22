@@ -36,6 +36,11 @@ type State struct {
 	} `json:"tags"`
 }
 
+type InputState struct {
+	flapjack.Event
+	TTL int64 `json:"ttl"`
+}
+
 type SNSSubscribe struct {
 	Message          string `json:"Message"`
 	MessageID        string `json:"MessageId"`
@@ -118,6 +123,7 @@ type NewRelicAlert struct {
 // handler caches
 func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	var state State
+	var input_state InputState
 	var event_format EventFormat
 	var NRAlarm NewRelicAlert
 	var SNSData SNSNotification
@@ -157,7 +163,7 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 
 	switch event_format {
 	case Normal:
-		err = json.Unmarshal(body, &state)
+		err = json.Unmarshal(body, &input_state)
 		if err != nil {
 			message := "Error: Couldn't read request body: %s\n"
 			log.Println(message, err)
@@ -244,6 +250,11 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	if state.TTL == 0 {
 		state.TTL = 300
 	}
+
+	if state.Tags.FromBroker == "" {
+		state.Tags.FromBroker = "httpbroker"
+	}
+
 	updates <- state
 
 	json, _ := json.Marshal(state)
