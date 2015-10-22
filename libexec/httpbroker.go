@@ -2,16 +2,33 @@ package main
 
 import (
 	"encoding/json"
+	"flapjack"
 	"fmt"
-        "flapjack"
-        "os"
-	"github.com/go-martini/martini"
-	"gopkg.in/alecthomas/kingpin.v1"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
+	"gopkg.in/alecthomas/kingpin.v1"
+	"github.com/go-martini/martini"
 )
+
+type EventFormat int
+
+const (
+	Normal   EventFormat = 1
+	SNS      EventFormat = 2
+	Newrelic EventFormat = 3
+)
+
+// State is a basic representation of a Flapjack event, with some extra field.
+// The extra fields handle state expiry.
+// Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
+type State struct {
+	flapjack.Event
+	TTL int64 `json:"ttl"`
+}
 
 type SNSSubscribe struct {
 	Message          string `json:"Message"`
@@ -46,7 +63,7 @@ type CWAlarm struct {
 	OldStateValue    string      `json:"OldStateValue"`
 	Region           string      `json:"Region"`
 	StateChangeTime  string      `json:"StateChangeTime"`
-	Time 			 int64         `json:"Time"`
+	Time             int64       `json:"Time"`
 	Trigger          struct {
 		ComparisonOperator string `json:"ComparisonOperator"`
 		Dimensions         []struct {
@@ -58,16 +75,46 @@ type CWAlarm struct {
 		Namespace         string      `json:"Namespace"`
 		Period            int         `json:"Period"`
 		Statistic         string      `json:"Statistic"`
-		Threshold         float64         `json:"Threshold"`
+		Threshold         float64     `json:"Threshold"`
 		Unit              interface{} `json:"Unit"`
 	} `json:"Trigger"`
 }
 
+type NewRelicAlert struct {
+	AccountID              int    `json:"account_id"`
+	AccountName            string `json:"account_name"`
+	ConditionID            int    `json:"condition_id"`
+	ConditionName          string `json:"condition_name"`
+	CurrentState           string `json:"current_state"`
+	Details                string `json:"details"`
+	EventType              string `json:"event_type"`
+	IncidentAcknowledgeURL string `json:"incident_acknowledge_url"`
+	IncidentID             int    `json:"incident_id"`
+	IncidentURL            string `json:"incident_url"`
+	Owner                  string `json:"owner"`
+	PolicyName             string `json:"policy_name"`
+	PolicyURL              string `json:"policy_url"`
+	RunbookURL             string `json:"runbook_url"`
+	Severity               string `json:"severity"`
+	Targets                []struct {
+		ID     string `json:"id"`
+		Labels struct {
+			Label string `json:"label"`
+		} `json:"labels"`
+		Link    string `json:"link"`
+		Name    string `json:"name"`
+		Product string `json:"product"`
+		Type    string `json:"type"`
+	} `json:"targets"`
+	Timestamp int `json:"timestamp"`
+}
+
 // handler caches
-func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
-    var snsmessage SNSNotification
-    var snssubscription SNSSubscribe
-    var cwalarmmessage CWAlarm
+func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
+	var state State
+	var event_format EventFormat
+	var NRAlarm NewRelicAlert
+	var SNSData SNSNotification
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		message := "Error: Couldn't read request body: %s\n"
@@ -75,43 +122,115 @@ func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, message, err)
 		return
 	}
-	json.Unmarshal(body, &snssubscription)
-		if snssubscription.SubscribeURL != ""{
-			http.Get(snssubscription.SubscribeURL)
+	// Check if its a FJ event
+	err = json.Unmarshal(body, &state)
+	if state.Event.Entity != "" {
+		message := "Got Flapjack event"
+		log.Printf(message)
+		event_format = Normal
+
+	}
+
+	// Check if its a New Relic event
+	err = json.Unmarshal(body, &NRAlarm)
+	if NRAlarm.ConditionName != "" {
+		message := "Got New Relic event"
+		log.Printf(message)
+		event_format = Newrelic
+
+	}
+
+	// Check if its a SNS
+	err = json.Unmarshal(body, &SNSData)
+	if SNSData.SigningCertURL != "" {
+		message := "Got SNS event"
+		log.Printf(message)
+		event_format = SNS
+	}
+	switch event_format {
+	case Newrelic:
+		var event_state string
+		switch strings.ToLower(NRAlarm.CurrentState) {
+		case "alarm":
+			event_state = "critical"
+		default:
+			event_state = "ok"
+		}
+		new_details := fmt.Sprint("New Relic Alert Received: ", NRAlarm.Details, " Ack the alert using the following URL: ", NRAlarm.IncidentAcknowledgeURL)
+		state = State{
+			flapjack.Event{
+				Entity: NRAlarm.PolicyName,
+				Check:  NRAlarm.ConditionName,
+				// Type:    "service", // @TODO: Make this magic
+				State:   event_state,
+				Summary: new_details,
+			},
+			0,
+		}
+
+	case SNS:
+		var sns_subscription SNSSubscribe
+		var cw_alarm CWAlarm
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			message := "Error: Couldn't read request body: %s\n"
+			log.Printf(message, err)
+			fmt.Fprintf(w, message, err)
 			return
 		}
-    err = json.Unmarshal(body, &snsmessage)
-    if err != nil {
-		message := "Error: Couldn't read request body from the SNS notification: %s\n"
-		log.Println(message, err)
-		fmt.Fprintf(w, message, err)
-		return
+
+		json.Unmarshal(body, &sns_subscription)
+		if sns_subscription.SubscribeURL != "" {
+			http.Get(sns_subscription.SubscribeURL)
+			return
+		}
+
+		input_message := []byte(SNSData.Message)
+		err = json.Unmarshal(input_message, &cw_alarm)
+		if err != nil {
+			message := "Error: Couldn't read request body from the SNS message: %s\n"
+			log.Println(message, err)
+			fmt.Fprintf(w, message, err)
+			return
+		}
+
+		var event_state string
+		switch strings.ToLower(cw_alarm.NewStateValue) {
+		case "alarm":
+			event_state = "critical"
+		default:
+			event_state = "ok"
+		}
+
+		state = State{
+			flapjack.Event{
+				Entity: cw_alarm.AlarmName,
+				Check:  cw_alarm.Trigger.MetricName,
+				// Type:    "service", // @TODO: Make this magic
+				State:   event_state,
+				Summary: cw_alarm.NewStateReason,
+			},
+			0,
+		}
 	}
-        inputmessage := []byte(snsmessage.Message)
-	err = json.Unmarshal(inputmessage, &cwalarmmessage)
-    if err != nil {
-		message := "Error: Couldn't read request body from the SNS message: %s\n"
-		log.Println(message, err)
-		fmt.Fprintf(w, message, err)
-		return
-	}
-        alarmstate := "OK"
-        if cwalarmmessage.NewStateValue == "ALARM" {
 
-            alarmstate = "CRITICAL"
-        }
-
-        cwalarmmessage.NewStateValue = alarmstate
-
-    cwalarmmessage.Time = time.Now().Unix()
-
-	if len(alarmstate) == 0 {
-		alarmstate = "service"
+	// Populate a time if none has been set.
+	if state.Time == 0 {
+		state.Time = time.Now().Unix()
 	}
 
-	updates <- cwalarmmessage
+	if len(state.Type) == 0 {
+		state.Type = "service"
+	}
 
-	json, _ := json.Marshal(cwalarmmessage)
+	if state.TTL == 0 {
+		state.TTL = 300
+	}
+
+	updates <- state
+
+	json, _ := json.Marshal(state)
 	message := "Caching state: %s\n"
 	log.Printf(message, json)
 	fmt.Fprintf(w, message, json)
@@ -120,15 +239,15 @@ func CreateState(updates chan CWAlarm, w http.ResponseWriter, r *http.Request) {
 // cacheState stores a cache of event state to be sent to Flapjack.
 // The event state is queried later when submitting events periodically
 // to Flapjack.
-func cacheState(updates chan CWAlarm, cwalarmmessage map[string]CWAlarm) {
+func cacheState(updates chan State, state map[string]State) {
 	for ns := range updates {
-		key := ns.AlarmName + ":" + ns.NewStateReason
-		cwalarmmessage[key] = ns
+		key := ns.Entity + ":" + ns.Check
+		state[key] = ns
 	}
 }
 
 // submitCachedState periodically samples the cached state, sends it to Flapjack.
-func submitCachedState(cwalarmmessage map[string]CWAlarm, config Config) {
+func submitCachedState(states map[string]State, config Config) {
 	transport, err := flapjack.Dial(config.Server, config.Database)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -136,32 +255,36 @@ func submitCachedState(cwalarmmessage map[string]CWAlarm, config Config) {
 	}
 
 	for {
-		log.Printf("Number of cached states: %d\n", len(cwalarmmessage))
-		for id, state := range cwalarmmessage {
+		log.Printf("Number of cached states: %d\n", len(states))
+		for id, state := range states {
 			now := time.Now().Unix()
 			event := flapjack.Event{
-				Entity:  state.AlarmName,
-				Check:   state.Trigger.MetricName,
-             			Type:    "service", // @TODO: Make this magic
-				State:   state.NewStateValue,
-				Summary: state.NewStateReason,
+				Entity:  state.Entity,
+				Check:   state.Check,
+				Type:    state.Type,
+				State:   state.State,
+				Summary: state.Summary,
 				Time:    now,
 			}
 
+			// Stale state sends UNKNOWNs
+			elapsed := now - state.Time
+			if state.TTL >= 0 && elapsed > state.TTL {
+				log.Printf("State for %s is stale. Sending UNKNOWN.\n", id)
+				event.State = "UNKNOWN"
+				event.Summary = fmt.Sprintf("httpbroker: Cached state is stale (%ds old, should be < %ds)", elapsed, state.TTL)
+			}
 			if config.Debug {
 				log.Printf("Sending event data for %s\n", id)
 			}
 			transport.Send(event)
 		}
-                time.Sleep(config.Interval)
+		time.Sleep(config.Interval)
 	}
-
-
 }
 
-
 var (
-	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("80").OverrideDefaultFromEnvar("PORT").String()
+	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
 	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
 	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
 	interval = kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
@@ -191,8 +314,8 @@ func main() {
 		log.Printf("Booting with config: %+v\n", config)
 	}
 
-	updates := make(chan CWAlarm)
-	state := map[string]CWAlarm{}
+	updates := make(chan State)
+	state := map[string]State{}
 
 	go cacheState(updates, state)
 	go submitCachedState(state, config)
