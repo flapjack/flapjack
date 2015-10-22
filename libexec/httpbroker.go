@@ -137,7 +137,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		message := "Got Flapjack event"
 		log.Printf(message)
 		event_format = Normal
-
 	}
 
 	// Check if its a New Relic event
@@ -146,7 +145,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		message := "Got New Relic event"
 		log.Printf(message)
 		event_format = Newrelic
-
 	}
 
 	// Check if its a SNS
@@ -156,6 +154,7 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		log.Printf(message)
 		event_format = SNS
 	}
+
 	switch event_format {
 	case Normal:
 		err = json.Unmarshal(body, &state)
@@ -223,9 +222,8 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 
 		state = State{
 			flapjack.Event{
-				Entity: cw_alarm.AlarmName,
-				Check:  cw_alarm.Trigger.MetricName,
-				// Type:    "service", // @TODO: Make this magic
+				Entity:  cw_alarm.AlarmName,
+				Check:   cw_alarm.Trigger.MetricName,
 				State:   event_state,
 				Summary: cw_alarm.NewStateReason,
 			},
@@ -302,7 +300,6 @@ func submitCachedState(states map[string]State, config Config) {
 }
 
 var (
-	format   = kingpin.Flag("format", "Event format").Default("flapjack").String()
 	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
 	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
 	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
