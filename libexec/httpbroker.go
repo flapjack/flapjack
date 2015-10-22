@@ -36,6 +36,11 @@ type State struct {
 	} `json:"tags"`
 }
 
+type InputState struct {
+	flapjack.Event
+	TTL  int64 `json:"ttl"`
+}
+
 type SNSSubscribe struct {
 	Message          string `json:"Message"`
 	MessageID        string `json:"MessageId"`
@@ -118,6 +123,7 @@ type NewRelicAlert struct {
 // handler caches
 func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	var state State
+	var input_state InputState
 	var event_format EventFormat
 	var NRAlarm NewRelicAlert
 	var SNSData SNSNotification
@@ -130,13 +136,13 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, message, err)
 		return
 	}
+
 	// Check if its a FJ event
 	err = json.Unmarshal(body, &state)
 	if state.Event.Entity != "" {
 		message := "Got Flapjack event"
 		log.Printf(message)
 		event_format = Normal
-
 	}
 
 	// Check if its a New Relic event
@@ -145,7 +151,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		message := "Got New Relic event"
 		log.Printf(message)
 		event_format = Newrelic
-
 	}
 
 	// Check if its a SNS
@@ -155,7 +160,16 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		log.Printf(message)
 		event_format = SNS
 	}
+
 	switch event_format {
+	case Normal:
+		err = json.Unmarshal(body, &input_state)
+		if err != nil {
+			message := "Error: Couldn't read request body: %s\n"
+			log.Println(message, err)
+			fmt.Fprintf(w, message, err)
+			return
+		}
 	case Newrelic:
 		var event_state string
 		switch strings.ToLower(NRAlarm.CurrentState) {
@@ -211,11 +225,11 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		default:
 			event_state = "ok"
 		}
+
 		state = State{
 			flapjack.Event{
-				Entity: cw_alarm.AlarmName,
-				Check:  cw_alarm.Trigger.MetricName,
-				// Type:    "service", // @TODO: Make this magic
+				Entity:  cw_alarm.AlarmName,
+				Check:   cw_alarm.Trigger.MetricName,
 				State:   event_state,
 				Summary: cw_alarm.NewStateReason,
 			},
@@ -236,6 +250,11 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	if state.TTL == 0 {
 		state.TTL = 300
 	}
+
+	if state.Tags.FromBroker == "" {
+		state.Tags.FromBroker = "httpbroker"
+	}
+	
 	updates <- state
 
 	json, _ := json.Marshal(state)
