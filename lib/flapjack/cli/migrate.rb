@@ -11,8 +11,7 @@
 # 'npm install redis-dump -g')
 #
 #  be ruby bin/flapjack migrate to_v2 --source=redis://127.0.0.1/7 --destination=redis://127.0.0.1/8
-#  redis-dump -d 7 >~/Desktop/dump7.txt
-#  redis-dump -d 8 >~/Desktop/dump8.txt
+#  redis-dump -d 7 >~/Desktop/dump7.txt && redis-dump -d 8 >~/Desktop/dump8.txt
 #
 #   Not migrated:
 #      current alertable/rollup status (these should reset on app start)
@@ -532,10 +531,10 @@ module Flapjack
                 old_time_restrictions = Flapjack.load_json(old_time_restrictions_json)
                 if old_time_restrictions.nil? || old_time_restrictions.empty?
                   []
-                elsif tr.is_a?(Hash)
-                  [rule_time_restriction_to_icecube_schedule(tr, contact.time_zone)]
-                elsif tr.is_a?(Array)
-                  tr.map {|t| rule_time_restriction_to_icecube_schedule(t, contact.time_zone)}
+                elsif old_time_restrictions.is_a?(Hash)
+                  [rule_time_restriction_to_icecube_schedule(old_time_restrictions, contact.time_zone)]
+                elsif old_time_restrictions.is_a?(Array)
+                  old_time_restrictions.map {|t| rule_time_restriction_to_icecube_schedule(t, contact.time_zone)}
                 end
               end
 
@@ -573,7 +572,7 @@ module Flapjack
               end
 
 
-              old_tags = field_from_rule_json(rule, 'tags')
+              old_tags = field_from_rule_json(rule_data, 'tags')
               tags = case old_tags
               when String
                 Set.new([old_tags])
@@ -583,7 +582,7 @@ module Flapjack
                 nil
               end
 
-              old_regex_tags = field_from_rule_json(rule, 'regex_tags')
+              old_regex_tags = field_from_rule_json(rule_data, 'regex_tags')
               tag_regexes = case old_regex_tags
               when String
                 Set.new([Regexp.new(old_regex_tags)])
@@ -610,11 +609,11 @@ module Flapjack
                 end
               end
 
-              unless old_tags_checks.nil?
+              unless old_tags_checks.empty?
                 tag = Flapjack::Data::Tag.new(:name => "migrated_rule_#{rule_id}")
                 tag.save!
                 tag.checks.add_ids(*old_tags_checks.ids)
-                limit_tag_ids << tag.id
+                filter_tag_ids << tag.id
               end
 
               normal_rules_to_create = []
@@ -636,8 +635,8 @@ module Flapjack
               # multiplier -- conditions_by_blackhole_and_media[false].size +
               #               conditions_by_blackhole_and_media[true].size
 
-              condition[false, true].each do |blackhole|
-                rules_to_create = conditions_by_blackhole_and_media[blackhole].each_with_object({}) do |(media_types_str, fail_states), memo|
+              [false, true].each do |blackhole|
+                 normal_rules_to_create += conditions_by_blackhole_and_media[blackhole].each_with_object([]) do |(media_types_str, fail_states), memo|
                   media_types = media_types_str.split('|')
 
                   rule_media_ids = contact.media.intersect(:transport => media_types).ids
@@ -657,35 +656,34 @@ module Flapjack
               # multiply by number of applied time restrictions, if any
               unless time_restrictions.empty?
                 replace_rules = time_restrictions.each_with_object([]) do |tr, memo|
-                  memo += rules_to_create.collect do |r|
+                  memo += normal_rules_to_create.collect do |r|
                     r.merge(:time_restriction => tr)
                   end
                 end
 
-                rules_to_create = replace_rules
+                normal_rules_to_create = replace_rules
               end
 
-              unless blackhole || filter_tag_ids.empty?
+              unless filter_tag_ids.empty?
                 filter_data = {
                   :blackhole => true,
                   :strategy => 'no_tag'
                 }
 
-                filter_rules = rules_to_create.each_with_object([]) do |r, memo|
-                  memo << r.merge(filter_data)
+                filter_rules = normal_rules_to_create.each_with_object([]) do |r, memo|
+                  memo << r.merge(filter_data) unless r[:blackhole]
                 end
 
                 filter_rules_to_create += filter_rules
               end
 
-              new_rule_ids += rules_to_create.collect do |r|
+              new_rule_ids += normal_rules_to_create.collect do |r|
                 new_rule_id = SecureRandom.uuid
                 r[:id] = new_rule_id
                 medium_ids = r.delete(:medium_ids)
                 rule = Flapjack::Data::Rule.new(r)
                 rule.save!
                 rule.media.add_ids(*medium_ids)
-                rule.tags.add_ids(*tag_ids) unless tag_ids.empty?
                 new_rule_id
               end
 
@@ -696,7 +694,7 @@ module Flapjack
                 rule = Flapjack::Data::Rule.new(r)
                 rule.save!
                 rule.media.add_ids(*medium_ids)
-                rule.tags.add_ids(*filter_tag_ids) unless tag_ids.empty?
+                rule.tags.add_ids(*filter_tag_ids) unless filter_tag_ids.empty?
                 new_rule_id
               end
             end
