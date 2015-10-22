@@ -17,16 +17,23 @@ import (
 type EventFormat int
 
 const (
-	Normal EventFormat = 1
-	SNS    EventFormat = 2
+	Normal   EventFormat = 1
+	SNS      EventFormat = 2
+	Newrelic EventFormat = 3
 )
 
 // State is a basic representation of a Flapjack event, with some extra field.
 // The extra fields handle state expiry.
 // Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
+type Tags struct {
+	FromBroker string `json:"from_broker"`
+}
 type State struct {
 	flapjack.Event
-	TTL int64 `json:"ttl"`
+	TTL  int64 `json:"ttl"`
+	Tags struct {
+		FromBroker string `json:"from_broker"`
+	} `json:"tags"`
 }
 
 type SNSSubscribe struct {
@@ -79,10 +86,43 @@ type CWAlarm struct {
 	} `json:"Trigger"`
 }
 
-// handler caches
-func CreateState(event_format EventFormat, updates chan State, w http.ResponseWriter, r *http.Request) {
-	var state State
+type NewRelicAlert struct {
+	AccountID              int    `json:"account_id"`
+	AccountName            string `json:"account_name"`
+	ConditionID            int    `json:"condition_id"`
+	ConditionName          string `json:"condition_name"`
+	CurrentState           string `json:"current_state"`
+	Details                string `json:"details"`
+	EventType              string `json:"event_type"`
+	IncidentAcknowledgeURL string `json:"incident_acknowledge_url"`
+	IncidentID             int    `json:"incident_id"`
+	IncidentURL            string `json:"incident_url"`
+	Owner                  string `json:"owner"`
+	PolicyName             string `json:"policy_name"`
+	PolicyURL              string `json:"policy_url"`
+	RunbookURL             string `json:"runbook_url"`
+	Severity               string `json:"severity"`
+	Targets                []struct {
+		ID     string `json:"id"`
+		Labels struct {
+			Label string `json:"label"`
+		} `json:"labels"`
+		Link    string `json:"link"`
+		Name    string `json:"name"`
+		Product string `json:"product"`
+		Type    string `json:"type"`
+	} `json:"targets"`
+	Timestamp int `json:"timestamp"`
+}
 
+// handler caches
+func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
+	var state State
+	var event_format EventFormat
+	var NRAlarm NewRelicAlert
+	var SNSData SNSNotification
+	var tags Tags
+	tags.FromBroker = "httpbroker"
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		message := "Error: Couldn't read request body: %s\n"
@@ -91,6 +131,31 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 		return
 	}
 
+	// Check if its a FJ event
+	err = json.Unmarshal(body, &state)
+	if state.Event.Entity != "" {
+		message := "Got Flapjack event"
+		log.Printf(message)
+		event_format = Normal
+
+	}
+
+	// Check if its a New Relic event
+	err = json.Unmarshal(body, &NRAlarm)
+	if NRAlarm.ConditionName != "" {
+		message := "Got New Relic event"
+		log.Printf(message)
+		event_format = Newrelic
+
+	}
+
+	// Check if its a SNS
+	err = json.Unmarshal(body, &SNSData)
+	if SNSData.SigningCertURL != "" {
+		message := "Got SNS event"
+		log.Printf(message)
+		event_format = SNS
+	}
 	switch event_format {
 	case Normal:
 		err = json.Unmarshal(body, &state)
@@ -100,9 +165,28 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 			fmt.Fprintf(w, message, err)
 			return
 		}
+	case Newrelic:
+		var event_state string
+		switch strings.ToLower(NRAlarm.CurrentState) {
+		case "alarm":
+			event_state = "critical"
+		default:
+			event_state = "ok"
+		}
+		new_details := fmt.Sprint("New Relic Alert Received: ", NRAlarm.Details, " Ack the alert using the following URL: ", NRAlarm.IncidentAcknowledgeURL)
+		state = State{
+			flapjack.Event{
+				Entity: NRAlarm.PolicyName,
+				Check:  NRAlarm.ConditionName,
+				// Type:    "service", // @TODO: Make this magic
+				State:   event_state,
+				Summary: new_details,
+			},
+			0,
+			tags,
+		}
 
 	case SNS:
-		var sns_messages SNSNotification
 		var sns_subscription SNSSubscribe
 		var cw_alarm CWAlarm
 
@@ -120,15 +204,7 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 			return
 		}
 
-		err = json.Unmarshal(body, &sns_messages)
-		if err != nil {
-			message := "Error: Couldn't read request body from the SNS notification: %s\n"
-			log.Println(message, err)
-			fmt.Fprintf(w, message, err)
-			return
-		}
-
-		input_message := []byte(sns_messages.Message)
+		input_message := []byte(SNSData.Message)
 		err = json.Unmarshal(input_message, &cw_alarm)
 		if err != nil {
 			message := "Error: Couldn't read request body from the SNS message: %s\n"
@@ -154,6 +230,7 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 				Summary: cw_alarm.NewStateReason,
 			},
 			0,
+			tags,
 		}
 	}
 
@@ -169,7 +246,6 @@ func CreateState(event_format EventFormat, updates chan State, w http.ResponseWr
 	if state.TTL == 0 {
 		state.TTL = 300
 	}
-
 	updates <- state
 
 	json, _ := json.Marshal(state)
@@ -260,22 +336,13 @@ func main() {
 	updates := make(chan State)
 	state := map[string]State{}
 
-	var event_format EventFormat
-
-	switch strings.ToLower(*format) {
-	case "sns":
-		event_format = SNS
-	default:
-		event_format = Normal
-	}
-
 	go cacheState(updates, state)
 	go submitCachedState(state, config)
 
 	m := martini.Classic()
 	m.Group("/state", func(r martini.Router) {
 		r.Post("", func(res http.ResponseWriter, req *http.Request) {
-			CreateState(event_format, updates, res, req)
+			CreateState(updates, res, req)
 		})
 		r.Get("", func() []byte {
 			data, _ := json.Marshal(state)
