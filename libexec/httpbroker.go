@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"flapjack"
 	"fmt"
+	"github.com/go-martini/martini"
+	"gopkg.in/alecthomas/kingpin.v1"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
-	"gopkg.in/alecthomas/kingpin.v1"
-	"github.com/go-martini/martini"
 )
 
 type EventFormat int
@@ -25,9 +25,15 @@ const (
 // State is a basic representation of a Flapjack event, with some extra field.
 // The extra fields handle state expiry.
 // Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
+type Tags struct {
+	FromBroker string `json:"from_broker"`
+}
 type State struct {
 	flapjack.Event
-	TTL int64 `json:"ttl"`
+	TTL  int64 `json:"ttl"`
+	Tags struct {
+		FromBroker string `json:"from_broker"`
+	} `json:"tags"`
 }
 
 type SNSSubscribe struct {
@@ -115,6 +121,8 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	var event_format EventFormat
 	var NRAlarm NewRelicAlert
 	var SNSData SNSNotification
+	var tags Tags
+	tags.FromBroker = "httpbroker"
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		message := "Error: Couldn't read request body: %s\n"
@@ -166,6 +174,7 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 				Summary: new_details,
 			},
 			0,
+			tags,
 		}
 
 	case SNS:
@@ -202,7 +211,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		default:
 			event_state = "ok"
 		}
-
 		state = State{
 			flapjack.Event{
 				Entity: cw_alarm.AlarmName,
@@ -212,6 +220,7 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 				Summary: cw_alarm.NewStateReason,
 			},
 			0,
+			tags,
 		}
 	}
 
@@ -227,7 +236,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	if state.TTL == 0 {
 		state.TTL = 300
 	}
-
 	updates <- state
 
 	json, _ := json.Marshal(state)
