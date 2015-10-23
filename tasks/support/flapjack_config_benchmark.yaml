@@ -23,7 +23,6 @@ test:
     sms_queue: sms_notifications
     jabber_queue: jabber_notifications
     pagerduty_queue: pagerduty_notifications
-    notification_log_file: log/notification_test.log
     default_contact_timezone: Australia/Broken_Hill
     logger:
       level: WARN

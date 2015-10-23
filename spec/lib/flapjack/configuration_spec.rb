@@ -39,12 +39,6 @@ describe Flapjack::Configuration, :logger => true do
         expect(configuration.all['processor']['enabled']).to be_a(TrueClass)
       end
 
-      it "loads array data" do
-        expect(
-          configuration.all[:processor][:new_check_scheduled_maintenance_ignore_tags]
-        ).to be_an(Array)
-      end
-
       it "loads nested data" do
         expect(
           configuration.all[:gateways][:sms_twilio][:logger][:syslog_errors]
@@ -57,16 +51,12 @@ describe Flapjack::Configuration, :logger => true do
       it "reloads config data" do
         allow(File).to receive(:read).and_return(reloaded_toml_data)
 
-        expect(configuration.all[:pid_dir]).to eq("/var/run/flapjack/")
-        expect(configuration.all[:log_dir]).to eq("/var/log/flapjack/")
         expect(configuration.for_redis[:host]).to eq('192.168.0.1')
         expect(configuration.for_redis[:port]).to eq(9999)
         expect(configuration.for_redis[:db]).to eq(11)
 
         configuration.reload
 
-        expect(configuration.all[:pid_dir]).to eq("/var/run/flapjack_new/")
-        expect(configuration.all[:log_dir]).to eq("/var/log/flapjack_new/")
         expect(configuration.for_redis['host']).to eq('192.168.0.2')
         expect(configuration.for_redis['port']).to eq(8888)
         expect(configuration.for_redis['db']).to eq(12)
@@ -88,7 +78,6 @@ describe Flapjack::Configuration, :logger => true do
 
       configuration.load('dummy_pattern')
 
-      expect(configuration.all[:pid_dir]).to eq('/var/run/flapjack/')
       expect(configuration.all[:gateways][:sms][:enabled]).to be_a(FalseClass)
       expect(configuration.for_redis[:host]).to eq('192.168.0.1')
     end
@@ -109,9 +98,6 @@ describe Flapjack::Configuration, :logger => true do
 
   let(:toml_data) {
     <<-TOML_DATA
-pid_dir = "/var/run/flapjack/"
-log_dir = "/var/log/flapjack/"
-daemonize = true
 [logger]
   level = "INFO"
   syslog_errors = true
@@ -126,7 +112,7 @@ daemonize = true
   archive_events = true
   events_archive_maxage = 10800
   new_check_scheduled_maintenance_duration = "100 years"
-  new_check_scheduled_maintenance_ignore_tags = ["bypass_ncsm"]
+  new_check_scheduled_maintenance_ignore_regex = "bypass_ncsm$"
   [processor.logger]
     level = "INFO"
     syslog_errors = true
@@ -139,19 +125,14 @@ daemonize = true
   sns_queue = "sns_notifications"
   jabber_queue = "jabber_notifications"
   pagerduty_queue = "pagerduty_notifications"
-  notification_log_file = "/var/log/flapjack/notification.log"
   default_contact_timezone = "UTC"
   [notifier.logger]
     level = "INFO"
     syslog_errors = true
 [nagios-receiver]
   fifo = "/var/cache/nagios3/event_stream.fifo"
-  pid_dir = "/var/run/flapjack/"
-  log_dir = "/var/log/flapjack/"
 [nsca-receiver]
   fifo = "/var/lib/nagios3/rw/nagios.cmd"
-  pid_dir = "/var/run/flapjack/"
-  log_dir = "/var/log/flapjack/"
 [gateways]
   # Generates email notifications
   [gateways.email]
@@ -251,8 +232,6 @@ daemonize = true
 
   let(:reloaded_toml_data) {
     <<-NEW_TOML_DATA
-pid_dir = "/var/run/flapjack_new/"
-log_dir = "/var/log/flapjack_new/"
 daemonize = false
 [logger]
   level = "DEBUG"
@@ -266,8 +245,6 @@ NEW_TOML_DATA
 
   let(:base_toml_data) {
     <<-BASE_TOML_DATA
-pid_dir = "/var/run/flapjack/"
-log_dir = "/var/log/flapjack/"
 daemonize = true
 [logger]
   level = "INFO"

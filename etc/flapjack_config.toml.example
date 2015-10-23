@@ -1,6 +1,3 @@
-pid_dir = "/var/run/flapjack/"
-log_dir = "/var/log/flapjack/"
-daemonize = true
 [logger]
   level = "INFO"
   syslog_errors = true
@@ -42,7 +39,6 @@ daemonize = true
   sns_queue = "sns_notifications"
   jabber_queue = "jabber_notifications"
   pagerduty_queue = "pagerduty_notifications"
-  notification_log_file = "/var/log/flapjack/notification.log"
   default_contact_timezone = "UTC"
   [notifier.logger]
     level = "INFO"
