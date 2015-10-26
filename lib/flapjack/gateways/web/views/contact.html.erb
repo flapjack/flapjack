@@ -25,7 +25,7 @@
           <td>
             <% @pagerduty_credentials.each_pair do |pk, pv| %>
               <% unless pv.empty? %>
-                <p><%= 'password'.eql?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
+                <p><%= %w(password token service_key).include?(pk) ? h("#{pk}: ...") : h("#{pk}: #{pv}") %></p>
               <% end %>
             <% end %>
           </td>
