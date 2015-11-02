@@ -56,6 +56,10 @@ module Flapjack
           rescue => e
             @logger.error "Error generating or dispatching email message: #{e.class}: #{e.message}\n" +
               e.backtrace.join("\n")
+
+            # Sleep 1-2 seconds to avoid pathologically reconnecting to Redis. (Issues/866)
+            # Random delay is intended as cheap stampeding herd mitigation
+            sleep(1 + rand())
           end
         end
       end
