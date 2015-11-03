@@ -19,10 +19,8 @@ module Flapjack
     end
 
     def logger
-      log = Thread.current[:flapjack_logger]
-      return log unless log.nil?
-      Thread.current[:flapjack_logger] = Flapjack::Logger.new(
-        Thread.current[:flapjack_logger_name]   || 'flapjack',
+      Thread.current[:flapjack_logger] ||= Flapjack::Logger.new(
+        Thread.current[:flapjack_logger_name]   || 'default',
         Thread.current[:flapjack_logger_config] || {}
       )
     end
@@ -51,7 +49,15 @@ module Flapjack
         "#{t} [#{severity}] :: #{@name} :: #{msg}\n"
       end
 
-      @logger = ::Logger.new(STDOUT)
+      output = if config[:file].nil? || config[:file].empty? || !File.writable?(config[:file])
+        # puts "[#{name}] Logging to STDOUT"
+        STDOUT
+      else
+        # puts "[#{name}] Logging to '#{config[:file]}'"
+        config[:file]
+      end
+
+      @logger = ::Logger.new(output)
       @logger.formatter = @formatter
 
       configure(config)

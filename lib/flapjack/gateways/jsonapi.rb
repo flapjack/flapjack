@@ -127,6 +127,10 @@ module Flapjack
       end
 
       before do
+        # needs to be done per-thread...
+        Flapjack.configure_log('jsonapi', config['logger'])
+
+        # ... as does this
         Zermelo.redis ||= Flapjack.redis
 
         input = nil

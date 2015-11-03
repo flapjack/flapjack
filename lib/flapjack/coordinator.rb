@@ -37,6 +37,10 @@ module Flapjack
       @monitor = Monitor.new
       @monitor_cond = @monitor.new_cond
 
+      # needs to be done per-thread
+      cfg = @config.all
+      Flapjack.configure_log('flapjack-coordinator', cfg.nil? ? {} : cfg['logger'])
+
       @reload = proc {
         @monitor.synchronize {
           @monitor_cond.wait_until { :running.eql?(@state) }
@@ -58,13 +62,16 @@ module Flapjack
     def start(opts = {})
       # we can't block on the main thread, as signals interrupt that
       Thread.new do
+        # needs to be done per-thread
+        cfg = @config.all
+        Flapjack.configure_log('flapjack-coordinator', cfg.nil? ? {} : cfg['logger'])
 
         @boot_time = Time.now
 
         Flapjack::RedisProxy.config = @config.for_redis
         # Flapjack::Data::Condition.ensure_present
 
-        pikelet_defs = pikelet_definitions(@config.all)
+        pikelet_defs = pikelet_definitions(cfg)
         return if pikelet_defs.empty?
 
         create_pikelets(pikelet_defs).each do |pik|

@@ -11,7 +11,7 @@ describe Flapjack::Coordinator do
   it "starts and stops a pikelet" do
     cfg = {'processor' => {'enabled' => true}}
 
-    expect(config).to receive(:all).and_return(cfg)
+    expect(config).to receive(:all).twice.and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
@@ -46,7 +46,7 @@ describe Flapjack::Coordinator do
   it "loads an old executive pikelet config block with no new data" do
     cfg = {'executive' => {'enabled' => true}}
 
-    expect(config).to receive(:all).and_return(cfg)
+    expect(config).to receive(:all).twice.and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
@@ -93,7 +93,7 @@ describe Flapjack::Coordinator do
            'notifier'  => {'enabled' => false}
           }
 
-    expect(config).to receive(:all).and_return(cfg)
+    expect(config).to receive(:all).twice.and_return(cfg)
 
     expect(config).to receive(:for_redis).and_return(redis_config)
     expect(Flapjack::RedisProxy).to receive(:config=).with(redis_config)
@@ -128,6 +128,8 @@ describe Flapjack::Coordinator do
   it "traps system signals and shuts down" do
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('darwin12.0.0')
 
+    expect(config).to receive(:all).and_return({})
+
     thread = double(Thread)
     expect(thread).to receive(:join).exactly(3).times
     expect(Thread).to receive(:new).exactly(3).times.and_yield.and_return(thread)
@@ -151,6 +153,8 @@ describe Flapjack::Coordinator do
 
   it "only traps two system signals on Windows" do
     expect(RbConfig::CONFIG).to receive(:[]).with('host_os').and_return('mswin')
+
+    expect(config).to receive(:all).and_return({})
 
     thread = double(Thread)
     expect(thread).to receive(:join).twice
@@ -176,8 +180,7 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true}}
     new_cfg = {'gateways' => {'jabber' => {'enabled' => true}}}
 
-
-    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
+    expect(config).to receive(:all).exactly(3).times.and_return(old_cfg, old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')
@@ -204,7 +207,7 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'foo' => 'baz'}}
 
-    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
+    expect(config).to receive(:all).exactly(3).times.and_return(old_cfg, old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')
@@ -224,7 +227,7 @@ describe Flapjack::Coordinator do
     old_cfg = {'processor' => {'enabled' => true, 'foo' => 'bar'}}
     new_cfg = {'processor' => {'enabled' => true, 'baz' => 'qux'}}
 
-    expect(config).to receive(:all).twice.and_return(old_cfg, new_cfg)
+    expect(config).to receive(:all).exactly(3).times.and_return(old_cfg, old_cfg, new_cfg)
     expect(config).to receive(:reload)
 
     processor = double('processor')

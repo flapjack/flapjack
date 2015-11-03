@@ -128,6 +128,9 @@ module Flapjack
       before do
         content_type charset_for_content_type('text/html')
 
+        # needs to be done per-thread
+        Flapjack.configure_log('web', config['logger'])
+
         @base_url         = "#{request.base_url}/"
         @default_logo_url = self.class.instance_variable_get('@default_logo_url')
         @logo_image_file  = self.class.instance_variable_get('@logo_image_file')
