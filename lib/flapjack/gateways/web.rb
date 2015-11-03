@@ -414,9 +414,9 @@ module Flapjack
         end
 
         # FIXME: intersect with current checks, or push down to Contact.entities
-        @entities_and_checks = @contact.entities(:checks => true).sort_by {|ec|
-          ec[:entity].name
-        }
+        @entities_and_checks = @contact.entities(:checks => true).
+          select  {|cec| cec.key?(:entity) && !cec[:entity].nil? }.
+          sort_by {|ec| ec[:entity].name }
 
         erb 'contact.html'.to_sym
       end
