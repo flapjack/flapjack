@@ -97,7 +97,8 @@ def one_event(kind, entity, check, details:nil)
       'state'              => kind,
       'summary'            => "",
       'entity'             => entity,
-      'check'              => check
+      'check'              => check,
+      'tags'               => ['tag1', 'tag2']
   }
   event['details'] = details unless details.nil?
   case kind

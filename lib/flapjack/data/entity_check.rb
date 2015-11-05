@@ -608,6 +608,7 @@ module Flapjack
         count = options[:count]
         initial_delay = options[:initial_failure_delay]
         repeat_delay = options[:repeat_failure_delay]
+        tags = options[:tags] || Set.new
 
         old_state = self.state
 
@@ -653,6 +654,7 @@ module Flapjack
           # hash summary and details (as they may have changed)
           multi.hset("check:#{@key}", 'summary', (summary || ''))
           multi.hset("check:#{@key}", 'details', (details || ''))
+          multi.hset("check:#{@key}", 'tags', tags.to_a.join(','))
 
           # NB: delays will revert to defaults if event sources don't continue sending
           # through their custom delays in the event structure
@@ -927,6 +929,12 @@ module Flapjack
 
       alias_method :tags_without_entity_and_check_name, :tags
       alias_method :tags, :tags_with_entity_and_check_name
+
+      def tags_saved
+        # The saved tags; a comma-separated array
+        saved = @redis.hget("check:#{@key}", 'tags')
+        saved.nil? ? [] : saved.split(',')
+      end
 
       def ack_hash
         @ack_hash ||= @redis.hget('check_hashes_by_id', @key)

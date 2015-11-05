@@ -305,6 +305,27 @@
 </div>
 
 <div class="row">
+  <div id="tags" class="col-md-6">
+    <a name="tags"></a>
+    <h3>Tags</h3>
+    <% if @tags && !@tags.empty? %>
+        <table class="table table-bordered table-hover table-condensed">
+          <tr>
+            <th>Tag</th>
+          </tr>
+          <% @tags.sort.each do |tag| %>
+              <tr>
+                <td><%= h tag %></td>
+              </tr>
+          <% end %>
+        </table>
+    <% else %>
+        <p>There are <strong>no tags</strong> associated with this check.</p>
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
   <div id="scheduled-maintenance-periods" class="col-md-12">
     <a name="scheduled_maintenance_periods"></a>
     <h3>Scheduled Maintenance Periods</h3>
