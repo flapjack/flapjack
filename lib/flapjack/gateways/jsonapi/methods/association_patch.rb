@@ -22,11 +22,11 @@ module Flapjack
               end
 
               singular_links = jsonapi_links.select {|n, jd|
-                jd.patch.is_a?(TrueClass) && :singular.eql?(jd.number)
+                jd.link.is_a?(TrueClass) && jd.patch.is_a?(TrueClass) && :singular.eql?(jd.number)
               }
 
               multiple_links = jsonapi_links.select {|n, jd|
-                jd.patch.is_a?(TrueClass) && :multiple.eql?(jd.number)
+                jd.link.is_a?(TrueClass) && jd.patch.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless singular_links.empty? && multiple_links.empty?
@@ -38,7 +38,7 @@ module Flapjack
                   single = resource.singularize
 
                   singular_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
                         key :description, "Replace associated #{link_name} for a #{single}"
@@ -74,7 +74,7 @@ module Flapjack
                   end
 
                   multiple_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
                         key :description, "Replace associated #{link_name} for a #{single}"

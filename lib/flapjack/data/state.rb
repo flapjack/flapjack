@@ -159,14 +159,9 @@ module Flapjack
       end
 
       swagger_schema :StateLinks do
-        key :required, [:self]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
+        key :required, [:check]
         property :check do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :CheckLinkage
         end
       end
 

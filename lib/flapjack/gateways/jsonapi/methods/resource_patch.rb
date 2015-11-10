@@ -44,8 +44,8 @@ module Flapjack
                   model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
-                  model_type_update_data = "jsonapi_data_#{model_type}Update".to_sym
-                  model_type_update_data_plural = "jsonapi_data_#{model_type_plural}Update".to_sym
+                  model_type_update_data = "data_#{model_type}Update".to_sym
+                  model_type_update_data_plural = "data_#{model_type_plural}Update".to_sym
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :patch do

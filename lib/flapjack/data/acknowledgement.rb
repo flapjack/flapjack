@@ -72,6 +72,37 @@ module Flapjack
         @sent = true
       end
 
+      swagger_schema :Acknowledgement do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::Acknowledgement.short_model_name.singular]
+        end
+        property :duration do
+          key :type, :integer
+        end
+        property :summary do
+          key :type, :string
+        end
+        property :relationships do
+          key :"$ref", :AcknowledgementLinks
+        end
+      end
+
+      swagger_schema :AcknowledgementLinks do
+        # create (and response) must have one (and only one) of these set
+        property :check do
+          key :"$ref", :CheckLinkage
+        end
+        property :tag do
+          key :"$ref", :TagLinkage
+        end
+      end
+
       swagger_schema :AcknowledgementCreate do
         key :required, [:type]
         property :id do
@@ -94,11 +125,13 @@ module Flapjack
       end
 
       swagger_schema :AcknowledgementCreateLinks do
+        # create (and response) must have one (and only one) of these set
+        # key :required, [:check, :tag]
         property :check do
-          key :"$ref", :jsonapi_CheckLinkage
+          key :"$ref", :data_CheckReference
         end
         property :tag do
-          key :"$ref", :jsonapi_TagLinkage
+          key :"$ref", :data_TagReference
         end
       end
 

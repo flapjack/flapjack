@@ -37,7 +37,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourceDelete::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.include?(:delete)
+              if resource_class.jsonapi_methods.key?(:delete)
                 resource = resource_class.short_model_name.plural
 
                 app.class_eval do
@@ -45,7 +45,7 @@ module Flapjack
 
                   model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
-                  model_type_reference_data_plural = "jsonapi_data_#{model_type_plural}Reference".to_sym
+                  model_type_reference_data_plural = "data_#{model_type_plural}Reference".to_sym
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :delete do

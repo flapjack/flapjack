@@ -22,7 +22,7 @@ module Flapjack
               end
 
               post_links = jsonapi_links.select {|n, jd|
-                jd.post.is_a?(TrueClass) && :multiple.eql?(jd.number)
+                jd.post.is_a?(TrueClass) && jd.link.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless post_links.empty?
@@ -31,7 +31,7 @@ module Flapjack
                   single = resource.singularize
 
                   post_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :post do

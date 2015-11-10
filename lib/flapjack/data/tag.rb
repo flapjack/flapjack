@@ -80,34 +80,23 @@ module Flapjack
       end
 
       swagger_schema :TagLinks do
-        key :required, [:self, :checks, :rules]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
         property :checks do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ChecksLinkage
         end
         property :contacts do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ContactsLinkage
         end
         property :rules do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :RulesLinkage
         end
         property :scheduled_maintenances do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ScheduledMaintenancesLinkage
         end
         property :states do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :StatesLinkage
         end
         property :unscheduled_maintenances do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :UnscheduledMaintenancesLinkage
         end
       end
 
@@ -121,7 +110,19 @@ module Flapjack
           key :type, :string
         end
         property :relationships do
-          key :"$ref", :TagChangeLinks
+          key :"$ref", :TagCreateLinks
+        end
+      end
+
+      swagger_schema :TagCreateLinks do
+        property :checks do
+          key :"$ref", :data_ChecksReference
+        end
+        property :contacts do
+          key :"$ref", :data_ContactsReference
+        end
+        property :rules do
+          key :"$ref", :data_RulesReference
         end
       end
 
@@ -139,19 +140,19 @@ module Flapjack
           key :type, :string
         end
         property :relationships do
-          key :"$ref", :TagChangeLinks
+          key :"$ref", :TagUpdateLinks
         end
       end
 
-      swagger_schema :TagChangeLinks do
+      swagger_schema :TagUpdateLinks do
         property :checks do
-          key :"$ref", :jsonapi_ChecksLinkage
+          key :"$ref", :data_ChecksReference
         end
         property :contacts do
-          key :"$ref", :jsonapi_ContactsLinkage
+          key :"$ref", :data_ContactsReference
         end
         property :rules do
-          key :"$ref", :jsonapi_RulesLinkage
+          key :"$ref", :data_RulesReference
         end
       end
 

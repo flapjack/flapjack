@@ -135,26 +135,18 @@ module Flapjack
       end
 
       swagger_schema :ContactLinks do
-        key :required, [:self, :checks, :media, :rules]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
+        key :required, [:checks, :media, :rules]
         property :checks do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ChecksLinkage
         end
         property :media do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :MediaLinkage
         end
         property :rules do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :RulesLinkage
         end
         property :tags do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :TagsLinkage
         end
       end
 
@@ -176,7 +168,13 @@ module Flapjack
           key :format, :tzinfo
         end
         property :relationships do
-          key :"$ref", :ContactChangeLinks
+          key :"$ref", :ContactCreateLinks
+        end
+      end
+
+      swagger_schema :ContactCreateLinks do
+        property :tags do
+          key :"$ref", :data_TagsReference
         end
       end
 
@@ -198,19 +196,19 @@ module Flapjack
           key :format, :tzinfo
         end
         property :relationships do
-          key :"$ref", :ContactChangeLinks
+          key :"$ref", :ContactUpdateLinks
         end
       end
 
-      swagger_schema :ContactChangeLinks do
+      swagger_schema :ContactUpdateLinks do
         property :media do
-          key :"$ref", :jsonapi_MediaLinkage
+          key :"$ref", :data_MediaReference
         end
         property :rules do
-          key :"$ref", :jsonapi_RulesLinkage
+          key :"$ref", :data_RulesReference
         end
         property :tags do
-          key :"$ref", :jsonapi_TagsLinkage
+          key :"$ref", :data_TagsReference
         end
       end
 

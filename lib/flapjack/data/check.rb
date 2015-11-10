@@ -243,44 +243,35 @@ module Flapjack
       end
 
       swagger_schema :CheckLinks do
-        key :required, [:self, :alerting_media, :contacts, :current_state,
-                        :latest_notifications, :scheduled_maintenances,
-                        :states, :tags, :unscheduled_maintenances]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
         property :alerting_media do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :MediaLinkage
         end
         property :contacts do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ContactsLinkage
+        end
+        property :current_scheduled_maintenances do
+          key :"$ref", :ScheduledMaintenancesLinkage
         end
         property :current_state do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :StateLinkage
+        end
+        property :current_unscheduled_maintenance do
+          key :"$ref", :UnscheduledMaintenanceLinkage
         end
         property :latest_notifications do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :StatesLinkage
         end
         property :scheduled_maintenances do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ScheduledMaintenancesLinkage
         end
         property :states do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :StatesLinkage
         end
         property :tags do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :TagsLinkage
         end
         property :unscheduled_maintenances do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :UnscheduledMaintenancesLinkage
         end
       end
 
@@ -302,7 +293,13 @@ module Flapjack
           key :enum, [true, false]
         end
         property :relationships do
-          key :"$ref", :CheckChangeLinks
+          key :"$ref", :CheckCreateLinks
+        end
+      end
+
+      swagger_schema :CheckCreateLinks do
+        property :tags do
+          key :"$ref", :data_TagsReference
         end
       end
 
@@ -324,19 +321,13 @@ module Flapjack
           key :enum, [true, false]
         end
         property :relationships do
-          key :"$ref", :CheckChangeLinks
+          key :"$ref", :CheckUpdateLinks
         end
       end
 
-      swagger_schema :CheckChangeLinks do
-        property :scheduled_maintenances do
-          key :"$ref", :jsonapi_UnscheduledMaintenancesLinkage
-        end
+      swagger_schema :CheckUpdateLinks do
         property :tags do
-          key :"$ref", :jsonapi_TagsLinkage
-        end
-        property :unscheduled_maintenances do
-          key :"$ref", :jsonapi_ScheduledMaintenancesLinkage
+          key :"$ref", :data_TagsReference
         end
       end
 

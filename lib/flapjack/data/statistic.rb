@@ -59,9 +59,10 @@ module Flapjack
         property :instance_name do
           key :type, :string
         end
-        # property :created_at do
-        #   key :type, :timestamp
-        # end
+        property :created_at do
+          key :type, :string
+          key :format, :'date-time'
+        end
         property :all_events do
           key :type, :integer
           key :minimum, 0

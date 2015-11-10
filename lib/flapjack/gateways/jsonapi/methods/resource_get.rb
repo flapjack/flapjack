@@ -15,7 +15,7 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.include?(:get)
+              if resource_class.jsonapi_methods.key?(:get)
                 resource = resource_class.short_model_name.plural
 
                 app.class_eval do
@@ -24,8 +24,8 @@ module Flapjack
                   model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
-                  model_type_data = "jsonapi_data_#{model_type}".to_sym
-                  model_type_data_plural = "jsonapi_data_#{model_type_plural}".to_sym
+                  model_type_data = "data_#{model_type}".to_sym
+                  model_type_data_plural = "data_#{model_type_plural}".to_sym
 
                   swagger_path "/#{resource}" do
                     operation :get do

@@ -50,8 +50,8 @@ module Flapjack
 
                   model_type = resource_class.short_model_name.name
 
-                  model_type_data = "jsonapi_data_#{model_type}".to_sym
-                  model_type_create_data = "jsonapi_data_#{model_type}Create".to_sym
+                  model_type_data = "data_#{model_type}".to_sym
+                  model_type_create_data = "data_#{model_type}Create".to_sym
 
                   # TODO how to include plural for same route?
 

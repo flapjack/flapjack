@@ -183,10 +183,6 @@ module Flapjack
 
       validates_with Flapjack::Data::Validators::IdValidator
 
-      def self.jsonapi_type
-        self.name.demodulize.underscore
-      end
-
       swagger_schema :Medium do
         key :required, [:id, :type, :transport]
 
@@ -229,18 +225,12 @@ module Flapjack
       end
 
       swagger_schema :MediumLinks do
-        key :required, [:self, :contact, :rules]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
+        key :required, [:contact, :rules]
         property :contact do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :ContactLinkage
         end
         property :rules do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :RulesLinkage
         end
       end
 
@@ -283,7 +273,17 @@ module Flapjack
           key :minimum, 1
         end
         property :relationships do
-          key :"$ref", :MediumChangeLinks
+          key :"$ref", :MediumCreateLinks
+        end
+      end
+
+      swagger_schema :MediumCreateLinks do
+        key :required, [:contact]
+        property :contact do
+          key :"$ref", :data_ContactReference
+        end
+        property :rules do
+          key :"$ref", :data_RulesReference
         end
       end
 
@@ -323,16 +323,13 @@ module Flapjack
           key :minimum, 1
         end
         property :relationships do
-          key :"$ref", :MediumChangeLinks
+          key :"$ref", :MediumUpdateLinks
         end
       end
 
-      swagger_schema :MediumChangeLinks do
-        property :contact do
-          key :"$ref", :jsonapi_ContactLinkage
-        end
+      swagger_schema :MediumUpdateLinks do
         property :rules do
-          key :"$ref", :jsonapi_RulesLinkage
+          key :"$ref", :data_RulesReference
         end
       end
 

@@ -64,6 +64,34 @@ module Flapjack
         @sent = true
       end
 
+      swagger_schema :TestNotification do
+        key :required, [:id, :type]
+        property :id do
+          key :type, :string
+          key :format, :uuid
+        end
+        property :type do
+          key :type, :string
+          key :enum, [Flapjack::Data::TestNotification.short_model_name.singular]
+        end
+        property :summary do
+          key :type, :string
+        end
+        property :relationships do
+          key :"$ref", :TestNotificationLinks
+        end
+      end
+
+      swagger_schema :TestNotificationLinks do
+        # create (and response) can only have one of these set
+        property :check do
+          key :"$ref", :CheckLinkage
+        end
+        property :tag do
+          key :"$ref", :TagLinkage
+        end
+      end
+
       swagger_schema :TestNotificationCreate do
         key :required, [:type, :summary]
         property :id do
@@ -83,11 +111,12 @@ module Flapjack
       end
 
       swagger_schema :TestNotificationCreateLinks do
+        # create (and response) can only have one of these set
         property :check do
-          key :"$ref", :jsonapi_CheckLinkage
+          key :"$ref", :data_CheckReference
         end
         property :tag do
-          key :"$ref", :jsonapi_TagLinkage
+          key :"$ref", :data_TagReference
         end
       end
 

@@ -22,11 +22,11 @@ module Flapjack
               end
 
               singular_links = jsonapi_links.select {|n, jd|
-                jd.get.is_a?(TrueClass) && :singular.eql?(jd.number)
+                jd.link.is_a?(TrueClass) && jd.get.is_a?(TrueClass) && :singular.eql?(jd.number)
               }
 
               multiple_links = jsonapi_links.select {|n, jd|
-                jd.get.is_a?(TrueClass) && :multiple.eql?(jd.number)
+                jd.link.is_a?(TrueClass) && jd.get.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               resource = resource_class.short_model_name.plural
@@ -39,7 +39,8 @@ module Flapjack
                   single = resource.singularize
 
                   singular_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
+
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"
@@ -96,7 +97,7 @@ module Flapjack
                   end
 
                   multiple_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
                         key :description, "Get the #{link_name} of a #{single}"

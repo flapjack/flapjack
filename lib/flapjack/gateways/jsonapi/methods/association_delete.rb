@@ -22,7 +22,7 @@ module Flapjack
               end
 
               delete_links = jsonapi_links.select {|n, jd|
-                jd.delete.is_a?(TrueClass) && :multiple.eql?(jd.number)
+                jd.link.is_a?(TrueClass) && jd.delete.is_a?(TrueClass) && :multiple.eql?(jd.number)
               }
 
               unless delete_links.empty?
@@ -31,7 +31,7 @@ module Flapjack
                   single = resource.singularize
 
                   delete_links.each_pair do |link_name, link_data|
-                    link_type = link_data.type
+                    link_type = link_data.data_klass.short_model_name.name
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :delete do

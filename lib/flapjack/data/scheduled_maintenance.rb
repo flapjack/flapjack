@@ -112,14 +112,9 @@ module Flapjack
       end
 
       swagger_schema :ScheduledMaintenanceLinks do
-        key :required, [:self, :check]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
+        key :required, [:check]
         property :check do
-          key :type, :string
-          key :format, :url
+          key :"$ref", :CheckLinkage
         end
       end
 
@@ -146,6 +141,13 @@ module Flapjack
         end
       end
 
+      swagger_schema :ScheduledMaintenanceCreateLinks do
+        key :required, [:check]
+        property :check do
+          key :"$ref", :data_CheckReference
+        end
+      end
+
       swagger_schema :ScheduledMaintenanceUpdate do
         key :required, [:id, :type, :start_time, :end_time]
         property :id do
@@ -163,18 +165,6 @@ module Flapjack
         property :end_time do
           key :type, :string
           key :format, :"date-time"
-        end
-      end
-
-      swagger_schema :ScheduledMaintenanceCreateLinks do
-        key :required, [:self, :check]
-        property :self do
-          key :type, :string
-          key :format, :url
-        end
-        property :check do
-          key :type, :string
-          key :format, :url
         end
       end
 

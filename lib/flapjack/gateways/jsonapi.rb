@@ -63,8 +63,8 @@ module Flapjack
         Flapjack::Data::Medium,
         Flapjack::Data::Rule,
         Flapjack::Data::ScheduledMaintenance,
-        Flapjack::Data::Statistic,
         Flapjack::Data::State,
+        Flapjack::Data::Statistic,
         Flapjack::Data::Tag,
         Flapjack::Data::TestNotification,
         Flapjack::Data::UnscheduledMaintenance
@@ -204,7 +204,6 @@ module Flapjack
       end
 
       include Swagger::Blocks
-
       include Flapjack::Gateways::JSONAPI::Helpers::SwaggerDocs
 
       # hacky, but trying to avoid too much boilerplate -- association paths
