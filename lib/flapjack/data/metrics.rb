@@ -69,6 +69,16 @@ module Flapjack
         }
       end
 
+      swagger_schema :data_Metrics do
+        key :required, [:data]
+        property :data do
+          key :"$ref", :Metrics
+        end
+        property :links do
+          key :"$ref", :Links
+        end
+      end
+
       swagger_schema :Metrics do
         key :required, [:type, :total_keys,
           :event_queue_length, :processed_events,
@@ -96,7 +106,7 @@ module Flapjack
         end
       end
 
-      swagger_schema :MetricsProcessedEventsCounts do
+      swagger_schema :MetricsProcessedEventCounts do
         key :required, [:all_events, :ok_events, :failure_events,
                         :action_events, :invalid_events]
         property :all_events do
@@ -146,9 +156,12 @@ module Flapjack
       end
 
       swagger_schema :MetricsCheckCounts do
-        key :required, [:all_events, :ok_events, :failure_events, :action_events,
-         :invalid_events]
+        key :required, [:all, :enabled, :failing]
         property :all do
+          key :type, :integer
+          key :minimum, 0
+        end
+        property :enabled do
           key :type, :integer
           key :minimum, 0
         end

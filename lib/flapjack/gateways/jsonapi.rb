@@ -21,6 +21,7 @@ require 'flapjack/data/acknowledgement'
 require 'flapjack/data/check'
 require 'flapjack/data/contact'
 require 'flapjack/data/medium'
+require 'flapjack/data/metrics'
 require 'flapjack/data/rule'
 require 'flapjack/data/scheduled_maintenance'
 require 'flapjack/data/statistic'
@@ -208,9 +209,9 @@ module Flapjack
 
       # hacky, but trying to avoid too much boilerplate -- association paths
       # must be before resource ones to avoid greedy path captures
-      %w[metrics association_post resource_post
-         association_get resource_get association_patch resource_patch
-         association_delete resource_delete].each do |method|
+      %w[metrics association_post resource_post association_get resource_get
+         association_patch resource_patch association_delete
+         resource_delete].each do |method|
 
         require "flapjack/gateways/jsonapi/methods/#{method}"
         eval "register Flapjack::Gateways::JSONAPI::Methods::#{method.camelize}"
@@ -221,7 +222,8 @@ module Flapjack
         swagger_wrappers(endpoint, resource_class)
       end
 
-      SWAGGERED_CLASSES = [self] + Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES
+      SWAGGERED_CLASSES = [self] + Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES +
+        [Flapjack::Data::Metrics]
 
       get '/doc' do
         Flapjack.dump_json(Swagger::Blocks.build_root_json(SWAGGERED_CLASSES))

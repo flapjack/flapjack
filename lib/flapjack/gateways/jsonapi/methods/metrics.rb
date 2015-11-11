@@ -19,6 +19,36 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Resources
             # app.helpers Flapjack::Gateways::JSONAPI::Methods::Metrics::Helpers
 
+            app.class_eval do
+
+              swagger_path "/metrics" do
+                operation :get do
+                  key :description, "Get metrics"
+                  key :operationId, "get_metrics"
+                  key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
+                  parameter do
+                    key :name, :fields
+                    key :in, :query
+                    key :description, 'Comma-separated list of fields to return'
+                    key :required, false
+                    key :type, :string
+                  end
+                  response 200 do
+                    key :description, "GET metrics response"
+                    schema do
+                      key :'$ref', :data_Metrics
+                    end
+                  end
+                  # response :default do
+                  #   key :description, 'unexpected error'
+                  #   schema do
+                  #     key :'$ref', :ErrorModel
+                  #   end
+                  # end
+                end
+              end
+            end
+
             app.get %r{^/metrics$} do
               fields = params[:fields]
               fields = [fields] unless fields.nil? || fields.is_a?(Array)
