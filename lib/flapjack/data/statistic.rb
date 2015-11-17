@@ -85,6 +85,11 @@ module Flapjack
         end
       end
 
+      def self.swagger_included_classes
+        # hack -- hardcoding for now
+        []
+      end
+
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(

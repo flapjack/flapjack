@@ -31,19 +31,6 @@ module Flapjack
               key :produces, [JSONAPI_MEDIA_TYPE]
             end
 
-            swagger_schema :Reference do
-              key :required, [:type, :id]
-              property :type do
-                key :type, :string
-                key :enum, Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.
-                  map(&:short_model_name).map(&:singular).map(&:to_s)
-              end
-              property :id do
-                key :type, :string
-                key :format, :uuid
-              end
-            end
-
             swagger_schema :Linkage do
               key :required, [:related, :self]
               property :related do
@@ -115,44 +102,6 @@ module Flapjack
                 {}
               end
 
-              model_type           = klass.name.demodulize
-              model_type_plural    = model_type.pluralize
-
-              model_type_create                = jsonapi_methods.key?(:post) ? "#{model_type}Create".to_sym : nil
-              model_type_update                = jsonapi_methods.key?(:patch) ? "#{model_type}Update".to_sym : nil
-
-              model_type_data                  = "data_#{model_type}".to_sym
-              model_type_data_plural           = "data_#{model_type_plural}".to_sym
-
-              model_type_create_data           = jsonapi_methods.key?(:post) ? "data_#{model_type_create}".to_sym : nil
-              # model_type_create_data_plural  = jsonapi_methods.key?(:post) ? "data_#{model_type_plural}Create".to_sym : nil
-
-              model_type_update_data           = jsonapi_methods.key?(:patch) ? "data_#{model_type_update}".to_sym : nil
-              model_type_update_data_plural    = jsonapi_methods.key?(:patch) ? "data_#{model_type_plural}Update".to_sym : nil
-
-              model_type_reference             = "#{model_type}Reference".to_sym
-              model_type_reference_data        = "data_#{model_type_reference}".to_sym
-              model_type_reference_data_plural = "data_#{model_type_plural}Reference".to_sym
-
-              model_type_linkage               = "#{model_type}Linkage".to_sym
-              model_type_linkage_plural        = "#{model_type_plural}Linkage".to_sym
-
-              swagger_schema model_type_data do
-                key :required, [:data]
-                property :data do
-                  key :"$ref", model_type
-                end
-                property :included do
-                  key :type, :array
-                  items do
-                    key :"$ref", :Reference
-                  end
-                end
-                property :links do
-                  key :"$ref", :Links
-                end
-              end
-
               singular = Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.map(&:jsonapi_associations).inject([]) do |memo, assoc|
                 memo += assoc.values.select {|ja| klass.eql?(ja.data_klass) && :singular.eql?(ja.number) }
                 memo
@@ -163,68 +112,111 @@ module Flapjack
                 memo
               end
 
-              if [:get, :patch, :delete].any? {|m| jsonapi_methods.key?(m) } ||
-                !singular.empty? || !multiple.empty?
+              included_classes = klass.swagger_included_classes
 
-                # not needed due to swagger's inability to represent the different
-                # return types for POST operations to the same endpoint, as
-                # required by JSONAPI
-                swagger_schema model_type_data_plural do
+              model_type           = klass.name.demodulize
+              model_type_plural    = model_type.pluralize
+
+              model_type_included              = "#{model_type}Included".to_sym
+
+              model_type_create                = jsonapi_methods.key?(:post) ? "#{model_type}Create".to_sym : nil
+              model_type_update                = jsonapi_methods.key?(:patch) ? "#{model_type}Update".to_sym : nil
+
+              model_type_data                  = "data_#{model_type}".to_sym
+              model_type_data_plural           = "data_#{model_type_plural}".to_sym
+
+              # model_type_create_data           = jsonapi_methods.key?(:post) ? "data_#{model_type_create}".to_sym : nil
+              # model_type_create_data_plural  = jsonapi_methods.key?(:post) ? "data_#{model_type_plural}Create".to_sym : nil
+
+              model_type_reference             = "#{model_type}Reference".to_sym
+              model_type_reference_data        = "data_#{model_type_reference}".to_sym
+              model_type_reference_data_plural = "data_#{model_type_plural}Reference".to_sym
+
+              model_type_linkage               = "#{model_type}Linkage".to_sym
+              model_type_linkage_plural        = "#{model_type_plural}Linkage".to_sym
+
+              if included_classes.empty?
+
+                swagger_schema model_type_data do
                   key :required, [:data]
                   property :data do
-                    key :type, :array
-                    items do
-                      key :"$ref", model_type
-                    end
+                    key :"$ref", model_type
+                  end
+                  property :links do
+                    key :"$ref", :Links
+                  end
+                end
+
+              else
+                swagger_schema model_type_included do
+                  key :required, [:type, :id]
+                  property :type do
+                    key :type, :string
+                    key :enum, included_classes.map(&:short_model_name).
+                      map(&:singular).map(&:to_s)
+                  end
+                  property :id do
+                    key :type, :string
+                    key :format, :uuid
+                  end
+                end
+
+                swagger_schema model_type_data do
+                  key :required, [:data]
+                  property :data do
+                    key :"$ref", model_type
                   end
                   property :included do
                     key :type, :array
                     items do
-                      key :"$ref", :Reference
+                      key :"$ref", model_type_included
                     end
                   end
                   property :links do
                     key :"$ref", :Links
                   end
-                  property :meta do
-                    key :"$ref", :Meta
-                  end
                 end
               end
 
-              if jsonapi_methods.key?(:post)
-                swagger_schema model_type_create_data do
-                  key :required, [:data]
-                  property :data do
-                    key :"$ref", model_type_create
+              if [:get, :patch, :delete].any? {|m| jsonapi_methods.key?(m) } ||
+                !singular.empty? || !multiple.empty?
+
+                if included_classes.empty?
+                  swagger_schema model_type_data_plural do
+                    key :required, [:data]
+                    property :data do
+                      key :type, :array
+                      items do
+                        key :"$ref", model_type
+                      end
+                    end
+                    property :links do
+                      key :"$ref", :Links
+                    end
+                    property :meta do
+                      key :"$ref", :Meta
+                    end
                   end
-                end
-
-                # swagger_schema model_type_create_data_plural do
-                #   key :required, [:data]
-                #   property :data do
-                #     key :type, :array
-                #     items do
-                #       key :"$ref", model_type_create
-                #     end
-                #   end
-                # end
-              end
-
-              if jsonapi_methods.key?(:patch)
-                swagger_schema model_type_update_data do
-                  key :required, [:data]
-                  property :data do
-                    key :"$ref", model_type_update
-                  end
-                end
-
-                swagger_schema model_type_update_data_plural do
-                  key :required, [:data]
-                  property :data do
-                    key :type, :array
-                    items do
-                      key :"$ref", model_type_update
+                else
+                  swagger_schema model_type_data_plural do
+                    key :required, [:data]
+                    property :data do
+                      key :type, :array
+                      items do
+                        key :"$ref", model_type
+                      end
+                    end
+                    property :included do
+                      key :type, :array
+                      items do
+                        key :"$ref", model_type_included
+                      end
+                    end
+                    property :links do
+                      key :"$ref", :Links
+                    end
+                    property :meta do
+                      key :"$ref", :Meta
                     end
                   end
                 end
@@ -248,7 +240,7 @@ module Flapjack
                     end
                     property :type do
                       key :type, :string
-                      key :enum, [model_type.downcase]
+                      key :enum, [klass.short_model_name.singular]
                     end
                   end
                 end

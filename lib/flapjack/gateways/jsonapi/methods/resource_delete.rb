@@ -44,8 +44,6 @@ module Flapjack
                   single = resource_class.short_model_name.singular
 
                   model_type = resource_class.short_model_name.name
-                  model_type_plural = model_type.pluralize
-                  model_type_reference_data_plural = "data_#{model_type_plural}Reference".to_sym
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :delete do
@@ -78,12 +76,15 @@ module Flapjack
                       key :operationId, "delete_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do
-                        key :name, :body
+                        key :name, :data
                         key :in, :body
                         key :description, "#{resource} to delete"
                         key :required, true
                         schema do
-                          key :'$ref', model_type_reference_data_plural
+                          key :type, :array
+                          items do
+                            key :"$ref", "#{model_type}Reference".to_sym
+                          end
                         end
                       end
                       response 204 do

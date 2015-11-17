@@ -49,9 +49,8 @@ module Flapjack
                   single = resource_class.short_model_name.singular
 
                   model_type = resource_class.short_model_name.name
-
+                  model_type_create = "#{model_type}Create".to_sym
                   model_type_data = "data_#{model_type}".to_sym
-                  model_type_create_data = "data_#{model_type}Create".to_sym
 
                   # TODO how to include plural for same route?
 
@@ -62,12 +61,12 @@ module Flapjack
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                       parameter do
-                        key :name, :body
+                        key :name, :data
                         key :in, :body
                         key :description, "#{single} to create"
                         key :required, true
                         schema do
-                          key :"$ref", model_type_create_data
+                          key :"$ref", model_type_create
                         end
                       end
                       response 200 do

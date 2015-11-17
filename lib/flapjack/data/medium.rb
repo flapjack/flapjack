@@ -244,9 +244,6 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::Medium.short_model_name.singular]
         end
-        property :name do
-          key :type, :string
-        end
         property :transport do
           key :type, :string
           key :enum, Flapjack::Data::Medium::TRANSPORTS.map(&:to_sym)
@@ -331,6 +328,20 @@ module Flapjack
         property :rules do
           key :"$ref", :data_RulesReference
         end
+      end
+
+      def self.swagger_included_classes
+        # hack -- hardcoding for now
+        [
+          Flapjack::Data::Check,
+          Flapjack::Data::Contact,
+          Flapjack::Data::Medium,
+          Flapjack::Data::Rule,
+          Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::State,
+          Flapjack::Data::Tag,
+          Flapjack::Data::UnscheduledMaintenance
+        ]
       end
 
       def self.jsonapi_methods

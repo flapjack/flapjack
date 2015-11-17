@@ -300,7 +300,7 @@ module Flapjack
         property :blackhole do
           key :type, :boolean
         end
-        property :stratgey do
+        property :strategy do
           key :type, :string
           key :enum, Flapjack::Data::Rule::STRATEGIES
         end
@@ -322,6 +322,20 @@ module Flapjack
         property :tags do
           key :"$ref", :data_TagsReference
         end
+      end
+
+      def self.swagger_included_classes
+        # hack -- hardcoding for now
+        [
+          Flapjack::Data::Check,
+          Flapjack::Data::Contact,
+          Flapjack::Data::Medium,
+          Flapjack::Data::Rule,
+          Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::State,
+          Flapjack::Data::Tag,
+          Flapjack::Data::UnscheduledMaintenance
+        ]
       end
 
       def self.jsonapi_methods

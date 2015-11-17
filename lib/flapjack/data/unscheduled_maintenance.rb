@@ -97,6 +97,20 @@ module Flapjack
         end
       end
 
+      def self.swagger_included_classes
+        # hack -- hardcoding for now
+        [
+          Flapjack::Data::Check,
+          Flapjack::Data::Contact,
+          Flapjack::Data::Medium,
+          Flapjack::Data::Rule,
+          Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::State,
+          Flapjack::Data::Tag,
+          Flapjack::Data::UnscheduledMaintenance
+        ]
+      end
+
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(

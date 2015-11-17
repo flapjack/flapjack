@@ -112,6 +112,20 @@ module Flapjack
         self.perfdata_json = @perfdata.nil? ? nil : Flapjack.dump_json(@perfdata)
       end
 
+      def self.swagger_included_classes
+        # hack -- hardcoding for now
+        [
+          Flapjack::Data::Check,
+          Flapjack::Data::Contact,
+          Flapjack::Data::Medium,
+          Flapjack::Data::Rule,
+          Flapjack::Data::ScheduledMaintenance,
+          Flapjack::Data::State,
+          Flapjack::Data::Tag,
+          Flapjack::Data::UnscheduledMaintenance
+        ]
+      end
+
       swagger_schema :State do
         key :required, [:id, :created_at, :updated_at, :finished_at,
                         :condition, :action, :summary, :details, :perfdata]

@@ -44,8 +44,7 @@ module Flapjack
                   model_type = resource_class.short_model_name.name
                   model_type_plural = model_type.pluralize
 
-                  model_type_update_data = "data_#{model_type}Update".to_sym
-                  model_type_update_data_plural = "data_#{model_type_plural}Update".to_sym
+                  model_type_update = "#{model_type}Update".to_sym
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :patch do
@@ -61,12 +60,12 @@ module Flapjack
                         key :format, :uuid
                       end
                       parameter do
-                        key :name, :body
+                        key :name, :data
                         key :in, :body
                         key :description, "#{model_type} to update"
                         key :required, true
                         schema do
-                          key :"$ref", model_type_update_data
+                          key :"$ref", model_type_update
                         end
                       end
                       response 204 do
@@ -87,12 +86,15 @@ module Flapjack
                       key :operationId, "update_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do
-                        key :name, :body
+                        key :name, :data
                         key :in, :body
                         key :description, "#{resource} to update"
                         key :required, true
                         schema do
-                          key :"$ref", model_type_update_data_plural
+                          key :type, :array
+                          items do
+                            key :"$ref", model_type_update
+                          end
                         end
                       end
                       response 204 do
