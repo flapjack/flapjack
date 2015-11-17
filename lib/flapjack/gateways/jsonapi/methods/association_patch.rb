@@ -61,14 +61,20 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, ''
+                          key :description, 'No Content; link update succeeded'
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; no link id"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                   end
@@ -100,14 +106,20 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, ''
+                          key :description, 'No Content; link update succeeded'
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; no link ids"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                   end
@@ -150,7 +162,7 @@ module Flapjack
                     if assoc_ids.nil?
                       resource.send("#{assoc_name}=".to_sym, nil)
                     else
-                      halt(err(409, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
+                      halt(err(403, "Trying to add multiple records to singular association '#{assoc_name}'")) if assoc_ids.size > 1
                       value = assoc_ids.first.nil? ? nil : assoc.data_klass.find_by_id!(assoc_ids.first)
                       resource.send("#{assoc_name}=".to_sym, value)
                     end

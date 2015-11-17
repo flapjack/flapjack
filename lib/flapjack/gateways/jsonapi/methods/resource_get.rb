@@ -85,12 +85,6 @@ module Flapjack
                           key :'$ref', model_type_data_plural
                         end
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
                     end
                   end
 
@@ -120,12 +114,12 @@ module Flapjack
                           key :'$ref', model_type_data
                         end
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 404 do
+                        key :description, "Not Found"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
                     end
                   end
                 end

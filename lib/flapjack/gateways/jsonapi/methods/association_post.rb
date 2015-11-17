@@ -58,14 +58,20 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, ''
+                          key :description, 'No Content; link creation succeeded'
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; no link ids"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                   end

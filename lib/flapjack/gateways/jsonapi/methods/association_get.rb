@@ -59,12 +59,18 @@ module Flapjack
                             key :"$ref", "#{link_type}Reference".to_sym
                           end
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; invalid request"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
 
@@ -86,12 +92,18 @@ module Flapjack
                             key :"$ref", "#{link_type}Reference".to_sym
                           end
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; invalid request"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                   end
@@ -119,12 +131,18 @@ module Flapjack
                             end
                           end
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; invalid request"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
@@ -148,12 +166,18 @@ module Flapjack
                             end
                           end
                         end
-                        # response :default do
-                        #   key :description, 'unexpected error'
-                        #   schema do
-                        #     key :'$ref', :ErrorModel
-                        #   end
-                        # end
+                        response 403 do
+                          key :description, "Forbidden; invalid request"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
+                        response 404 do
+                          key :description, "Not Found"
+                          schema do
+                            key :'$ref', :Errors
+                          end
+                        end
                       end
                     end
                   end

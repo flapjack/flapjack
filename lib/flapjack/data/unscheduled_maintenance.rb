@@ -87,10 +87,6 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::UnscheduledMaintenance.short_model_name.singular]
         end
-        property :start_time do
-          key :type, :string
-          key :format, :"date-time"
-        end
         property :end_time do
           key :type, :string
           key :format, :"date-time"

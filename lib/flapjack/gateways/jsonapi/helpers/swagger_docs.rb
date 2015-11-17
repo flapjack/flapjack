@@ -92,6 +92,28 @@ module Flapjack
                 key :"$ref", :Pagination
               end
             end
+
+            swagger_schema :Error do
+              property :id do
+                key :type, :string
+                key :format, :uuid
+              end
+              property :status do
+                key :type, :string
+              end
+              property :detail do
+                key :type, :string
+              end
+            end
+
+            swagger_schema :Errors do
+              property :errors do
+                key :type, :array
+                items do
+                  key :"$ref", :Error
+                end
+              end
+            end
           end
 
           class_methods do

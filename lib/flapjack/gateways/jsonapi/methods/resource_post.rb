@@ -75,12 +75,18 @@ module Flapjack
                           key :'$ref', model_type_data
                         end
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 403 do
+                        key :description, "Forbidden; invalid data"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
+                      response 409 do
+                        key :description, "Conflict; bad request structure"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
                     end
                   end
 

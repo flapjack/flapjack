@@ -69,14 +69,26 @@ module Flapjack
                         end
                       end
                       response 204 do
-                        key :description, "#{model_type} update response"
+                        key :description, "No Content; #{model_type} update succeeded"
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 403 do
+                        key :description, "Forbidden; invalid data"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
+                      response 404 do
+                        key :description, "Not Found"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
+                      response 409 do
+                        key :description, "Conflict; request id mismatch"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
                     end
                   end
 
@@ -98,14 +110,26 @@ module Flapjack
                         end
                       end
                       response 204 do
-                        key :description, "#{model_type} update response"
+                        key :description, "No Content; #{resource} update succeeded"
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 403 do
+                        key :description, "Forbidden; invalid data"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
+                      response 404 do
+                        key :description, "Not Found"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
+                      response 409 do
+                        key :description, "Conflict; request id mismatch"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
                     end
                   end
                 end
@@ -142,7 +166,7 @@ module Flapjack
                     resources = if resource_id.nil?
                       resources = resource_class.find_by_ids!(*ids)
                     else
-                      halt(err(403, "Id path/data mismatch")) unless ids.nil? || ids.eql?([resource_id])
+                      halt(err(409, "Id path/data mismatch")) unless ids.nil? || ids.eql?([resource_id])
                       [resource_class.find_by_id!(resource_id)]
                     end
 

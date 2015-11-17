@@ -20,7 +20,6 @@ module Flapjack
                   halt(err(404, "Could not find all records to delete")) unless resources.count == ids.size
                   resources.destroy_all
                 else
-                  halt(err(403, "Id path/data mismatch")) unless ids.eql?([id])
                   klass.find_by_id!(id).destroy
                 end
               end
@@ -59,14 +58,14 @@ module Flapjack
                         key :format, :uuid
                       end
                       response 204 do
-                        key :description, "#{model_type} deletion response"
+                        key :description, "No Content; #{model_type} deletion succeeded"
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 404 do
+                        key :description, "Not Found"
+                        schema do
+                          key :'$ref', :Errors
+                        end
+                      end
                     end
                   end
 
@@ -88,14 +87,14 @@ module Flapjack
                         end
                       end
                       response 204 do
-                        key :description, "#{resource} deletion response"
+                        key :description, "No Content; #{resource} deletion succeeded"
                       end
-                      # response :default do
-                      #   key :description, 'unexpected error'
-                      #   schema do
-                      #     key :'$ref', :ErrorModel
-                      #   end
-                      # end
+                      response 404 do
+                        key :description, "Not Found"
+                        schema do
+                          key :'$ref', :Error
+                        end
+                      end
                     end
                   end
                 end
