@@ -229,15 +229,27 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone]
+            :attributes => [:name, :timezone],
+            :description => "
+
+"
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone]
+            :attributes => [:name, :timezone],
+            :description => "
+
+"
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :timezone]
+            :attributes => [:name, :timezone],
+            :description => "
+
+"
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+             :description => "
+
+"
           ),
         }
       end
@@ -249,19 +261,48 @@ module Flapjack
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :type => 'check',
-              :klass => Flapjack::Data::Check
+              :klass => Flapjack::Data::Check,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => "
+
+",
+                :get => "
+
+",
+                :patch => "
+
+",
+                :delete => "
+
+"
+              }
             )
           }
           populate_association_data(@jsonapi_associations)

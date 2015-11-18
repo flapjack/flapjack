@@ -374,7 +374,12 @@ module Flapjack
                 Flapjack::Data::Rule,
                 Flapjack::Data::Tag,
                 Flapjack::Data::ScheduledMaintenance
-              ]
+              ],
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
@@ -384,43 +389,97 @@ module Flapjack
               :callback_classes => [
                 Flapjack::Data::Rule,
                 Flapjack::Data::Tag
-              ]
+              ],
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :current_scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :type => 'scheduled_maintenance',
-              :klass => Flapjack::Data::ScheduledMaintenance
+              :klass => Flapjack::Data::ScheduledMaintenance,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :current_state => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :singular, :link => true, :includable => true
+              :number => :singular, :link => true, :includable => true,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :current_unscheduled_maintenance => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :singular, :link => true, :includable => true,
               :type => 'unscheduled_maintenance',
-              :klass => Flapjack::Data::UnscheduledMaintenance
+              :klass => Flapjack::Data::UnscheduledMaintenance,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :latest_notifications => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => false
+              :number => :multiple, :link => true, :includable => false,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => false
+              :number => :multiple, :link => true, :includable => false,
+              :descriptions => {
+                :get => "
+
+"
+              }
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :get => "
+
+",
+                :post => "
+
+",
+                :patch => "
+
+",
+                :delete => "
+
+"
+              }
             ),
             :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
-              :number => :multiple, :link => true, :includable => false
+              :number => :multiple, :link => true, :includable => false,
+              :descriptions => {
+                :get => "
+
+"
+              }
             )
           }
           populate_association_data(@jsonapi_associations)

@@ -95,7 +95,10 @@ module Flapjack
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:instance_name, :created_at, :all_events,
                             :ok_events, :failure_events, :action_events,
-                            :invalid_events]
+                            :invalid_events],
+            :description => "
+
+"
           )
         }
       end

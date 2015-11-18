@@ -56,7 +56,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :post do
-                      key :description, "Create a #{single}"
+                      key :description, resource_class.jsonapi_methods[:post].description
                       key :operationId, "create_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
@@ -70,7 +70,7 @@ module Flapjack
                         end
                       end
                       response 200 do
-                        key :description, "#{single} creation response"
+                        key :description, "#{single} creation success"
                         schema do
                           key :'$ref', model_type_data
                         end

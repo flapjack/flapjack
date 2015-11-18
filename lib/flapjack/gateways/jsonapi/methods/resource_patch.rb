@@ -48,7 +48,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :patch do
-                      key :description, "Update a #{single}"
+                      key :description, resource_class.jsonapi_methods[:patch].description
                       key :operationId, "update_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       parameter do
@@ -69,7 +69,7 @@ module Flapjack
                         end
                       end
                       response 204 do
-                        key :description, "No Content; #{model_type} update succeeded"
+                        key :description, "No Content; #{model_type} update success"
                       end
                       response 403 do
                         key :description, "Forbidden; invalid data"
@@ -94,7 +94,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :patch do
-                      key :description, "Update multiple #{resource}"
+                      key :description, resource_class.jsonapi_methods[:patch].description
                       key :operationId, "update_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do

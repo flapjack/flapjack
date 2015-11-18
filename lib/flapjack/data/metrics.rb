@@ -180,7 +180,10 @@ module Flapjack
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:total_keys, :processed_events, :event_queue_length,
-                            :check_freshness, :check_counts]
+                            :check_freshness, :check_counts],
+            :description => "
+
+"
           )
         }
       end

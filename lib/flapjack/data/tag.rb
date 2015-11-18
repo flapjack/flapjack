@@ -173,15 +173,19 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name]
+            :attributes => [:name],
+            :description => " "
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name]
+            :attributes => [:name],
+            :description => " "
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name]
+            :attributes => [:name],
+            :description => " "
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :description => " "
           )
         }
       end
@@ -191,35 +195,61 @@ module Flapjack
           @jsonapi_associations = {
             :checks => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => " ",
+                :get => " ",
+                :patch => " ",
+                :delete => " "
+              }
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => " ",
+                :get => " ",
+                :patch => " ",
+                :delete => " "
+              }
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => " ",
+                :get => " ",
+                :patch => " ",
+                :delete => " "
+              }
             ),
             :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => false,
               :type => 'scheduled_maintenance',
-              :klass => Flapjack::Data::ScheduledMaintenance
+              :klass => Flapjack::Data::ScheduledMaintenance,
+              :descriptions => {
+                :get => " "
+              }
             ),
             :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => false,
               :type => 'state',
-              :klass => Flapjack::Data::State
+              :klass => Flapjack::Data::State,
+              :descriptions => {
+                :get => " ",
+              }
             ),
             :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => false,
               :type => 'unscheduled_maintenance',
-              :klass => Flapjack::Data::UnscheduledMaintenance
+              :klass => Flapjack::Data::UnscheduledMaintenance,
+              :descriptions => {
+                :get => " "
+              }
             )
-
           }
           populate_association_data(@jsonapi_associations)
         end

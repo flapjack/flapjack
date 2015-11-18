@@ -46,7 +46,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :delete do
-                      key :description, "Delete a #{single}"
+                      key :description, resource_class.jsonapi_methods[:delete].description
                       key :operationId, "delete_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       parameter do
@@ -58,7 +58,7 @@ module Flapjack
                         key :format, :uuid
                       end
                       response 204 do
-                        key :description, "No Content; #{model_type} deletion succeeded"
+                        key :description, "No Content; #{model_type} deletion success"
                       end
                       response 404 do
                         key :description, "Not Found"
@@ -71,7 +71,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :delete do
-                      key :description, "Delete #{resource}"
+                      key :description, resource_class.jsonapi_methods[:delete].description
                       key :operationId, "delete_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do

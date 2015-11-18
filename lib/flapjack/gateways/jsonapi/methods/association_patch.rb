@@ -41,7 +41,7 @@ module Flapjack
                     link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
-                        key :description, "Replace associated #{link_name} for a #{single}"
+                        key :description, link_data.descriptions[:patch]
                         key :operationId, "replace_#{single}_#{link_name}"
                         key :consumes, [JSONAPI_MEDIA_TYPE]
                         parameter do
@@ -61,7 +61,7 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, 'No Content; link update succeeded'
+                          key :description, 'No Content; link update success'
                         end
                         response 403 do
                           key :description, "Forbidden; no link id"
@@ -83,7 +83,7 @@ module Flapjack
                     link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :patch do
-                        key :description, "Replace associated #{link_name} for a #{single}"
+                        key :description, link_data.descriptions[:patch]
                         key :operationId, "replace_#{single}_#{link_name}"
                         key :consumes, [JSONAPI_MEDIA_TYPE]
                         parameter do

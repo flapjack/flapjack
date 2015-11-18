@@ -342,17 +342,29 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
-              :time_restriction_ical]
+              :time_restriction_ical],
+            :description => "
+
+"
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
-              :time_restriction_ical]
+              :time_restriction_ical],
+            :description => "
+
+"
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
-              :time_restriction_ical]
+              :time_restriction_ical],
+            :description => "
+
+"
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
+            :description => "
+
+"
           )
         }
       end
@@ -362,15 +374,51 @@ module Flapjack
           @jsonapi_associations = {
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,
-              :number => :singular, :link => true, :includable => true
+              :number => :singular, :link => true, :includable => true,
+              :descriptions => {
+                :post => "
+
+",
+                :get => "
+
+"
+              }
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => "
+
+",
+                :get => "
+
+",
+                :patch => "
+
+",
+                :delete => "
+
+"
+              }
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
-              :number => :multiple, :link => true, :includable => true
+              :number => :multiple, :link => true, :includable => true,
+              :descriptions => {
+                :post => "
+
+",
+                :get => "
+
+",
+                :patch => "
+
+",
+                :delete => "
+
+"
+              }
             )
           }
           populate_association_data(@jsonapi_associations)

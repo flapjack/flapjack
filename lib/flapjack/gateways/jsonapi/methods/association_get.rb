@@ -43,7 +43,7 @@ module Flapjack
 
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
-                        key :description, "Get the #{link_name} of a #{single}"
+                        key :description, link_data.descriptions[:get]
                         key :operationId, "get_#{single}_#{link_name}"
                         key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                         parameter do
@@ -54,7 +54,7 @@ module Flapjack
                           key :type, :string
                         end
                         response 200 do
-                          key :description, "GET #{resource} response"
+                          key :description, "GET #{resource} #{link_name} success"
                           schema do
                             key :"$ref", "#{link_type}Reference".to_sym
                           end
@@ -76,7 +76,7 @@ module Flapjack
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :get do
-                        key :description, "Get the #{link_name} of a #{single}"
+                        key :description, link_data.descriptions[:get]
                         key :operationId, "get_#{single}_#{link_name}"
                         key :produces, [JSONAPI_MEDIA_TYPE]
                         parameter do
@@ -87,7 +87,7 @@ module Flapjack
                           key :type, :string
                         end
                         response 200 do
-                          key :description, "GET #{resource} response"
+                          key :description, "GET #{resource} success"
                           schema do
                             key :"$ref", "#{link_type}Reference".to_sym
                           end
@@ -112,7 +112,7 @@ module Flapjack
                     link_type = link_data.data_klass.short_model_name.name
                     swagger_path "/#{resource}/{#{single}_id}/#{link_name}" do
                       operation :get do
-                        key :description, "Get the #{link_name} of a #{single}"
+                        key :description, link_data.descriptions[:get]
                         key :operationId, "get_#{single}_#{link_name}"
                         key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                         parameter do
@@ -147,7 +147,7 @@ module Flapjack
                     end
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :get do
-                        key :description, "Get the #{link_name} of a #{single}"
+                        key :description, link_data.descriptions[:get]
                         key :operationId, "get_#{single}_links_#{link_name}"
                         key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                         parameter do
@@ -182,7 +182,6 @@ module Flapjack
                     end
                   end
                 end
-
               end
 
               assoc_patt = jsonapi_links.keys.map(&:to_s).join("|")

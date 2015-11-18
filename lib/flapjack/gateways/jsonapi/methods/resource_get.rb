@@ -29,7 +29,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :get do
-                      key :description, "Get all #{resource}"
+                      key :description,  resource_class.jsonapi_methods[:get].description
                       key :operationId, "get_all_#{resource}"
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                       parameter do
@@ -80,7 +80,7 @@ module Flapjack
                         key :type, :integer
                       end
                       response 200 do
-                        key :description, "GET #{resource} response"
+                        key :description, "GET #{resource} success"
                         schema do
                           key :'$ref', model_type_data_plural
                         end
@@ -90,7 +90,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :get do
-                      key :description, "Get a #{single}"
+                      key :description, resource_class.jsonapi_methods[:get].description
                       key :operationId, "get_#{single}"
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                       parameter do

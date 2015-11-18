@@ -35,7 +35,7 @@ module Flapjack
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :delete do
-                        key :description, "Remove one or more #{link_name} from a #{single}"
+                        key :description, link_data.descriptions[:delete]
                         key :operationId, "remove_#{single}_#{link_name}"
                         key :consumes, [JSONAPI_MEDIA_TYPE]
                         parameter do
@@ -58,7 +58,7 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, 'No Content; link creation succeeded'
+                          key :description, 'No Content; link deletion success'
                         end
                         response 403 do
                           key :description, "Forbidden; no link ids"

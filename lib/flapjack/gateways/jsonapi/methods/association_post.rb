@@ -35,7 +35,7 @@ module Flapjack
 
                     swagger_path "/#{resource}/{#{single}_id}/relationships/#{link_name}" do
                       operation :post do
-                        key :description, "Associate one or more #{link_name} to a #{single}"
+                        key :description, link_data.descriptions[:post]
                         key :operationId, "add_#{single}_#{link_name}"
                         key :consumes, [JSONAPI_MEDIA_TYPE]
                         parameter do
@@ -58,7 +58,7 @@ module Flapjack
                           end
                         end
                         response 204 do
-                          key :description, 'No Content; link creation succeeded'
+                          key :description, 'No Content; link creation success'
                         end
                         response 403 do
                           key :description, "Forbidden; no link ids"
