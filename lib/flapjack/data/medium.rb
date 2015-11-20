@@ -350,27 +350,34 @@ module Flapjack
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration],
-            :description => "
-"
+            :descriptions => {
+              :singular => "Create a media record.",
+              :multiple => "Create media records."
+            }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration],
-            :description => "
-"
+            :descriptions => {
+              :singular => "Returns data for a media record.",
+              :multiple => "Returns data for media records."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:transport, :address, :interval, :rollup_threshold,
                             :pagerduty_subdomain, :pagerduty_token,
                             :pagerduty_ack_duration],
-            :description => "
-"
-
+            :descriptions => {
+              :singular => "Update a media record.",
+              :multiple => "Update media records."
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :description => "
-"
+            :descriptions => {
+              :singular => "Delete a media record.",
+              :multiple => "Delete media records."
+            }
           )
         }
       end
@@ -389,39 +396,25 @@ module Flapjack
                 Flapjack::Data::ScheduledMaintenance
               ],
               :descriptions => {
-                :get => "
-
-"
+                :get => "Returns all checks that have alerted through a medium (that are still failing."
               }
             ),
             :contact => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-"
+                :post => "Set a contact for a medium during medium creation (required).",
+                :get => "Get the contact a medium belongs to."
               }
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-",
-                :patch => "
-
-",
-                :delete => "
-
-"
+                :post => "Associate this medium with rules on medium creation.",
+                :get => "Get the rules this medium is associated with.",
+                :patch => "Update the rules this medium is associated with.",
+                :delete => "Delete associations between this medium and rules."
               }
 
             )

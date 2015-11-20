@@ -83,7 +83,7 @@ module Flapjack
         case act
         when 'acknowledgement'
           'acknowledgement'
-        when 'test_notifications'
+        when /\Atest_notifications(?:\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/
           'test'
         when nil
           case cond

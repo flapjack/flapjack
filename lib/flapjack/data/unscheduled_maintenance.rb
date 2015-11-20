@@ -111,14 +111,23 @@ module Flapjack
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary],
-            :description => " "
+            :descriptions => {
+              :singular => "Get data for an un scheduled maintenance period.",
+              :multiple => "Get data for multiple unscheduled maintenance periods."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary],
-            :description => " "
+            :descriptions => {
+              :singular => "Update data for an unscheduled maintenance period.",
+              :multiple => "Update data for unscheduled maintenance periods.",
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :description => " "
+            :descriptions => {
+              :singular => "Delete an scheduled maintenance period.",
+              :multiple => "Delete unscheduled maintenance periods."
+            }
           )
         }
       end
@@ -130,7 +139,7 @@ module Flapjack
               :get => true,
               :number => :singular, :link => true, :includable => true,
               :descriptions => {
-                :get => " "
+                :get => "Returns the check an unscheduled maintenance period applies to."
               }
             )
           }

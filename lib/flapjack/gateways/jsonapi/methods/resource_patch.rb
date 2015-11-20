@@ -15,16 +15,9 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
+              jsonapi_method = resource_class.jsonapi_methods[:patch]
 
-              method_defs = if resource_class.respond_to?(:jsonapi_methods)
-                resource_class.jsonapi_methods
-              else
-                {}
-              end
-
-              method_def = method_defs[:patch]
-
-              unless method_def.nil?
+              unless jsonapi_method.nil?
 
                 jsonapi_links = resource_class.jsonapi_associations
 
@@ -48,7 +41,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :patch do
-                      key :description, resource_class.jsonapi_methods[:patch].description
+                      key :description, jsonapi_method.descriptions[:singular]
                       key :operationId, "update_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       parameter do
@@ -94,7 +87,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :patch do
-                      key :description, resource_class.jsonapi_methods[:patch].description
+                      key :description, jsonapi_method.descriptions[:multiple]
                       key :operationId, "update_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do
@@ -141,7 +134,7 @@ module Flapjack
 
                   resources_data, _ = wrapped_params
 
-                  attributes = method_def.attributes || []
+                  attributes = jsonapi_method.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
                     :singular_links => singular_links,

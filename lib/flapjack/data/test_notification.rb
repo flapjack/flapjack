@@ -23,9 +23,13 @@ module Flapjack
       include Flapjack::Data::Extensions::Associations
       include Flapjack::Data::Extensions::ShortName
 
-      define_attributes :summary => :string
+      define_attributes :condition => :string,
+                        :summary => :string
 
       attr_accessor :queue
+
+      validates :condition, :allow_nil => true,
+        :inclusion => { :in => Flapjack::Data::Condition.unhealthy.keys }
 
       def save!
         @id ||= SecureRandom.uuid
@@ -42,7 +46,7 @@ module Flapjack
         raise "Test notification already sent" if @sent
 
         Flapjack::Data::Event.test_notifications(
-          @queue, [c], :summary => self.summary
+          @queue, [c], :condition => self.condition, :summary => self.summary
         )
 
         @sent = true
@@ -57,7 +61,8 @@ module Flapjack
 
         unless checks.empty?
           Flapjack::Data::Event.test_notifications(
-            @queue, checks.all, :summary => self.summary
+            @queue, checks.all, :condition => self.condition,
+            :summary => self.summary
           )
         end
 
@@ -73,6 +78,10 @@ module Flapjack
         property :type do
           key :type, :string
           key :enum, [Flapjack::Data::TestNotification.short_model_name.singular]
+        end
+        property :condition do
+          key :type, :string
+          key :enum, Flapjack::Data::Condition.unhealthy.keys
         end
         property :summary do
           key :type, :string
@@ -102,6 +111,10 @@ module Flapjack
           key :type, :string
           key :enum, [Flapjack::Data::TestNotification.short_model_name.singular]
         end
+        property :condition do
+          key :type, :string
+          key :enum, Flapjack::Data::Condition.unhealthy.keys
+        end
         property :summary do
           key :type, :string
         end
@@ -128,8 +141,12 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:summary],
-            :description => " "
+            :attributes => [:condition, :summary],
+            :descriptions => {
+              :singular => "Create a simulated event for a check, or checks linked to a tag.",
+              :multiple => "Create simulated events for a check, or checks linked to a tag.",
+            }
+
           )
         }
       end
@@ -143,7 +160,7 @@ module Flapjack
               :type => 'check',
               :klass => Flapjack::Data::Check,
               :descriptions => {
-                :post => " "
+                :post => "Creates a simulated event for this check."
               }
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
@@ -152,7 +169,7 @@ module Flapjack
               :type => 'tag',
               :klass => Flapjack::Data::Tag,
               :descriptions => {
-                :post => " "
+                :post => "Creates a simulated event for all checks associated with this tag."
               }
             )
           }

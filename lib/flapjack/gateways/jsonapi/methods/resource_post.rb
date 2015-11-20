@@ -19,16 +19,9 @@ module Flapjack
             # app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourcePost::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
+              jsonapi_method = resource_class.jsonapi_methods[:post]
 
-              method_defs = if resource_class.respond_to?(:jsonapi_methods)
-                resource_class.jsonapi_methods
-              else
-                {}
-              end
-
-              method_def = method_defs[:post]
-
-              unless method_def.nil?
+              unless jsonapi_method.nil?
                 resource = resource_class.short_model_name.plural
 
                 jsonapi_links = if resource_class.respond_to?(:jsonapi_associations)
@@ -52,11 +45,11 @@ module Flapjack
                   model_type_create = "#{model_type}Create".to_sym
                   model_type_data = "data_#{model_type}".to_sym
 
-                  # TODO how to include plural for same route?
+                  # TODO how to include plural for same route? swagger won't overload...
 
                   swagger_path "/#{resource}" do
                     operation :post do
-                      key :description, resource_class.jsonapi_methods[:post].description
+                      key :description, jsonapi_method.descriptions[:singular]
                       key :operationId, "create_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
@@ -97,7 +90,7 @@ module Flapjack
 
                   resources_data, unwrap = wrapped_params
 
-                  attributes = method_def.attributes || []
+                  attributes = jsonapi_method.attributes || []
 
                   validate_data(resources_data, :attributes => attributes,
                     :singular_links => singular_links,

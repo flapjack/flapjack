@@ -181,9 +181,7 @@ module Flapjack
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:total_keys, :processed_events, :event_queue_length,
                             :check_freshness, :check_counts],
-            :description => "
-
-"
+            :description => "Get global metrics and event counter values."
           )
         }
       end

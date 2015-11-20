@@ -230,26 +230,30 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :timezone],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Create a contact.",
+              :multiple => "Create contacts."
+            }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :timezone],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Get data for a contact.",
+              :multiple => "Get data for multiple contacts."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :timezone],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Update a contact record.",
+              :multiple => "Update contact records."
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-             :description => "
-
-"
+            :descriptions => {
+              :singular => "Delete a contact.",
+              :multiple => "Delete contacts."
+            }
           ),
         }
       end
@@ -263,45 +267,32 @@ module Flapjack
               :type => 'check',
               :klass => Flapjack::Data::Check,
               :descriptions => {
-                :get => "
-
-"
+                :get => "Returns checks which this contact's notification " \
+                        "rules allow it to receive notifications."
               }
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :get => "
-
-"
+                :get => "Returns media belonging to the contact."
               }
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :get => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :get => "
-
-"
+                :get => "Returns rules belonging to the contact."
               }
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-",
-                :patch => "
-
-",
-                :delete => "
-
-"
+                :post => "Associate tags with this contact.",
+                :get => "Returns all tags linked to this contact.",
+                :patch => "Update the tags associated with this contact.",
+                :delete => "Delete associations between tags and this contact."
               }
             )
           }

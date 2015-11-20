@@ -119,7 +119,7 @@ module Flapjack
 
         # checks in sched/unsched maint will not be notified -- time should be taken
         # from the processor's created notification, maint period check done there only
-        is_a_test            = 'test_notifications'.eql?(notification_state.action)
+        is_a_test = !(notification_state.action =~ /\Atest_notifications/).nil?
 
         alerting_severity = is_a_test ? 'critical' : notification.severity
 

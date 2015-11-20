@@ -20,9 +20,10 @@ module Flapjack
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
             ['ok', 'warning', 'critical', 'unknown', 'acknowledgement',
-             'test_notifications'].include?(e['state'].downcase) } =>
+             'test_notifications'].include?(e['state'].downcase) ||
+             !(e['state'] =~ /\Atest_notifications(?:\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/).nil? } =>
           "state must be one of 'ok', 'warning', 'critical', 'unknown', " +
-          "'acknowledgement' or 'test_notifications'",
+          "'acknowledgement', 'test_notifications', or 'test_notifications [problem]' ",
 
         proc {|e| e['entity'].nil? || e['entity'].is_a?(String) } =>
           "entity must be a string",
@@ -156,8 +157,12 @@ module Flapjack
 
       def self.test_notifications(queue, checks, opts = {})
         raise "Check(s) must be provided" if checks.nil?
+        condition = opts[:condition] || 'critical'
+        unless Flapjack::Data::Condition.unhealthy.keys.include?(condition)
+          raise "Condition must be a problem"
+        end
         checks.each do |check|
-          self.push(queue, 'state'              => 'test_notifications',
+          self.push(queue, 'state'              => "test_notifications #{condition}",
                            'check'              => check.name,
                            'summary'            => opts[:summary],
                            'details'            => opts[:details])

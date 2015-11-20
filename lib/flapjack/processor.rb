@@ -176,7 +176,7 @@ module Flapjack
       timestamp = Time.now
 
       event_condition = case event.state
-      when 'acknowledgement', 'test_notifications'
+      when 'acknowledgement', /\Atest_notifications(?:\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/
         nil
       else
         cond = Flapjack::Data::Condition.for_name(event.state)
@@ -318,7 +318,7 @@ module Flapjack
         new_state.action = event.state
         new_state.condition = old_state.condition unless old_state.nil?
 
-        unless 'test_notifications'.eql?(new_state.action)
+        unless new_state.action =~ /\Atest_notifications(?:\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/
           @global_stats.action_events   += 1
           @instance_stats.action_events += 1
         end
@@ -346,10 +346,11 @@ module Flapjack
     def generate_notification(check, old_state, new_state, event, event_condition)
       severity = nil
 
-      if 'test_notifications'.eql?(new_state.action)
+      # accepts test_notifications without condition, for backwards compatibility
+      if new_state.action =~ /\Atest_notifications(\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/
         # the state won't be preserved for any time after the notification is
         # sent via association to a state or check
-        severity = Flapjack::Data::Condition.most_unhealthy
+        severity = Regexp.last_match(1) || Flapjack::Data::Condition.most_unhealthy
       else
         latest_notif = check.latest_notifications
 
@@ -399,7 +400,7 @@ module Flapjack
 
       @notifier_queue.push(notification)
 
-      return if 'test_notifications'.eql?(new_state.action)
+      return if new_state.action =~ /\Atest_notifications(?:\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?\z/
 
       Flapjack.logger.info "notification count: #{check.notification_count}"
 

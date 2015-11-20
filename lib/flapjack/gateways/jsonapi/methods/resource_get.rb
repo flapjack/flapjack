@@ -15,7 +15,10 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Helpers::Serialiser
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.key?(:get)
+
+              jsonapi_method = resource_class.jsonapi_methods[:get]
+
+              unless jsonapi_method.nil?
                 resource = resource_class.short_model_name.plural
 
                 app.class_eval do
@@ -29,7 +32,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :get do
-                      key :description,  resource_class.jsonapi_methods[:get].description
+                      key :description, jsonapi_method.descriptions[:multiple]
                       key :operationId, "get_all_#{resource}"
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                       parameter do
@@ -90,7 +93,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :get do
-                      key :description, resource_class.jsonapi_methods[:get].description
+                      key :description, jsonapi_method.descriptions[:singular]
                       key :operationId, "get_#{single}"
                       key :produces, [Flapjack::Gateways::JSONAPI.media_type_produced]
                       parameter do

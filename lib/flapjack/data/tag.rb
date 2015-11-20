@@ -174,18 +174,30 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name],
-            :description => " "
+            :descriptions => {
+              :singular => "Create a tag.",
+              :multiple => "Create tags."
+            }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name],
-            :description => " "
+            :descriptions => {
+              :singular => "Returns data for a tag.",
+              :multiple => "Returns data for tags."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name],
-            :description => " "
+            :descriptions => {
+              :singular => "Update a tag.",
+              :multiple => "Update tags."
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :description => " "
+            :descriptions => {
+              :singular => "Delete a tag.",
+              :multiple => "Delete tags."
+            }
           )
         }
       end
@@ -197,30 +209,30 @@ module Flapjack
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => " ",
-                :get => " ",
-                :patch => " ",
-                :delete => " "
+                :post => "Associate checks with this tag.",
+                :get => "Returns all checks linked to this tag.",
+                :patch => "Update the checks associated with this tag.",
+                :delete => "Delete associations between checks and this tag."
               }
             ),
             :contacts => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => " ",
-                :get => " ",
-                :patch => " ",
-                :delete => " "
+                :post => "Associate contacts with this tag.",
+                :get => "Returns all contacts linked to this tag.",
+                :patch => "Update the contacts associated with this tag.",
+                :delete => "Delete associations between contacts and this tag."
               }
             ),
             :rules => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => " ",
-                :get => " ",
-                :patch => " ",
-                :delete => " "
+                :post => "Associate rules with this tag.",
+                :get => "Returns all rules linked to this tag.",
+                :patch => "Update the rules associated with this tag.",
+                :delete => "Delete associations between rules and this tag."
               }
             ),
             :scheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
@@ -229,7 +241,9 @@ module Flapjack
               :type => 'scheduled_maintenance',
               :klass => Flapjack::Data::ScheduledMaintenance,
               :descriptions => {
-                :get => " "
+                :get => "Returns all scheduled maintenance periods for " \
+                        "checks linked to this tag; default sort order is " \
+                        "newest first."
               }
             ),
             :states => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
@@ -238,7 +252,8 @@ module Flapjack
               :type => 'state',
               :klass => Flapjack::Data::State,
               :descriptions => {
-                :get => " ",
+                :get => "Returns all state records for all checks linked to " \
+                        "this tag; default sort order is newest first."
               }
             ),
             :unscheduled_maintenances => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
@@ -247,7 +262,9 @@ module Flapjack
               :type => 'unscheduled_maintenance',
               :klass => Flapjack::Data::UnscheduledMaintenance,
               :descriptions => {
-                :get => " "
+                :get => "Returns all unscheduled maintenance periods for " \
+                        "checks linked to this tag; default sort order is " \
+                        "newest first."
               }
             )
           }

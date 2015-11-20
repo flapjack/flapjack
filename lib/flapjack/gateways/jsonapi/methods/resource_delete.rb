@@ -36,7 +36,10 @@ module Flapjack
             app.helpers Flapjack::Gateways::JSONAPI::Methods::ResourceDelete::Helpers
 
             Flapjack::Gateways::JSONAPI::RESOURCE_CLASSES.each do |resource_class|
-              if resource_class.jsonapi_methods.key?(:delete)
+
+              jsonapi_method = resource_class.jsonapi_methods[:delete]
+
+              unless jsonapi_method.nil?
                 resource = resource_class.short_model_name.plural
 
                 app.class_eval do
@@ -46,7 +49,7 @@ module Flapjack
 
                   swagger_path "/#{resource}/{#{single}_id}" do
                     operation :delete do
-                      key :description, resource_class.jsonapi_methods[:delete].description
+                      key :description, jsonapi_method.descriptions[:singular]
                       key :operationId, "delete_#{single}"
                       key :consumes, [JSONAPI_MEDIA_TYPE]
                       parameter do
@@ -71,7 +74,7 @@ module Flapjack
 
                   swagger_path "/#{resource}" do
                     operation :delete do
-                      key :description, resource_class.jsonapi_methods[:delete].description
+                      key :description, jsonapi_method.descriptions[:multiple]
                       key :operationId, "delete_#{resource}"
                       key :consumes, [JSONAPI_MEDIA_TYPE_BULK]
                       parameter do

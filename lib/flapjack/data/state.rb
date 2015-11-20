@@ -79,7 +79,8 @@ module Flapjack
 
       ACTIONS = %w(acknowledgement test_notifications)
       validates :action, :allow_nil => true,
-        :inclusion => {:in => Flapjack::Data::State::ACTIONS}
+        :format => {:with => /\A(?:acknowledgement|test_notifications(\s+#{Flapjack::Data::Condition.unhealthy.keys.join('|')})?)\z/,
+        :message => 'must either be an acknowledgement or a notification test'}
 
       # TODO handle JSON exception
       def perfdata
@@ -184,7 +185,10 @@ module Flapjack
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:created_at, :updated_at, :finished_at, :condition,
                             :action, :summary, :details, :perfdata],
-            :description => " "
+            :descriptions => {
+              :singular => "Get data for a single check state record.",
+              :multiple => "Get data for check state records."
+            }
           )
         }
       end
@@ -196,7 +200,7 @@ module Flapjack
               :get => true,
               :number => :singular, :link => true, :includable => true,
               :descriptions => {
-                :get => " "
+                :get => "Returns the check the state data describes."
               }
             )
           }
@@ -205,11 +209,6 @@ module Flapjack
         @jsonapi_associations
       end
 
-      # FIXME ensure state.destroy is called when removed from:
-      # latest_notifications
-      # most_severe
-      # notification
-      # latest_media
       before_destroy :is_unlinked
 
       def is_unlinked
@@ -226,7 +225,7 @@ module Flapjack
 
         Flapjack.logger.debug "deleting"
 
-        return true
+        true
       end
     end
   end

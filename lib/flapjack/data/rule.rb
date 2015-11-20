@@ -343,28 +343,32 @@ module Flapjack
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Create a notification rule.",
+              :multiple => "Create notification rules."
+            }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Get data for a notification rule.",
+              :multiple => "Get data for multiple notification rules."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :blackhole, :strategy, :conditions_list,
               :time_restriction_ical],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Update a notification rule.",
+              :multiple => "Update notification rules."
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Delete a notification rule.",
+              :multiple => "Delete notification rules."
+            }
           )
         }
       end
@@ -376,48 +380,28 @@ module Flapjack
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-"
+                :post => "Set a contact for a rule during rule creation (required).",
+                :get => "Get the contact a rule belongs to."
               }
             ),
             :media => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-",
-                :patch => "
-
-",
-                :delete => "
-
-"
+                :post => "Associate this rule with media on rule creation.",
+                :get => "Get the media this rule is associated with.",
+                :patch => "Update the media this rule is associated with.",
+                :delete => "Delete associations between this rule and media."
               }
             ),
             :tags => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true, :get => true, :patch => true, :delete => true,
               :number => :multiple, :link => true, :includable => true,
               :descriptions => {
-                :post => "
-
-",
-                :get => "
-
-",
-                :patch => "
-
-",
-                :delete => "
-
-"
+                :post => "Associate tags with this rule.",
+                :get => "Returns all tags linked to this rule.",
+                :patch => "Update the tags associated with this rule.",
+                :delete => "Delete associations between tags and this rule."
               }
             )
           }

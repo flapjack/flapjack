@@ -96,9 +96,10 @@ module Flapjack
             :attributes => [:instance_name, :created_at, :all_events,
                             :ok_events, :failure_events, :action_events,
                             :invalid_events],
-            :description => "
-
-"
+            :descriptions => {
+              :multiple => "Returns global or per-instance event statistics.",
+              :singular => "Returns a single event statistics data object."
+            }
           )
         }
       end

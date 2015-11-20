@@ -186,24 +186,30 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Create a scheduled maintenance period for a check, or checks associated with a tag.",
+              :multiple => "Create scheduled maintenance periods for a check, or checks associated with a tag."
+            }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary],
-            :description => "
-
-"
+            :descriptions => {
+              :singular => "Get data for a scheduled maintenance period.",
+              :multiple => "Get data for multiple scheduled maintenance periods."
+            }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:start_time, :end_time, :summary],
-            :description => "
-"
+            :descriptions => {
+              :singular => "Update data for a scheduled maintenance period.",
+              :multiple => "Update data for scheduled maintenance periods.",
+            }
           ),
           :delete => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :description => "
-"
+            :descriptions => {
+              :singular => "Delete a scheduled maintenance period.",
+              :multiple => "Delete scheduled maintenance periods."
+            }
           )
         }
       end
@@ -215,8 +221,8 @@ module Flapjack
               :post => true, :get => true,
               :number => :singular, :link => true, :includable => true,
               :descriptions => {
-                :post => " ",
-                :get => " "
+                :post => "Set a check for scheduled maintenance on creation.",
+                :get => "Returns the check a scheduled maintenance period applies to."
               }
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
@@ -225,7 +231,7 @@ module Flapjack
               :type => 'tag',
               :klass => Flapjack::Data::Tag,
               :descriptions => {
-                :post => " "
+                :post => "Set scheduled maintenance on multiple checks on creation."
               }
             )
           }

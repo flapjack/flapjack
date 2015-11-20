@@ -144,8 +144,10 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:duration, :summary],
-            :description => "
-"
+            :descriptions => {
+              :singular => "Acknowledge a check, or acknowledge all checks linked to a tag.",
+              :multiple => "Acknowledge multiple checks, or checks linked to different tags."
+            }
           )
         }
       end
@@ -157,23 +159,13 @@ module Flapjack
               :post => true,
               :number => :singular, :link => false, :includable => false,
               :type => 'check',
-              :klass => Flapjack::Data::Check,
-              :descriptions => {
-                :post => "
-
-"
-              }
+              :klass => Flapjack::Data::Check
             ),
             :tag => Flapjack::Gateways::JSONAPI::Data::JoinDescriptor.new(
               :post => true,
               :number => :singular, :link => false, :includable => false,
               :type => 'tag',
-              :klass => Flapjack::Data::Tag,
-              :descriptions => {
-                :post => "
-
-"
-              }
+              :klass => Flapjack::Data::Tag
             )
           }
           populate_association_data(@jsonapi_associations)
