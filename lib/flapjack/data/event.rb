@@ -14,8 +14,8 @@ module Flapjack
       # tags are now ignored, tags on the checks are used for rule matching
       REQUIRED_KEYS = %w(state check)
       OPTIONAL_KEYS = %w(entity time initial_failure_delay
-        repeat_failure_delay summary details acknowledgement_id duration tags
-        perfdata type)
+        repeat_failure_delay initial_recovery_delay summary details
+        acknowledgement_id duration tags perfdata type)
 
       VALIDATIONS = {
         proc {|e| e['state'].is_a?(String) &&
@@ -45,6 +45,11 @@ module Flapjack
                   e['repeat_failure_delay'].is_a?(Integer) ||
                  (e['repeat_failure_delay'].is_a?(String) && !!(e['repeat_failure_delay'] =~ /^\d+$/)) } =>
           "repeat_failure_delay must be a positive integer, or a string castable to one",
+
+        proc {|e| e['initial_recovery_delay'].nil? ||
+                  e['initial_recovery_delay'].is_a?(Integer) ||
+                 (e['initial_recovery_delay'].is_a?(String) && !!(e['initial_recovery_delay'] =~ /^\d+$/)) } =>
+          "initial_recovery_delay must be a positive integer, or a string castable to one",
 
         proc {|e| e['summary'].nil? || e['summary'].is_a?(String) } =>
           "summary must be a string",
@@ -115,7 +120,8 @@ module Flapjack
       #   'check'                 => check,
       #   'time'                  => timestamp,
       #   'initial_failure_delay' => initial_failure_delay,
-      #   'repeat_failure_delay'  => repeat_failure_delay
+      #   'repeat_failure_delay'  => repeat_failure_delay,
+      #   'initial_recovery_delay' => initial_recovery_delay,
       #   'type'                  => 'service',
       #   'state'                 => state,
       #   'summary'               => check_output,
@@ -176,8 +182,8 @@ module Flapjack
           "#{attrs['entity']}:#{attrs['check']}"
         end
         [:state, :time, :initial_failure_delay, :repeat_failure_delay,
-         :summary, :details, :perfdata, :acknowledgement_id,
-         :duration].each do |key|
+         :initial_recovery_delay, :summary, :details, :perfdata,
+         :acknowledgement_id, :duration].each do |key|
 
           instance_variable_set("@#{key.to_s}", attrs[key.to_s])
         end
@@ -199,7 +205,8 @@ module Flapjack
         @state.downcase
       end
 
-      [:time, :initial_failure_delay, :repeat_failure_delay, :duration].each do |num_prop|
+      [:time, :initial_failure_delay, :repeat_failure_delay,
+       :initial_recovery_delay, :duration].each do |num_prop|
         define_method(num_prop) do
           prop = instance_variable_get("@#{num_prop}")
           return if prop.nil?

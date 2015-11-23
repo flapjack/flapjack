@@ -43,6 +43,11 @@ module Flapjack
         @repeat_failure_delay = nil
       end
 
+      @initial_recovery_delay = @config['initial_recovery_delay']
+      if !@initial_recovery_delay.is_a?(Integer) || (@initial_recovery_delay < 0)
+        @initial_recovery_delay = nil
+      end
+
       @notifier_queue = Flapjack::RecordQueue.new(@config['notifier_queue'] || 'notifications',
                  Flapjack::Data::Notification)
 
@@ -265,9 +270,15 @@ module Flapjack
                               @repeat_failure_delay ||
                               Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
 
+          init_recov_delay = (event_condition.nil? ? nil : event.initial_recovery_delay) ||
+                             check.initial_recovery_delay ||
+                             @initial_recovery_delay ||
+                             Flapjack::DEFAULT_INITIAL_RECOVERY_DELAY
+
           filter_opts = {
             :initial_failure_delay => init_fail_delay,
             :repeat_failure_delay => repeat_fail_delay,
+            :initial_recovery_delay => init_recov_delay,
             :old_state => old_state, :new_state => new_state,
             :timestamp => timestamp, :duration => event.duration
           }

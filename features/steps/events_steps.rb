@@ -119,7 +119,7 @@ Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, enti
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   if check.nil?
     check = Flapjack::Data::Check.new(:name => "#{entity_name}:#{check_name}",
-      :enabled => true)
+      :enabled => true, :initial_recovery_delay => 0)
     expect(check.save).to be true
   end
 
