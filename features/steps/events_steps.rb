@@ -80,9 +80,9 @@ def submit_event(condition, entity_name, check_name, opts = {})
     'entity'  => entity_name,
     'check'   => check_name,
   }
-  ['initial', 'repeat'].each do |delay_type|
-    delay_key = "#{delay_type}_failure_delay".to_sym
-    event.update(delay_key => opts[delay_key]) unless opts[delay_key].nil?
+  ['initial_failure', 'repeat_failure', 'initial_recovery'].each do |delay_type|
+    delay_key = "#{delay_type}_delay".to_sym
+    event.update(delay_key => opts[delay_key].to_i) unless opts[delay_key].nil?
   end
   Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
@@ -119,7 +119,7 @@ Given /^the check is check '(.*)' on entity '([\w\.\-]+)'$/ do |check_name, enti
   check = Flapjack::Data::Check.intersect(:name => "#{entity_name}:#{check_name}").all.first
   if check.nil?
     check = Flapjack::Data::Check.new(:name => "#{entity_name}:#{check_name}",
-      :enabled => true, :initial_recovery_delay => 0)
+      :enabled => true)
     expect(check.save).to be true
   end
 
@@ -151,14 +151,16 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   set_unscheduled_maintenance(entity_name, check_name, 60*60*2)
 end
 
-When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial|repeat) failure delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |condition, init_or_repeat, failure_delay, check_name, entity_name|
+When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial failure|repeat failure|initial recovery) delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |condition, init_or_repeat, delay, check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
   opts = case init_or_repeat
-  when 'initial'
-    {:initial_failure_delay => failure_delay}
-  when 'repeat'
-    {:repeat_failure_delay => failure_delay}
+  when 'initial failure'
+    {:initial_failure_delay => delay}
+  when 'repeat failure'
+    {:repeat_failure_delay => delay}
+  when 'initial recovery'
+    {:initial_recovery_delay => delay}
   else
     {}
   end

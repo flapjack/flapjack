@@ -7,7 +7,7 @@ module Flapjack
 
     # * If the service event's state is ok and there is unscheduled maintenance set, end the unscheduled
     #   maintenance
-    # * If the service event’s state is ok and the previous state was ok, don’t alert
+    # * If the service event’s state is ok and there was no previous state, don’t alert
     # * If the service event’s state is ok and there's never been a notification, don't alert
     # * If the service event's state is ok and the previous notification was a recovery or ok, don't alert
     class Ok
@@ -27,9 +27,8 @@ module Flapjack
 
         check.clear_unscheduled_maintenance(timestamp)
 
-        if old_state.nil? || Flapjack::Data::Condition.healthy?(old_state.condition)
-          Flapjack.logger.debug("Filter: Ok: block - previous state was ok, so blocking")
-          Flapjack.logger.debug(old_state.inspect)
+        if old_state.nil?
+          Flapjack.logger.debug("Filter: Ok: no previous state was ok, so blocking")
           Flapjack.logger.debug(new_state.inspect) unless new_state.nil?
           return true
         end

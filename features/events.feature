@@ -38,6 +38,23 @@ Feature: events
     Then  1 notification should have been generated
 
   @time
+  Scenario: Check recovery with recovery delay
+    Given the check is in an ok state
+    When  a critical event is received
+    And   1 minute passes
+    And   a critical event is received
+    Then  1 notification should have been generated
+    When  10 seconds passes
+    And   an ok event with an initial recovery delay of 30 seconds is received
+    Then  1 notification should have been generated
+    When  10 seconds passes
+    And   an ok event with an initial recovery delay of 30 seconds is received
+    Then  1 notification should have been generated
+    When  25 seconds passes
+    And   an ok event with an initial recovery delay of 30 seconds is received
+    Then  2 notifications should have been generated
+
+  @time
   Scenario: Check ok to warning for 1 minute
     Given the check is in an ok state
     When  a warning event is received
@@ -199,6 +216,8 @@ Feature: events
     Then  2 notifications should have been generated
     When  6 minutes passes
     And   a critical event is received
+    And   45 seconds passes
+    And   a critical event is received
     Then  3 notifications should have been generated
     When  6 minutes passes
     And   a critical event is received
@@ -219,6 +238,8 @@ Feature: events
     And   an ok event is received
     Then  2 notifications should have been generated
     When  10 seconds passes
+    And   a critical event is received
+    And   45 seconds passes
     And   a critical event is received
     Then  3 notifications should have been generated
     When  50 seconds passes
@@ -329,6 +350,8 @@ Feature: events
     When  10 seconds passes
     # 120 seconds
     And   a critical event is received
+    And   45 seconds passes
+    And   a critical event is received
     Then  3 notifications should have been generated
     When  10 seconds passes
     And   a critical event is received
@@ -437,6 +460,8 @@ Scenario: a lot of quick ok -> warning -> ok -> warning
     And   an ok event is received
     Then  2 notifications should have been generated
     When  10 seconds passes
+    And   a warning event is received
+    And   45 seconds passes
     And   a warning event is received
     Then  3 notifications should have been generated
     When  10 seconds passes

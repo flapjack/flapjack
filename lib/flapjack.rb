@@ -16,7 +16,9 @@ module Flapjack
   DEFAULT_INITIAL_FAILURE_DELAY = 30
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 
-  DEFAULT_INITIAL_RECOVERY_DELAY = 30
+  # defaulting to 0 for backwards compatibility; can be overridden in config,
+  # or per check / event
+  DEFAULT_INITIAL_RECOVERY_DELAY = 0
 
   def self.load_json(data)
     ActiveSupport::JSON.decode(data)
