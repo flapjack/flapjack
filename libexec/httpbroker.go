@@ -5,7 +5,7 @@ import (
 	"flapjack"
 	"fmt"
 	"github.com/go-martini/martini"
-	"gopkg.in/alecthomas/kingpin.v1"
+	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -311,11 +311,12 @@ func submitCachedState(states map[string]State, config Config) {
 }
 
 var (
-	port     = kingpin.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
-	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
-	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
-	interval = kingpin.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
-	debug    = kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
+	app      = kingpin.New("httpbroker", "Accepts HTTP events for Flapjack.")
+	port     = app.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
+	server   = app.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database = app.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
+	interval = app.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
+	debug    = app.Flag("debug", "Enable verbose output (default false)").Bool()
 )
 
 type Config struct {
@@ -327,8 +328,10 @@ type Config struct {
 }
 
 func main() {
-	kingpin.Version("0.0.1")
-	kingpin.Parse()
+	app.Version("0.0.1")
+	app.Writer(os.Stdout) // direct help to stdout
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+	app.Writer(os.Stderr) // ... but ensure errors go to stderr
 
 	config := Config{
 		Server:   *server,

@@ -6,7 +6,7 @@ export GOPATH=$(pwd):$GOPATH
 
 go get github.com/garyburd/redigo/redis
 go get github.com/go-martini/martini
-go get gopkg.in/alecthomas/kingpin.v1
+go get gopkg.in/alecthomas/kingpin.v2
 go get github.com/oguzbilgic/pandik
 mv bin/pandik libexec/httpchecker
 

@@ -4,25 +4,28 @@ import (
 	"encoding/json"
 	"flapjack"
 	"fmt"
-	"gopkg.in/alecthomas/kingpin.v1"
+	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"strings"
 	"time"
 )
 
 var (
-	entity   = kingpin.Arg("entity", "Entity name").Required().String()
-	check    = kingpin.Arg("check", "Check name").Required().String()
-	state    = kingpin.Arg("state", "Current state").Required().String()
-	summary  = kingpin.Arg("summary", "Summary of event").Required().String()
-	debug    = kingpin.Flag("debug", "Enable verbose output (default false)").Bool()
-	server   = kingpin.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
-	database = kingpin.Flag("database", "Redis database to connect to (default 0)").Int()
+	app      = kingpin.New("oneoff", "Submits a single event to Flapjack.")
+	entity   = app.Arg("entity", "Entity name").Required().String()
+	check    = app.Arg("check", "Check name").Required().String()
+	state    = app.Arg("state", "Current state").Required().String()
+	summary  = app.Arg("summary", "Summary of event").Required().String()
+	debug    = app.Flag("debug", "Enable verbose output (default false)").Bool()
+	server   = app.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
+	database = app.Flag("database", "Redis database to connect to (default 0)").Int()
 )
 
 func main() {
-	kingpin.Version("0.0.1")
-	kingpin.Parse()
+	app.Version("0.0.1")
+	app.Writer(os.Stdout) // direct help to stdout
+	kingpin.MustParse(app.Parse(os.Args[1:]))
+	app.Writer(os.Stderr) // ... but ensure errors go to stderr
 
 	if *debug {
 		fmt.Println("Entity:", *entity)
