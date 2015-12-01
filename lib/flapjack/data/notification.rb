@@ -11,6 +11,7 @@ module Flapjack
     class Notification
 
       include Zermelo::Records::RedisSet
+      include Flapjack::Data::Extensions::ShortName
 
       define_attributes :severity           => :string,
                         :duration           => :integer,
