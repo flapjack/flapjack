@@ -86,7 +86,7 @@ module Flapjack
         dest_addr = @options[:destination]
         dest_redis = Redis.new(:url => dest_addr, :driver => :hiredis)
 
-        Zermelo.logger = ::Logger.new('/Users/ali/Desktop/zermelo_migrate.log')
+        # Zermelo.logger = ::Logger.new('/tmp/zermelo_migrate.log')
 
         Zermelo.redis = dest_redis
 
