@@ -217,13 +217,13 @@
   # Browsable web interface
   [gateways.web]
     enabled = true
-    #bind_address = "127.0.0.1"
+    bind_address = "0.0.0.0"
     port = 3080
     timeout = 300
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
     auto_refresh = 120
     access_log = "/var/log/flapjack/web_access.log"
-    api_url = "http://localhost:3081/"
+    api_url = "http://127.0.0.1:3081/"
     # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
     #logo_image_path = "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
     show_exceptions = false
@@ -234,11 +234,11 @@
   # HTTP API server
   [gateways.jsonapi]
     enabled = true
-    #bind_address = "127.0.0.1"
+    bind_address = "0.0.0.0"
     port = 3081
     timeout = 300
     access_log = "/var/log/flapjack/jsonapi_access.log"
-    base_url = "http://localhost:3081/"
+    base_url = "http://127.0.0.1:3081/"
     [gateways.jsonapi.logger]
       file = "/var/log/flapjack/flapjack.log"
       level = "INFO"

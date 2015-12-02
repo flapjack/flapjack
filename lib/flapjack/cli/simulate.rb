@@ -32,23 +32,20 @@ module Flapjack
 
       def _fail
         events(:state => @options[:state], :recover => false,
-          :entity => @options[:entity], :check => @options[:check],
-          :tags => @options[:tags],
-          :minutes => @options[:time].to_f, :interval => @options[:interval].to_f)
+          :check => @options[:check], :minutes => @options[:time].to_f,
+          :interval => @options[:interval].to_f)
       end
 
       def fail_and_recover
         events(:state => @options[:state], :recover => true,
-          :entity => @options[:entity], :check => @options[:check],
-          :tags => @options[:tags],
-          :minutes => @options[:time].to_f, :interval => @options[:interval].to_f)
+          :check => @options[:check], :minutes => @options[:time].to_f,
+          :interval => @options[:interval].to_f)
       end
 
       def ok
         events(:state => 'ok', :recover => false,
-          :entity => @options[:entity], :check => @options[:check],
-          :tags => @options[:tags],
-          :minutes => @options[:time].to_f, :interval => @options[:interval].to_f)
+          :check => @options[:check], :minutes => @options[:time].to_f,
+          :interval => @options[:interval].to_f)
       end
 
       private
@@ -58,14 +55,12 @@ module Flapjack
         recover = opts[:recover]
         state = opts[:state] || 'critical'
         event = {
-          'entity' => opts[:entity] || 'foo-app-01',
-          'check'  => opts[:check]  || 'HTTP',
-          'tags'   => opts[:tags]   || [],
+          'check'  => opts[:check] || 'HTTP',
           'type'   => 'service'
         }
         failure  = event.merge('state' => state, 'summary' => 'Simulated check output (test by operator)')
         recovery = event.merge('state' => 'ok', 'summary' => 'Simulated check output (test by operator)')
-        key = "#{event['entity']}:#{event['check']}"
+        key = event['check']
 
         lock = Monitor.new
         stop_cond = lock.new_cond
@@ -123,9 +118,6 @@ command :simulate do |simulate|
     _fail.flag [:i, 'interval'], :desc => "SECONDS between events, can be decimal eg 0.1 (10)",
       :default_value => 10
 
-    _fail.flag [:e, 'entity'],   :desc => "ENTITY to generate failure events for ('foo-app-01')",
-      :default_value => 'foo-app-01'
-
     _fail.flag [:k, 'check'],    :desc => "CHECK to generate failure events for ('HTTP')",
       :default_value => 'HTTP'
 
@@ -150,9 +142,6 @@ command :simulate do |simulate|
     fail_and_recover.flag [:i, 'interval'], :desc => "SECONDS between events, can be decimal eg 0.1 (10)",
       :default_value => 10
 
-    fail_and_recover.flag [:e, 'entity'],   :desc => "ENTITY to generate failure events for ('foo-app-01')",
-      :default_value => 'foo-app-01'
-
     fail_and_recover.flag [:k, 'check'],    :desc => "CHECK to generate failure events for ('HTTP')",
       :default_value => 'HTTP'
 
@@ -176,9 +165,6 @@ command :simulate do |simulate|
 
     ok.flag [:i, 'interval'], :desc => "SECONDS between events, can be decimal eg 0.1 (10)",
       :default_value => 10
-
-    ok.flag [:e, 'entity'],   :desc => "ENTITY to generate ok events for ('foo-app-01')",
-      :default_value => 'foo-app-01'
 
     ok.flag [:k, 'check'],    :desc => "CHECK to generate ok events for ('HTTP')",
       :default_value => 'HTTP'
