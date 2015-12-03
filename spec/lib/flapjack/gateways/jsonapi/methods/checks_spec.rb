@@ -252,7 +252,8 @@ describe 'Flapjack::Gateways::JSONAPI::Methods::Checks', :sinatra => true, :logg
     expect(check).to receive(:as_json).with(:only => [:name, :enabled]).
       and_return(:name => check_data[:name], :enabled => check_data[:enabled])
 
-    resp_data = check_json(check_data).merge(:relationships => check_rel(check_data))
+    resp_data = check_json(check_data.select {|k, v| [:name, :enabled].include?(k)}).
+                  merge(:relationships => check_rel(check_data))
 
     get "/checks/#{check.id}?fields[check]=name%2Cenabled"
     expect(last_response).to be_ok

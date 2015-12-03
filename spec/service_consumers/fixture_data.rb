@@ -44,7 +44,10 @@ module FixtureData
     @check_data ||= {
      :id   => '1ed80833-6d28-4aba-8603-d81c249b8c23',
      :name => 'www.example.com:SSH',
-     :enabled => true
+     :enabled => true,
+     :initial_failure_delay => nil,
+     :repeat_failure_delay => nil,
+     # :initial_recovery_delay => nil
     }
   end
 
@@ -52,7 +55,10 @@ module FixtureData
     @check_2_data ||= {
      :id   => '29e913cf-29ea-4ae5-94f6-7069cf4a1514',
      :name => 'www2.example.com:PING',
-     :enabled => true
+     :enabled => true,
+     :initial_failure_delay => nil,
+     :repeat_failure_delay => nil,
+     # :initial_recovery_delay => nil
     }
   end
 

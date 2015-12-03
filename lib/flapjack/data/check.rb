@@ -212,7 +212,8 @@ module Flapjack
       attr_accessor :count
 
       swagger_schema :Check do
-        key :required, [:id, :type, :name, :enabled, :failing]
+        key :required, [:id, :type, :name, :enabled, :initial_failure_delay,
+          :repeat_failure_delay, :failing]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -228,6 +229,12 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
+        property :initial_failure_delay do
+          key :type, :integer
+        end
+        property :repeat_failure_delay do
+          key :type, :integer
+        end
         property :failing do
           key :type, :boolean
           key :enum, [true, false]
@@ -236,6 +243,9 @@ module Flapjack
           key :type, :string
           key :enum, Flapjack::Data::Condition.healthy.keys +
                        Flapjack::Data::Condition.unhealthy.keys
+        end
+        property :ack_hash do
+          key :type, :string
         end
         property :relationships do
           key :"$ref", :CheckLinks
@@ -276,7 +286,8 @@ module Flapjack
       end
 
       swagger_schema :CheckCreate do
-        key :required, [:type, :name, :enabled]
+        key :required, [:type, :name, :enabled, :initial_failure_delay,
+          :repeat_failure_delay]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -291,6 +302,12 @@ module Flapjack
         property :enabled do
           key :type, :boolean
           key :enum, [true, false]
+        end
+        property :initial_failure_delay do
+          key :type, :integer
+        end
+        property :repeat_failure_delay do
+          key :type, :integer
         end
         property :relationships do
           key :"$ref", :CheckCreateLinks
@@ -320,6 +337,12 @@ module Flapjack
           key :type, :boolean
           key :enum, [true, false]
         end
+        property :initial_failure_delay do
+          key :type, :integer
+        end
+        property :repeat_failure_delay do
+          key :type, :integer
+        end
         property :relationships do
           key :"$ref", :CheckUpdateLinks
         end
@@ -348,21 +371,24 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled],
+            :attributes => [:name, :enabled, :initial_failure_delay,
+                            :repeat_failure_delay],
             :descriptions => {
               :singular => "Create a check.",
               :multiple => "Create checks."
             }
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled, :ack_hash, :failing, :condition],
+            :attributes => [:name, :enabled, :initial_failure_delay,
+                            :repeat_failure_delay, :ack_hash, :failing, :condition],
             :descriptions => {
               :singular => "Returns data for a check.",
               :multiple => "Returns data for multiple check records."
             }
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:name, :enabled],
+            :attributes => [:name, :enabled, :initial_failure_delay,
+                            :repeat_failure_delay],
             :descriptions => {
               :singular => "Update a check.",
               :multiple => "Update checks."
