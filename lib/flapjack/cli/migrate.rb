@@ -144,6 +144,20 @@ module Flapjack
             migrate_actions(check)
             migrate_scheduled_maintenances(check)
             migrate_unscheduled_maintenances(check)
+
+            if (idx % 500) == 0
+              # reopen connections -- avoid potential timeout for long-running jobs
+              @source_redis.quit
+              @source_redis = case source_addr
+              when Hash
+                Redis.new(source_addr.merge(:driver => :hiredis))
+              when String
+                Redis.new(:url => source_addr, :driver => :hiredis)
+              end
+
+              Zermelo.redis.quit
+              Zermelo.redis = Redis.new(:url => dest_addr, :driver => :hiredis)
+            end
           end
         end
 
