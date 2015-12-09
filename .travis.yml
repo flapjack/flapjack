@@ -6,7 +6,7 @@ rvm:
 - '2.2'
 - 'jruby-9.0.0.0'
 jdk: oraclejdk8
-script: "bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v"
+script: bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v
 env: GOPATH=$TRAVIS_BUILD_DIR
 gemfile: Gemfile
 cache: bundler
@@ -26,13 +26,8 @@ install:
 notifications:
   irc:
     channels:
-      - 'irc.freenode.net#flapjack'
+    - irc.freenode.net#flapjack
     template:
-      - '%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})'
-  hipchat:
-    template:
-      - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}
-        (<a href="%{build_url}">Details</a>/<a href="%{compare_url}">Change view</a>)'
-    format: html
-    rooms:
-      secure: ajMolTKDuprYJ9Fadcjb3evh80MyJSgjW4hl4OWnEHyrjQLnsO0hbAvSrKRFUzorMoi58L8XZXd01gMgRqRxMvwqfoHLv4njw8px4X9+F/hySPZj3aMAFM1HuoTmHqeP+Rl+1Ssg+Kss6N4JkgNS81s+tkRnnoHG1n/EhfH6PkE=
+    - "%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})"
+  slack:
+    secure: OlXm5ljaX0xAR8wHEeODXUrL9r++LmBZIj/lZbJTJ0HUSUe11evYDN8NXAwzUCP57EGeVqV94m7uoIZzvknunrs4zPlNDAbTIGkSZ+ahemBYfQmlH54PYbPQWm0mrkN6NXgzn3e6CPkQIZPCWDA+/iq5oRl6ZZtIEmoa41KrUh0=
