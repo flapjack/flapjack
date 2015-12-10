@@ -54,10 +54,6 @@ module Flapjack
         @global_options = global_options
         @options = options
 
-        unless options[:'yes-i-know-its-not-finished']
-          exit_now! "Until Flapjack v2 is released, the migrate command requires the '--yes-i-know-its-not-finished' switch"
-        end
-
         config = Flapjack::Configuration.new
 
         if options[:source].nil? || options[:source].strip.empty?
@@ -940,14 +936,11 @@ command :migrate do |migrate|
     to_v2.flag [:d, :destination], :desc => 'Destination Redis server URL ' \
       'e.g. redis://localhost:6379/1', :required => true
 
-    to_v2.switch [:f, :force], :desc => 'Clears the destination database on start',
+    to_v2.switch [:rules], :desc => 'Also migrate rules and contact/entity visibility restrictions',
       :default_value => false
 
-    to_v2.switch [:r, :rules], :desc => 'Also migrate rules and contact/entity visibility restrictions',
+    to_v2.switch [:force], :desc => "Run even if the destination DB isn't empty (clears it first)",
       :default_value => false
-
-    to_v2.switch 'yes-i-know-its-not-finished', :desc => 'Required switch until final v2 release',
-      :default_value => false, :negatable => false
 
     to_v2.action do |global_options,options,args|
       migrator = Flapjack::CLI::Migrate.new(global_options, options)
