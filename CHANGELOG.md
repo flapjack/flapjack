@@ -1,5 +1,8 @@
 ## Flapjack Changelog
 
+# 2.0.0b1 - 2015-10-12
+- Feature: First beta release for v2.0.
+
 # 1.6.0rc3 - 2015-06-15
 - Chore/Bug?: SNS gateway improvements (@ali-graham)
 - Feature: add summary to rollup alerts #869 (@necula-01)
