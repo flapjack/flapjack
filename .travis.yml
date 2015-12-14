@@ -6,7 +6,7 @@ rvm:
 - '2.2'
 - 'jruby-9.0.4.0'
 jdk: oraclejdk8
-script: bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v
+script: bundle _1.10.6_ exec rspec spec && bundle _1.10.6_ exec rake pact:verify && bundle _1.10.6_ exec cucumber features && cd src/flapjack && go test -v
 env: GOPATH=$TRAVIS_BUILD_DIR
 gemfile: Gemfile
 cache: bundler
@@ -16,14 +16,13 @@ before_script:
 - mkdir -p ./log
 before_install:
 - git submodule update --init --recursive
-- gem uninstall bundler -v 1.11.0 # platform bug in bundler 1.11.0
-- gem install bundler -v 1.10.6
+- gem install bundler -v 1.10.6 # platform bug in bundler 1.11.0
 install:
 - go get github.com/garyburd/redigo/redis
 - go get github.com/go-martini/martini
 - go get gopkg.in/alecthomas/kingpin.v2
 - go get github.com/oguzbilgic/pandik
-- bundle install
+- bundle _1.10.6_ install
 notifications:
   irc:
     channels:
