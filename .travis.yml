@@ -4,7 +4,7 @@ rvm:
 - '2.0'
 - '2.1'
 - '2.2'
-- 'jruby-9.0.0.0'
+- 'jruby-9.0.4.0'
 jdk: oraclejdk8
 script: bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v
 env: GOPATH=$TRAVIS_BUILD_DIR
@@ -16,7 +16,8 @@ before_script:
 - mkdir -p ./log
 before_install:
 - git submodule update --init --recursive
-- gem install bundler
+- gem uninstall bundler -v 1.11.0 # platform bug in bundler 1.11.0
+- gem install bundler -v 1.10.6
 install:
 - go get github.com/garyburd/redigo/redis
 - go get github.com/go-martini/martini
