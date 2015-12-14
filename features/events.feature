@@ -169,7 +169,9 @@ Feature: events
   Scenario: Osciliating state, period of two minutes
     Given the check is in an ok state
     When  a critical event is received
+    # No notification because initial delay
     Then  a notification should not be generated
+
     When  50 seconds passes
     And   a critical event is received
     Then  a notification should be generated
@@ -420,3 +422,39 @@ Scenario: a lot of quick ok -> warning -> ok -> warning
     Given the check has no state
     When  an ok event is received
     Then  scheduled maintenance should be generated
+
+@time
+Scenario: a transient recovery
+    Given event initial recovery delay 30 seconds
+    Given the check is in a critical state
+    When  10 seconds passes
+    And   a critical event is received with details 'event 1: critical'
+    Then  a notification should be generated
+
+    When  5 seconds passes
+    And   an ok event is received with details 'event 2: ok - no event, before initial_recovery_delay'
+    Then  a notification should not be generated
+
+    When  5 seconds passes
+    And   an ok event is received with details 'event 3: ok - no event, still before initial_recovery_delay'
+    Then  a notification should not be generated
+
+    When 10 seconds passes
+    And  a critical event is received with details 'event 4: critical, no event because we were in the initial_failure_delay'
+    Then  a notification should not be generated
+
+    When 30 seconds passes
+    And  a critical event is received with details 'event 5: critical, no event because we are in the repeat_failure_delay'
+    Then  a notification should not be generated
+
+    When 10 seconds passes
+    And   an ok event is received with details 'event 6: ok - no event, before initial_recovery_delay'
+    Then  a notification should not be generated
+
+    When 60 seconds passes
+    And   an ok event is received with details 'event 7: ok - send event, after initial_recovery_delay'
+    Then  a notification should be generated
+
+    When 60 seconds passes
+    And   an ok event is received with details 'event 8: ok - no event, we have already sent the recovery'
+    Then  a notification should not be generated

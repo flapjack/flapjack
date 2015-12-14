@@ -5,6 +5,7 @@ require 'oj'
 module Flapjack
 
   DEFAULT_INITIAL_FAILURE_DELAY = 30
+  DEFAULT_INITIAL_RECOVERY_DELAY = 0 # How long to wait for a recovery to notify (0 - notify immediately)
   DEFAULT_REPEAT_FAILURE_DELAY  = 60
 
   def self.load_json(data)

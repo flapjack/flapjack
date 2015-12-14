@@ -192,6 +192,7 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(entity_check).to receive(:enabled?).and_return(true)
       expect(entity_check).to receive(:initial_failure_delay).exactly(2).times.and_return(30)
       expect(entity_check).to receive(:repeat_failure_delay).exactly(2).times.and_return(60)
+      expect(entity_check).to receive(:initial_recovery_delay).exactly(2).times.and_return(0)
 
       expect(Flapjack::Data::Entity).to receive(:find_by_name).
         with(entity_name, :redis => redis).and_return(entity)

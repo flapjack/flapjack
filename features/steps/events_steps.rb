@@ -117,6 +117,9 @@ def one_event(kind, entity, check, details:nil)
       event['state'] = 'test_notifications'
       event['summary'] = "test notification for all contacts interested in #{entity}"
   end
+  unless @event_initial_recovery_delay.nil?
+    event['initial_recovery_delay'] = @event_initial_recovery_delay
+  end
   submit_event(event)
 end
 
@@ -195,6 +198,12 @@ When /^an? ((?:ok)|(?:failure)|(?:critical)|(?:warning)|(?:unknown)|(?:acknowled
   one_event(kind, entity, check, details:details)
   drain_events
 end
+
+# Set the default initial_recovery_delay for next events
+Given /^event initial recovery delay (\d+) seconds/ do |delay|
+  @event_initial_recovery_delay = delay.to_i
+end
+
 
 When /^the unscheduled maintenance is ended(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |check, entity|
   check  ||= @check

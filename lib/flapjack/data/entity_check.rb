@@ -607,6 +607,7 @@ module Flapjack
         perfdata = options[:perfdata]
         count = options[:count]
         initial_delay = options[:initial_failure_delay]
+        recovery_delay = options[:initial_recovery_delay]
         repeat_delay = options[:repeat_failure_delay]
 
         old_state = self.state
@@ -658,6 +659,7 @@ module Flapjack
           # through their custom delays in the event structure
           multi.hset("check:#{@key}", 'initial_failure_delay', (initial_delay || Flapjack::DEFAULT_INITIAL_FAILURE_DELAY))
           multi.hset("check:#{@key}", 'repeat_failure_delay', (repeat_delay || Flapjack::DEFAULT_REPEAT_FAILURE_DELAY))
+          multi.hset("check:#{@key}", 'initial_recovery_delay', (recovery_delay || Flapjack::DEFAULT_INITIAL_RECOVERY_DELAY))
           if perfdata
             multi.hset("check:#{@key}", 'perfdata', format_perfdata(perfdata).to_json)
   #          multi.set("#{@key}:#{timestamp}:perfdata", perfdata)
@@ -785,6 +787,11 @@ module Flapjack
 
       def initial_failure_delay
         delay = @redis.hget("check:#{@key}", 'initial_failure_delay')
+        delay.to_i unless delay.nil?
+      end
+
+      def initial_recovery_delay
+        delay = @redis.hget("check:#{@key}", 'initial_recovery_delay')
         delay.to_i unless delay.nil?
       end
 

@@ -11,12 +11,12 @@ module Flapjack
       attr_accessor :counter, :id_hash, :tags
 
       attr_reader :check, :summary, :details, :acknowledgement_id, :perfdata,
-                  :initial_failure_delay, :repeat_failure_delay
+                  :initial_failure_delay, :repeat_failure_delay, :initial_recovery_delay
 
       REQUIRED_KEYS = ['type', 'state', 'entity', 'check']
       OPTIONAL_KEYS = ['time', 'summary', 'details', 'acknowledgement_id',
                        'duration', 'tags', 'perfdata', 'initial_failure_delay',
-                       'repeat_failure_delay']
+                       'repeat_failure_delay', 'initial_recovery_delay']
 
       VALIDATIONS = {
         proc {|e| e['type'].is_a?(String) &&
@@ -44,6 +44,11 @@ module Flapjack
                   e['initial_failure_delay'].is_a?(Integer) ||
                  (e['initial_failure_delay'].is_a?(String) && !!(e['initial_failure_delay'] =~ /^\d+$/)) } =>
           "initial_failure_delay must be a positive integer, or a string castable to one",
+
+        proc {|e| e['initial_recovery_delay'].nil? ||
+            e['initial_recovery_delay'].is_a?(Integer) ||
+            (e['initial_recovery_delay'].is_a?(String) && !!(e['initial_recovery_delay'] =~ /^\d+$/)) } =>
+            "initial_recovery_delay must be a positive integer, or a string castable to one",
 
         proc {|e| e['repeat_failure_delay'].nil? ||
                   e['repeat_failure_delay'].is_a?(Integer) ||
@@ -192,6 +197,7 @@ module Flapjack
       #   'perfdata'              => perf_data,
       #   'time'                  => timestamp,
       #   'initial_failure_delay' => initial_failure_delay,
+      #   'initial_recovery_delay'=> initial_recovery_delay,
       #   'repeat_failure_delay'  => repeat_failure_delay
       def self.add(evt, opts = {})
         raise "Redis connection not set" unless redis = opts[:redis]
@@ -233,7 +239,7 @@ module Flapjack
       def initialize(attrs = {})
         ['type', 'state', 'entity', 'check', 'time', 'summary', 'details',
          'perfdata', 'acknowledgement_id', 'duration', 'initial_failure_delay',
-         'repeat_failure_delay'].each do |key|
+         'repeat_failure_delay', 'initial_recovery_delay'].each do |key|
 
           instance_variable_set("@#{key}", Flapjack.sanitize(attrs[key]))
         end

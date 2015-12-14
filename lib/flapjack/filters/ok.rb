@@ -21,11 +21,6 @@ module Flapjack
 
         entity_check.end_unscheduled_maintenance(Time.now.to_i)
 
-        if previous_state == 'ok'
-          @logger.debug("Filter: Ok: block - previous state was ok, so blocking")
-          return true
-        end
-
         last_notification = entity_check.last_notification
         @logger.debug("Filter: Ok: last notification: #{last_notification.inspect}")
 

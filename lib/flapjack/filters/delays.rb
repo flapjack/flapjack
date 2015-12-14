@@ -25,12 +25,29 @@ module Flapjack
           initial_failure_delay = Flapjack::DEFAULT_INITIAL_FAILURE_DELAY
         end
 
+        initial_recovery_delay = entity_check.initial_recovery_delay
+        if initial_recovery_delay.nil? || (initial_recovery_delay < 0)
+          initial_recovery_delay = Flapjack::DEFAULT_INITIAL_RECOVERY_DELAY
+        end
+
         repeat_failure_delay = entity_check.repeat_failure_delay
         if repeat_failure_delay.nil? || (repeat_failure_delay < 0)
           repeat_failure_delay = Flapjack::DEFAULT_REPEAT_FAILURE_DELAY
         end
 
         label = 'Filter: Delays:'
+
+        last_change          = entity_check.last_change
+        current_time = Time.now.to_i
+        current_state_duration = last_change.nil? ? nil : current_time - last_change
+
+        if event.ok? && !current_state_duration.nil?
+          if current_state_duration < initial_recovery_delay
+            @logger.debug("#{label} block - duration of current recovery " +
+                              "(#{current_state_duration}) is less than initial_recovery_delay (#{initial_recovery_delay})")
+            return true
+          end
+        end
 
         unless event.service? && event.failure?
           @logger.debug("#{label} pass - not a service event in a failure state")
@@ -43,11 +60,7 @@ module Flapjack
         end
 
         last_problem_alert   = entity_check.last_notification_for_state(:problem)[:timestamp]
-        last_change          = entity_check.last_change
         last_alert_state     = entity_check.last_notification[:type]
-
-        current_time = Time.now.to_i
-        current_state_duration = current_time - last_change
         time_since_last_alert  = current_time - last_problem_alert unless last_problem_alert.nil?
 
         @logger.debug("#{label} last_problem_alert: #{last_problem_alert.to_s}, " +

@@ -300,6 +300,15 @@
           <% end %>
         </td>
       </tr>
+      <tr>
+        <td>Initial recovery delay:</td>
+        <td><%= h(ChronicDuration.output(@check_initial_recovery_delay, :keep_zero => true)) %>
+          <% if @check_initial_recovery_delay_is_default %>
+            (default)
+          <% end %>
+        </td>
+      </tr>
+
     </table>
   </div>
 </div>
