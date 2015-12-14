@@ -31,27 +31,29 @@ Feature: events
 
   @time
   Scenario: Check critical to critical after 10 seconds, with an initial delay of 5 seconds
-    Given the check is in an ok state
-    When  a critical event with an initial failure delay of 5 seconds is received
+    Given event initial failure delay is 5 seconds
+    And   the check is in an ok state
+    When  a critical event is received
     And   10 seconds passes
-    And   a critical event with an initial failure delay of 5 seconds is received
+    And   a critical event is received
     Then  1 notification should have been generated
 
   @time
   Scenario: Check recovery with recovery delay
-    Given the check is in an ok state
+    Given event initial recovery delay is 30 seconds
+    And   the check is in an ok state
     When  a critical event is received
     And   1 minute passes
     And   a critical event is received
     Then  1 notification should have been generated
     When  10 seconds passes
-    And   an ok event with an initial recovery delay of 30 seconds is received
+    And   an ok event is received
     Then  1 notification should have been generated
     When  10 seconds passes
-    And   an ok event with an initial recovery delay of 30 seconds is received
+    And   an ok event is received
     Then  1 notification should have been generated
     When  25 seconds passes
-    And   an ok event with an initial recovery delay of 30 seconds is received
+    And   an ok event is received
     Then  2 notifications should have been generated
 
   @time
@@ -72,10 +74,11 @@ Feature: events
 
   @time
   Scenario: Check ok to critical for 1 minute, with an initial delay of 2 minutes
+    Given event initial failure delay is 120 seconds
     And   the check is in an ok state
-    When  a critical event with an initial failure delay of 120 seconds is received
+    When  a critical event is received
     And   1 minute passes
-    And   a critical event with an initial failure delay of 120 seconds is received
+    And   a critical event is received
     Then  no notifications should have been generated
 
   @time
@@ -105,13 +108,14 @@ Feature: events
 
   @time
   Scenario: Check critical and alerted to critical for 40 seconds, with a repeat delay of 20 seconds
-    Given the check is in an ok state
-    When  a critical event with a repeat failure delay of 20 seconds is received
+    Given event repeat failure delay is 20 seconds
+    And the check is in an ok state
+    When  a critical event is received
     And   1 minute passes
-    And   a critical event with a repeat failure delay of 20 seconds is received
+    And   a critical event is received
     Then  1 notification should have been generated
     When  40 seconds passes
-    And   a critical event with a repeat failure delay of 20 seconds is received
+    And   a critical event is received
     Then  2 notifications should have been generated
 
   @time
@@ -127,13 +131,14 @@ Feature: events
 
   @time
   Scenario: Check critical and alerted to critical for 6 minutes, with a repeat delay of 10 minutes
-    Given the check is in an ok state
-    When  a critical event with a repeat failure delay of 600 seconds is received
+    Given event repeat failure delay is 600 seconds
+    And the check is in an ok state
+    When  a critical event is received
     And   1 minute passes
-    And   a critical event with a repeat failure delay of 600 seconds is received
+    And   a critical event is received
     Then  1 notification should have been generated
     When  6 minutes passes
-    And   a critical event with a repeat failure delay of 600 seconds is received
+    And   a critical event is received
     Then  1 notification should have been generated
 
   @time
@@ -470,3 +475,47 @@ Scenario: a lot of quick ok -> warning -> ok -> warning
     When  10 seconds passes
     And   an ok event is received
     Then  4 notifications should have been generated
+
+  @time
+  Scenario: a transient recovery
+    Given event initial recovery delay is 30 seconds
+    Given the check is in a critical state
+    When  35 seconds passes
+    # 'event 1: critical'
+    And   a critical event is received
+    Then  1 notification should have been generated
+
+    When  5 seconds passes
+    # 'event 2: ok - no event, before initial_recovery_delay'
+    And   an ok event is received
+    Then  1 notification should have been generated
+
+    When  5 seconds passes
+    # 'event 3: ok - no event, still before initial_recovery_delay'
+    And   an ok event is received
+    Then  1 notification should have been generated
+
+    When 10 seconds passes
+    # 'event 4: critical, no event because we were in the initial_failure_delay'
+    And  a critical event is received
+    Then  1 notification should have been generated
+
+    When 30 seconds passes
+    # 'event 5: critical, no event because we are in the repeat_failure_delay'
+    And  a critical event is received
+    Then  1 notification should have been generated
+
+    When 10 seconds passes
+    # 'event 6: ok - no event, before initial_recovery_delay'
+    And   an ok event is received
+    Then  1 notification should have been generated
+
+    When 60 seconds passes
+    # 'event 7: ok - send event, after initial_recovery_delay'
+    And   an ok event is received
+    Then  2 notifications should have been generated
+
+    When 60 seconds passes
+    # 'event 8: ok - no event, we have already sent the recovery'
+    And   an ok event is received
+    Then  2 notifications should have been generated

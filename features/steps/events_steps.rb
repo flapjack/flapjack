@@ -64,7 +64,7 @@ def set_state(entity_name, check_name, condition, last_update = Time.now)
   check.states << state
 end
 
-def submit_event(condition, entity_name, check_name, opts = {})
+def submit_event(condition, entity_name, check_name)
   err_rate = case condition
   when 'ok'
     '0'
@@ -81,8 +81,9 @@ def submit_event(condition, entity_name, check_name, opts = {})
     'check'   => check_name,
   }
   ['initial_failure', 'repeat_failure', 'initial_recovery'].each do |delay_type|
-    delay_key = "#{delay_type}_delay".to_sym
-    event.update(delay_key => opts[delay_key].to_i) unless opts[delay_key].nil?
+    delay = instance_variable_get("@event_#{delay_type}_delay")
+    next if delay.nil? || delay < 0
+    event.update("#{delay_type}_delay".to_sym => delay)
   end
   Flapjack.redis.rpush('events', Flapjack.dump_json(event))
 end
@@ -151,20 +152,15 @@ Given /^(?:the check|check '([\w\.\-]+)' for entity '([\w\.\-]+)') is in unsched
   set_unscheduled_maintenance(entity_name, check_name, 60*60*2)
 end
 
-When /^an? (ok|failure|critical|warning|unknown) event(?: with an? (initial failure|repeat failure|initial recovery) delay of (\d+) seconds)? is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |condition, init_or_repeat, delay, check_name, entity_name|
+# Set the delays for next events
+Given /^event (initial failure|repeat failure|initial recovery) delay is (\d+) seconds$/ do |delay_type, delay|
+  instance_variable_set("@event_#{delay_type.sub(/ /, '_')}_delay", delay.to_i)
+end
+
+When /^an? (ok|failure|critical|warning|unknown) event is received(?: for check '([\w\.\-]+)' on entity '([\w\.\-]+)')?$/ do |condition, check_name, entity_name|
   check_name  ||= @check_name
   entity_name ||= @entity_name
-  opts = case init_or_repeat
-  when 'initial failure'
-    {:initial_failure_delay => delay}
-  when 'repeat failure'
-    {:repeat_failure_delay => delay}
-  when 'initial recovery'
-    {:initial_recovery_delay => delay}
-  else
-    {}
-  end
-  submit_event(condition, entity_name, check_name, opts)
+  submit_event(condition, entity_name, check_name)
   drain_events
 end
 
