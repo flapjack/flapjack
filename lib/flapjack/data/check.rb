@@ -216,7 +216,9 @@ module Flapjack
       attr_accessor :count
 
       swagger_schema :Check do
-        key :required, [:id, :type, :name, :enabled, :failing]
+        key :required, [:id, :type, :name, :enabled, :initial_failure_delay,
+          :repeat_failure_delay, :initial_recovery_delay, :failing, :condition,
+          :ack_hash]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -228,6 +230,10 @@ module Flapjack
         property :name do
           key :type, :string
         end
+        property :enabled do
+          key :type, :boolean
+          key :enum, [true, false]
+        end
         property :initial_failure_delay do
           key :type, :integer
         end
@@ -237,13 +243,6 @@ module Flapjack
         property :initial_recovery_delay do
           key :type, :integer
         end
-        property :ack_hash do
-          key :type, :string
-        end
-        property :enabled do
-          key :type, :boolean
-          key :enum, [true, false]
-        end
         property :failing do
           key :type, :boolean
           key :enum, [true, false]
@@ -252,6 +251,9 @@ module Flapjack
           key :type, :string
           key :enum, Flapjack::Data::Condition.healthy.keys +
                        Flapjack::Data::Condition.unhealthy.keys
+        end
+        property :ack_hash do
+          key :type, :string
         end
         property :relationships do
           key :"$ref", :CheckLinks
@@ -383,7 +385,7 @@ module Flapjack
         @jsonapi_methods ||= {
           :post => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :initial_failure_delay,
-              :repeat_failure_delay, :initial_recovery_delay],
+                            :repeat_failure_delay, :initial_recovery_delay],
             :descriptions => {
               :singular => "Create a check.",
               :multiple => "Create checks."
@@ -391,8 +393,8 @@ module Flapjack
           ),
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :initial_failure_delay,
-              :repeat_failure_delay, :initial_recovery_delay,
-              :ack_hash, :failing, :condition],
+                            :repeat_failure_delay, :initial_recovery_delay,
+                            :failing, :condition, :ack_hash],
             :descriptions => {
               :singular => "Returns data for a check.",
               :multiple => "Returns data for multiple check records."
@@ -400,7 +402,7 @@ module Flapjack
           ),
           :patch => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
             :attributes => [:name, :enabled, :initial_failure_delay,
-              :repeat_failure_delay, :initial_recovery_delay],
+                            :repeat_failure_delay, :initial_recovery_delay],
             :descriptions => {
               :singular => "Update a check.",
               :multiple => "Update checks."

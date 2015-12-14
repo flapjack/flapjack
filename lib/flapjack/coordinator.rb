@@ -69,7 +69,6 @@ module Flapjack
         @boot_time = Time.now
 
         Flapjack::RedisProxy.config = @config.for_redis
-        # Flapjack::Data::Condition.ensure_present
 
         pikelet_defs = pikelet_definitions(cfg)
         return if pikelet_defs.empty?
@@ -116,7 +115,7 @@ module Flapjack
       Kernel.trap('INT')    { Thread.new { @shutdown.call(Signal.list['INT']) }.join }
       Kernel.trap('TERM')   { Thread.new { @shutdown.call(Signal.list['TERM']) }.join }
       unless RbConfig::CONFIG['host_os'] =~ /mswin|windows|cygwin/i
-        Kernel.trap('HUP')  { Thread.new { @reload.call   }.join }
+        Kernel.trap('HUP')  { Thread.new { @reload.call }.join }
       end
     end
 

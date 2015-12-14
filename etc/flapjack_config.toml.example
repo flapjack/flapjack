@@ -1,5 +1,5 @@
 [logger]
-  file = "log/flapjack.log"
+  file = "/var/log/flapjack/flapjack.log"
   level = "INFO"
   syslog_errors = true
 [redis]
@@ -23,7 +23,7 @@
   new_check_scheduled_maintenance_duration = "100 years"
   new_check_scheduled_maintenance_ignore_regex = "bypass_ncsm$"
   [processor.logger]
-    file = "log/flapjack.log"
+    file = "/var/log/flapjack/flapjack.log"
     level = "INFO"
     syslog_errors = true
 # Processes notification events off the *notifications* queue (a redis list) and
@@ -43,7 +43,7 @@
   pagerduty_queue = "pagerduty_notifications"
   default_contact_timezone = "UTC"
   [notifier.logger]
-    file = "log/flapjack.log"
+    file = "/var/log/flapjack/flapjack.log"
     level = "INFO"
     syslog_errors = true
 [nagios-receiver]
@@ -89,7 +89,7 @@
     username = "ermahgerd"
     password = "xxxx"
     [gateways.sms.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     # location of custom alert templates
@@ -105,7 +105,7 @@
     auth_token = "zzzzz"
     from = ""
     [gateways.slack.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     ## location of custom alert templates
@@ -120,7 +120,7 @@
     api_key = "APIKEY"
     secret = "s3cr3t"
     [gateways.sms_nexmo.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     ## location of custom alert templates
@@ -135,7 +135,7 @@
     auth_token = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
     from = "+1xxxxxxxxxx"
     [gateways.sms_twilio.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     # location of custom alert templates
@@ -153,7 +153,7 @@
     username = "xxxx"
     password = "xxxx"
     [gateways.sms_aspsms.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     # location of custom alert templates
@@ -189,7 +189,7 @@
       "log@conference.jabber.example.com"
     ]
     [gateways.jabber.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     # location of custom alert templates
@@ -208,7 +208,7 @@
       username = "user"
       password = "pass"
     [gateways.pagerduty.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
     # location of custom alert templates
@@ -217,30 +217,30 @@
   # Browsable web interface
   [gateways.web]
     enabled = true
-    #bind_address = "127.0.0.1"
+    bind_address = "0.0.0.0"
     port = 3080
     timeout = 300
     # Seconds between auto_refresh of entities/checks pages.  Set to 0 to disable
     auto_refresh = 120
     access_log = "/var/log/flapjack/web_access.log"
-    api_url = "http://localhost:3081/"
+    api_url = "http://127.0.0.1:3081/"
     # Full path to location of logo file, e.g. /etc/flapjack/custom_logo.png
     #logo_image_path = "/etc/flapjack/web/custom_logo/flapjack-2013-notext-transparent-300-300.png"
     show_exceptions = false
     [gateways.web.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
   # HTTP API server
   [gateways.jsonapi]
     enabled = true
-    #bind_address = "127.0.0.1"
+    bind_address = "0.0.0.0"
     port = 3081
     timeout = 300
     access_log = "/var/log/flapjack/jsonapi_access.log"
-    base_url = "http://localhost:3081/"
+    base_url = "http://127.0.0.1:3081/"
     [gateways.jsonapi.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true
   # "out-of-band" end-to-end testing, used for monitoring other instances of
@@ -268,6 +268,6 @@
       "log@conference.jabber.example.com"
     ]
     [gateways.oobetet.logger]
-      file = "log/flapjack.log"
+      file = "/var/log/flapjack/flapjack.log"
       level = "INFO"
       syslog_errors = true

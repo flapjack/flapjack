@@ -1,12 +1,5 @@
 #!/usr/bin/env ruby
 
-# the name represents a 'log entry', as Flapjack's data model resembles an
-# audit log.
-
-# TODO when removed from an associated check or notification, if the rest of
-# those associations are not present, remove it from the state's associations
-# and delete it
-
 require 'swagger/blocks'
 
 require 'zermelo/records/redis'
@@ -34,7 +27,6 @@ module Flapjack
 
       define_attributes :created_at    => :timestamp,
                         :updated_at    => :timestamp,
-                        :finished_at   => :timestamp,
                         :condition     => :string,
                         :action        => :string,
                         :summary       => :string,
@@ -44,7 +36,7 @@ module Flapjack
       define_sort_attribute :created_at
 
       index_by :condition, :action
-      range_index_by :created_at, :updated_at, :finished_at
+      range_index_by :created_at
 
       # public
       belongs_to :check, :class_name => 'Flapjack::Data::Check',
@@ -128,8 +120,8 @@ module Flapjack
       end
 
       swagger_schema :State do
-        key :required, [:id, :created_at, :updated_at, :finished_at,
-                        :condition, :action, :summary, :details, :perfdata]
+        key :required, [:id, :created_at, :updated_at, :condition, :action,
+                        :summary, :details, :perfdata]
         property :id do
           key :type, :string
           key :format, :uuid
@@ -143,10 +135,6 @@ module Flapjack
           key :format, :"date-time"
         end
         property :updated_at do
-          key :type, :string
-          key :format, :"date-time"
-        end
-        property :finished_at do
           key :type, :string
           key :format, :"date-time"
         end
@@ -183,8 +171,8 @@ module Flapjack
       def self.jsonapi_methods
         @jsonapi_methods ||= {
           :get => Flapjack::Gateways::JSONAPI::Data::MethodDescriptor.new(
-            :attributes => [:created_at, :updated_at, :finished_at, :condition,
-                            :action, :summary, :details, :perfdata],
+            :attributes => [:created_at, :updated_at, :condition, :action,
+                            :summary, :details, :perfdata],
             :descriptions => {
               :singular => "Get data for a single check state record.",
               :multiple => "Get data for check state records."

@@ -49,11 +49,13 @@ module Flapjack
         "#{t} [#{severity}] :: #{@name} :: #{msg}\n"
       end
 
-      output = if config[:file].nil? || config[:file].empty? || !File.writable?(config[:file])
-        # puts "[#{name}] Logging to STDOUT"
+      output = if config[:file].nil? || config[:file].empty? ||
+        !File.exists?(File.dirname(config[:file])) ||
+        !File.writable?(File.dirname(config[:file])) ||
+        (File.exists?(config[:file]) && !File.writable?(config[:file]))
+
         STDOUT
       else
-        # puts "[#{name}] Logging to '#{config[:file]}'"
         config[:file]
       end
 

@@ -1,8 +1,5 @@
 #!/usr/bin/env ruby
 
-# NB: use of redis.keys probably indicates we should maintain a data
-# structure to avoid the need for this type of query
-
 require 'securerandom'
 require 'set'
 
