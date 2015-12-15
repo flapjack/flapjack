@@ -106,12 +106,27 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                      }
 
     it "doesn't look for acknowledgements if this search is already running" do
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
       expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
-      expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(0)
+      pd_now = Time.new
+
+      expect(Time).to receive(:now).and_return(pd_now)
+
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:lock).with(
+        Flapjack::Data::Check,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::UnscheduledMaintenance
+      ).and_yield
+
+      pd_status = double(Flapjack::Data::PagerDutyStatus)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:all).and_return([pd_status])
+      expect(pd_status).to receive(:persisted?).and_return(true)
+      expect(pd_status).to receive(:locked).and_return(true)
+      expect(pd_status).to receive(:updated_at).and_return(pd_now - 30)
 
       expect(Kernel).to receive(:sleep).with(10).and_raise(Flapjack::PikeletStop.new)
 
@@ -123,13 +138,27 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
     end
 
     it "looks for and creates acknowledgements if the search is not already running" do
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
       expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
-      expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
-      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 3600)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:lock).with(
+        Flapjack::Data::Check,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::UnscheduledMaintenance
+      ).and_yield
+
+      pd_status = double(Flapjack::Data::PagerDutyStatus)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:all).and_return([])
+      expect(pd_status).to receive(:persisted?).and_return(false)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:new).and_return(pd_status)
+
+      expect(pd_status).to receive(:locked=).with(true)
+      expect(pd_status).to receive(:locked=).with(false)
+      expect(pd_status).to receive(:updated_at=).with(an_instance_of(Time)).twice
+      expect(pd_status).to receive(:save!).twice.and_return(true)
 
       expect(Flapjack::Data::Check).to receive(:lock).
         with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).
@@ -208,8 +237,6 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                       :body => Flapjack.dump_json(response),
                       :headers => {})
 
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
-
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
       result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
@@ -266,8 +293,6 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                       :body => Flapjack.dump_json(response_2),
                       :headers => {})
 
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
-
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
       result = fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       expect(req).to have_been_requested
@@ -313,8 +338,6 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
                       :body => Flapjack.dump_json(response),
                       :headers => {})
 
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running')
-
       fpa = Flapjack::Gateways::PagerDuty::AckFinder.new(:config => config)
       fpa.send(:pagerduty_acknowledgements, now, subdomain, token, [check.name])
       fpa.send(:pagerduty_acknowledgements, (now + 10), subdomain, token, [check.name])
@@ -323,13 +346,27 @@ describe Flapjack::Gateways::PagerDuty, :logger => true do
     end
 
     it 'does not look for acknowledgements if no checks are failing & unacknowledged' do
-      expect(redis).to receive(:del).with('sem_pagerduty_acks_running').twice
       expect(redis).to receive(:quit)
 
       expect(Flapjack::Gateways::PagerDuty).to receive(:test_pagerduty_connection).and_return(true)
 
-      expect(redis).to receive(:setnx).with('sem_pagerduty_acks_running', 'true').and_return(1)
-      expect(redis).to receive(:expire).with('sem_pagerduty_acks_running', 3600)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:lock).with(
+        Flapjack::Data::Check,
+        Flapjack::Data::Medium,
+        Flapjack::Data::Rule,
+        Flapjack::Data::ScheduledMaintenance,
+        Flapjack::Data::UnscheduledMaintenance
+      ).and_yield
+
+      pd_status = double(Flapjack::Data::PagerDutyStatus)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:all).and_return([])
+      expect(pd_status).to receive(:persisted?).and_return(false)
+      expect(Flapjack::Data::PagerDutyStatus).to receive(:new).and_return(pd_status)
+
+      expect(pd_status).to receive(:locked=).with(true)
+      expect(pd_status).to receive(:locked=).with(false)
+      expect(pd_status).to receive(:updated_at=).with(an_instance_of(Time)).twice
+      expect(pd_status).to receive(:save!).twice.and_return(true)
 
       expect(Flapjack::Data::Check).to receive(:lock).
         with(Flapjack::Data::ScheduledMaintenance, Flapjack::Data::UnscheduledMaintenance).

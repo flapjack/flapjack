@@ -11,11 +11,13 @@ require 'flapjack/exceptions'
 require 'flapjack/data/alert'
 require 'flapjack/data/check'
 require 'flapjack/data/event'
+require 'flapjack/data/medium'
+require 'flapjack/data/pager_duty_status'
+require 'flapjack/data/scheduled_maintenance'
+require 'flapjack/data/unscheduled_maintenance'
 
 module Flapjack
-
   module Gateways
-
     class PagerDuty
 
       # FIXME trap JSON errors
@@ -162,8 +164,7 @@ module Flapjack
       end
 
       class AckFinder
-        SEM_PAGERDUTY_ACKS_RUNNING = 'sem_pagerduty_acks_running'
-        SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
+        PAGERDUTY_ACKS_RUNNING_TIMEOUT = 3600
 
         def initialize(opts = {})
           @lock = opts[:lock]
@@ -172,10 +173,6 @@ module Flapjack
           @initial = true
 
           Flapjack.logger.debug("New PagerDuty::AckFinder pikelet with the following options: #{@config.inspect}")
-
-          # TODO: only clear this if there isn't another PagerDuty gateway instance running
-          # or better, include an instance ID in the semaphore key name
-          Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
         end
 
         def start
@@ -187,20 +184,41 @@ module Flapjack
           begin
             Zermelo.redis = Flapjack.redis
 
-            loop do
-              @lock.synchronize do
-                # ensure we're the only instance of the PagerDuty acknowledgement check running (with a naive
-                # timeout of one hour to guard against stale locks caused by crashing code) either in this
-                # process or in other processes
-                if Flapjack.redis.setnx(SEM_PAGERDUTY_ACKS_RUNNING, 'true') == 0
-                  Flapjack.logger.debug("skipping looking for acks in PagerDuty as this is already happening")
-                else
-                  Flapjack.redis.expire(SEM_PAGERDUTY_ACKS_RUNNING, SEM_PAGERDUTY_ACKS_RUNNING_TIMEOUT)
-                  find_pagerduty_acknowledgements
-                  Flapjack.redis.del(SEM_PAGERDUTY_ACKS_RUNNING)
-                end
+            @lock.synchronize do
+              loop do
 
-                Kernel.sleep 10
+                Flapjack::Data::PagerDutyStatus.lock(Flapjack::Data::Check,
+                  Flapjack::Data::Medium, Flapjack::Data::Rule,
+                  Flapjack::Data::ScheduledMaintenance,
+                  Flapjack::Data::UnscheduledMaintenance) do
+
+                  t = Time.now
+
+                  pagerduty_status = Flapjack::Data::PagerDutyStatus.all.first
+                  if pagerduty_status.nil?
+                    pagerduty_status = Flapjack::Data::PagerDutyStatus.new
+                  end
+
+                  if !pagerduty_status.persisted? || !pagerduty_status.locked ||
+                    (pagerduty_status.updated_at < (t - PAGERDUTY_ACKS_RUNNING_TIMEOUT))
+
+                    pagerduty_status.locked = true
+                    pagerduty_status.updated_at = t
+                    pagerduty_status.save!
+
+                    find_pagerduty_acknowledgements
+
+                    pagerduty_status.locked = false
+                    pagerduty_status.updated_at = Time.now
+                    pagerduty_status.save!
+                  else
+                    # Zermelo locking should ensure that this is never reached... but being
+                    # defensive in case of inconsistent Redis state etc.
+                    Flapjack.logger.debug("skipping looking for acks in PagerDuty as this is already happening")
+                  end
+
+                  Kernel.sleep 10
+                end
               end
             end
           ensure
