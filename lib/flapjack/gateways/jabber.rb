@@ -47,6 +47,9 @@ module Flapjack
 
         @logger = opts[:logger]
 
+        # Log xmpp details using the gateway logger
+        Blather.logger = @logger
+
         @redis = Flapjack::RedisPool.new(:config => @redis_config, :size => 2, :logger => @logger)
 
         @logger.debug("Jabber Initializing")
