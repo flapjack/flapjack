@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
 module Flapjack
-  VERSION = '2.0.0b1'
+  VERSION = '2.0.0rc1'
 end
 

@@ -1,5 +1,9 @@
 ## Flapjack Changelog
 
+# 2.0.0rc1 - 2016-01-08
+- Feature: First release candidate for v2.0.
+- Feature: Added configurable recovery delay (@necula-01 and @ali-graham)
+
 # 2.0.0b1 - 2015-10-12
 - Feature: First beta release for v2.0.
 

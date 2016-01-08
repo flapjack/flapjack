@@ -17,7 +17,6 @@ before_script:
 - mkdir -p ./log
 before_install:
 - git submodule update --init --recursive
-- gem install bundler
 install:
 - go get github.com/garyburd/redigo/redis
 - go get github.com/go-martini/martini
