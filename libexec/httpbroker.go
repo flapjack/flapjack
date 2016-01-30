@@ -90,6 +90,8 @@ func submitCachedState(states map[string]State, config Config) {
 				Type:    state.Type,
 				State:   state.State,
 				Summary: state.Summary,
+                                Details: state.Details,
+                                Tags:    state.Tags,
 				Time:    now,
 			}
 

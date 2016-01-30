@@ -5,12 +5,14 @@ import "errors"
 // Event is a basic representation of a Flapjack event.
 // Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
 type Event struct {
-	Entity  string `json:"entity"`
-	Check   string `json:"check"`
-	Type    string `json:"type"`
-	State   string `json:"state"`
-	Summary string `json:"summary"`
-	Time    int64  `json:"time"`
+        Entity  string   `json:"entity"`
+        Check   string   `json:"check"`
+        Type    string   `json:"type"`
+        State   string   `json:"state"`
+        Time    int64    `json:"time"`
+        Summary string   `json:"summary"`
+        Details string   `json:"details"`
+        Tags    []string `json:"tags"`
 }
 
 // IsValid performs basic validations on the event data.

@@ -24,3 +24,19 @@ func TestValidationPasses(t *testing.T) {
 		t.Error("Expected validation to pass, got:", err)
 	}
 }
+
+func TestValidationPassesExtraFields(t *testing.T) {
+        event := Event{
+                Entity:  "hello",
+                Check:   "world",
+                State:   "ok",
+                Summary: "hello world",
+                Details: "hello world, i am quite detailed",
+                Tags:    []string{"hello_world"},
+        }
+        err := event.IsValid()
+
+        if err != nil {
+                t.Error("Expected validation to pass, got:", err)
+        }
+}
