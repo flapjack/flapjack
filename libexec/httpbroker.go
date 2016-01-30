@@ -25,18 +25,7 @@ const (
 // State is a basic representation of a Flapjack event, with some extra field.
 // The extra fields handle state expiry.
 // Find more at http://flapjack.io/docs/1.0/development/DATA_STRUCTURES
-type Tags struct {
-	FromBroker string `json:"from_broker"`
-}
 type State struct {
-	flapjack.Event
-	TTL  int64 `json:"ttl"`
-	Tags struct {
-		FromBroker string `json:"from_broker"`
-	} `json:"tags"`
-}
-
-type InputState struct {
 	flapjack.Event
 	TTL int64 `json:"ttl"`
 }
@@ -123,12 +112,9 @@ type NewRelicAlert struct {
 // handler caches
 func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	var state State
-	var input_state InputState
 	var event_format EventFormat
 	var NRAlarm NewRelicAlert
 	var SNSData SNSNotification
-	var tags Tags
-	tags.FromBroker = "httpbroker"
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		message := "Error: Couldn't read request body: %s\n"
@@ -162,14 +148,7 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch event_format {
-	case Normal:
-		err = json.Unmarshal(body, &input_state)
-		if err != nil {
-			message := "Error: Couldn't read request body: %s\n"
-			log.Println(message, err)
-			fmt.Fprintf(w, message, err)
-			return
-		}
+	// case Normal: // no further action needed
 	case Newrelic:
 		var event_state string
 		switch strings.ToLower(NRAlarm.CurrentState) {
@@ -181,14 +160,13 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 		new_details := fmt.Sprint("New Relic Alert Received: ", NRAlarm.Details, " Ack the alert using the following URL: ", NRAlarm.IncidentAcknowledgeURL)
 		state = State{
 			flapjack.Event{
-				Entity: NRAlarm.PolicyName,
-				Check:  NRAlarm.ConditionName,
-				// Type:    "service", // @TODO: Make this magic
+				Entity:  NRAlarm.PolicyName,
+				Check:   NRAlarm.ConditionName,
 				State:   event_state,
 				Summary: new_details,
+				Tags:    []string{"httpbroker"},
 			},
 			0,
-			tags,
 		}
 
 	case SNS:
@@ -232,9 +210,9 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 				Check:   cw_alarm.Trigger.MetricName,
 				State:   event_state,
 				Summary: cw_alarm.NewStateReason,
+				Tags:    []string{"httpbroker"},
 			},
 			0,
-			tags,
 		}
 	}
 
@@ -249,10 +227,6 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 
 	if state.TTL == 0 {
 		state.TTL = 300
-	}
-
-	if state.Tags.FromBroker == "" {
-		state.Tags.FromBroker = "httpbroker"
 	}
 
 	updates <- state
@@ -291,6 +265,8 @@ func submitCachedState(states map[string]State, config Config) {
 				Type:    state.Type,
 				State:   state.State,
 				Summary: state.Summary,
+				Details: state.Details,
+				Tags:    state.Tags,
 				Time:    now,
 			}
 
