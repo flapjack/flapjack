@@ -304,41 +304,53 @@ func submitCachedState(states map[string]State, config Config) {
 			if config.Debug {
 				log.Printf("Sending event data for %s\n", id)
 			}
-			transport.Send(event)
+
+			_, err := transport.Send(event, config.FlapjackVersion, config.Queue)
+
+			if config.Debug && (err != nil) {
+				log.Printf("Error sending event data: %s\n", err)
+			}
 		}
 		time.Sleep(config.Interval)
 	}
 }
 
 var (
-	app      = kingpin.New("httpbroker", "Accepts HTTP events for Flapjack.")
-	port     = app.Flag("port", "Address to bind HTTP server (default 3090)").Default("3090").OverrideDefaultFromEnvar("PORT").String()
-	server   = app.Flag("server", "Redis server to connect to (default localhost:6380)").Default("localhost:6380").String()
-	database = app.Flag("database", "Redis database to connect to (default 0)").Int() // .Default("13").Int()
-	interval = app.Flag("interval", "How often to submit events (default 10s)").Default("10s").Duration()
-	debug    = app.Flag("debug", "Enable verbose output (default false)").Bool()
+	app = kingpin.New("httpbroker", "Accepts HTTP events for Flapjack.")
+
+	flapjack_version = app.Flag("flapjack-version", "Flapjack version being delivered to (1 or 2)").Default("2").Int()
+	server           = app.Flag("server", "Redis server to connect to").Default("localhost:6380").String()
+	port             = app.Flag("port", "Address to bind HTTP server").Default("3090").OverrideDefaultFromEnvar("PORT").String()
+	database         = app.Flag("database", "Redis database to connect to").Default("0").Int()
+	queue            = app.Flag("queue", "Flapjack event queue name to use").Default("events").String()
+	interval         = app.Flag("interval", "How often to submit events").Default("10s").Duration()
+	debug            = app.Flag("debug", "Enable verbose output (default false)").Default("false").Bool()
 )
 
 type Config struct {
-	Port     string
-	Server   string
-	Database int
-	Interval time.Duration
-	Debug    bool
+	FlapjackVersion int
+	Server          string
+	Port            string
+	Database        int
+	Queue           string
+	Interval        time.Duration
+	Debug           bool
 }
 
 func main() {
-	app.Version("0.0.1")
+	app.Version("0.0.2")
 	app.Writer(os.Stdout) // direct help to stdout
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	app.Writer(os.Stderr) // ... but ensure errors go to stderr
 
 	config := Config{
-		Server:   *server,
-		Database: *database,
-		Interval: *interval,
-		Debug:    *debug,
-		Port:     ":" + *port,
+		FlapjackVersion: *flapjack_version,
+		Server:          *server,
+		Port:            *port,
+		Database:        *database,
+		Queue:           *queue,
+		Interval:        *interval,
+		Debug:           *debug,
 	}
 	if config.Debug {
 		log.Printf("Booting with config: %+v\n", config)
@@ -361,5 +373,5 @@ func main() {
 		})
 	})
 
-	log.Fatal(http.ListenAndServe(config.Port, m))
+	log.Fatal(http.ListenAndServe(":"+config.Port, m))
 }
