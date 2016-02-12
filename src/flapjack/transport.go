@@ -32,21 +32,31 @@ func Dial(address string, database int) (Transport, error) {
 }
 
 // Send takes an event and sends it over a transport.
-func (t Transport) Send(event Event) (interface{}, error) {
+func (t Transport) Send(event Event, flapjackVersion int, list string) (interface{}, error) {
 	err := event.IsValid()
 	if err != nil {
 		return nil, err
 	}
 
 	data, _ := json.Marshal(event)
-	reply, err := t.Connection.Do("LPUSH", "events", data)
+	reply, err := t.Connection.Do("LPUSH", list, data)
 	if err != nil {
 		return nil, err
 	}
 
-	// required for Flapjack v2 -- if the broker is split out as a separate
-	// project, this will need to be optional
-	_, err = t.Connection.Do("LPUSH", "events_actions", "+")
+	if flapjackVersion >= 2 {
+		_, err := t.Connection.Do("LPUSH", list+"_actions", "+")
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return reply, nil
+}
+
+func (t Transport) Close() (interface{}, error) {
+	reply, err := t.Connection.Do("QUIT")
 	if err != nil {
 		return nil, err
 	}

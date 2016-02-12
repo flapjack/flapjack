@@ -24,7 +24,7 @@ func TestSendSucceeds(t *testing.T) {
 		Summary: "hello world",
 	}
 
-	_, err = transport.Send(event)
+	_, err = transport.Send(event, 1, "events")
 	if err != nil {
 		t.Fatalf("Error when sending event: %s", err)
 	}
@@ -37,7 +37,7 @@ func TestSendFails(t *testing.T) {
 	}
 	event := Event{}
 
-	_, err = transport.Send(event)
+	_, err = transport.Send(event, 1, "events")
 	if err == nil {
 		t.Fatal("Expected error when sending event, got none.")
 	}

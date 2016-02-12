@@ -10,7 +10,7 @@ go get gopkg.in/alecthomas/kingpin.v2
 go get github.com/oguzbilgic/pandik
 mv bin/pandik libexec/httpchecker
 
-if [ ! -z "$SKIPTESTS" ]; then
+if [ -z "$SKIPTESTS" ]; then
   go test flapjack
 fi
 
