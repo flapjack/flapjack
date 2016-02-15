@@ -31,8 +31,30 @@ func Dial(address string, database int) (Transport, error) {
 	return transport, nil
 }
 
-// Send takes an event and sends it over a transport.
-func (t Transport) Send(event Event, flapjackVersion int, list string) (interface{}, error) {
+// defaulting to latest version in master, to v1 in maint/1.x
+// if this is split out to a separate project, will default to latest version
+func (t Transport) Send(event Event) (interface{}, error) {
+	reply, err := t.send(event, 2, "events")
+	return reply, err
+}
+
+func (t Transport) SendVersion(event Event, flapjackVersion int) (interface{}, error) {
+	reply, err := t.send(event, flapjackVersion, "events")
+	return reply, err
+}
+
+func (t Transport) SendQueue(event Event, list string) (interface{}, error) {
+	reply, err := t.send(event, 2, list)
+	return reply, err
+}
+
+func (t Transport) SendVersionQueue(event Event, flapjackVersion int, list string) (interface{}, error) {
+	reply, err := t.send(event, flapjackVersion, list)
+	return reply, err
+}
+
+// send takes an event and sends it over a transport.
+func (t Transport) send(event Event, flapjackVersion int, list string) (interface{}, error) {
 	err := event.IsValid()
 	if err != nil {
 		return nil, err

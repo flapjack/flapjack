@@ -281,7 +281,7 @@ func submitCachedState(states map[string]State, config Config) {
 				log.Printf("Sending event data for %s\n", id)
 			}
 
-			_, err := transport.Send(event, config.FlapjackVersion, config.Queue)
+			_, err := transport.SendVersionQueue(event, config.FlapjackVersion, config.Queue)
 
 			if config.Debug && (err != nil) {
 				log.Printf("Error sending event data: %s\n", err)

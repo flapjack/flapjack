@@ -74,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	reply, err := transport.Send(event, *flapjack_version, *queue)
+	reply, err := transport.SendVersionQueue(event, *flapjack_version, *queue)
 
 	if *debug {
 		fmt.Println("Reply from Redis:", reply)
