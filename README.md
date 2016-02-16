@@ -1,7 +1,3 @@
-Please note that Flapjack's master branch currently represents the `v2.0.0-alpha.1` pre-release of this gem. You may be looking for the [documentation for the release branch](https://github.com/flapjack/flapjack/blob/maint/1.x/README.md). Many things have changed for Flapjack v2, and the documentation needs to be fixed before the actual release.
-
----
-
 # ![Flapjack](http://flapjack.io/images/flapjack-2013-notext-transparent-50-50.png "Flapjack") Flapjack
 
 [![Build Status](https://travis-ci.org/flapjack/flapjack.png)](https://travis-ci.org/flapjack/flapjack)
@@ -21,7 +17,7 @@ Flapjack will be immediately useful to you if:
 
 ### Try it out with the Quickstart Guide
 
-The [Quickstart](http://flapjack.io/quickstart/) guide will help you get Flapjack up and running in a VM locally using Vagrant and VirtualBox.
+The [Quickstart](http://flapjack.io/docs/2.x/usage/quickstart/) guide will help you get Flapjack up and running in a VM locally using Vagrant and VirtualBox.
 
 ### The technical low-down
 
@@ -39,6 +35,8 @@ Additional check engines can be supported by adding additional receiver processe
 
 ## Installing
 
+**NB: v2 packages will be ready soon -- for the moment these instructions will not work**
+
 **Ubuntu Precise 64 (12.04):**
 
 Tell apt to trust the Flapjack package signing key:
@@ -50,18 +48,18 @@ gpg -a --export 803709B6 | sudo apt-key add -
 
 Add the Flapjack Debian repository to your Apt sources:
 
-``` text
-echo "deb http://packages.flapjack.io/deb/v1 precise main" | sudo tee /etc/apt/sources.list.d/flapjack.list
+```text
+echo "deb http://packages.flapjack.io/deb/v2 precise main" | sudo tee /etc/apt/sources.list.d/flapjack.list
 ```
 
 Install the latest Flapjack package:
 
-``` text
+```text
 sudo apt-get update
 sudo apt-get install flapjack
 ```
 
-Alternatively, [download the deb](http://packages.flapjack.io/deb/v1/pool/main/f/flapjack/) and install using `sudo dpkg -i <filename>`
+Alternatively, [download the deb](http://packages.flapjack.io/deb/v2/pool/main/f/flapjack/) and install using `sudo dpkg -i <filename>`
 
 The Flapjack package is an [Omnibus](https://github.com/opscode/omnibus) package and as such contains most dependencies under `/opt/flapjack`, including Redis.
 
@@ -69,7 +67,7 @@ Installing the package will start Redis (non standard port) and Flapjack. You sh
 
 [http://localhost:3080/](http://localhost:3080)
 
-And consume the [REST API](http://flapjack.io/docs/1.0/jsonapi/) at:
+And consume the [REST API](http://flapjack.io/docs/2.x/jsonapi/) at:
 
 [http://localhost:3081/](http://localhost:3081)
 
@@ -136,15 +134,15 @@ sudo /etc/init.d/flapjack stop
 sudo /etc/init.d/flapjack start
 ```
 
-## Using - Details
+## Usage
 
-We are [updating](https://github.com/flapjack/flapjack/issues/624) this section of the docs.
+Please see the [documentation](http://flapjack.io/docs/2.x/).
 
 ## Developing Flapjack
 
-Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Developing](http://flapjack.io/docs/1.0/development/DEVELOPING/) section of [the docs](http://flapjack.io/docs/1.0/).
+Information on developing more Flapjack components or contributing to core Flapjack development can be found in the [Developing](http://flapjack.io/docs/2.x/development/DEVELOPING/) section of [the docs](http://flapjack.io/docs/2.x/).
 
-Note that the master branch is still undergoing breaking changes and is for Flapjack 2. Building packages from the master branch is unlikely to work. Current stable builds are built from the maint/1.x branch.
+Note that the master branch corresponds to Flapjack 2; maintenance builds for Flapjack 1 are built from the maint/1.x branch.
 
 ## Documentation Submodule
 
@@ -163,5 +161,5 @@ If you make changes to the documentation locally, here's how to publish them:
 
 ## RTFM
 
-All of [the documentation](http://flapjack.io/docs).
+All of [the documentation](http://flapjack.io/docs/2.x/).
 
