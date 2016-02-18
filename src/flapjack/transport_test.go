@@ -12,4 +12,33 @@ func TestDialFails(t *testing.T) {
 	}
 }
 
-// TODO(auxesis): add test for sending and receiving Events
+func TestSendSucceeds(t *testing.T) {
+	transport, err := Dial("localhost:6379", 9)
+	if err != nil {
+		t.Fatalf("Couldn't establish connection to testing Redis: %s", err)
+	}
+	event := Event{
+		Entity:  "hello",
+		Check:   "world",
+		State:   "ok",
+		Summary: "hello world",
+	}
+
+	_, err = transport.SendVersionQueue(event, 1, "events")
+	if err != nil {
+		t.Fatalf("Error when sending event: %s", err)
+	}
+}
+
+func TestSendFails(t *testing.T) {
+	transport, err := Dial("localhost:0", 9)
+	if err == nil {
+		t.Fatal("Expected error when connecting to testing Redis, got none.")
+	}
+	event := Event{}
+
+	_, err = transport.SendVersionQueue(event, 1, "events")
+	if err == nil {
+		t.Fatal("Expected error when sending event, got none.")
+	}
+}
