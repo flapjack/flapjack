@@ -78,8 +78,8 @@
     #  alert_subject_text = "/etc/flapjack/templates/email/alert_subject.text.erb"
     #  rollup_text = "/etc/flapjack/templates/email/rollup.text.erb"
     #  alert_text = "/etc/flapjack/templates/email/alert.text.erb"
-    #  rollup.html = "/etc/flapjack/templates/email/rollup.html.erb"
-    #  alert.html = "/etc/flapjack/templates/email/alert.html.erb"
+    #  rollup_html = "/etc/flapjack/templates/email/rollup.html.erb"
+    #  alert_html = "/etc/flapjack/templates/email/alert.html.erb"
   # Sends SMS notifications via MessageNet (Australia only)
   [gateways.sms]
     enabled = false
