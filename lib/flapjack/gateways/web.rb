@@ -162,7 +162,7 @@ module Flapjack
         erb 'index.html'.to_sym
       end
 
-      get '/self_stats' do
+      get '/self_stats/?' do
         @current_time = Time.now
 
         @api_url = self.class.instance_variable_get('@api_url')
@@ -204,7 +204,7 @@ module Flapjack
         erb 'self_stats.html'.to_sym
       end
 
-      get '/tags' do
+      get '/tags/?' do
         opts = {}
         @name = params[:name]
         opts.update(:name => @name) unless @name.nil? || @name.empty?
@@ -234,7 +234,7 @@ module Flapjack
         erb 'tag.html'.to_sym
       end
 
-      get '/checks' do
+      get '/checks/?' do
         time = Time.now
 
         opts = {}
@@ -421,7 +421,7 @@ module Flapjack
         redirect back
       end
 
-      get '/contacts' do
+      get '/contacts/?' do
         opts = {}
         @name = params[:name]
         opts.update(:name => @name) unless @name.nil?
