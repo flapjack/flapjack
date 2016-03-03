@@ -5,11 +5,10 @@ addons:
     - libgmp-dev # https://github.com/travis-ci/travis-rubies/issues/15
 language: ruby
 rvm:
-- '2.0.0-p648' # remove in March 2016, end-of-life
 - '2.1.8'
 - '2.2.4'
 - '2.3.0'
-- 'jruby-9.0.4.0'
+- 'jruby-9.0.5.0'
 jdk: oraclejdk8
 script: bundle exec rspec spec && bundle exec rake pact:verify && bundle exec cucumber features && cd src/flapjack && go test -v
 env: GOPATH=$TRAVIS_BUILD_DIR
