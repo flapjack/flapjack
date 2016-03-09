@@ -106,6 +106,11 @@ func submitCachedState(states map[string]State, config Config) {
 				log.Printf("Sending event data for %s\n", id)
 			}
 			transport.Send(event)
+
+      // If TTL < 0, send once and remove from memory
+			if state.TTL < 0 {
+			  delete(states, id)
+      }
 		}
 		time.Sleep(config.Interval)
 	}
