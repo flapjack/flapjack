@@ -157,7 +157,7 @@ module Flapjack
                   resource_class.jsonapi_lock_method(:patch, klasses_to_lock) do
 
                     resources = if resource_id.nil?
-                      resources = resource_class.find_by_ids!(*ids)
+                      resource_class.find_by_ids!(*ids)
                     else
                       halt(err(409, "Id path/data mismatch")) unless ids.nil? || ids.eql?([resource_id])
                       [resource_class.find_by_id!(resource_id)]
