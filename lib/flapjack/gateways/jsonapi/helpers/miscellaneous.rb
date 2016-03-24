@@ -12,23 +12,29 @@ module Flapjack
             rurl
           end
 
+          def is_bulk?
+            !(request.content_type =~ /^(?:.+;)?\s*ext=bulk(?:\s*;\s*.+)?$/).nil?
+          end
+
           def wrapped_params(options = {})
             result = params['data']
 
             if result.nil?
-              return([nil, false]) if options[:allow_nil].is_a?(TrueClass)
+              if options[:allow_nil].is_a?(TrueClass)
+                halt(err(406, "JSONAPI Bulk Extension was set in headers")) if is_bulk?
+                return([nil, false])
+              end
               logger.debug("No 'data' object found in the supplied JSON:")
               logger.debug(request.body.is_a?(StringIO) ? request.body.read : request.body)
               halt(err(403, "Data object must be provided"))
             end
 
-            ext_bulk = !(request.content_type =~ /^(?:.+;)?\s*ext=bulk(?:\s*;\s*.+)?$/).nil?
             case result
             when Array
-              halt(err(406, "JSONAPI Bulk Extension not set in headers")) unless ext_bulk
+              halt(err(406, "JSONAPI Bulk Extension not set in headers")) unless is_bulk?
               [result, false]
             when Hash
-              halt(err(406, "JSONAPI Bulk Extension was set in headers")) if ext_bulk
+              halt(err(406, "JSONAPI Bulk Extension was set in headers")) if is_bulk?
               [[result], true]
             else
               halt(err(403, "The received data object is not an Array or a Hash"))
