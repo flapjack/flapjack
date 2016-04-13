@@ -24,6 +24,7 @@ require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
 require 'flapjack/gateways/pager_duty'
 require 'flapjack/gateways/slack'
+require 'flapjack/gateways/hipchat'
 require 'flapjack/gateways/sms_messagenet'
 require 'flapjack/gateways/sms_nexmo'
 require 'flapjack/gateways/sms_twilio'
@@ -219,6 +220,7 @@ module Flapjack
              'pagerduty'  => [Flapjack::Gateways::PagerDuty::Notifier,
                               Flapjack::Gateways::PagerDuty::AckFinder],
              'slack'      => [Flapjack::Gateways::Slack],
+             'hipchat'    => [Flapjack::Gateways::Hipchat],
              'sms'        => [Flapjack::Gateways::SmsMessagenet],
              'sms_nexmo'  => [Flapjack::Gateways::SmsNexmo],
              'sms_twilio' => [Flapjack::Gateways::SmsTwilio],

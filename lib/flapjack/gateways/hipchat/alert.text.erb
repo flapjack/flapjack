@@ -1,0 +1,6 @@
+<% summary = @alert.summary -%>
+<%= @alert.type_sentence_case %>: '<%= @alert.check %>' on <%= @alert.entity -%>
+<% unless ['acknowledgement', 'test'].include?(@alert.notification_type) -%>
+ is <%= @alert.state_title_case -%>
+<% end -%>
+ at <%= Time.at(@alert.time).strftime('%-d %b %H:%M') %><%= (summary.nil? || summary.empty?) ? '' : ", #{summary}" -%>
