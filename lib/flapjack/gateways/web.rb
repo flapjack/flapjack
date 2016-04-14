@@ -210,7 +210,7 @@ module Flapjack
         opts.update(:name => @name) unless @name.nil? || @name.empty?
 
         @tags = Flapjack::Diner.tags(:filter => opts,
-          :page => (params[:page] || 1))
+          :page => current_page_num(params[:page]))
 
         unless @tags.nil? || @tags.empty?
           @pagination = pagination_from_context(Flapjack::Diner.context)
@@ -249,7 +249,7 @@ module Flapjack
         opts.update(:failing => @failing) unless @failing.nil?
 
         @checks = Flapjack::Diner.checks(:filter => opts,
-                    :page => (params[:page] || 1),
+                    :page => current_page_num(params[:page]),
                     :include => ['current_state', 'latest_notifications',
                                  'current_scheduled_maintenances',
                                  'current_unscheduled_maintenance'])
@@ -426,7 +426,7 @@ module Flapjack
         @name = params[:name]
         opts.update(:name => @name) unless @name.nil?
 
-        @contacts = Flapjack::Diner.contacts(:page => params[:page] || 1,
+        @contacts = Flapjack::Diner.contacts(:page => current_page_num(params[:page]),
           :filter => opts, :sort => '+name')
 
         unless @contacts.nil?
@@ -666,6 +666,10 @@ module Flapjack
           links[key] = "#{url_without_params}?#{new_params.to_query}"
         end
         links
+      end
+      
+      def current_page_num(page)
+        page ? page.to_i : 1
       end
     end
   end
