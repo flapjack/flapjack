@@ -5,6 +5,10 @@
 
 <div class="page-header">
   <h2><%= h @entity %></h2>
+  <form action="<%= @base_url %>scheduled_maintenances/<%= @entity %>" method="post" align="right">
+    <input type="hidden" name="_method" value="delete">
+    <button type="submit" class="btn btn-danger">End Active Scheduled Maintenances</button>
+  </form>
 </div>
 <% if @states.empty? %>
   <div>

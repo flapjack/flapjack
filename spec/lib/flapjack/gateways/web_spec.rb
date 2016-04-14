@@ -279,6 +279,16 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(last_response.status).to eq(302)
     end
 
+    it "deletes a scheduled maintenance period for an entity" do
+      expect(Flapjack::Data::Entity).to receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      expect(entity).to receive(:end_scheduled_maintenance)#.with(start_time)
+
+      adelete "/scheduled_maintenances/#{entity_name_esc}"
+      expect(last_response.status).to eq(302)
+    end
+
     it "shows a list of all known contacts" do
       expect(Flapjack::Data::Contact).to receive(:all)
 

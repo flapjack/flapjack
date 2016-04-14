@@ -386,6 +386,16 @@ module Flapjack
         redirect back
       end
 
+      # delete a scheduled maintenance for an entity
+      delete '/scheduled_maintenances/:entity' do
+        entity = get_entity(params[:entity])
+        
+        halt(404, "Could not find entity '#{params[:entity]}'") if entity.nil?
+
+        entity.end_scheduled_maintenance(:redis => redis)
+        redirect back
+      end 
+
       # delete a check (actually just disables it)
       delete '/checks/:entity/:check' do
         entity_check = get_entity_check(params[:entity], params[:check])
@@ -431,6 +441,11 @@ module Flapjack
           Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
         return if entity_obj.nil? || (check.nil? || check.length == 0)
         Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => redis)
+      end
+
+      def get_entity(entity)
+        entity_obj = (entity && entity.length > 0) ?
+          Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
       end
 
       def entity_check_state(entity_name, check)
