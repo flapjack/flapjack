@@ -132,7 +132,7 @@
 <% end %>
 
 <h3>All Checks</h3>
-<% if @checks.empty? %>
+<% if !@checks || @checks.empty? %>
   <p>No checks</p>
 <% else %>
   <table class="table table-bordered table-hover table-condensed">
