@@ -35,6 +35,22 @@ module Flapjack
         }.sort_by(&:name)
       end
 
+      def end_scheduled_maintenance(options = {})
+        raise "Redis connection not set" unless redis = options[:redis]
+        checks = check_list
+        checks.each do | check |
+          check_obj = Flapjack::Data::EntityCheck.for_entity_name(self.name, check, :redis => redis) 
+          if check_obj.in_scheduled_maintenance?
+            current_sched_ms = check_obj.maintenances(nil, nil, :scheduled => true).select {|sm|
+              #only remove the active maintenance schedule
+              if sm[:start_time] <= Time.now.to_i
+                check_obj.end_scheduled_maintenance(sm[:start_time])
+              end
+            }
+          end
+        end
+      end
+
       # no way to lock all data operations, so hit & hope... at least the renames
       # should be atomic
       def self.rename(existing_name, entity_name, options = {})

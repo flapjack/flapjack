@@ -6,6 +6,29 @@ describe Flapjack::Data::Entity, :redis => true do
   let(:name)  { 'abc-123' }
   let(:check) { 'ping' }
 
+  it "ends scheduled_maintenance on an entity" do
+    entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis, :create => true)
+
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ping")
+    @redis.zadd("current_checks:#{name}", Time.now.to_i, "ssh")
+
+    ec1 = Flapjack::Data::EntityCheck.for_entity_name(name, "ping", :redis => @redis)
+    ec2 = Flapjack::Data::EntityCheck.for_entity_name(name, "ssh", :redis => @redis)
+
+    ec1.create_scheduled_maintenance(Time.now.to_i, 3600, :summary => "first")
+    ec2.create_scheduled_maintenance(Time.now.to_i, 3600, :summary => "first")
+
+    entity.end_scheduled_maintenance(:redis => @redis)
+
+    check_list = entity.check_list
+    expect(check_list).not_to be_nil
+    expect(check_list.size).to eq(2)
+
+    expect(ec1).not_to be_in_scheduled_maintenance
+    expect(ec2).not_to be_in_scheduled_maintenance
+    
+  end
+
   it "creates an entity if allowed when it can't find it" do
     entity = Flapjack::Data::Entity.find_by_name(name, :redis => @redis, :create => true)
 
