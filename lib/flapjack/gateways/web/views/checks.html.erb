@@ -50,7 +50,7 @@
             <% if in_unscheduled_outage%> (Ack'd)<% end %>
             <% if in_scheduled_outage %> (Sched)<% end %>
           </td>
-          <td><%= h summary %></td>
+          <td><div class='check_summary'><%= h summary %></div></td>
           <td><%= h changed %></td>
           <td><%= h updated %></td>
           <td><%= h notified %></td>

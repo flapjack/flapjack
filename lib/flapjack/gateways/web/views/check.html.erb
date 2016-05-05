@@ -218,8 +218,9 @@
 
 <div class="row">
   <div id="output" class="col-md-6">
-    <h3>Output: <%= h @check_summary %></h3>
-    <p><%= h @check_details %></p>
+    <h3>Output:</h3>
+    <div class='check_summary'><%= h @check_summary %></div>
+    <div class='check_details'><%= h @check_details %></div>
     <% if @check_perfdata && @check_perfdata.is_a?(Array) %>
     <h3>Performance Data:</h3>
     <table>
@@ -249,7 +250,7 @@
           <td>Last <%= h type.to_s %> notification:</td>
           <td><%= @last_notifications[type] ? h(@last_notifications[type][:relative]) : 'never' %></td>
           <td><%= @last_notifications[type] ? h(@last_notifications[type][:time].to_s) : '&nbsp;' %></td>
-          <td><%= @last_notifications[type] ? h(@last_notifications[type][:summary]) : '&nbsp;' %></td>
+          <td><div class='check_summary'><%= @last_notifications[type] ? h(@last_notifications[type][:summary]) : '&nbsp;' %></div></td>
         </tr>
       <% end %>
     </table>
@@ -268,7 +269,7 @@
       <tr>
         <td><%= h Time.at(state_change[:timestamp]).to_s %></td>
         <td><%= h state_change[:state] %></td>
-        <td><%= h state_change[:summary] %></td>
+        <td><div class='check_summary'><%= h state_change[:summary] %></div></td>
       </tr>
       <% end %>
     </table>
