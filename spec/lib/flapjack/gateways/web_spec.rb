@@ -262,6 +262,35 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(last_response.status).to eq(302)
     end
 
+    it "creates a scheduled maintenance period for all checks that belong to an entity" do
+      t = Time.now.to_i
+
+      start_time = Time.at(t - (24 * 60 * 60))
+      duration = 30 * 60
+      summary = 'wow'
+
+      expect(Chronic).to receive(:parse).with('1 day ago').and_return(start_time)
+      expect(ChronicDuration).to receive(:parse).with('30 minutes').and_return(duration)
+
+      expect(Flapjack::Data::Entity).to receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)      
+
+      expect(entity).to receive(:check_list).and_return(['ping'])
+
+      expect(Flapjack::Data::Entity).to receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      expect(Flapjack::Data::EntityCheck).to receive(:for_entity).
+        with(entity, 'ping', :redis => redis).and_return(entity_check)
+
+      expect(entity_check).to receive(:create_scheduled_maintenance).
+        with(start_time.to_i, duration, :summary => summary)
+
+      apost "/scheduled_maintenances/#{entity_name_esc}?start_time=1+day+ago&duration=30+minutes&summary=wow"
+
+      expect(last_response.status).to eq(302)
+    end
+
     it "deletes a scheduled maintenance period for an entity check" do
       t = Time.now.to_i
 
@@ -276,6 +305,16 @@ describe Flapjack::Gateways::Web, :sinatra => true, :logger => true do
       expect(entity_check).to receive(:end_scheduled_maintenance).with(start_time)
 
       adelete "/scheduled_maintenances/#{entity_name_esc}/ping?start_time=#{start_time}"
+      expect(last_response.status).to eq(302)
+    end
+
+    it "deletes a scheduled maintenance period for an entity" do
+      expect(Flapjack::Data::Entity).to receive(:find_by_name).
+        with(entity_name, :redis => redis).and_return(entity)
+
+      expect(entity).to receive(:end_scheduled_maintenance)#.with(start_time)
+
+      adelete "/scheduled_maintenances/#{entity_name_esc}"
       expect(last_response.status).to eq(302)
     end
 
