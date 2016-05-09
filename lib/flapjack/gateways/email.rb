@@ -60,19 +60,36 @@ module Flapjack
         end
       end
 
+      def safe_address(addr)
+        return "flapjack@#{@fqdn}" if addr.nil? || addr.empty?
+        safe_addr = addr.clone
+        while safe_addr =~ /(<|>)/
+          safe_addr.sub!(/^.*</, '').sub!(/>.*$/, '')
+        end
+
+        safe_addr
+      end
+
       def deliver(alert)
-        host = @smtp_config ? @smtp_config['host'] : nil
-        port = @smtp_config ? @smtp_config['port'] : nil
-        starttls = @smtp_config ? !! @smtp_config['starttls'] : nil
-        m_from = @smtp_config ? @smtp_config['from'] : "flapjack@#{@fqdn}"
-        m_reply_to = @smtp_config ? ( @smtp_config['reply_to'] ||= m_from ) : "flapjack@#{@fqdn}"
         if @smtp_config
+          host = @smtp_config['host']
+          port = @smtp_config['port']
+          starttls = !!@smtp_config['starttls']
+
+          m_from = safe_address(@smtp_config['from'])
+          m_reply_to = @smtp_config['reply_to'] || @smtp_config['from']
+
           if auth_config = @smtp_config['auth']
             auth = {}
             auth[:type]     = auth_config['type'].to_sym || :plain
             auth[:username] = auth_config['username']
             auth[:password] = auth_config['password']
           end
+        else
+          host = nil
+          port = nil
+          starttls = nil
+          m_reply_to = m_from = "flapjack@#{@fqdn}"
         end
 
         @logger.debug("flapjack_mailer: set from to #{m_from}")
