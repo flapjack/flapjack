@@ -6,6 +6,7 @@
 <div class="page-header">
   <h2><%= h @entity %></h2>
 </div>
+
 <% if @states.empty? %>
   <div>
     <p>This entity has no check output associated with it</p>
@@ -49,3 +50,70 @@
     <% end %>
   </table>
 <% end %>
+
+<div class="row">
+  <div class="col-md-12">
+    <div id="add-scheduled-maintenances" class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">Add Scheduled Maintenances</h4>
+      </div>
+      <div class="panel-body">
+        <form action="<%= @base_url %>scheduled_maintenances/<%= @entity %>" method="post" role="form" class="form-horizontal">
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="start_time">Start time:</label>
+            <div class="col-sm-9">
+              <input type="text" name="start_time" value="now" class="form-control" size="20" maxlength="80" value="">
+              <span class="help-block">
+                e.g. "today 4pm", "two hours hence", "friday 2pm", "2012-01-28 13:00"
+              </span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="duration">Duration:</label>
+            <div class="col-sm-9">
+              <input type="text" name="duration" value="1 day" class="form-control" size="20" maxlength="80" value="">
+              <span class="help-block">
+                e.g. "1 hour", "2:30:00", "three days", etc
+              </span>
+            </div>
+          </div>
+
+          <div class="col-sm-9 col-md-offset-2">
+            <div class="alert alert-info">
+              Times given will be interpreted in the local timezone of
+              <span class="alert-link"><%= h(local_timezone) %></span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="col-sm-2 control-label" for="summary">Summary:</label>
+            <div class="col-sm-9">
+              <input type="text" name="summary" class="form-control" size="80" maxlength="160" value="">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="col-sm-2"></div>
+            <div class="col-sm-9">
+              <button type="submit" class="btn btn-success">Save</button>
+            </div>
+          </div>
+        </form><!-- form-horizontal-->
+
+      </div><!-- panel-body -->
+    </div><!-- panel panel-default -->
+    <div id="end-scheduled-maintenances" class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title">End Active Scheduled Maintenances</h4>
+      </div>
+      <div class="panel-body">
+        <form action="<%= @base_url %>scheduled_maintenances/<%= @entity %>" method="post" align="right">
+          <input type="hidden" name="_method" value="delete">
+          <button type="submit" class="btn btn-danger">End Active Scheduled Maintenances</button>
+        </form>
+      </div>
+    </div>
+  </div><!-- col-md-12 -->
+</div><!-- row -->

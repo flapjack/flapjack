@@ -362,6 +362,28 @@ module Flapjack
         redirect back
       end
 
+      # create scheduled maintenance for an entity
+      post '/scheduled_maintenances/:entity' do
+        start_time = Chronic.parse(params[:start_time]).to_i
+        halt(400, "Start time '#{params[:start_time]}' parsed to 0") if start_time == 0
+        duration   = ChronicDuration.parse(params[:duration])
+        summary    = params[:summary]
+        
+        entity = get_entity(params[:entity])
+        halt(404, "Could not find entity '#{params[:entity]}'") if entity.nil?
+
+        checks = entity.check_list
+        checks.each do | check |          
+          entity_check = get_entity_check(params[:entity], check)
+          halt(404, "Could not find check '#{params[:entity]}:#{check}'") if entity_check.nil?
+
+          entity_check.create_scheduled_maintenance(start_time, duration,
+                                                  :summary => summary)
+        end
+
+        redirect back
+      end
+
       # create scheduled maintenance
       post '/scheduled_maintenances/:entity/:check' do
         start_time = Chronic.parse(params[:start_time]).to_i
@@ -385,6 +407,16 @@ module Flapjack
         entity_check.end_scheduled_maintenance(params[:start_time].to_i)
         redirect back
       end
+
+      # delete a scheduled maintenance for an entity
+      delete '/scheduled_maintenances/:entity' do
+        entity = get_entity(params[:entity])
+        
+        halt(404, "Could not find entity '#{params[:entity]}'") if entity.nil?
+
+        entity.end_scheduled_maintenance(:redis => redis)
+        redirect back
+      end 
 
       # delete a check (actually just disables it)
       delete '/checks/:entity/:check' do
@@ -431,6 +463,11 @@ module Flapjack
           Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
         return if entity_obj.nil? || (check.nil? || check.length == 0)
         Flapjack::Data::EntityCheck.for_entity(entity_obj, check, :redis => redis)
+      end
+
+      def get_entity(entity)
+        entity_obj = (entity && entity.length > 0) ?
+          Flapjack::Data::Entity.find_by_name(entity, :redis => redis) : nil
       end
 
       def entity_check_state(entity_name, check)

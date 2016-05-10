@@ -1,13 +1,17 @@
 <%
   require_css 'select2'
   require_css 'select2-bootstrap'
+  require_css 'jquery-ui'
+  require_css 'jquery.timepicker'
 
   require_js  'underscore'
   require_js  'jquery-1.10.2'
   require_js  'backbone'
   require_js  'backbone.jsonapi'
+  require_js  'jquery-ui'
   require_js  'bootstrap'
   require_js  'select2'
+  require_js  'jquery.timepicker'
 %>
 
 <script type="text/template" id="contact-actions-template">
@@ -24,6 +28,9 @@
   </td>
   <td class="actions">
     <button type="button" class="btn btn-default contact-entities" aria-hidden="true">Entities</button>
+  </td>
+  <td class="actions">
+    <button type="button" class="btn btn-default contact-notification-rules" aria-hidden="true">Notification Rules</button>
   </td>
   <td class="actions">
     <button type="button" class="btn btn-danger delete-contact">Delete</button>
@@ -138,12 +145,181 @@
   <td><button type="button" class="close btn delete delete-entity" aria-hidden="true">&minus;</button></td>
 </script>
 
+<script type="text/template" id="contact-notification-rules-template">
+<div class="modal-content">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h4 class="modal-title" id="contactModalLabel">Notification Rules for <@- first_name @> <@- last_name @></h4>
+  </div>
+  <div class="modal-body">
+    <button id="add-contact-notification-rule" type="button" class="btn btn-default btn-xs">
+      <i class="fa fa-plus-square"></i>
+      &nbsp;
+      Add Notification Rule
+    </button>
+      <table class="table" style="margin-top: 1em;">
+        <thead><tr>
+          <th style="width: 26px">&nbsp;</th>
+          <th style="width: 180px">Entities</th>
+          <th style="width: 150px">Entities Regex</th>
+          <th style="width: 150px">Tags</th>
+          <th style="width: 150px">Tags Regex</th>
+          <th style="width: 180px">Warning Media</th>
+          <th style="width: 180px">Critical Media</th>
+          <th style="width: 180px">Time Restrictions</th>
+          <th style="width: 120px">Blackholes</th>
+          <th style="width: 26px">&nbsp;</th>
+        </tr></thead>
+        <tbody id="contactNotificationRuleList">
+        </tbody>
+      </table>
+  </div>
+</div><!-- /.modal-content -->
+</script>
+
+<script type="text/template" id="contact-notification-rule-list-item-ro-template">
+<td>
+  <button type="button" class="btn close edit-notification-rule" aria-hidden="true">
+    <i class="fa fa-pencil"></i>
+  </button>
+</td>
+<td><@- entities != null ? entities.join(', ') : '-' @></td>
+<td><@- regex_entities !== null ? regex_entities.join(', ') : '-' @></td>
+<td><@- tags != null ? tags.join(', ') : '-' @></td>
+<td><@- regex_tags != null ? regex_tags.join(', ') : '-' @></td>
+<td><@- warning_media != null ? warning_media.join(', ') : '-' @></td>
+<td><@- critical_media != null ? critical_media.join(', ') : '-' @></td>
+<td><@- time_restrictions != null ? JSON.stringify(time_restrictions).replace(/,/g, ', ') : '[]' @></td>
+<td>
+  <@- unknown_blackhole ? 'Unknown' : '' @></br>
+  <@- warning_blackhole ? 'Warning' : '' @></br>
+  <@- critical_blackhole ? 'Critical' : '' @>
+</td>
+<td>
+  <button type="button" class="close btn delete delete-notification-rule" aria-hidden="true">&minus;</button>
+</td>
+</script>
+
+<script type="text/template" id="contact-notification-rule-list-item-template">
+<td></td>
+<td>
+   <input type="hidden" id="<@- id @>-entityChooser" data-attr="entities" value="<@- entities @>">
+</td>
+<td>
+  <textarea id="<@- id @>-regex_entities" data-attr="regex_entities" class="form-control" rows="5"><@- regex_entities @></textarea>
+</td>
+<td>
+  <input type="hidden" id="<@- id @>-tagChooser" data-attr="tags" value="<@- tags @>">
+</td>
+<td>
+  <textarea id="<@- id @>-regex_tags" data-attr="regex_tags" class="form-control" rows="5"><@- regex_tags @></textarea>
+</td>
+<td>
+  <input type="hidden" id="<@- id @>-warningMediaChooser" data-attr="warning_media" value="<@- warning_media @>">
+</td>
+<td>
+  <input type="hidden" id="<@- id @>-criticalMediaChooser" data-attr="critical_media" value="<@- critical_media @>">
+</td>
+<td>
+  <div id="<@- id @>-time_restrictions" data-attr="time_restrictions"></div>
+  <textarea readonly id="<@- id @>-time_restrictions" data-attr="time_restrictions" class="form-control" rows="10"><@- JSON.stringify(time_restrictions) @></textarea>
+</td>
+<td>
+  <label><input type="checkbox" data-attr="unknown_blackhole" value="true" <@- unknown_blackhole ? 'checked="checked"' : '' @>> Unknown</label></br>
+  <label><input type="checkbox" data-attr="warning_blackhole" value="true" <@- warning_blackhole ? 'checked="checked"' : '' @>> Warning</label></br>
+  <label><input type="checkbox" data-attr="critical_blackhole" value="true" <@- critical_blackhole ? 'checked="checked"' : '' @>> Crititcal</label></br>
+</td>
+<td>
+  <button type="button" class="close btn close-edit-notification-rule" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+</td>
+</script>
+
+<script type="text/template" id="contact-time-restriction-template">
+<form class="form-horizontal" style="width: 500px">
+<div class="form-group">
+  <label for="start-time" class="col-sm-4 control-label">Start time</label>
+  <div class="col-sm-8">
+    <div class="input-group double-input">
+      <input class="form-control" type="text" id="start-date" data-attr="start-date" placeholder="Select start date">
+      <input class="form-control" type="text" id="start-time" data-attr="start-time" value="<@- startTime @>">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="end-time" class="col-sm-4 control-label">End time</label>
+  <div class="col-sm-8">
+    <div class="input-group double-input">
+      <input class="form-control" type="text" id="end-date" data-attr="end-date" placeholder="Select end date">
+      <input class="form-control" type="text" id="end-time" data-attr="end-time" value="<@- endTime @>">
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label for="rule-type" class="col-sm-4 control-label">Frequency</label>
+  <div class="col-sm-8"><input class="form-control" type="text" id="rule-type" data-attr="rule-type" value="0"></div>
+</div>
+<div class="form-group">
+  <label for="interval" class="col-sm-4 control-label">Every</label>
+  <div class="col-sm-3"><input class="form-control" id="interval" type="text" data-attr="interval" value="1"></div>
+  <div id="interval-suffix" class="col-sm-5">Day(s)</div>
+</div>
+<div class="form-group">
+  <label  class="col-sm-4 control-label"></label>
+  <div id="weekly-validations" class="col-sm-8"></div>
+  <div id="monthly-validations"class="col-sm-8"></div>
+</div>
+<div class="form-group">
+  <div class="col-sm-offset-4 col-sm 8">
+    <button id="set-time-restriction" type="button" class="btn btn-default btn-xs">
+      <i class="fa fa-plus-square"></i>
+      &nbsp;Set Timerestriction
+    </button>
+    <button id="cancel-time-restriction" type="button" class="btn btn-default btn-xs">
+      <i class="fa fa-undo"></i>
+      &nbsp;Cancel
+    </button>
+  </div>
+</div>
+</form>
+</script>
+
+<script type="text/template" id="contact-weekly-validations-template">
+<div id="weekly-days" class="btn-group btn-group-sm" data-toggle="buttons">
+</div>
+</script>
+
+<script type="text/template" id="contact-monthly-validations-template">
+<div class="form-group form-group-sm">
+  <label class="radio-inline control-label"><input type="radio" name="day-of-options" value="day-of-month" checked>Day of month</label>
+  <label class="radio-inline control-label"><input type="radio" name="day-of-options" value="day-of-week">Day of week</label>
+</div>
+<div id="day-of-month" class="btn-group btn-group-xs col-sm-10" data-toggle="buttons" style="max-width: 220px"></div>
+<div id="day-of-week" style="min-width: 400px">
+  <table>
+    <tr><td>1st&nbsp;</td><td><div id="monthly-1st-week" class="btn-group btn-group-xs" data-toggle="buttons"></div></td></tr>
+    <tr><td>2nd&nbsp;</td><td><div id="monthly-2nd-week" class="btn-group btn-group-xs" data-toggle="buttons"></div></td></tr>
+    <tr><td>3th&nbsp;</td><td><div id="monthly-3th-week" class="btn-group btn-group-xs" data-toggle="buttons"></div></td></tr>
+    <tr><td>4th&nbsp;</td><td><div id="monthly-4th-week" class="btn-group btn-group-xs" data-toggle="buttons"></div></td></tr>
+  </table>
+</div>
+</script>
+
+<script type="text/template" id="contact-day-toggle-button-template">
+<label class="btn btn-default" style="width: <@- width @>">
+  <input type="checkbox" id="<@- id @>" value="<@- value @>"><@- day @>
+</label>
+</script>
+
+
 <%
   require_js  'flapjack'
 
   require_js  'modules/contact'
   require_js  'modules/entity'
   require_js  'modules/medium'
+  require_js  'modules/notification_rule'
 %>
 
 <div id="data-api-url" data-api-url="<%= @api_url %>">

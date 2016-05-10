@@ -78,3 +78,16 @@ footer p.credits span.separator {
 }
 
 /* end footer */
+
+.ui-datepicker {
+  z-index: 1200 !important
+}
+
+.popover {
+  max-width: 100%;
+}
+
+.double-input .form-control {
+    width: 50%;
+}
+
