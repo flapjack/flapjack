@@ -43,4 +43,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'gli', '= 2.12.0'
   gem.add_dependency 'nokogiri', '= 1.6.2.1'
   gem.add_dependency 'nexmo', '= 2.0.0'
+  gem.add_dependency 'hipchat'
 end

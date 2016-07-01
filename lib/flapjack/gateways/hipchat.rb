@@ -8,6 +8,7 @@ require 'flapjack/redis_pool'
 
 require 'flapjack/data/alert'
 require 'flapjack/utility'
+require 'hipchat'
 
 module Flapjack
   module Gateways
@@ -53,8 +54,8 @@ module Flapjack
       end
 
       def deliver(alert)
-      	access_token = @config["access_token"]
-        endpoint     = @config["endpoint"]
+        username     = @config["username"]
+      	api_token    = @config["api_token"]
       	room         = @config["room"]
 
         notification_id = alert.notification_id
@@ -78,8 +79,8 @@ module Flapjack
         errors = []
 
         [  
-         [access_token, "Hipchat endpoint is missing"],
-         [endpoint, "Hipchat endpoint is missing"],
+         [username, "Hipchat username is missing"],  
+         [api_token, "Hipchat api_token is missing"],
          [room, "Hipchat room is missing"]
         ].each do |val_err|
 
@@ -92,31 +93,23 @@ module Flapjack
           return
         end
         
-        payload = Flapjack.dump_json(
-          'message_format'    => 'text',
-          'color'             => message =~ /Problem:/ ? 'red' : 'green',
-          'message'           => message,
-        )
+        payload = {
+          :message_format    => 'html',
+          :color             => message =~ /Problem:/ ? 'red' : 'green'
+        }
         
-        http = EM::HttpRequest.new("#{endpoint}/room/#{room}/notification?auth_token=#{access_token}").post(:body => payload, :head => {'Content-Type' => 'application/json'})
- 
-        status = (http.nil? || http.response_header.nil?) ? nil : http.response_header.status
-
-        @logger.debug "payload: #{payload.inspect}"
-
-        http = EM::HttpRequest.new("#{endpoint}").post(:body => {'payload' => payload})
-
-        @logger.debug "server response: #{http.response}"
-
-        status = (http.nil? || http.response_header.nil?) ? nil : http.response_header.status
-        if (status >= 200) && (status <= 206)
+        reported_payload = payload.merge(:message => message)
+        
+        @logger.debug "payload: #{reported_payload}"
+        
+        client = HipChat::Client.new(api_token, :api_version => 'v2')
+        begin
+          client[room].send(username, message, payload)
           @sent += 1
           alert.record_send_success!
-          @logger.debug "Sent message via Hipchat, response status is #{status}, " +
-            "notification_id: #{notification_id}"
-        else
-          @logger.error "Failed to send message via Hipchat, response status is #{status}, " +
-            "notification_id: #{notification_id}"
+          @logger.debug "Sent message via Hipchat"
+        rescue HipChat::UnknownRoom  
+          @logger.error "Failed to send message via Hipchat. Unknown room #{room}"
         end
       rescue => e
         @logger.error "Error generating or delivering hipchat message to #{alert.address}: #{e.class}: #{e.message}"
