@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    flapjack (1.6.0)
+    flapjack (1.6.1)
       activesupport
       blather (~> 0.8.3)
       chronic
@@ -262,4 +262,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.11.2
+   1.12.3
