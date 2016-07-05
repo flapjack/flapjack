@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     flapjack (1.6.1)
-      activesupport
+      activesupport (~> 4.2.0)
       blather (~> 0.8.3)
       chronic
       chronic_duration
@@ -14,7 +14,7 @@ PATH
       gli (= 2.12.0)
       hipchat
       hiredis
-      ice_cube (>= 0.14.0)
+      ice_cube (>= 0.13.2)
       mail
       nexmo (= 2.0.0)
       nokogiri (= 1.6.2.1)
@@ -32,10 +32,11 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (5.0.0)
-      concurrent-ruby (~> 1.0, >= 1.0.2)
+    activesupport (4.2.0)
       i18n (~> 0.7)
+      json (~> 1.7, >= 1.7.7)
       minitest (~> 5.1)
+      thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
     addressable (2.3.6)
     async_rack_test (0.0.5)
@@ -54,7 +55,6 @@ GEM
     chronic_duration (0.10.6)
       numerizer (~> 0.1.1)
     coderay (1.1.0)
-    concurrent-ruby (1.0.2)
     connection_pool (1.2.0)
     cookiejar (0.3.3)
     crack (0.4.2)
