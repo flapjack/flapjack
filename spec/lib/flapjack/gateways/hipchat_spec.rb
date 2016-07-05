@@ -36,7 +36,7 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
   it "sends a Hipchat message" do
     expected_payload = Flapjack.dump_json(
       'room_id'           => 'flapjack-hipchat-test',
-      'from'              => 'Sir Lore',
+      'from'              => 'Hipchat User',
       'color'             => 'green',
       'notify'            => false,
       'message_format'    => 'html',

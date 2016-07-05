@@ -95,7 +95,7 @@ module Flapjack
         
         payload = {
           :message_format    => 'html',
-          :color             => message =~ /Problem:/ ? 'red' : 'green'
+          :color             => @alert.state == 'ok' ? 'green' : 'red'
         }
         
         reported_payload = payload.merge(:message => message)
