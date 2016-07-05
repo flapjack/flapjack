@@ -7,7 +7,6 @@ describe Flapjack::Data::NotificationRule, :redis => true do
     wd = IceCube::Schedule.new(Time.local(2013,2,1,8,0,0), :duration => 60 * 60 * 10)
     wd.add_recurrence_rule(IceCube::Rule.weekly.day(:monday, :tuesday, :wednesday, :thursday, :friday))
     wd = wd.to_hash
-    wd[:start_time] = wd.delete(:start_date)
     wd[:rrules].first[:rule_type] = wd[:rrules].first[:rule_type].sub(/\AIceCube::(\w+)Rule\z/, '\1')
     wd
   }

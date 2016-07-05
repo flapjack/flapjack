@@ -249,7 +249,6 @@ module Flapjack
       end
 
       def self.prepare_time_restriction(time_restriction, timezone = nil)
-        binding.pry
         # this will hand back a 'deep' copy
         tr = symbolize(time_restriction)
 
@@ -312,82 +311,72 @@ module Flapjack
 
         tr
       end
-
+        
       VALIDATION_PROCS = {
+        proc {|d| !d.has_key?(:entities) ||
+               ( d[:entities].nil? ||
+                 d[:entities].is_a?(Array) &&
+                 d[:entities].all? {|e| e.is_a?(String)} ) } =>
+        "entities must be a list of strings",
+
+        proc {|d| !d.has_key?(:regex_entities) ||
+               ( d[:regex_entities].nil? ||
+                 d[:regex_entities].is_a?(Array) &&
+                 d[:regex_entities].all? {|e| e.is_a?(String)} ) } =>
+        "regex_entities must be a list of strings",
+
+        proc {|d| !d.has_key?(:tags) ||
+               ( d[:tags].nil? ||
+                 d[:tags].is_a?(Set) &&
+                 d[:tags].all? {|et| et.is_a?(String)} ) } =>
+        "tags must be a tag_set of strings",
+
+        proc {|d| !d.has_key?(:regex_tags) ||
+               ( d[:regex_tags].nil? ||
+                 d[:regex_tags].is_a?(Set) &&
+                 d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
+        "regex_tags must be a tag_set of strings",
+
+        # conversion to a schedule needs a time zone, any one will do
         proc {|d| !d.has_key?(:time_restrictions) ||
                ( d[:time_restrictions].nil? ||
                  d[:time_restrictions].all? {|tr|
                    !!self.time_restriction_to_icecube_schedule(symbolize(tr), ActiveSupport::TimeZone['UTC'])
                  } )
              } =>
-        "time restrictions are invalid"
+        "time restrictions are invalid",
+
+        # TODO should the media types be checked against a whitelist?
+        proc {|d| !d.has_key?(:unknown_media) ||
+               ( d[:unknown_media].nil? ||
+                 d[:unknown_media].is_a?(Array) &&
+                 d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
+        "unknown_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:warning_media) ||
+               ( d[:warning_media].nil? ||
+                 d[:warning_media].is_a?(Array) &&
+                 d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
+        "warning_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:critical_media) ||
+               ( d[:critical_media].nil? ||
+                 d[:critical_media].is_a?(Array) &&
+                 d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
+        "critical_media must be a list of strings",
+
+        proc {|d| !d.has_key?(:unknown_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
+        "unknown_blackhole must be true or false",
+
+        proc {|d| !d.has_key?(:warning_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
+        "warning_blackhole must be true or false",
+
+        proc {|d| !d.has_key?(:critical_blackhole) ||
+               [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
+        "critical_blackhole must be true or false",
       }
-        
-      # VALIDATION_PROCS = {
-      #   proc {|d| !d.has_key?(:entities) ||
-      #          ( d[:entities].nil? ||
-      #            d[:entities].is_a?(Array) &&
-      #            d[:entities].all? {|e| e.is_a?(String)} ) } =>
-      #   "entities must be a list of strings",
-      #
-      #   proc {|d| !d.has_key?(:regex_entities) ||
-      #          ( d[:regex_entities].nil? ||
-      #            d[:regex_entities].is_a?(Array) &&
-      #            d[:regex_entities].all? {|e| e.is_a?(String)} ) } =>
-      #   "regex_entities must be a list of strings",
-      #
-      #   proc {|d| !d.has_key?(:tags) ||
-      #          ( d[:tags].nil? ||
-      #            d[:tags].is_a?(Set) &&
-      #            d[:tags].all? {|et| et.is_a?(String)} ) } =>
-      #   "tags must be a tag_set of strings",
-      #
-      #   proc {|d| !d.has_key?(:regex_tags) ||
-      #          ( d[:regex_tags].nil? ||
-      #            d[:regex_tags].is_a?(Set) &&
-      #            d[:regex_tags].all? {|et| et.is_a?(String)} ) } =>
-      #   "regex_tags must be a tag_set of strings",
-      #
-      #   # conversion to a schedule needs a time zone, any one will do
-      #   proc {|d| !d.has_key?(:time_restrictions) ||
-      #          ( d[:time_restrictions].nil? ||
-      #            d[:time_restrictions].all? {|tr|
-      #              !!self.time_restriction_to_icecube_schedule(symbolize(tr), ActiveSupport::TimeZone['UTC'])
-      #            } )
-      #        } =>
-      #   "time restrictions are invalid",
-      #
-      #   # TODO should the media types be checked against a whitelist?
-      #   proc {|d| !d.has_key?(:unknown_media) ||
-      #          ( d[:unknown_media].nil? ||
-      #            d[:unknown_media].is_a?(Array) &&
-      #            d[:unknown_media].all? {|et| et.is_a?(String)} ) } =>
-      #   "unknown_media must be a list of strings",
-      #
-      #   proc {|d| !d.has_key?(:warning_media) ||
-      #          ( d[:warning_media].nil? ||
-      #            d[:warning_media].is_a?(Array) &&
-      #            d[:warning_media].all? {|et| et.is_a?(String)} ) } =>
-      #   "warning_media must be a list of strings",
-      #
-      #   proc {|d| !d.has_key?(:critical_media) ||
-      #          ( d[:critical_media].nil? ||
-      #            d[:critical_media].is_a?(Array) &&
-      #            d[:critical_media].all? {|et| et.is_a?(String)} ) } =>
-      #   "critical_media must be a list of strings",
-      #
-      #   proc {|d| !d.has_key?(:unknown_blackhole) ||
-      #          [TrueClass, FalseClass].include?(d[:unknown_blackhole].class) } =>
-      #   "unknown_blackhole must be true or false",
-      #
-      #   proc {|d| !d.has_key?(:warning_blackhole) ||
-      #          [TrueClass, FalseClass].include?(d[:warning_blackhole].class) } =>
-      #   "warning_blackhole must be true or false",
-      #
-      #   proc {|d| !d.has_key?(:critical_blackhole) ||
-      #          [TrueClass, FalseClass].include?(d[:critical_blackhole].class) } =>
-      #   "critical_blackhole must be true or false",
-      # }
 
       def self.validate_data(d, options = {})
         id_not_required = !!options[:id_not_required]
