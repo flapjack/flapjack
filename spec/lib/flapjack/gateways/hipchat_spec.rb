@@ -8,7 +8,7 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
   let(:redis) { double('redis') }
   
   let(:config) { {
-    'username'     => 'Sir Lore',
+    'username'     => 'Hipchat User',
     'api_token'    => 'xxxxxxxxxxxx',
     'room'         => 'flapjack-hipchat-test'
   } }
@@ -45,7 +45,7 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
 
    req = stub_request(:post, %r{\Ahttps://api.hipchat.com/v2/room/flapjack-hipchat-test/notification\?auth_token=(.*)\z}).
       with(
-        :body => "{\"room_id\":\"flapjack-hipchat-test\",\"from\":\"Sir Lore\",\"message\":\"Recovery: 'ping' on example.com is OK at 31 Oct 13:45, smile\",\"message_format\":\"html\",\"color\":\"green\",\"notify\":false}",
+        :body => "{\"room_id\":\"flapjack-hipchat-test\",\"from\":\"Hipchat User\",\"message\":\"Recovery: 'ping' on example.com is OK at 31 Oct 13:45, smile\",\"message_format\":\"html\",\"color\":\"green\",\"notify\":false}",
         :headers => {'Accept'=>'application/json', 'Content-Type'=>'application/json'}
       ).to_return(:status => 200, :body => "", :headers => {})
                 
