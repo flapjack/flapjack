@@ -78,11 +78,20 @@ module Flapjack
       end
 
       def deliver(alert)
-        return if !@enable_rollups && alert.rollup
+        if alert.rollup && !@enable_rollups
+          @logger.info "Dropping rollup alert: #{to_s}"
+          return
+        end
+        
+        message_type    = alert.rollup ? 'rollup' : 'alert'
+                
+        if (message_type == 'rollup') && !@enable_rollups
+          alert.record_send_success! # SMELL Hack sent flag
+          return
+        end  
         
         notification_id = alert.notification_id
-        message_type    = alert.rollup ? 'rollup' : 'alert'
-
+        
         hipchat_template_erb, hipchat_template =
           load_template(@config['templates'], message_type, 'text',
                         File.join(File.dirname(__FILE__), 'hipchat'))
@@ -99,7 +108,7 @@ module Flapjack
         end
         
         payload = {
-          :message_format    => 'html',
+          :message_format    => 'text',
           :color             => @alert.state == 'ok' ? 'green' : 'red'
         }
         
