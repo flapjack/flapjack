@@ -30,6 +30,7 @@ module Flapjack
         api_token     = @config["api_token"]
         @username     = @config["username"]
         @room         = @config["room"]
+        @enable_rollups = @config["enable_rollups"] || false
         
         errors = []
 
@@ -77,6 +78,8 @@ module Flapjack
       end
 
       def deliver(alert)
+        return if @enable_rollups && alert.rollup
+        
         notification_id = alert.notification_id
         message_type    = alert.rollup ? 'rollup' : 'alert'
 

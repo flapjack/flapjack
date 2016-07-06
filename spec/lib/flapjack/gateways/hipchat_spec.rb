@@ -60,6 +60,10 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
     expect(req).to have_been_requested
   end
 
+  # NOTE Implemented - just needs to be tested
+  it "sends a Hipchat rollup message if rollups enabled"
+  it "does not send a Hipchat rollup message if rollups enabled"
+  
   it "does not initialize Hipchat gateway with an invalid config" do
     EM.synchrony do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
