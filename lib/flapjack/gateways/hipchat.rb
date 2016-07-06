@@ -24,8 +24,31 @@ module Flapjack
 
         @logger.info("starting")
         @logger.debug("new hipchat gateway pikelet with the following options: #{@config.inspect}")
-
+        
         @sent = 0
+          
+        api_token     = @config["api_token"]
+        @username     = @config["username"]
+        @room         = @config["room"]
+        
+        errors = []
+
+        [  
+         [api_token, "Hipchat api_token is missing"],
+         [@username, "Hipchat username is missing"],  
+         [@room, "Hipchat room is missing"]
+        ].each do |val_err|
+
+          next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
+          errors << val_err.last
+        end
+
+        unless errors.empty?
+          errors.each {|err| @logger.error err }
+          return 
+        end
+        
+        @client = HipChat::Client.new(api_token, :api_version => 'v2')
       end
 
       def stop
@@ -54,10 +77,6 @@ module Flapjack
       end
 
       def deliver(alert)
-        username     = @config["username"]
-      	api_token    = @config["api_token"]
-      	room         = @config["room"]
-
         notification_id = alert.notification_id
         message_type    = alert.rollup ? 'rollup' : 'alert'
 
@@ -75,23 +94,6 @@ module Flapjack
             "ERB being executed: #{hipchat_template}"
           raise
         end
-
-        errors = []
-
-        [  
-         [username, "Hipchat username is missing"],  
-         [api_token, "Hipchat api_token is missing"],
-         [room, "Hipchat room is missing"]
-        ].each do |val_err|
-
-          next unless val_err.first.nil? || (val_err.first.respond_to?(:empty?) && val_err.first.empty?)
-          errors << val_err.last
-        end
-
-        unless errors.empty?
-          errors.each {|err| @logger.error err }
-          return
-        end
         
         payload = {
           :message_format    => 'html',
@@ -101,15 +103,14 @@ module Flapjack
         reported_payload = payload.merge(:message => message)
         
         @logger.debug "payload: #{reported_payload}"
-        
-        client = HipChat::Client.new(api_token, :api_version => 'v2')
+
         begin
-          client[room].send(username, message, payload)
+          @client[@room].send(@username, message, payload)
           @sent += 1
           alert.record_send_success!
           @logger.debug "Sent message via Hipchat"
         rescue HipChat::UnknownRoom  
-          @logger.error "Failed to send message via Hipchat. Unknown room #{room}"
+          @logger.error "Failed to send message via Hipchat. Unknown room #{@room}"
         end
       rescue => e
         @logger.error "Error generating or delivering hipchat message to #{alert.address}: #{e.class}: #{e.message}"

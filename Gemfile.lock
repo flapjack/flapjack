@@ -18,7 +18,7 @@ PATH
       mail
       nexmo (= 2.0.0)
       nokogiri (= 1.6.2.1)
-      oj (>= 2.9.0)
+      oj (~> 2.11.4)
       rack-fiber_pool
       rake
       rbtrace
@@ -32,7 +32,7 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    activesupport (4.2.0)
+    activesupport (4.2.6)
       i18n (~> 0.7)
       json (~> 1.7, >= 1.7.7)
       minitest (~> 5.1)
@@ -149,7 +149,7 @@ GEM
     nokogiri (1.6.2.1)
       mini_portile (= 0.6.0)
     numerizer (0.1.1)
-    oj (2.16.1)
+    oj (2.11.5)
     pact (1.7.0)
       awesome_print (~> 1.1)
       find_a_port (~> 1.0.1)
@@ -249,7 +249,7 @@ GEM
     trollop (2.1.2)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
-    tzinfo-data (1.2016.5)
+    tzinfo-data (1.2016.6)
       tzinfo (>= 1.0.0)
     webmock (1.19.0)
       addressable (>= 2.3.6)

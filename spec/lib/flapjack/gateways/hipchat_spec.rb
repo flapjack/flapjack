@@ -47,7 +47,7 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
       with(
         :body => "{\"room_id\":\"flapjack-hipchat-test\",\"from\":\"Hipchat User\",\"message\":\"Recovery: 'ping' on example.com is OK at 31 Oct 13:45, smile\",\"message_format\":\"html\",\"color\":\"green\",\"notify\":false}",
         :headers => {'Accept'=>'application/json', 'Content-Type'=>'application/json'}
-      ).to_return(:status => 200, :body => "", :headers => {})
+      ).to_return(:status => 200, :body => "", :headers => {}) 
                 
     EM.synchrony do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
@@ -60,16 +60,14 @@ describe Flapjack::Gateways::Hipchat, :logger => true do
     expect(req).to have_been_requested
   end
 
-  it "does not send a Hipchat message with an invalid config" do
+  it "does not initialize Hipchat gateway with an invalid config" do
     EM.synchrony do
       expect(Flapjack::RedisPool).to receive(:new).and_return(redis)
 
-      alert = Flapjack::Data::Alert.new(message, :logger => @logger)
       hipchat = Flapjack::Gateways::Hipchat.new(:config => config.reject {|k, v| k == 'api_token'}, :logger => @logger)
-      hipchat.deliver(alert)
+      expect(@logger.messages).to include("ERROR: Hipchat api_token is missing") 
       EM.stop
     end
 
-    expect(WebMock).not_to have_requested(:post, config['api_token'])
   end
 end

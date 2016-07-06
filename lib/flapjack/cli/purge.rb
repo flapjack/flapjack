@@ -69,10 +69,14 @@ module Flapjack
   end
 end
 
+
+
 desc "Purge data from Flapjack's database"
 command :purge do |purge|
 
+  
   purge.desc 'Purge check history'
+  
   purge.command :check_history do |check_history|
 
     check_history.flag [:d, 'days'], :desc => "purge check history older than DAYS days ago",

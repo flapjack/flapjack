@@ -30,7 +30,8 @@ module Flapjack
         'jabber',
         'pagerduty',
         'sns',
-        'webhook'
+        'webhook',
+        'hipchat'
       ]
 
       def self.all(options = {})
