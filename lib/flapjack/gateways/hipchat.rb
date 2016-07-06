@@ -78,7 +78,7 @@ module Flapjack
       end
 
       def deliver(alert)
-        return if @enable_rollups && alert.rollup
+        return if !@enable_rollups && alert.rollup
         
         notification_id = alert.notification_id
         message_type    = alert.rollup ? 'rollup' : 'alert'
