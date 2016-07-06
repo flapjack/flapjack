@@ -86,8 +86,8 @@ module Flapjack
         
         message_type    = alert.rollup ? 'rollup' : 'alert'
                 
-        if (message_type == 'rollup')# && !@enable_rollups
-          alert.record_send_success! # SMELL Hack sent flag
+        if (message_type == 'rollup') #&& !@enable_rollups
+          @logger.info "Dropping rollup alert: #{to_s}"
           return
         end  
         
