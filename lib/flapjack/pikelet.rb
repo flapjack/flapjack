@@ -17,6 +17,7 @@ require 'thin'
 
 require 'flapjack/notifier'
 require 'flapjack/processor'
+require 'flapjack/gateways/hipchat'
 require 'flapjack/gateways/jsonapi'
 require 'flapjack/gateways/jabber'
 require 'flapjack/gateways/oobetet'
@@ -105,6 +106,7 @@ module Flapjack
                       'pagerduty'  => Flapjack::Gateways::Pagerduty,
                       'oobetet'    => Flapjack::Gateways::Oobetet,
                       'email'      => Flapjack::Gateways::Email,
+                      'hipchat'    => Flapjack::Gateways::Hipchat,
                       'sms'        => Flapjack::Gateways::SmsMessagenet,
                       'slack'      => Flapjack::Gateways::Slack,
                       'sms_twilio' => Flapjack::Gateways::SmsTwilio,

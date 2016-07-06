@@ -4,6 +4,7 @@ gemspec :name => 'flapjack'
 
 group :development do
   gem 'ruby-prof'
+  gem 'pry-byebug'
 end
 
 group :test do

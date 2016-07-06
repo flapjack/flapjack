@@ -19,7 +19,7 @@ Gem::Specification.new do |gem|
   gem.version       = Flapjack::VERSION
 
   gem.add_dependency 'dante', '= 0.2.0'
-  gem.add_dependency 'oj', '>= 2.9.0'
+  gem.add_dependency 'oj', '~> 2.11.4'
   gem.add_dependency 'eventmachine', '~> 1.0.0'
   gem.add_dependency 'redis', '~> 3.0.6'
   gem.add_dependency 'hiredis'
@@ -34,8 +34,8 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'chronic'
   gem.add_dependency 'chronic_duration'
   gem.add_dependency 'terminal-table'
-  gem.add_dependency 'activesupport'
-  gem.add_dependency 'ice_cube'
+  gem.add_dependency 'activesupport', '~> 4.2.0'
+  gem.add_dependency 'ice_cube', '>=  0.13.2'
   gem.add_dependency 'tzinfo'
   gem.add_dependency 'tzinfo-data'
   gem.add_dependency 'rbtrace'
@@ -43,4 +43,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'gli', '= 2.12.0'
   gem.add_dependency 'nokogiri', '= 1.6.2.1'
   gem.add_dependency 'nexmo', '= 2.0.0'
+  gem.add_dependency 'hipchat'
 end

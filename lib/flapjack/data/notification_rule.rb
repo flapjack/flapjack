@@ -311,7 +311,7 @@ module Flapjack
 
         tr
       end
-
+        
       VALIDATION_PROCS = {
         proc {|d| !d.has_key?(:entities) ||
                ( d[:entities].nil? ||
