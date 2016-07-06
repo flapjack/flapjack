@@ -30,7 +30,8 @@ module Flapjack
         api_token     = @config["api_token"]
         @username     = @config["username"]
         @room         = @config["room"]
-        @enable_rollups = @config["enable_rollups"] || false
+        # SMELL Horrible test for "truthiness
+        @enable_rollups = @config["enable_rollups"] && (@config["enable_rollups"] == 'yes' || @config["enable_rollups"] == true)
         
         errors = []
 
@@ -78,14 +79,14 @@ module Flapjack
       end
 
       def deliver(alert)
-        if alert.rollup && !@enable_rollups
-          @logger.info "Dropping rollup alert: #{to_s}"
-          return
-        end
+        # if alert.rollup && !@enable_rollups
+       #    @logger.info "Dropping rollup alert: #{to_s}"
+       #    return
+       #  end
         
         message_type    = alert.rollup ? 'rollup' : 'alert'
                 
-        if (message_type == 'rollup') && !@enable_rollups
+        if (message_type == 'rollup')# && !@enable_rollups
           alert.record_send_success! # SMELL Hack sent flag
           return
         end  
