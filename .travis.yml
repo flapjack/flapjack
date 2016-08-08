@@ -32,5 +32,3 @@ notifications:
     - irc.freenode.net#flapjack
     template:
     - "%{message} %{repository}#%{build_number} (%{branch} - %{commit} : %{author})"
-  slack:
-    secure: OlXm5ljaX0xAR8wHEeODXUrL9r++LmBZIj/lZbJTJ0HUSUe11evYDN8NXAwzUCP57EGeVqV94m7uoIZzvknunrs4zPlNDAbTIGkSZ+ahemBYfQmlH54PYbPQWm0mrkN6NXgzn3e6CPkQIZPCWDA+/iq5oRl6ZZtIEmoa41KrUh0=
