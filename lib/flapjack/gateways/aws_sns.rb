@@ -149,13 +149,12 @@ module Flapjack
 
         Base64.encode64(signature).strip
       end
-
+      def self.url_encode(string)
+        # don't encode: ~_-, spaces must be %20
+        CGI.escape(string.to_s).gsub("%7E", "~").gsub("+", "%20")
+      end
       def self.string_to_sign(method, host, uri, query)
-        @safe_re ||= Regexp.new("[^#{URI::PATTERN::UNRESERVED}]")
-
-        encoded_query = query.keys.sort.collect {|key|
-          "#{URI.escape(key, @safe_re)}=#{URI.escape(query[key].to_s, @safe_re)}"
-        }.join("&")
+        encoded_query = query.keys.sort.collect {|key|  [self.url_encode(key), self.url_encode(query[key])].join("=") }.join("&")
 
         [method.upcase,
          host.downcase,
@@ -167,4 +166,3 @@ module Flapjack
     end
   end
 end
-
