@@ -36,6 +36,7 @@
   sms_queue = "sms_notifications"
   sms_nexmo_queue = "sms_nexmo_notifications"
   slack_queue = "slack_notifications"
+  hipchat_queue = "hipchat_notifications"
   sms_twilio_queue = "sms_twilio_notifications"
   sms_aspsms_queue = "sms_aspsms_notifications"
   sns_queue = "sns_notifications"
@@ -114,6 +115,16 @@
     #templates:
     #  rollup_text = "/etc/flapjack/templates/slack/rollup.text.erb"
     #  alert_text = "/etc/flapjack/templates/slack/alert.text.erb"
+  # Sends notifications via Hipchat
+  [gateways.hipchat]
+    enabled = false
+    queue = "hipchat_notifications"
+    access_token = "abc12345678"
+    channel_id = "12345"
+    endpoint = "https://api.hipchat.com/v2"
+    [gateways.hipchat.logger]
+      level = "INFO"
+      syslog_errors = true
   # Sends SMS notifications via Nexmo
   [gateways.sms_nexmo]
     enabled = false
