@@ -89,8 +89,7 @@ module Flapjack
 
     def load_template(template_config, message_type, message_filetype,
                       default_template_path)
-      template_file = if template_config.nil? ||
-          !template_config.has_key?("#{message_type}_#{message_filetype}")
+      template_file = if template_config.nil? || !template_config.has_key?("#{message_type}_#{message_filetype}")
         # we ship UTF-8 templates with the gem
         template_path = File.join(default_template_path, "#{message_type}.#{message_filetype}.erb")
         File.open(template_path, "r:UTF-8", &:read)
