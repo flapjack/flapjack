@@ -65,15 +65,20 @@ func CreateState(updates chan State, w http.ResponseWriter, r *http.Request) {
 // cacheState stores a cache of event state to be sent to Flapjack.
 // The event state is queried later when submitting events periodically
 // to Flapjack.
-func cacheState(updates chan State, state map[string]State) {
-	for ns := range updates {
-		key := ns.Entity + ":" + ns.Check
-		state[key] = ns
+func cacheState(updates chan State, tombstones chan string, state map[string]State) {
+	for {
+		select {
+		case id := <-tombstones:
+			delete(state, id)
+		case ns := <-updates:
+			key := ns.Entity + ":" + ns.Check
+			state[key] = ns
+		}
 	}
 }
 
 // submitCachedState periodically samples the cached state, sends it to Flapjack.
-func submitCachedState(states map[string]State, config Config) {
+func submitCachedState(states map[string]State, tombstones chan string, config Config) {
 	transport, err := flapjack.Dial(config.Server, config.Database)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -90,8 +95,8 @@ func submitCachedState(states map[string]State, config Config) {
 				Type:    state.Type,
 				State:   state.State,
 				Summary: state.Summary,
-                                Details: state.Details,
-                                Tags:    state.Tags,
+				Details: state.Details,
+				Tags:    state.Tags,
 				Time:    now,
 			}
 
@@ -107,10 +112,10 @@ func submitCachedState(states map[string]State, config Config) {
 			}
 			transport.Send(event)
 
-      // If TTL < 0, send once and remove from memory
+			// If TTL < 0, send once and remove from memory
 			if state.TTL < 0 {
-			  delete(states, id)
-      }
+				tombstones <- id
+			}
 		}
 		time.Sleep(config.Interval)
 	}
@@ -148,10 +153,11 @@ func main() {
 	}
 
 	updates := make(chan State)
+	tombstones := make(chan string)
 	state := map[string]State{}
 
-	go cacheState(updates, state)
-	go submitCachedState(state, config)
+	go cacheState(updates, tombstones, state)
+	go submitCachedState(state, tombstones, config)
 
 	m := martini.Classic()
 	m.Group("/state", func(r martini.Router) {
