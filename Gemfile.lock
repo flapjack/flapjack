@@ -87,6 +87,8 @@ GEM
     multi_test (0.1.2)
     multi_xml (0.5.5)
     nexmo (2.0.0)
+    nio4r (2.5.2)
+    nio4r (2.5.2-java)
     numerizer (0.1.1)
     pact (1.9.0)
       awesome_print (~> 1.1)
@@ -119,8 +121,10 @@ GEM
       rspec (>= 2.14)
       term-ansicolor (~> 1.0)
       thor
-    puma (2.15.3)
-    puma (2.15.3-java)
+    puma (4.3.3)
+      nio4r (~> 2.0)
+    puma (4.3.3-java)
+      nio4r (~> 2.0)
     rack (1.6.4)
     rack-protection (1.5.3)
       rack
