@@ -126,7 +126,7 @@ GEM
       rack
     rack-test (0.6.3)
       rack (>= 1.0)
-    rake (10.4.2)
+    rake (13.0.1)
     randexp (0.1.7)
     redis (3.2.2)
     rspec (3.4.0)
